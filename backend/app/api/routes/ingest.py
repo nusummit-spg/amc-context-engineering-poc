@@ -1,4 +1,5 @@
 """WS3 — /ingest endpoints: upload, batch, status polling."""
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, UploadFile
@@ -20,7 +21,7 @@ async def ingest_file(
     upload_dir.mkdir(parents=True, exist_ok=True)
     safe_name = Path(file.filename or "upload").name
     dest = upload_dir / safe_name
-
+    logging.info("test push")
     supported = container.pipeline._registry.supported_extensions()
     if dest.suffix.lower() not in supported:
         raise ValidationFailedError(
