@@ -1,29 +1,22 @@
-"""Graph schema — uniqueness constraints matching the ontology's canonical keys."""
-from graph.client import run_write
+"""WS5b — Neo4j graph schema: constraints + indexes for the 9 node labels."""
+from backend.app.graph.client import GraphClient
 
-CONSTRAINTS = [
-    "CREATE CONSTRAINT fund_house_amfi IF NOT EXISTS FOR (fh:FundHouse) REQUIRE fh.amfi_code IS UNIQUE",
-    "CREATE CONSTRAINT scheme_isin IF NOT EXISTS FOR (s:Scheme) REQUIRE s.isin_growth IS UNIQUE",
-    "CREATE CONSTRAINT holding_isin IF NOT EXISTS FOR (h:Holding) REQUIRE h.isin IS UNIQUE",
-    "CREATE CONSTRAINT issuer_name IF NOT EXISTS FOR (i:Issuer) REQUIRE i.name IS UNIQUE",
-    "CREATE CONSTRAINT issuer_group_name IF NOT EXISTS FOR (g:IssuerGroup) REQUIRE g.name IS UNIQUE",
-    "CREATE CONSTRAINT circular_no IF NOT EXISTS FOR (c:RegulatoryCircular) REQUIRE c.circular_no IS UNIQUE",
-    "CREATE CONSTRAINT theme_name IF NOT EXISTS FOR (t:RiskTheme) REQUIRE t.name IS UNIQUE",
-    "CREATE CONSTRAINT analyst_name IF NOT EXISTS FOR (a:Analyst) REQUIRE a.name IS UNIQUE",
-    "CREATE CONSTRAINT benchmark_name IF NOT EXISTS FOR (b:Benchmark) REQUIRE b.name IS UNIQUE",
-    "CREATE CONSTRAINT fund_manager_name IF NOT EXISTS FOR (fm:FundManager) REQUIRE fm.name IS UNIQUE",
-    # NAVRecord / AUMFigure are append-only time series -> no uniqueness constraint,
-    # but index on date for fast range queries.
-    "CREATE INDEX nav_date_idx IF NOT EXISTS FOR (n:NAVRecord) ON (n.date)",
-    "CREATE INDEX aum_date_idx IF NOT EXISTS FOR (n:AUMFigure) ON (n.date)",
+NODE_LABELS = [
+    "Scheme", "Issuer", "IssuerGroup", "Analyst", "Sector",
+    "RiskTheme", "RegulatoryCircular", "ClauseType", "Document", "TaxonomyNode",
 ]
 
 
-def setup_schema():
-    for stmt in CONSTRAINTS:
-        run_write(stmt)
-        print(f"[schema] applied: {stmt.split('FOR')[0].strip()}")
-
-
-if __name__ == "__main__":
-    setup_schema()
+async def apply_schema(graph: GraphClient) -> None:
+    """Idempotent constraint/index creation. Run at startup / from seed script."""
+    for label in NODE_LABELS:
+        await graph.run(
+            f"CREATE CONSTRAINT {label.lower()}_name IF NOT EXISTS "
+            f"FOR (n:{label}) REQUIRE n.name IS UNIQUE"
+        )
+    await graph.run(
+        "CREATE INDEX taxonomy_path IF NOT EXISTS FOR (n:TaxonomyNode) ON (n.path)"
+    )
+    await graph.run(
+        "CREATE INDEX document_docid IF NOT EXISTS FOR (n:Document) ON (n.document_id)"
+    )
