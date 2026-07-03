@@ -1,58 +1,43 @@
-"""WS2 — DOCX parser (python-docx): heading hierarchy preserved for chunking."""
-from pathlib import Path
+"""
+DOCX parser — handles the narrative commentary docs, e.g.
+Average AUM/Fundwise/April - June 2026.docx. Splits on heading styles so
+chunking stays section-aware. Always routed to the NER pipeline (the
+companion .xlsx for the same period is structured data — see excel.py).
+"""
+from typing import List
+import docx
 
-from docx import Document as DocxFile
-
-from app.ingestion.parsers.base import BaseParser
-from app.schemas.documents import Document, DocumentType, Section
+from ingestion.parsers.base import BaseParser, ParsedSection
 
 
-class DocxParser(BaseParser):
-    extensions = (".docx",)
+class DOCXParser(BaseParser):
+    supported_extensions = [".docx"]
 
-    def parse(self, path: Path) -> Document:
-        docx = DocxFile(str(path))
-        sections: list[Section] = []
-        current_title: str | None = None
-        current_level = 1
-        current_lines: list[str] = []
-        order = 0
+    def parse(self, filepath: str) -> List[ParsedSection]:
+        document = docx.Document(filepath)
+        sections: List[ParsedSection] = []
+        current_heading = "Document Start"
+        current_text: List[str] = []
 
         def flush():
-            nonlocal order
-            text = "\n".join(current_lines).strip()
-            if text:
-                sections.append(Section(
-                    title=current_title, level=current_level, text=text, order=order,
-                ))
-                order += 1
+            if current_text:
+                sections.append(
+                    ParsedSection(
+                        heading=current_heading,
+                        text="\n".join(current_text).strip(),
+                        source_file=filepath,
+                        route_hint="unstructured",
+                    )
+                )
 
-        for para in docx.paragraphs:
+        for para in document.paragraphs:
             style = (para.style.name or "").lower()
-            if style.startswith("heading"):
+            if style.startswith("heading") or style == "title":
                 flush()
-                current_title = para.text.strip()
-                try:
-                    current_level = int(style.replace("heading", "").strip() or 1)
-                except ValueError:
-                    current_level = 1
-                current_lines = []
+                current_heading = para.text.strip() or current_heading
+                current_text = []
             elif para.text.strip():
-                current_lines.append(para.text)
+                current_text.append(para.text.strip())
 
-        # Tables as pipe-delimited rows appended to the current section.
-        for table in docx.tables:
-            rows = [" | ".join(cell.text.strip() for cell in row.cells) for row in table.rows]
-            if rows:
-                current_lines.append("\n[TABLE]\n" + "\n".join(rows))
         flush()
-
-        author = docx.core_properties.author or None
-        return Document(
-            filename=path.name,
-            doc_type=DocumentType.DOCX,
-            title=docx.core_properties.title or path.stem.replace("_", " "),
-            author=author,
-            source_path=str(path),
-            sections=sections or [Section(text="", order=0)],
-        )
+        return [s for s in sections if s.text]

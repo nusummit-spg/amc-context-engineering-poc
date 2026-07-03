@@ -1,77 +1,58 @@
-"""WS2 — Email parsers: .msg via extract-msg, .eml via stdlib. Thread unwinding:
-each reply in a quoted thread becomes its own section (newest first)."""
-import email
-import email.policy
-import re
-from pathlib import Path
+"""
+Email parser — handles .msg (Outlook) and .eml files if any surface in the
+corpus (e.g. analyst email threads). Uses extract-msg for real .msg structure;
+falls back to plain-text read for .eml.
+"""
+from typing import List
 
-from app.ingestion.parsers.base import BaseParser
-from app.schemas.documents import Document, DocumentType, Section
-
-# Common reply-separators used to unwind a quoted thread.
-_THREAD_SPLIT_RE = re.compile(
-    r"(?:^-{3,}\s*Original Message\s*-{3,}$|^On .{5,120} wrote:$|^From:\s.+$)",
-    re.MULTILINE,
-)
+from ingestion.parsers.base import BaseParser, ParsedSection
 
 
-def _split_thread(body: str) -> list[str]:
-    parts = _THREAD_SPLIT_RE.split(body)
-    return [p.strip() for p in parts if p and p.strip()]
+class EmailParser(BaseParser):
+    supported_extensions = [".msg", ".eml"]
 
+    def parse(self, filepath: str) -> List[ParsedSection]:
+        if filepath.lower().endswith(".msg"):
+            return self._parse_msg(filepath)
+        return self._parse_eml(filepath)
 
-def _build_document(path: Path, headers: dict, body: str) -> Document:
-    parts = _split_thread(body)
-    sections = [
-        Section(
-            title=f"Message {i + 1}" if i else (headers.get("subject") or "Message"),
-            text=part,
-            order=i,
-            metadata={"thread_position": i},
-        )
-        for i, part in enumerate(parts)
-    ]
-    return Document(
-        filename=path.name,
-        doc_type=DocumentType.EMAIL,
-        title=headers.get("subject") or path.stem,
-        author=headers.get("from"),
-        source_path=str(path),
-        sections=sections or [Section(text=body, order=0)],
-        metadata=headers,
-    )
+    def _parse_msg(self, filepath: str) -> List[ParsedSection]:
+        try:
+            import extract_msg
+        except ImportError:
+            print("[email parser] extract-msg not installed, falling back to raw read")
+            return self._raw_fallback(filepath)
 
-
-class MsgParser(BaseParser):
-    extensions = (".msg",)
-
-    def parse(self, path: Path) -> Document:
-        import extract_msg
-
-        msg = extract_msg.Message(str(path))
-        headers = {
-            "from": msg.sender or "",
-            "to": msg.to or "",
-            "subject": msg.subject or "",
-            "date": str(msg.date or ""),
-        }
+        msg = extract_msg.Message(filepath)
+        heading = msg.subject or "email"
         body = msg.body or ""
-        msg.close()
-        return _build_document(path, headers, body)
+        metadata = {"sender": msg.sender, "date": str(msg.date)}
+        return [
+            ParsedSection(
+                heading=heading, text=body, source_file=filepath,
+                route_hint="unstructured", metadata=metadata,
+            )
+        ] if body.strip() else []
 
+    def _parse_eml(self, filepath: str) -> List[ParsedSection]:
+        import email
+        from email import policy
 
-class EmlParser(BaseParser):
-    extensions = (".eml",)
+        with open(filepath, "rb") as f:
+            msg = email.message_from_binary_file(f, policy=policy.default)
+        body = msg.get_body(preferencelist=("plain",))
+        text = body.get_content() if body else ""
+        return [
+            ParsedSection(
+                heading=msg.get("Subject", "email"), text=text, source_file=filepath,
+                route_hint="unstructured",
+                metadata={"sender": msg.get("From"), "date": msg.get("Date")},
+            )
+        ] if text.strip() else []
 
-    def parse(self, path: Path) -> Document:
-        with open(path, "rb") as f:
-            msg = email.message_from_binary_file(f, policy=email.policy.default)
-        headers = {
-            "from": str(msg.get("From", "")),
-            "to": str(msg.get("To", "")),
-            "subject": str(msg.get("Subject", "")),
-            "date": str(msg.get("Date", "")),
-        }
-        body_part = msg.get_body(preferencelist=("plain", "html"))
-        body = body_part.get_content() if body_part else ""
-        return _build_document(path, headers, body)
+    def _raw_fallback(self, filepath: str) -> List[ParsedSection]:
+        with open(filepath, "r", errors="ignore") as f:
+            text = f.read()
+        return [
+            ParsedSection(heading="email", text=text, source_file=filepath, route_hint="unstructured")
+        ] if text.strip() else []

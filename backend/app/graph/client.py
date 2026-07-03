@@ -1,120 +1,66 @@
-"""Neo4j client wrapper — async driver, query helper, entity/relationship upserts."""
-import logging
-from typing import Any, Optional
+"""
+Neo4j driver singleton. On AWS: if Neo4j runs on AuraDB (SaaS), Lambda just
+needs outbound internet (NAT gateway if Lambda is in a VPC). If Neo4j is
+self-hosted on EC2, Lambda must be attached to the same VPC/subnet as the
+instance. Either way, pull credentials from Secrets Manager, not plain env
+vars, in production — get_driver() below reads from env for local/dev use;
+swap _get_credentials() to call boto3 secretsmanager for prod.
+"""
+import os
+from neo4j import GraphDatabase, Driver
+from typing import List, Dict, Any
 
-from neo4j import AsyncDriver, AsyncGraphDatabase
-
-from app.config import get_settings
-from app.schemas.entities import BaseEntity
-from app.schemas.relationships import Relationship
-
-logger = logging.getLogger("graph")
-
-
-class GraphClient:
-    def __init__(self) -> None:
-        settings = get_settings()
-        self._driver: AsyncDriver = AsyncGraphDatabase.driver(
-            settings.neo4j_uri,
-            auth=(settings.neo4j_user, settings.neo4j_password),
-        )
-        self._database = settings.neo4j_database
-
-    async def close(self) -> None:
-        await self._driver.close()
-
-    async def run(self, cypher: str, **params: Any) -> list[dict]:
-        async with self._driver.session(database=self._database) as session:
-            result = await session.run(cypher, **params)
-            return [record.data() async for record in result]
-
-    async def ping(self) -> bool:
-        try:
-            await self.run("RETURN 1 AS ok")
-            return True
-        except Exception:
-            return False
-
-    # ---------- upserts ----------
-
-    async def upsert_entity(self, entity: BaseEntity) -> None:
-        label = entity.entity_type.value
-        await self.run(
-            f"""
-            MERGE (e:{label} {{name: $name}})
-            SET e.entity_id = coalesce(e.entity_id, $entity_id),
-                e.aliases = $aliases,
-                e += $properties
-            """,
-            name=entity.name,
-            entity_id=entity.entity_id,
-            aliases=entity.aliases,
-            properties={k: v for k, v in entity.properties.items() if v is not None},
-        )
-
-    async def upsert_relationship(self, rel: Relationship, source_name: str, target_name: str) -> None:
-        rel_type = rel.relationship_type.value
-        props = dict(rel.properties)
-        props["extraction_method"] = rel.extraction_method
-        props["confidence"] = rel.confidence
-        if rel.source_document_id:
-            props["source_document_id"] = rel.source_document_id
-        await self.run(
-            f"""
-            MATCH (a {{name: $source_name}}), (b {{name: $target_name}})
-            MERGE (a)-[r:{rel_type}]->(b)
-            SET r += $props
-            """,
-            source_name=source_name,
-            target_name=target_name,
-            props=props,
-        )
-
-    # ---------- reads for /graph endpoints ----------
-
-    async def full_graph(self, limit: int = 500) -> dict:
-        nodes = await self.run(
-            "MATCH (n) WHERE n.name IS NOT NULL "
-            "RETURN elementId(n) AS id, labels(n) AS labels, properties(n) AS props LIMIT $limit",
-            limit=limit,
-        )
-        edges = await self.run(
-            "MATCH (a)-[r]->(b) WHERE a.name IS NOT NULL AND b.name IS NOT NULL "
-            "RETURN elementId(r) AS id, elementId(a) AS source, elementId(b) AS target, "
-            "type(r) AS rel_type, properties(r) AS props LIMIT $limit",
-            limit=limit,
-        )
-        return {"nodes": nodes, "edges": edges}
-
-    async def neighborhood(self, name: str, depth: int = 1) -> dict:
-        depth = max(1, min(depth, 3))
-        records = await self.run(
-            f"""
-            MATCH path = (n {{name: $name}})-[*1..{depth}]-(m)
-            WITH nodes(path) AS ns, relationships(path) AS rs
-            UNWIND ns AS node
-            WITH collect(DISTINCT node) AS all_nodes, collect(rs) AS rel_lists
-            UNWIND rel_lists AS rl
-            UNWIND rl AS rel
-            WITH all_nodes, collect(DISTINCT rel) AS all_rels
-            RETURN
-              [n IN all_nodes | {{id: elementId(n), labels: labels(n), props: properties(n)}}] AS nodes,
-              [r IN all_rels | {{id: elementId(r), source: elementId(startNode(r)),
-                                 target: elementId(endNode(r)), rel_type: type(r),
-                                 props: properties(r)}}] AS edges
-            """,
-            name=name,
-        )
-        if not records:
-            return {"nodes": [], "edges": []}
-        return records[0]
+_driver: Driver | None = None
 
 
-_graph_client: Optional[GraphClient] = None
+def _get_credentials() -> tuple[str, str, str]:
+    uri = os.environ["NEO4J_URI"]
+    user = os.environ.get("NEO4J_USER", "neo4j")
+    password = os.environ["NEO4J_PASSWORD"]
+    return uri, user, password
+
+    # --- production variant ---
+    # import boto3, json
+    # client = boto3.client("secretsmanager")
+    # secret = json.loads(client.get_secret_value(SecretId=os.environ["NEO4J_SECRET_ARN"])["SecretString"])
+    # return secret["uri"], secret["user"], secret["password"]
 
 
-def get_graph_client() -> GraphClient:
-    global _graph_client
-    if _graph_client is None:
-        _graph_client = GraphClient()
-    return _graph_client
+def get_driver() -> Driver:
+    global _driver
+    if _driver is None:
+        uri, user, password = _get_credentials()
+        _driver = GraphDatabase.driver(uri, auth=(user, password))
+    return _driver
+
+
+def run_query(cypher: str, params: Dict[str, Any] = None) -> List[Dict]:
+    driver = get_driver()
+    with driver.session() as session:
+        return [record.data() for record in session.run(cypher, params or {})]
+
+
+def run_write(cypher: str, params: Dict[str, Any] = None) -> None:
+    driver = get_driver()
+    with driver.session() as session:
+        session.execute_write(lambda tx: tx.run(cypher, params or {}).consume())
+
+
+def run_write_batch(statements: List[tuple[str, Dict[str, Any]]]) -> None:
+    """Runs multiple statements in a single transaction — used by the direct
+    ETL path for structured rows so a whole batch commits atomically."""
+    driver = get_driver()
+    with driver.session() as session:
+        def _tx(tx):
+            for cypher, params in statements:
+                tx.run(cypher, params)
+        session.execute_write(_tx)
+
+
+def ping() -> bool:
+    try:
+        run_query("RETURN 1 AS ok")
+        return True
+    except Exception as e:
+        print(f"[graph.client] connection failed: {e}")
+        return False
