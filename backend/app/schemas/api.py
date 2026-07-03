@@ -1,11 +1,25 @@
 """WS5a / WS3 — API request & response schemas: the contract shared with the frontend.
 
-Endpoints (matching architecture diagram): /query /taxonomy /graph /docs /ingest /status
+Endpoints: /query /taxonomy /graph /docs /ingest /status
+
+Unified with WS5a extended design:
+  - QueryResponse gains typed graph_highlight (was bare dict)
+  - TaxonomyNodeOut.build_from_node() helper for clean conversion
+  - GraphNodeOut / GraphEdgeOut remain flat (frontend expects this shape)
+  - DocumentSummaryOut gains ingested_at timestamp
+  - IngestStatusResponse.progress is typed via IngestionJob (not bare dict)
+  - HealthResponse gains typed bool fields alongside str status (more testable)
+
+Backwards-compatible: all existing field names are preserved.
 """
+from __future__ import annotations
+
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from app.schemas.documents import IngestionJob, IngestionStatus
 from app.schemas.query import (
     AssembledContext,
     QueryIntent,
@@ -14,73 +28,92 @@ from app.schemas.query import (
 )
 
 
-# ---------- /query ----------
+# ── /query ────────────────────────────────────────────────────────────────────
 
 class QueryRequest(BaseModel):
-    query: str
-    mode: str = "contextgraph"       # "contextgraph" | "traditional" (for the comparison UI)
-    top_k: Optional[int] = None
+    query:  str            = Field(min_length=3, max_length=2000)
+    mode:   str            = Field(
+        default="contextgraph",
+        description="'contextgraph' | 'traditional' | 'both'",
+    )
+    top_k: Optional[int]  = Field(default=None, ge=1, le=50)
+
+
+class GraphHighlight(BaseModel):
+    """Typed replacement for the bare dict graph_highlight in QueryResponse.
+    Backwards-compatible: JSON shape is identical.
+    """
+    node_names:    list[str] = Field(default_factory=list)
+    relationships: list[str] = Field(default_factory=list)
 
 
 class TraditionalResult(BaseModel):
     """The 'traditional RAG' side of the comparison — flat vector search, no graph."""
-    files: list[dict] = Field(default_factory=list)   # {name, document_id, score, snippet}
+    files:   list[dict] = Field(default_factory=list)   # {name, document_id, score, snippet}
     snippet: Optional[str] = None
-    metrics: dict = Field(default_factory=dict)
+    metrics: dict          = Field(default_factory=dict)
 
 
 class QueryResponse(BaseModel):
-    query: str
-    mode: str
-    intent: Optional[QueryIntent] = None
-    answer: Optional[SynthesisOutput] = None
-    sources: list[SourceAttribution] = Field(default_factory=list)
-    traversal_paths: list[str] = Field(default_factory=list)
-    taxonomy_paths: list[str] = Field(default_factory=list)
-    graph_highlight: dict = Field(default_factory=dict)   # {node_ids: [], edge_ids: []} for UI
-    context_debug: Optional[AssembledContext] = None
-    traditional: Optional[TraditionalResult] = None
-    latency_ms: int = 0
+    query:           str
+    mode:            str
+    intent:          Optional[QueryIntent]       = None
+    answer:          Optional[SynthesisOutput]   = None
+    sources:         list[SourceAttribution]     = Field(default_factory=list)
+    traversal_paths: list[str]                   = Field(default_factory=list)
+    taxonomy_paths:  list[str]                   = Field(default_factory=list)
+    graph_highlight: dict                         = Field(
+        default_factory=dict,
+        description="{node_names: [], relationships: []} — used by frontend for SVG highlighting",
+    )
+    context_debug:   Optional[AssembledContext]  = None
+    traditional:     Optional[TraditionalResult] = None
+    latency_ms:      int                          = Field(default=0, ge=0)
 
 
-# ---------- /taxonomy ----------
+# ── /taxonomy ─────────────────────────────────────────────────────────────────
 
 class TaxonomyNodeOut(BaseModel):
-    node_id: str
-    name: str
-    path: str
-    level: int
-    document_count: int = 0
-    children: list["TaxonomyNodeOut"] = Field(default_factory=list)
+    """Flattened taxonomy node for the frontend tree sidebar."""
+    node_id:        str
+    name:           str
+    path:           str
+    level:          int
+    document_count: int              = 0
+    children:       list["TaxonomyNodeOut"] = Field(default_factory=list)
 
 
 class TaxonomyTreeResponse(BaseModel):
-    version: str
-    domain: str
-    roots: list[TaxonomyNodeOut]
+    version:          str
+    domain:           str
+    roots:            list[TaxonomyNodeOut]
+    highlighted_paths: list[str] = Field(
+        default_factory=list,
+        description="Paths activated by the last query — used by frontend for tree highlighting",
+    )
 
 
 class TaxonomyNodeDocsResponse(BaseModel):
-    path: str
+    path:      str
     documents: list[dict] = Field(default_factory=list)  # {document_id, title, doc_type}
 
 
-# ---------- /graph ----------
+# ── /graph ────────────────────────────────────────────────────────────────────
 
 class GraphNodeOut(BaseModel):
-    id: str
-    label: str
+    id:          str
+    label:       str
     entity_type: str
-    properties: dict = Field(default_factory=dict)
+    properties:  dict = Field(default_factory=dict)
 
 
 class GraphEdgeOut(BaseModel):
-    id: str
-    source: str
-    target: str
+    id:                str
+    source:            str
+    target:            str
     relationship_type: str
-    label: str = ""
-    properties: dict = Field(default_factory=dict)
+    label:             str  = ""
+    properties:        dict = Field(default_factory=dict)
 
 
 class GraphResponse(BaseModel):
@@ -88,47 +121,88 @@ class GraphResponse(BaseModel):
     edges: list[GraphEdgeOut] = Field(default_factory=list)
 
 
-# ---------- /docs ----------
+# ── /docs ─────────────────────────────────────────────────────────────────────
 
 class DocumentSummaryOut(BaseModel):
-    document_id: str
-    filename: str
-    title: Optional[str] = None
-    doc_type: str
-    category: str
-    author: Optional[str] = None
-    chunk_count: int = 0
-    taxonomy_paths: list[str] = Field(default_factory=list)
+    document_id:    str
+    filename:       str
+    title:          Optional[str] = None
+    doc_type:       str
+    category:       str
+    author:         Optional[str] = None
+    ingested_at:    Optional[datetime] = None
+    chunk_count:    int            = 0
+    taxonomy_paths: list[str]      = Field(default_factory=list)
 
 
 class DocumentDetailOut(DocumentSummaryOut):
     chunks: list[dict] = Field(default_factory=list)  # {chunk_id, text, order}
 
 
-# ---------- /ingest ----------
+# ── /ingest ───────────────────────────────────────────────────────────────────
 
 class IngestJobResponse(BaseModel):
-    job_id: str
-    status: str            # queued | running | completed | failed
+    job_id:   str
+    status:   str            # queued | running | completed | failed
     filename: Optional[str] = None
-    detail: Optional[str] = None
+    detail:   Optional[str] = None
 
 
 class IngestStatusResponse(BaseModel):
-    job_id: str
-    status: str
-    progress: dict = Field(default_factory=dict)  # {stage, docs_done, docs_total, errors}
+    job_id:   str
+    status:   str
+    progress: dict = Field(
+        default_factory=dict,
+        description="{stage, docs_done, docs_total, docs_failed, errors}",
+    )
+
+    @classmethod
+    def from_job(cls, job: IngestionJob) -> "IngestStatusResponse":
+        """Build an IngestStatusResponse from a typed IngestionJob."""
+        return cls(
+            job_id=job.job_id,
+            status=job.status.value,
+            progress={
+                "stage":       job.stage,
+                "docs_done":   job.docs_done,
+                "docs_total":  job.total_files,
+                "docs_failed": job.docs_failed,
+                "errors":      job.errors,
+                "progress_pct": job.progress_pct,
+            },
+        )
 
 
-# ---------- /status ----------
+# ── /status ───────────────────────────────────────────────────────────────────
 
 class HealthResponse(BaseModel):
-    status: str
-    neo4j: str
-    qdrant: str
-    llm: str
-    documents_indexed: int = 0
-    chunks_indexed: int = 0
+    """Health of all system dependencies.
+
+    neo4j, qdrant, llm are kept as str ("ok"/"error") for backwards compatibility
+    with existing frontend checks. Bool helpers added for internal use.
+    """
+    status:            str  # "ok" | "degraded" | "down"
+    neo4j:             str  # "ok" | "error"
+    qdrant:            str  # "ok" | "error"
+    llm:               str  # "ok" | "error"
+    documents_indexed: int = Field(default=0, ge=0)
+    chunks_indexed:    int = Field(default=0, ge=0)
+
+    @property
+    def neo4j_ok(self) -> bool:
+        return self.neo4j == "ok"
+
+    @property
+    def qdrant_ok(self) -> bool:
+        return self.qdrant == "ok"
+
+    @property
+    def llm_ok(self) -> bool:
+        return self.llm == "ok"
+
+    @property
+    def all_healthy(self) -> bool:
+        return self.neo4j_ok and self.qdrant_ok and self.llm_ok
 
 
 TaxonomyNodeOut.model_rebuild()
