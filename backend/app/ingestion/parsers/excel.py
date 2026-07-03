@@ -1,44 +1,70 @@
-"""WS2 — Excel parser (openpyxl): table rows -> structured text, one section per sheet."""
-from pathlib import Path
+"""
+Excel/CSV parser — handles Fund Performance.xlsx, Average AUM/Fundwise/*.xlsx,
+History NAV_.../*.xlsx|csv, mutual_fund_data.csv.
 
-import openpyxl
+These are already structured (clean column headers, one fact per row) so they
+are routed as "structured" — ingestion/pipeline.py sends route_hint=="structured"
+sections straight to a deterministic ETL writer in graph/cypher_library.py,
+skipping the NER/LLM extraction path entirely. This is a deliberate cost/
+accuracy decision: don't pay an LLM to re-discover what a column header
+already tells you.
+"""
+from typing import List, Dict
+import pandas as pd
 
-from app.ingestion.parsers.base import BaseParser
-from app.schemas.documents import Document, DocumentType, Section
+from ingestion.parsers.base import BaseParser, ParsedSection
+
+# Column name variants we normalize to canonical keys. Extend as new sheet
+# layouts show up in the corpus.
+_COLUMN_ALIASES = {
+    "scheme_name": {"scheme", "scheme name", "fund", "fund name", "plan"},
+    "isin": {"isin", "isin code", "isin_growth"},
+    "nav_date": {"date", "nav date", "as_of_date", "as on date"},
+    "nav_value": {"nav", "nav value", "net asset value"},
+    "aum_cr": {"aum", "aum (cr)", "aum in cr", "average aum"},
+    "fund_house": {"amc", "fund house", "amc name"},
+}
+
+
+def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    rename_map = {}
+    for col in df.columns:
+        col_clean = str(col).strip().lower()
+        for canonical, aliases in _COLUMN_ALIASES.items():
+            if col_clean in aliases:
+                rename_map[col] = canonical
+                break
+    return df.rename(columns=rename_map)
 
 
 class ExcelParser(BaseParser):
-    extensions = (".xlsx", ".xlsm")
+    supported_extensions = [".xlsx", ".xls", ".csv"]
 
-    def parse(self, path: Path) -> Document:
-        wb = openpyxl.load_workbook(str(path), data_only=True, read_only=True)
-        sections: list[Section] = []
+    def parse(self, filepath: str) -> List[ParsedSection]:
+        is_csv = filepath.lower().endswith(".csv")
+        sheets: Dict[str, pd.DataFrame]
 
-        for order, ws in enumerate(wb.worksheets):
-            rows = [
-                [("" if c is None else str(c)) for c in row]
-                for row in ws.iter_rows(values_only=True)
-                if any(c is not None for c in row)
-            ]
-            if not rows:
+        if is_csv:
+            sheets = {"csv": pd.read_csv(filepath)}
+        else:
+            sheets = pd.read_excel(filepath, sheet_name=None)  # all sheets
+
+        sections: List[ParsedSection] = []
+        for sheet_name, df in sheets.items():
+            if df.empty:
                 continue
-            headers = rows[0]
-            lines = [" | ".join(headers)]
-            # Render each data row as "Header: value" pairs so entity/relationship
-            # extraction sees column semantics, not just positional cells.
-            for row in rows[1:]:
-                pairs = [f"{h}: {v}" for h, v in zip(headers, row) if v]
-                lines.append("; ".join(pairs))
-            sections.append(Section(
-                title=ws.title, text="\n".join(lines), order=order,
-                metadata={"sheet": ws.title, "row_count": len(rows)},
-            ))
-        wb.close()
+            df = _normalize_columns(df)
+            df = df.dropna(how="all")
+            rows = df.to_dict(orient="records")
 
-        return Document(
-            filename=path.name,
-            doc_type=DocumentType.EXCEL,
-            title=path.stem.replace("_", " "),
-            source_path=str(path),
-            sections=sections or [Section(text="", order=0)],
-        )
+            sections.append(
+                ParsedSection(
+                    heading=sheet_name,
+                    text=f"[structured data: {len(rows)} rows from sheet '{sheet_name}']",
+                    source_file=filepath,
+                    route_hint="structured",
+                    structured_rows=rows,
+                    metadata={"columns": list(df.columns), "row_count": len(rows)},
+                )
+            )
+        return sections
