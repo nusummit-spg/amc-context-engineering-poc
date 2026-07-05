@@ -24,7 +24,9 @@ RETURN g.name AS group_name, t.name AS risk_theme
 #    Circular -APPLIES_TO-> ClauseType -AFFECTS-> Scheme
 CIRCULAR_AFFECTED_SCHEMES = """
 MATCH (c:RegulatoryCircular)-[:APPLIES_TO]->(cl:ClauseType)-[a:AFFECTS]->(s:Scheme)
-WHERE c.name = $circular_name OR $circular_name IN coalesce(c.aliases, [])
+WHERE c.name = $circular_name
+   OR $circular_name IN coalesce(c.aliases, [])
+   OR toLower(c.name) CONTAINS toLower($circular_name)
 RETURN c.name AS circular, cl.name AS clause_type, s.name AS scheme,
        a.status AS status, a.action_needed AS action_needed,
        a.source_document_id AS source_document_id
@@ -81,3 +83,25 @@ MATCH (d:Document)-[:TAGGED_AS]->(t:TaxonomyNode)
 WHERE t.path STARTS WITH $path
 RETURN DISTINCT d.document_id AS document_id, d.name AS title, d.category AS category
 """
+
+# 10. Latest circular for a clause type — used when the user says "SEBI's latest circular"
+#     without naming the circular explicitly. Returns results ordered most-recent first.
+LATEST_CIRCULAR_AFFECTED_SCHEMES = """
+MATCH (c:RegulatoryCircular)-[:APPLIES_TO]->(cl:ClauseType)-[a:AFFECTS]->(s:Scheme)
+WHERE cl.name = $clause_name OR $clause_name IN coalesce(cl.aliases, [])
+WITH c, cl, a, s ORDER BY coalesce(c.issued_date, '') DESC
+RETURN c.name AS circular, cl.name AS clause_type, s.name AS scheme,
+       a.status AS status, a.action_needed AS action_needed,
+       a.source_document_id AS source_document_id
+"""
+
+# 11. All issuers belonging to a sector — house_view fallback when no Analyst→COVERS
+#     edges exist yet (e.g. early in ingestion). Case-insensitive sector name match.
+SECTOR_ISSUER_LIST = """
+MATCH (i:Issuer)-[:IN_SECTOR]->(sec:Sector)
+WHERE toLower(sec.name) = toLower($sector_name)
+   OR toLower(sec.name) CONTAINS toLower($sector_name)
+RETURN i.name AS issuer, sec.name AS sector
+ORDER BY i.name
+"""
+
