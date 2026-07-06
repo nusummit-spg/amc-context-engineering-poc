@@ -1,114 +1,54 @@
-import { useState, useEffect } from 'react';
-import Header from './components/Header';
-import QuerySelector from './components/QuerySelector';
-import QueryInputPanel from './components/QueryInputPanel';
-import TraditionalPanel from './components/TraditionalPanel';
-import ContextGraphPanel from './components/ContextGraphPanel';
-import DocumentModal from './components/DocumentModal';
-import queries from './data/queries';
-import corpusOntology from './data/ontology';
-import { fetchTraditionalSearch, fetchContextGraphSearch } from './api/contextgraphApi';
+import { useState, useCallback } from "react";
+import Header from "./components/layout/Header";
+import UploadPanel from "./components/upload/UploadPanel";
+import DocumentModal from "./components/corpus/DocumentModal";
+import ComparePage from "./components/compare/ComparePage";
+import Modal from "./components/common/Modal";
+import { useBackendStatus } from "./hooks/useBackendStatus";
+import "./components/layout/AppShell.css";
 
-function App() {
-  const [mode, setMode] = useState('preset'); // 'preset' | 'custom'
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [openDocId, setOpenDocId] = useState(null);
+export default function App() {
+  const { status: backendStatus, refreshKey: statusRefreshKey } = useBackendStatus();
+  const [openDocumentId, setOpenDocumentId] = useState(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [ingestRefreshKey, setIngestRefreshKey] = useState(0);
 
-  // custom query mode — two fully independent result slots
-  const [customText, setCustomText] = useState('');
-  const [customTrad, setCustomTrad] = useState(null);
-  const [customCg, setCustomCg] = useState(null);
-  const [tradLoading, setTradLoading] = useState(false);
-  const [cgLoading, setCgLoading] = useState(false);
-  const [tradError, setTradError] = useState(null);
-  const [cgError, setCgError] = useState(null);
-
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') setOpenDocId(null);
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+  const handleIngestComplete = useCallback(() => {
+    setIngestRefreshKey((k) => k + 1);
   }, []);
 
-  async function handleRunTraditional(text) {
-    setTradLoading(true);
-    setTradError(null);
-    try {
-      setCustomTrad(await fetchTraditionalSearch(text));
-    } catch (err) {
-      setTradError(err.message);
-    } finally {
-      setTradLoading(false);
-    }
-  }
-
-  async function handleRunContextGraph(text) {
-    setCgLoading(true);
-    setCgError(null);
-    try {
-      setCustomCg(await fetchContextGraphSearch(text));
-    } catch (err) {
-      setCgError(err.message);
-    } finally {
-      setCgLoading(false);
-    }
-  }
-
-  // Both panels always render from this single shape, whether the data
-  // came from the preset buttons or from custom search results.
-  const displayQuery = mode === 'preset'
-    ? queries[activeIndex]
-    : { full: customText || '(no query entered yet)', trad: customTrad, cg: customCg };
-
-  const tradIsLoading = mode === 'custom' && tradLoading;
-  const cgIsLoading = mode === 'custom' && cgLoading;
+  const dataRefreshKey = statusRefreshKey + ingestRefreshKey;
 
   return (
-    <div className="wrap">
-      <Header />
-
-      <div className="mode-tabs">
-        <button className={`mode-tab ${mode === 'preset' ? 'active' : ''}`} onClick={() => setMode('preset')}>
-          Preset Demo Queries
-        </button>
-        <button className={`mode-tab ${mode === 'custom' ? 'active' : ''}`} onClick={() => setMode('custom')}>
-          Custom Query
-        </button>
-      </div>
-
-      {mode === 'preset' && (
-        <QuerySelector queries={queries} activeIndex={activeIndex} onSelect={setActiveIndex} />
-      )}
-
-      {mode === 'custom' && (
-        <QueryInputPanel
-          text={customText}
-          onTextChange={setCustomText}
-          onRunTraditional={handleRunTraditional}
-          onRunContextGraph={handleRunContextGraph}
-          tradLoading={tradLoading}
-          cgLoading={cgLoading}
-        />
-      )}
-
-      {(tradError || cgError) && (
-        <div className="query-error">
-          {tradError && <div>Traditional search error: {tradError}</div>}
-          {cgError && <div>ContextGraph search error: {cgError}</div>}
+    <div className="app-shell">
+      <div className="app-shell__main">
+        <Header status={backendStatus} />
+        <div className="app-shell__content">
+          <div className="app-shell__content-inner">
+            <ComparePage onOpenDocument={setOpenDocumentId} refreshKey={dataRefreshKey} />
+          </div>
         </div>
-      )}
-
-      <div className="split">
-        <TraditionalPanel query={displayQuery} loading={tradIsLoading} onFileClick={setOpenDocId} />
-        <ContextGraphPanel query={displayQuery} ontology={corpusOntology} loading={cgIsLoading} onDocClick={setOpenDocId} />
       </div>
 
-      <footer>Illustrative demo — NuSummit Context Engineering Platform · Asset Management / Mutual Fund scenario</footer>
+      <button
+        className="upload-fab"
+        onClick={() => setUploadOpen(true)}
+        aria-label="Upload documents"
+        title="Upload documents"
+      >
+        <span className="upload-fab__icon" aria-hidden="true">↥</span>
+        <span className="upload-fab__label">Upload</span>
+      </button>
 
-      <DocumentModal docId={openDocId} onClose={() => setOpenDocId(null)} />
+      {uploadOpen && (
+        <Modal title="Upload Documents" eyebrow="Add to the corpus" onClose={() => setUploadOpen(false)}>
+          <UploadPanel onIngestComplete={handleIngestComplete} />
+        </Modal>
+      )}
+
+      {openDocumentId && (
+        <DocumentModal documentId={openDocumentId} onClose={() => setOpenDocumentId(null)} />
+      )}
     </div>
   );
 }
-
-export default App;

@@ -1,0 +1,88 @@
+.tax-tree__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.tax-tree__legend {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tax-tree__swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.tax-tree__swatch--active { background: var(--clay); }
+
+.tax-tree__roots, .tax-node__children {
+  list-style: none;
+  margin: 0; padding: 0;
+}
+
+.tax-node__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-2) 5px 0;
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+
+.tax-node__row:hover { background: var(--paper-sunken); }
+
+.tax-node__row.is-ancestor { background: var(--clay-tint-soft); }
+
+.tax-node__row.is-active {
+  background: var(--clay-tint);
+  box-shadow: inset 2px 0 0 var(--clay);
+}
+
+.tax-node__row.is-selected { outline: 1.5px solid var(--ink-blue); outline-offset: -1px; }
+
+.tax-node__twist {
+  width: 18px; height: 18px;
+  flex-shrink: 0;
+  background: none; border: none;
+  color: var(--ink-faint);
+  font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 4px;
+}
+.tax-node__twist:hover { background: var(--paper-line); }
+.tax-node__twist--leaf { color: var(--paper-line-strong); cursor: default; }
+
+.tax-node__label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  background: none; border: none;
+  text-align: left;
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: var(--ink);
+}
+.tax-node__label:hover { color: var(--clay-strong); }
+
+.tax-node__name {
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tax-node__level {
+  flex-shrink: 0;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.tax-node__children {
+  border-left: 1px dashed var(--paper-line-strong);
+  margin-left: 17px;
+}

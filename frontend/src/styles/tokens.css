@@ -1,0 +1,85 @@
+/* ==========================================================================
+   Design tokens — ContextGraph demo UI
+   A warm, editorial "research desk" theme in the Claude family: unbleached
+   paper backgrounds, a single clay-red accent used sparingly, ink-black text,
+   and a serif/sans pairing that reads like an analyst's notebook rather than
+   a SaaS dashboard.
+   ========================================================================== */
+
+:root {
+  /* ---- Palette -------------------------------------------------------- */
+  --paper: #F7F4EC;          /* app background */
+  --paper-raised: #FFFFFF;   /* cards / panels */
+  --paper-sunken: #EFEBE0;   /* wells, inputs, code blocks */
+  --paper-line: #E4DFD1;     /* hairline borders */
+  --paper-line-strong: #D7D0BC;
+
+  --ink: #23201A;            /* primary text */
+  --ink-soft: #55503F;       /* secondary text */
+  --ink-faint: #8A8371;      /* tertiary / captions */
+
+  --clay: #BD5B3F;           /* primary accent — used sparingly */
+  --clay-strong: #9C4A32;
+  --clay-tint: #F1DCCF;      /* accent wash for backgrounds */
+  --clay-tint-soft: #F8EBE1;
+
+  --ink-blue: #35506B;       /* secondary accent — graph / structure */
+  --ink-blue-tint: #DEE7ED;
+
+  --moss: #4C6B4E;           /* success / compliant */
+  --moss-tint: #DEE7DD;
+  --amber: #A9762A;          /* warning / outdated */
+  --amber-tint: #F1E3C8;
+  --brick: #A23F35;          /* error */
+  --brick-tint: #F2DAD6;
+
+  /* ---- Type ------------------------------------------------------------ */
+  --font-display: "Source Serif 4", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-body: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8375rem;
+  --text-base: 0.9375rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.625rem;
+  --text-2xl: 2.1rem;
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.55;
+
+  /* ---- Space (4px base) -------------------------------------------------*/
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 2.75rem;
+  --space-8: 3.5rem;
+
+  /* ---- Shape ------------------------------------------------------------*/
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(35, 32, 26, 0.06);
+  --shadow-md: 0 4px 16px rgba(35, 32, 26, 0.08), 0 1px 3px rgba(35, 32, 26, 0.06);
+  --shadow-lg: 0 12px 32px rgba(35, 32, 26, 0.14);
+
+  --ease-standard: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --duration-fast: 140ms;
+  --duration-med: 260ms;
+  --duration-slow: 480ms;
+
+  --sidebar-w: 248px;
+  --header-h: 60px;
+}
+
+@media (prefers-color-scheme: dark) {
+  /* Kept intentionally unused for now — app forces light "paper" theme,
+     which is core to the visual identity, not a default we forgot to
+     theme. Declared here so the intent is explicit for future work. */
+}

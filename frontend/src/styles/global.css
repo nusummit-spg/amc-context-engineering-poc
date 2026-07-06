@@ -1,0 +1,153 @@
+@import "./tokens.css";
+
+@font-face {
+  font-family: "Source Serif 4";
+  src: local("Source Serif 4"), local("Source Serif Pro");
+  font-display: swap;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(35,32,26,0.035) 1px, transparent 0);
+  background-size: 22px 22px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  margin: 0 0 var(--space-2);
+  letter-spacing: -0.01em;
+}
+
+h1 { font-size: var(--text-2xl); }
+h2 { font-size: var(--text-xl); }
+h3 { font-size: var(--text-lg); }
+h4 { font-size: var(--text-md); }
+
+p { margin: 0 0 var(--space-3); }
+
+a { color: var(--clay-strong); }
+
+code, pre, .mono { font-family: var(--font-mono); }
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--clay-tint);
+  color: var(--clay-strong);
+}
+
+/* Scrollbars — thin, warm, unobtrusive */
+* { scrollbar-width: thin; scrollbar-color: var(--paper-line-strong) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: var(--paper-line-strong); border-radius: var(--radius-pill); }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* Visible keyboard focus everywhere, no exceptions */
+:focus-visible {
+  outline: 2px solid var(--clay);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---- Small shared utility classes -------------------------------------- */
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.card {
+  background: var(--paper-raised);
+  border: 1px solid var(--paper-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--paper-sunken);
+  color: var(--ink-soft);
+  border: 1px solid var(--paper-line-strong);
+  white-space: nowrap;
+}
+
+.badge--clay { background: var(--clay-tint); color: var(--clay-strong); border-color: transparent; }
+.badge--blue { background: var(--ink-blue-tint); color: var(--ink-blue); border-color: transparent; }
+.badge--moss { background: var(--moss-tint); color: var(--moss); border-color: transparent; }
+.badge--amber { background: var(--amber-tint); color: var(--amber); border-color: transparent; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: var(--ink);
+  color: var(--paper);
+  transition: transform var(--duration-fast) var(--ease-standard),
+              background var(--duration-fast) var(--ease-standard);
+}
+.btn:hover { background: var(--clay-strong); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn--ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--paper-line-strong);
+}
+.btn--ghost:hover { background: var(--paper-sunken); color: var(--ink); }
+
+.btn--clay { background: var(--clay); }
+.btn--clay:hover { background: var(--clay-strong); }
+
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.status-dot--live { background: var(--moss); box-shadow: 0 0 0 3px var(--moss-tint); }
+.status-dot--demo { background: var(--amber); box-shadow: 0 0 0 3px var(--amber-tint); }
+.status-dot--checking { background: var(--ink-faint); }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
