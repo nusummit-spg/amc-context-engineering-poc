@@ -1,0 +1,318 @@
+.compare { display: flex; flex-direction: column; gap: var(--space-5); }
+
+/* ---- Query picker -------------------------------------------------- */
+
+.compare__intro { padding: var(--space-4) var(--space-5); }
+
+.compare__query-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.compare__demo-tabs { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+.compare__demo-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--paper-line-strong);
+  background: var(--paper-raised);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-soft);
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              background var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard);
+}
+.compare__demo-tab:hover { border-color: var(--clay); }
+.compare__demo-tab.is-active { background: var(--clay); color: white; border-color: var(--clay); }
+.compare__demo-tab.is-active .eyebrow { color: rgba(255, 255, 255, 0.75); }
+
+.compare__custom-form { display: flex; gap: var(--space-2); flex: 1; min-width: 260px; flex-wrap: wrap; }
+
+.compare__custom-form input {
+  flex: 1;
+  min-width: 220px;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--paper-line-strong);
+  background: var(--paper-sunken);
+  font-size: var(--text-sm);
+  color: var(--ink);
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+.compare__custom-form input:focus { outline: 2px solid var(--clay); outline-offset: 1px; }
+.compare__custom-form input::placeholder { color: var(--ink-faint); }
+
+.compare__run-buttons { display: flex; gap: var(--space-2); flex-shrink: 0; }
+.compare__run-buttons .btn { white-space: nowrap; }
+
+.compare__query-text {
+  margin: var(--space-4) 0 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  color: var(--ink);
+}
+.compare__query-text .eyebrow { display: block; margin-bottom: 2px; }
+
+/* ---- Two-column comparison grid ------------------------------------ */
+
+.compare__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  align-items: stretch;
+}
+
+.compare__col {
+  padding: var(--space-5);
+  border-top: 3px solid transparent;
+  animation: compare-rise-in var(--duration-med) var(--ease-standard);
+}
+.compare__col--trad { border-top-color: var(--ink-blue); }
+.compare__col--cg { border-top-color: var(--clay); }
+
+.compare__col-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--paper-line);
+}
+.compare__col-head h3 { flex: 1; min-width: 0; margin: 0; }
+
+.compare__dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.compare__dot--trad { background: var(--ink-blue); }
+.compare__dot--cg { background: var(--clay); }
+
+/* ---- ContextGraph sub-tabs (Answer / Ontology) ---------------------- */
+
+.compare__cg-tabs {
+  display: flex;
+  gap: var(--space-5);
+  border-bottom: 1px solid var(--paper-line);
+  margin-bottom: var(--space-4);
+}
+
+.compare__cg-tab {
+  background: none;
+  border: none;
+  padding: var(--space-1) 0 var(--space-2);
+  margin-bottom: -1px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-faint);
+  border-bottom: 2px solid transparent;
+  transition: color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+}
+.compare__cg-tab:hover { color: var(--ink); }
+.compare__cg-tab.is-active { color: var(--clay-strong); border-bottom-color: var(--clay); }
+
+/* ---- Shared states --------------------------------------------------- */
+
+.compare__empty {
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+  text-align: center;
+  padding: var(--space-6) var(--space-3);
+  margin: 0;
+}
+
+/* ---- Traditional column: file list ----------------------------------- */
+
+.compare__filelist {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.compare__file {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  background: var(--paper-sunken);
+  border: 1px solid var(--paper-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              background var(--duration-fast) var(--ease-standard);
+}
+.compare__file:hover { border-color: var(--clay); background: var(--clay-tint-soft); }
+
+.compare__file-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compare__snippet {
+  margin: 6px 0 0;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  font-style: italic;
+  line-height: var(--leading-normal);
+}
+
+.compare__warn {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  background: var(--amber-tint);
+  color: var(--amber);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* ---- Shared metric row ------------------------------------------------ */
+
+.compare__metric-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px dashed var(--paper-line-strong);
+}
+
+.compare__metric {
+  flex: 1;
+  min-width: 110px;
+  border: 1px solid var(--paper-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper-sunken);
+}
+.compare__metric-value { display: block; font-family: var(--font-display); font-size: var(--text-lg); font-weight: 600; }
+.compare__metric-label { display: block; font-size: var(--text-xs); color: var(--ink-faint); }
+.compare__metric--moss .compare__metric-value { color: var(--moss); }
+.compare__metric--amber .compare__metric-value { color: var(--amber); }
+
+/* ---- ContextGraph column: answer -------------------------------------- */
+
+.compare__answer { animation: compare-fade-in var(--duration-med) var(--ease-standard); }
+
+.compare__answer-text {
+  margin: var(--space-3) 0 var(--space-4);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--ink);
+}
+
+.compare__table-wrap { overflow-x: auto; margin-bottom: var(--space-4); }
+.compare__table { border-collapse: collapse; width: 100%; font-size: var(--text-sm); }
+.compare__table th, .compare__table td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--paper-line); white-space: nowrap; }
+.compare__table th { font-family: var(--font-mono); font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-faint); }
+
+.compare__compliance {
+  background: var(--amber-tint);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.compare__compliance p { margin: 4px 0 0; color: var(--amber); font-weight: 600; font-size: var(--text-sm); }
+
+.compare__citations ul {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.compare__source-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+  text-align: left;
+}
+.compare__source-btn:hover { color: var(--clay-strong); text-decoration: underline; }
+
+.compare__latency {
+  margin: var(--space-4) 0 0;
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--paper-line-strong);
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+}
+
+/* ---- ContextGraph column: ontology view -------------------------------- */
+
+.compare__ontology { display: flex; flex-direction: column; gap: var(--space-4); animation: compare-fade-in var(--duration-med) var(--ease-standard); }
+
+.compare__ontology-note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  line-height: var(--leading-normal);
+}
+
+.compare__ontology-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.compare__ontology-panel {
+  border: 1px solid var(--paper-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--paper-raised);
+}
+.compare__ontology-panel h4 { margin-bottom: var(--space-2); font-size: var(--text-sm); }
+
+.compare__mini-tree { max-height: 300px; overflow-y: auto; }
+.compare__mini-graph .kgraph__legend { display: none; }
+.compare__mini-graph .kgraph__canvas-wrap { max-height: 300px; overflow-y: auto; }
+
+/* ---- Motion ------------------------------------------------------------ */
+
+@keyframes compare-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes compare-rise-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compare__col, .compare__answer, .compare__ontology { animation: none; }
+}
+
+/* ---- Responsive ---------------------------------------------------------- */
+
+@media (max-width: 1000px) {
+  .compare__grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 700px) {
+  .compare__ontology-grid { grid-template-columns: 1fr; }
+  .compare__query-picker { flex-direction: column; align-items: stretch; }
+  .compare__run-buttons { flex-direction: column; }
+  .compare__run-buttons .btn { width: 100%; }
+}

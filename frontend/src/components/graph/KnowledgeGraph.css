@@ -1,0 +1,89 @@
+.kgraph { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.kgraph__toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.kgraph__legend {
+  display: flex; flex-wrap: wrap; gap: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+.kgraph__legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.kgraph__swatch { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+
+.kgraph__clear { font-size: var(--text-xs); padding: 5px 12px; }
+
+.kgraph__canvas-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--paper-line);
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(var(--paper-sunken) 1px, transparent 1px) 0 0/100% 32px,
+    var(--paper-raised);
+}
+
+.kgraph__svg { display: block; }
+
+.kgraph__edge path {
+  stroke: var(--paper-line-strong);
+  stroke-width: 1.4;
+  transition: stroke var(--duration-fast) var(--ease-standard), stroke-width var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard);
+}
+.kgraph__edge--connected path, .kgraph__edge--query path { stroke: var(--clay); stroke-width: 2.2; }
+.kgraph__edge--dim path { opacity: 0.12; }
+.kgraph__edge--dim-soft path { opacity: 0.28; }
+
+.kgraph__edge rect { fill: var(--paper-raised); stroke: var(--paper-line-strong); stroke-width: 1; }
+.kgraph__edge--connected rect, .kgraph__edge--query rect { stroke: var(--clay); }
+.kgraph__edge text {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--ink-soft);
+}
+
+.kgraph__node { cursor: pointer; }
+.kgraph__node circle {
+  stroke: var(--paper-raised);
+  stroke-width: 2;
+  transition: r var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard);
+}
+.kgraph__node-label {
+  font-size: 10.5px;
+  fill: var(--ink-soft);
+  font-family: var(--font-body);
+  transition: opacity var(--duration-fast) var(--ease-standard), fill var(--duration-fast) var(--ease-standard);
+}
+
+.kgraph__node--selected circle { r: 12; stroke: var(--clay); }
+.kgraph__node--selected .kgraph__node-label { fill: var(--ink); font-weight: 700; }
+
+.kgraph__node--connected circle { stroke: var(--clay); }
+.kgraph__node--connected .kgraph__node-label { fill: var(--ink); font-weight: 600; }
+
+.kgraph__node--query circle { stroke: var(--clay); r: 10.5; }
+.kgraph__node--query .kgraph__node-label { fill: var(--clay-strong); font-weight: 700; }
+
+.kgraph__node--dim circle, .kgraph__node--dim .kgraph__node-label { opacity: 0.18; }
+.kgraph__node--dim-soft circle, .kgraph__node--dim-soft .kgraph__node-label { opacity: 0.35; }
+
+.kgraph__node:focus-visible circle { outline: 2px solid var(--ink-blue); outline-offset: 2px; }
+
+.kgraph__detail {
+  border: 1px solid var(--paper-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  background: var(--paper-sunken);
+  min-height: 52px;
+  font-size: var(--text-sm);
+}
+
+.kgraph__detail-head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
+
+.kgraph__paths { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.kgraph__paths .mono { font-family: var(--font-mono); font-size: var(--text-xs); }
+.kgraph__paths-rel { color: var(--clay-strong); font-family: var(--font-mono); font-size: var(--text-xs); }
+
+.kgraph__hint { margin: 0; color: var(--ink-faint); }

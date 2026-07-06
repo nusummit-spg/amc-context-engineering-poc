@@ -1,0 +1,76 @@
+.app-shell {
+  position: relative;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-shell__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+}
+
+.app-shell__content-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+@media (max-width: 900px) {
+  .app-shell__content { padding: var(--space-4); }
+}
+
+/* ---- Floating upload button -------------------------------------------- */
+
+.upload-fab {
+  position: fixed;
+  right: var(--space-6);
+  bottom: var(--space-6);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--clay);
+  color: var(--paper-raised);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-lg);
+  transition: background var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-standard);
+}
+
+.upload-fab:hover { background: var(--clay-strong); }
+.upload-fab:active { transform: translateY(1px); }
+
+.upload-fab__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px; height: 20px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+@media (max-width: 560px) {
+  .upload-fab {
+    right: var(--space-4);
+    bottom: var(--space-4);
+    padding: var(--space-3);
+    border-radius: 50%;
+  }
+  .upload-fab__label { display: none; }
+  .upload-fab__icon { width: 22px; height: 22px; font-size: 18px; }
+}

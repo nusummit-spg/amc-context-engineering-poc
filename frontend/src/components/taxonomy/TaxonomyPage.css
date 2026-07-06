@@ -1,0 +1,45 @@
+.taxonomy-page { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.taxonomy-page__query { padding: var(--space-4); }
+.taxonomy-page__query form { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.taxonomy-page__query input {
+  flex: 1; min-width: 240px;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--paper-line-strong);
+  background: var(--paper-sunken);
+  font-size: var(--text-sm);
+}
+.taxonomy-page__query input:focus { outline: 2px solid var(--clay); outline-offset: 1px; }
+
+.taxonomy-page__grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.taxonomy-page__tree { padding: var(--space-4); max-height: 640px; overflow-y: auto; }
+.taxonomy-page__docs { padding: var(--space-4); min-height: 200px; }
+
+.taxonomy-page__docs-head { margin-bottom: var(--space-3); }
+
+.taxonomy-page__doc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.taxonomy-page__doc-list button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--paper-sunken);
+  border: 1px solid var(--paper-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  font-size: var(--text-sm);
+}
+.taxonomy-page__doc-list button:hover { border-color: var(--clay); }
+
+@media (max-width: 900px) {
+  .taxonomy-page__grid { grid-template-columns: 1fr; }
+}
