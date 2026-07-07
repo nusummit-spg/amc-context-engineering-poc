@@ -1,91 +1,79 @@
-"""
-NER + Entity Extractor — [NER + Entity Extractor] stage. Two-tier:
-Layer A: deterministic regex/spaCy rules (ISIN, AUM/NAV figures, dates) — free, instant.
-Layer B: GLiNER zero-shot for named entities that don't follow a fixed pattern
-(scheme names, issuers, fund managers, benchmarks).
-"""
-import re
-from dataclasses import dataclass
-from typing import List
-import spacy
-from spacy.pipeline import EntityRuler
-from gliner import GLiNER
+"""NER + Entity Extractor (LLM-based AMC-domain NER)."""
+import logging
 
-ISIN_PATTERN = r"\bIN[EF][A-Z0-9]{9}\b"
-AUM_PATTERN = r"\b(?:₹|Rs\.?)?\s?[\d,]+(?:\.\d+)?\s?(?:Cr|Crore|Lakh|Lac|bn|mn)\b"
-DATE_PATTERN = r"\b\d{1,2}[-/](?:\d{1,2}|[A-Za-z]{3,9})[-/]\d{2,4}\b"
+from pydantic import BaseModel, Field
 
-MF_LABELS = [
-    "mutual fund scheme", "fund house", "benchmark index", "ISIN",
-    "credit rating", "asset class", "fund manager", "issuer",
-    "issuer group", "regulatory circular",
-]
+from app.core.llm import LLMClient
+from app.prompts import get_prompt
+from app.schemas.documents import Document
 
-_gliner_model: GLiNER | None = None
+logger = logging.getLogger("extraction")
 
-
-@dataclass
-class ExtractedEntity:
-    text: str
-    label: str
-    start: int
-    end: int
-    score: float
-    source: str  # "layer_a_rules" | "layer_b_gliner"
-
-
-def _get_gliner() -> GLiNER:
-    global _gliner_model
-    if _gliner_model is None:
-        _gliner_model = GLiNER.from_pretrained("urchade/gliner_medium-v2.1")
-    return _gliner_model
+_EXTRACTION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "entities": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "Scheme", "Issuer", "IssuerGroup", "Analyst", "Sector",
+                            "RiskTheme", "RegulatoryCircular", "ClauseType",
+                        ],
+                    },
+                    "surface_form": {"type": "string"},
+                    "normalized_name": {"type": "string"},
+                    "properties": {"type": "object", "additionalProperties": True},
+                },
+                "required": ["type", "surface_form", "normalized_name"],
+                "additionalProperties": False,
+            },
+        }
+    },
+    "required": ["entities"],
+    "additionalProperties": False,
+}
 
 
-def _build_rule_pipeline(gazetteer_terms: List[str] | None = None):
-    nlp = spacy.blank("en")
-    ruler: EntityRuler = nlp.add_pipe("entity_ruler")
-    patterns = [{"label": "ISIN", "pattern": [{"TEXT": {"REGEX": ISIN_PATTERN}}]}]
-    if gazetteer_terms:
-        patterns += [{"label": "FUND_HOUSE_OR_SCHEME", "pattern": t} for t in gazetteer_terms]
-    ruler.add_patterns(patterns)
-    return nlp
+class ExtractedMention(BaseModel):
+    type: str
+    surface_form: str
+    normalized_name: str
+    properties: dict = Field(default_factory=dict)
+    context: str = ""
 
 
-def extract_layer_a(text: str, gazetteer_terms: List[str] | None = None) -> List[ExtractedEntity]:
-    nlp = _build_rule_pipeline(gazetteer_terms)
-    doc = nlp(text)
-    entities = [
-        ExtractedEntity(text=e.text, label=e.label_, start=e.start_char, end=e.end_char,
-                         score=1.0, source="layer_a_rules")
-        for e in doc.ents
-    ]
-    for match in re.finditer(AUM_PATTERN, text):
-        entities.append(ExtractedEntity(text=match.group(), label="AUM_OR_NAV",
-                                         start=match.start(), end=match.end(), score=1.0, source="layer_a_rules"))
-    for match in re.finditer(DATE_PATTERN, text):
-        entities.append(ExtractedEntity(text=match.group(), label="DATE",
-                                         start=match.start(), end=match.end(), score=1.0, source="layer_a_rules"))
-    return entities
+class EntityExtractor:
+    def __init__(self, llm: LLMClient):
+        self._llm = llm
 
+    async def extract(self, document: Document) -> list[ExtractedMention]:
+        prompt = get_prompt("entity_extraction")
+        mentions: list[ExtractedMention] = []
+        seen: set[tuple[str, str]] = set()
 
-def extract_layer_b(text: str, threshold: float = 0.5) -> List[ExtractedEntity]:
-    model = _get_gliner()
-    raw = model.predict_entities(text, MF_LABELS, threshold=threshold)
-    return [
-        ExtractedEntity(text=r["text"], label=r["label"], start=r["start"], end=r["end"],
-                         score=r["score"], source="layer_b_gliner")
-        for r in raw
-    ]
-
-
-def extract_entities(text: str, gazetteer_terms: List[str] | None = None) -> List[ExtractedEntity]:
-    """Merged, deduped Layer A + Layer B output — the input to resolver.py."""
-    layer_a = extract_layer_a(text, gazetteer_terms)
-    layer_b = extract_layer_b(text)
-
-    merged = {}
-    for e in layer_a:
-        merged[e.text.lower()] = e
-    for e in layer_b:
-        merged.setdefault(e.text.lower(), e)  # Layer A wins on collision (deterministic > probabilistic)
-    return list(merged.values())
+        # Extract per-section to keep prompts small and context tight.
+        for section in document.sections:
+            if not section.text.strip():
+                continue
+            rendered = prompt.render(content=section.text[:6000])
+            try:
+                result = await self._llm.complete_structured(
+                    rendered, _EXTRACTION_SCHEMA, system=prompt.system, fast=True,
+                )
+            except Exception as exc:
+                logger.warning("Entity extraction failed on section of %s: %s",
+                               document.filename, exc)
+                continue
+            for raw in result.get("entities", []):
+                key = (raw["type"], raw["normalized_name"].lower())
+                if key in seen:
+                    continue
+                seen.add(key)
+                mentions.append(ExtractedMention(
+                    **raw, context=section.text[:300],
+                ))
+        return mentions

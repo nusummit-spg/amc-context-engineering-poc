@@ -6,13 +6,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.app.api import deps
-from backend.app.api.routes import docs, graph, ingest, query, status, taxonomy
-from backend.app.config import get_settings
-from backend.app.core.errors import AppError, app_error_handler
-from backend.app.core.logging import RequestLoggingMiddleware, setup_logging
-from backend.app.graph.schema import apply_schema
-from backend.app.tasks.queue import ingest_queue
+from app.api import deps
+from app.api.routes import docs, graph, ingest, query, status, taxonomy
+from app.config import get_settings
+from app.core.errors import AppError, app_error_handler
+from app.core.logging import RequestLoggingMiddleware, setup_logging
+from app.graph.schema import apply_schema
+from app.tasks.queue import ingest_queue
 
 logger = logging.getLogger("app")
 

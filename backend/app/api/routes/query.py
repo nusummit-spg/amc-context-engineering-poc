@@ -12,8 +12,8 @@ import time
 
 from fastapi import APIRouter, Depends
 
-from backend.app.api.deps import Container, get_container
-from backend.app.schemas.api import QueryRequest, QueryResponse, TraditionalResult
+from app.api.deps import Container, get_container
+from app.schemas.api import QueryRequest, QueryResponse, TraditionalResult
 
 router = APIRouter(prefix="/query", tags=["query"])
 

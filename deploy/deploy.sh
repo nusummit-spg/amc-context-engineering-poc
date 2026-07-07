@@ -11,6 +11,10 @@
 # Re-runnable: skips resources that already exist. Review before running.
 set -euo pipefail
 
+# Git Bash / MSYS on Windows rewrites args like "/dev/microsoft-app-id" into
+# Windows paths, breaking AWS names/ARNs. Disable that conversion for this run.
+export MSYS_NO_PATHCONV=1
+
 # ---------------- config ----------------
 REGION="${REGION:-ap-south-1}"
 NAME="${NAME:-amc-demo}"
@@ -99,7 +103,7 @@ if [ "$INSTANCE_ID" = "None" ] || [ -z "$INSTANCE_ID" ]; then
     --key-name "$KEY_NAME" --security-group-ids "$SG_ID" \
     --iam-instance-profile Name="$PROFILE_NAME" \
     --block-device-mappings 'DeviceName=/dev/xvda,Ebs={VolumeSize=30,VolumeType=gp3}' \
-    --user-data "file://$HERE/ec2-bootstrap.sh" \
+    --user-data "$(cat "$HERE/ec2-bootstrap.sh")" \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$NAME}]" \
     --region "$REGION" --query 'Instances[0].InstanceId' --output text)"
 else
