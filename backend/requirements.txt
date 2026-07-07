@@ -12,6 +12,9 @@ anthropic>=0.90
 neo4j>=5.24
 qdrant-client[fastembed]>=1.12
 
+# --- AWS (prod: SSM secret load) ---
+boto3>=1.34
+
 # --- Content ingestion & parsing (WS2) ---
 pymupdf>=1.24
 python-docx>=1.1
