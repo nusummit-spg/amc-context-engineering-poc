@@ -10,7 +10,7 @@ services:
       # t3.micro (1GB) tuning — cap the JVM heap so Neo4j doesn't grab 50% of RAM.
       NEO4J_server_memory_heap_initial__size: 128m
       NEO4J_server_memory_heap_max__size: 256m
-      NEO4J_server_memory_pagecache__size: 64m
+      NEO4J_server_memory_pagecache_size: 64m
     deploy:
       resources:
         limits:
