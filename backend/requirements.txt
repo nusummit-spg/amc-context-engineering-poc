@@ -10,7 +10,8 @@ anthropic>=0.90
 
 # --- Data stores ---
 neo4j>=5.24
-qdrant-client[fastembed]>=1.12
+faiss-cpu>=1.8
+fastembed>=0.3
 
 # --- AWS (prod: SSM secret load) ---
 boto3>=1.34

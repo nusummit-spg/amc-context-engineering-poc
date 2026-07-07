@@ -41,10 +41,8 @@ class Settings(BaseSettings):
     neo4j_password: str = "contextgraph"
     neo4j_database: str = "neo4j"
 
-    # --- Qdrant ---
-    qdrant_url: str = "http://localhost:6333"
-    qdrant_api_key: str = ""
-    qdrant_collection: str = "amc_chunks"
+    # --- Vector store (FAISS, in-process, persisted to disk) ---
+    faiss_dir: str = "./data/faiss"                  # index.faiss + payloads.json live here
     embedding_model: str = "BAAI/bge-small-en-v1.5"  # fastembed local model
     embedding_dim: int = 384
 

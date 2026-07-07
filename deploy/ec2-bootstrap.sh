@@ -25,6 +25,12 @@ curl -fsSL \
   -o /usr/local/lib/docker/cli-plugins/docker-compose
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
+# buildx — required by `docker compose build` (>=0.17). AL2023's docker pkg omits it.
+curl -fsSL \
+  https://github.com/docker/buildx/releases/download/v0.17.1/buildx-v0.17.1.linux-amd64 \
+  -o /usr/local/lib/docker/cli-plugins/docker-buildx
+chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
+
 # Marker so deploy.sh can poll for bootstrap completion.
 touch /home/ec2-user/.bootstrap-done
 chown ec2-user:ec2-user /home/ec2-user/.bootstrap-done
