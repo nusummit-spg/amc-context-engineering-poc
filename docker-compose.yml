@@ -46,6 +46,7 @@ services:
       UPLOAD_DIR: /data/uploads
     volumes:
       - ./data:/data
+      - hf_cache:/root/.cache   # persist GLiNER + sentence-transformer downloads
     depends_on:
       neo4j:
         condition: service_healthy
