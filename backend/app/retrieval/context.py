@@ -24,9 +24,9 @@ WS5d changes vs. original:
 """
 import logging
 
-from backend.app.config import get_settings
-from backend.app.ingestion.chunker import approx_tokens
-from backend.app.schemas.query import (
+from app.config import get_settings
+from app.ingestion.chunker import approx_tokens
+from app.schemas.query import (
     AssembledContext,
     QueryType,
     RetrievalResult,

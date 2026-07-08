@@ -1,15 +1,15 @@
 """WS3 — /taxonomy endpoints: tree fetch, node docs, query-highlight paths."""
 from fastapi import APIRouter, Depends, Query
 
-from backend.app.api.deps import Container, get_container
-from backend.app.core.errors import NotFoundError
-from backend.app.graph import cypher_library as cql
-from backend.app.schemas.api import (
+from app.api.deps import Container, get_container
+from app.core.errors import NotFoundError
+from app.graph import cypher_library as cql
+from app.schemas.api import (
     TaxonomyNodeDocsResponse,
     TaxonomyNodeOut,
     TaxonomyTreeResponse,
 )
-from backend.app.schemas.taxonomy import TaxonomyNode
+from app.schemas.taxonomy import TaxonomyNode
 
 router = APIRouter(prefix="/taxonomy", tags=["taxonomy"])
 

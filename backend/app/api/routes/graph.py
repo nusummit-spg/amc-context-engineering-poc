@@ -1,9 +1,9 @@
 """WS3 — /graph endpoints: full graph fetch, node neighbourhood, traversal highlight."""
 from fastapi import APIRouter, Depends, Query
 
-from backend.app.api.deps import Container, get_container
-from backend.app.core.errors import NotFoundError
-from backend.app.schemas.api import GraphEdgeOut, GraphNodeOut, GraphResponse
+from app.api.deps import Container, get_container
+from app.core.errors import NotFoundError
+from app.schemas.api import GraphEdgeOut, GraphNodeOut, GraphResponse
 
 router = APIRouter(prefix="/graph", tags=["graph"])
 

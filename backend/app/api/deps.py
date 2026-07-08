@@ -3,20 +3,20 @@ exposes FastAPI dependencies."""
 import json
 from pathlib import Path
 
-from backend.app.config import get_settings
-from backend.app.core.llm import get_llm_client
-from backend.app.extraction.classifier import TaxonomyClassifier
-from backend.app.extraction.entities import EntityExtractor
-from backend.app.extraction.relationships import RelationshipExtractor
-from backend.app.extraction.resolver import EntityResolver
-from backend.app.graph.client import get_graph_client
-from backend.app.ingestion.pipeline import IngestionPipeline
-from backend.app.retrieval.context import ContextAssembler
-from backend.app.retrieval.intent import IntentClassifier
-from backend.app.retrieval.orchestrator import RetrievalOrchestrator
-from backend.app.retrieval.synthesizer import Synthesizer
-from backend.app.retrieval.traversal import GraphTraversal
-from backend.app.schemas.taxonomy import TaxonomyNode, TaxonomyTree
+from app.config import get_settings
+from app.core.llm import get_llm_client
+from app.extraction.classifier import TaxonomyClassifier
+from app.extraction.entities import EntityExtractor
+from app.extraction.relationships import RelationshipExtractor
+from app.extraction.resolver import EntityResolver
+from app.graph.client import get_graph_client
+from app.ingestion.pipeline import IngestionPipeline
+from app.retrieval.context import ContextAssembler
+from app.retrieval.intent import IntentClassifier
+from app.retrieval.orchestrator import RetrievalOrchestrator
+from app.retrieval.synthesizer import Synthesizer
+from app.retrieval.traversal import GraphTraversal
+from app.schemas.taxonomy import TaxonomyNode, TaxonomyTree
 
 SEEDS_DIR = Path(__file__).resolve().parents[2] / "seeds"
 ALIAS_SEED_PATH = SEEDS_DIR / "entity_aliases.json"
@@ -37,7 +37,7 @@ class Container:
     """Singleton service container, built once in the lifespan handler."""
 
     def __init__(self) -> None:
-        from backend.app.vector.client import get_vector_store
+        from app.vector.client import get_vector_store
 
         self.settings = get_settings()
         self.taxonomy = load_taxonomy()

@@ -1,0 +1,6 @@
+# Thin client — the UI only calls the FastAPI backend over HTTP.
+# All ML/retrieval (torch, faiss, gliner, sentence-transformers, neo4j, Claude)
+# lives in the API now, so none of it is needed here.
+streamlit
+requests
+pandas

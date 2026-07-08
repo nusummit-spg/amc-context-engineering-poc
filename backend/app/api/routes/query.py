@@ -1,73 +1,142 @@
-"""WS3 — /query endpoint: runs the retrieval engine, returns structured response.
+"""WS3 — /query endpoints, powered by the merged context-engineering engine.
 
-mode=contextgraph -> full 7-step flow (graph + scoped vector + synthesis)
-mode=traditional  -> flat vector search only (comparison baseline)
-mode=both         -> both sides in one call (drives the split-screen UI)
+  POST /query/traditional   -> engine.retrieval.traditional_rag  (flat vector + LLM)
+  POST /query/contextgraph  -> engine.retrieval.hybrid_graphrag  (graph + vector + LLM)
+  POST /query               -> mode=traditional|contextgraph|both
+
+The engine returns plain dicts; these handlers adapt them into the QueryResponse
+schema the API and frontend already expect. The engine is self-contained (its own
+FAISS store + Neo4j via app.engine.config), so these routes don't use the old
+orchestrator/container.
 """
-import time
+import asyncio
+from functools import lru_cache
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, HTTPException
 
-from backend.app.api.deps import Container, get_container
-from backend.app.schemas.api import QueryRequest, QueryResponse, TraditionalResult
+from app.engine import config as engine_config
+from app.engine import faiss_store as engine_faiss
+from app.engine import graph_store, retrieval
+from app.schemas.api import QueryRequest, QueryResponse, TraditionalResult
+from app.schemas.query import SourceAttribution, SynthesisOutput
 
 router = APIRouter(prefix="/query", tags=["query"])
 
 
-def _traditional_result(hits: list[dict]) -> TraditionalResult:
-    files: list[dict] = []
-    seen: set[str] = set()
-    for h in hits:
-        doc_id = h.get("document_id", "")
-        if doc_id in seen:
-            continue
-        seen.add(doc_id)
-        files.append({
-            "name": h.get("document_title") or doc_id,
-            "document_id": doc_id,
-            "score": round(h.get("score", 0.0), 3),
-            "snippet": (h.get("text") or "")[:220],
-        })
-    return TraditionalResult(
-        files=files,
-        snippet=(hits[0].get("text", "")[:300] if hits else None),
+@lru_cache(maxsize=1)
+def _store():
+    """Cached FAISS store loaded from the prebuilt amc_master index.
+
+    faiss_store's own INDEXES_DIR default resolves wrong once vendored into the
+    package tree; point it at config.FAISS_DIR (app/engine/faiss_indexes), the
+    same override the original app.py did.
+    """
+    engine_faiss.INDEXES_DIR = engine_config.FAISS_DIR
+    return engine_faiss.BrochureFAISSStore("amc_master")
+
+
+def _get_store():
+    try:
+        return _store()
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=f"FAISS index unavailable: {exc}")
+
+
+def _confidence(label: str | None) -> str:
+    text = (label or "").lower()
+    return "high" if "high" in text else "medium" if "medium" in text else "low"
+
+
+# ---------- adapters: engine dicts -> QueryResponse ----------
+
+def _traditional_response(query: str, result: dict) -> QueryResponse:
+    docs = result.get("docs", [])
+    resp = QueryResponse(query=query, mode="traditional")
+    resp.traditional = TraditionalResult(
+        files=[{
+            "name": d.get("name"),
+            "document_id": d.get("name"),
+            "score": d.get("score"),
+            "snippet": d.get("snippet"),
+        } for d in docs],
+        snippet=result.get("answer"),
         metrics={
-            "docs_returned": len(files),
-            "consolidation": "manual",
-            "note": "No consolidated answer — each document must be reviewed individually.",
+            "docs_returned": len(docs),
+            "retrieve_ms": int(result.get("retrieve_time", 0) * 1000),
+            "llm_ms": int(result.get("llm_time", 0) * 1000),
+            "note": "Vanilla RAG — flat vector search + LLM over retrieved passages.",
         },
     )
+    resp.latency_ms = int(result.get("total_time", 0) * 1000)
+    return resp
+
+
+def _contextgraph_response(query: str, result: dict, entity_summary: list | None = None) -> QueryResponse:
+    docs = result.get("docs", [])
+    edges = result.get("graph_edges", [])
+    resp = QueryResponse(query=query, mode="contextgraph")
+    resp.answer = SynthesisOutput(
+        answer=result.get("answer") or "No answer generated.",
+        confidence=_confidence(result.get("confidence_label")),
+        compliance_note=result.get("confidence_label"),
+    )
+    resp.sources = [
+        SourceAttribution(
+            source_index=i + 1,
+            document_id=d.get("name", ""),
+            document_title=d.get("name", ""),
+            snippet=d.get("snippet"),
+        )
+        for i, d in enumerate(docs)
+    ]
+    resp.graph_highlight = {
+        "node_names": sorted({str(n) for n in result.get("graph_nodes", [])}),
+        "relationships": sorted({e.get("rel") for e in edges if e.get("rel")}),
+        "entities": sorted(result.get("matched_entity_texts", []) or []),
+        "labels": sorted(result.get("active_labels", []) or []),
+        # Full edges + entity-type summary so a thin UI client can render the graph.
+        "edges": [{"s": e.get("s"), "rel": e.get("rel"), "o": e.get("o"), "conf": e.get("conf")}
+                  for e in edges],
+        "entity_summary": entity_summary or [],
+    }
+    resp.latency_ms = int(result.get("total_time", 0) * 1000)
+    return resp
+
+
+# ---------- endpoints ----------
+
+@router.post("/traditional", response_model=QueryResponse)
+async def run_traditional(request: QueryRequest) -> QueryResponse:
+    store = _get_store()
+    result = await asyncio.to_thread(retrieval.traditional_rag, request.query, store)
+    return _traditional_response(request.query, result)
+
+
+@router.post("/contextgraph", response_model=QueryResponse)
+async def run_contextgraph(request: QueryRequest) -> QueryResponse:
+    store = _get_store()
+    result = await asyncio.to_thread(retrieval.hybrid_graphrag, request.query, store)
+    summary = await asyncio.to_thread(graph_store.get_entity_type_summary, result.get("active_labels"))
+    return _contextgraph_response(request.query, result, summary)
 
 
 @router.post("", response_model=QueryResponse)
-async def run_query(
-    request: QueryRequest,
-    container: Container = Depends(get_container),
-) -> QueryResponse:
-    start = time.perf_counter()
-    response = QueryResponse(query=request.query, mode=request.mode)
+async def run_query(request: QueryRequest) -> QueryResponse:
+    """Combined endpoint — mode selects one or both sides."""
+    store = _get_store()
+    resp = QueryResponse(query=request.query, mode=request.mode)
 
     if request.mode in ("traditional", "both"):
-        hits = await container.orchestrator.traditional_search(
-            request.query, top_k=request.top_k
-        )
-        response.traditional = _traditional_result(hits)
+        trad = await asyncio.to_thread(retrieval.traditional_rag, request.query, store)
+        resp.traditional = _traditional_response(request.query, trad).traditional
+        resp.latency_ms = int(trad.get("total_time", 0) * 1000)
 
     if request.mode in ("contextgraph", "both"):
-        intent, retrieval, context, synthesis = await container.orchestrator.answer(
-            request.query, top_k=request.top_k
-        )
-        response.intent = intent
-        response.answer = synthesis
-        response.sources = context.sources
-        response.traversal_paths = retrieval.traversal_paths
-        response.taxonomy_paths = intent.taxonomy_paths
-        response.context_debug = context
-        response.graph_highlight = {
-            "node_names": sorted({f.subject for f in retrieval.graph_facts}
-                                 | {f.object for f in retrieval.graph_facts}),
-            "relationships": sorted({f.predicate for f in retrieval.graph_facts}),
-        }
+        ctx = await asyncio.to_thread(retrieval.hybrid_graphrag, request.query, store)
+        summary = await asyncio.to_thread(graph_store.get_entity_type_summary, ctx.get("active_labels"))
+        cg = _contextgraph_response(request.query, ctx, summary)
+        resp.answer, resp.sources, resp.graph_highlight = cg.answer, cg.sources, cg.graph_highlight
+        if request.mode == "contextgraph":
+            resp.latency_ms = cg.latency_ms
 
-    response.latency_ms = int((time.perf_counter() - start) * 1000)
-    return response
+    return resp
