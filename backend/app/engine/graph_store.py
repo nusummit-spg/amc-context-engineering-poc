@@ -179,7 +179,7 @@ def get_subgraph_for_query(query: str, product_names: set | None = None,
             result = session.run(
                 """
                 MATCH (n:Entity)-[r]-(m)
-                WITH n, r, m, size((n)--()) AS degree
+                WITH n, r, m, COUNT { (n)--() } AS degree
                 ORDER BY degree DESC LIMIT $limit
                 RETURN n.text AS s, n.label AS s_label, type(r) AS rel,
                        r.confidence AS conf, m.text AS o, m.label AS o_label
