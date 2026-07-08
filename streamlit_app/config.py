@@ -44,6 +44,11 @@ if not CLAUDE_API_KEY and _SECRET_ID:
 CLAUDE_MODEL_RELATIONS = os.environ.get("CLAUDE_MODEL_RELATIONS", "claude-sonnet-4-6")
 CLAUDE_MODEL_LIGHT = os.environ.get("CLAUDE_MODEL_LIGHT", "claude-haiku-4-5-20251001")
 
+# Vision (image extraction during indexing) — throttle + model.
+CLAUDE_VISION_MODEL = os.environ.get("CLAUDE_VISION_MODEL", "claude-sonnet-4-6")
+CLAUDE_MAX_CONCURRENT_VISION = int(os.environ.get("CLAUDE_MAX_CONCURRENT_VISION", "4"))
+CLAUDE_VISION_RPM = int(os.environ.get("CLAUDE_VISION_RPM", "50"))
+
 # ── SMART EXTRACTION — the actual rate-limit fix ────────────────────────────
 SMART_EXTRACTION = os.environ.get("SMART_EXTRACTION", "true").lower() == "true"
 LOCAL_TEXT_SUFFICIENCY_THRESHOLD = int(os.environ.get("LOCAL_TEXT_SUFFICIENCY_THRESHOLD", "400"))
