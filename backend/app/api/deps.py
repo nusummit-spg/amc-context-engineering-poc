@@ -26,23 +26,11 @@ TAXONOMY_SEED_PATH = SEEDS_DIR / "taxonomy.json"
 def load_taxonomy() -> TaxonomyTree:
     """Builds the TaxonomyTree from the WS5b seed JSON (nested dict / leaf lists)."""
     data = json.loads(TAXONOMY_SEED_PATH.read_text(encoding="utf-8"))
-
-    def build(name: str, subtree, parent_path: str, level: int) -> TaxonomyNode:
-        path = f"{parent_path}/{name}" if parent_path else name
-        node = TaxonomyNode(
-            node_id=path.replace("/", "::").lower().replace(" ", "-"),
-            name=name, path=path, level=level,
-            parent_path=parent_path or None,
-        )
-        if isinstance(subtree, dict):
-            node.children = [build(k, v, path, level + 1) for k, v in subtree.items()]
-        elif isinstance(subtree, list):
-            node.children = [build(leaf, None, path, level + 1) for leaf in subtree]
-        return node
-
-    roots = [build(k, v, "", 1) for k, v in data["tree"].items()]
-    return TaxonomyTree(version=data.get("version", "1.0"),
-                        domain=data.get("domain", "AMC"), roots=roots)
+    return TaxonomyTree.build_from_seed(
+        data=data,
+        version=data.get("version", "1.0"),
+        domain=data.get("domain", "AMC"),
+    )
 
 
 class Container:
