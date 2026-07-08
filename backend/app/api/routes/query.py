@@ -16,7 +16,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.engine import config as engine_config
 from app.engine import faiss_store as engine_faiss
-from app.engine import retrieval
+from app.engine import graph_store, retrieval
 from app.schemas.api import QueryRequest, QueryResponse, TraditionalResult
 from app.schemas.query import SourceAttribution, SynthesisOutput
 
@@ -71,7 +71,7 @@ def _traditional_response(query: str, result: dict) -> QueryResponse:
     return resp
 
 
-def _contextgraph_response(query: str, result: dict) -> QueryResponse:
+def _contextgraph_response(query: str, result: dict, entity_summary: list | None = None) -> QueryResponse:
     docs = result.get("docs", [])
     edges = result.get("graph_edges", [])
     resp = QueryResponse(query=query, mode="contextgraph")
@@ -94,6 +94,10 @@ def _contextgraph_response(query: str, result: dict) -> QueryResponse:
         "relationships": sorted({e.get("rel") for e in edges if e.get("rel")}),
         "entities": sorted(result.get("matched_entity_texts", []) or []),
         "labels": sorted(result.get("active_labels", []) or []),
+        # Full edges + entity-type summary so a thin UI client can render the graph.
+        "edges": [{"s": e.get("s"), "rel": e.get("rel"), "o": e.get("o"), "conf": e.get("conf")}
+                  for e in edges],
+        "entity_summary": entity_summary or [],
     }
     resp.latency_ms = int(result.get("total_time", 0) * 1000)
     return resp
@@ -112,7 +116,8 @@ async def run_traditional(request: QueryRequest) -> QueryResponse:
 async def run_contextgraph(request: QueryRequest) -> QueryResponse:
     store = _get_store()
     result = await asyncio.to_thread(retrieval.hybrid_graphrag, request.query, store)
-    return _contextgraph_response(request.query, result)
+    summary = await asyncio.to_thread(graph_store.get_entity_type_summary, result.get("active_labels"))
+    return _contextgraph_response(request.query, result, summary)
 
 
 @router.post("", response_model=QueryResponse)
@@ -128,7 +133,8 @@ async def run_query(request: QueryRequest) -> QueryResponse:
 
     if request.mode in ("contextgraph", "both"):
         ctx = await asyncio.to_thread(retrieval.hybrid_graphrag, request.query, store)
-        cg = _contextgraph_response(request.query, ctx)
+        summary = await asyncio.to_thread(graph_store.get_entity_type_summary, ctx.get("active_labels"))
+        cg = _contextgraph_response(request.query, ctx, summary)
         resp.answer, resp.sources, resp.graph_highlight = cg.answer, cg.sources, cg.graph_highlight
         if request.mode == "contextgraph":
             resp.latency_ms = cg.latency_ms

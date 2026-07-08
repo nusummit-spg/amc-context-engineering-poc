@@ -1,37 +1,6 @@
-# core
-numpy
-faiss-cpu
-
-# pdf (faiss_store.py)
-pymupdf
-easyocr
-pillow
-sentence-transformers
-
-# document extractors
-openpyxl
-python-docx
-python-pptx
-
-# NER
-spacy
-gliner
-
-# LLM (Claude - active)
-anthropic
-
-# legacy Gemini (unused at runtime, kept for build tools)
-google-cloud-aiplatform
-google-generativeai
-
-# graph
-neo4j
-pyvis
-
-# app
+# Thin client — the UI only calls the FastAPI backend over HTTP.
+# All ML/retrieval (torch, faiss, gliner, sentence-transformers, neo4j, Claude)
+# lives in the API now, so none of it is needed here.
 streamlit
-
-# utils
-python-dotenv
-# AWS Secrets Manager (key load)
-boto3
+requests
+pandas
