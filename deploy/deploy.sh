@@ -127,28 +127,39 @@ tar -C "$PROJECT_ROOT" \
   --exclude='frontend/dist' --exclude='data' --exclude='__pycache__' \
   -czf - . | $SSH 'tar -xzf - -C /home/ec2-user/app'
 
+CORPUS_BUCKET="${CORPUS_BUCKET:-}"
 echo ">> Writing .env and starting the stack ..."
 $SSH "cat > /home/ec2-user/app/.env <<EOF
 NEO4J_URI=bolt://neo4j:7687
 NEO4J_USER=neo4j
 NEO4J_PASSWORD=contextgraph
-QDRANT_URL=http://qdrant:6333
 ENVIRONMENT=production
 LOG_LEVEL=INFO
 AWS_REGION=$REGION
 ANTHROPIC_SECRET_ID=$SECRET_ID
 ANTHROPIC_SECRET_JSON_KEY=$SECRET_JSON_KEY
+CORPUS_BUCKET=$CORPUS_BUCKET
 EOF
-cd /home/ec2-user/app && docker compose up -d"
+cd /home/ec2-user/app && docker compose up -d --build"
+
+# ---------------- 6. periodic S3 corpus reindex (cron) ----------------
+echo ">> Installing reindex cron (every 15 min, flock-guarded) ..."
+$SSH 'sudo dnf install -y cronie >/dev/null 2>&1
+sudo systemctl enable --now crond >/dev/null 2>&1
+sudo tee /etc/logrotate.d/reindex >/dev/null <<EOF
+/home/ec2-user/reindex.log { weekly rotate 4 compress missingok notifempty maxsize 20M }
+EOF
+(crontab -l 2>/dev/null; echo "*/15 * * * * /usr/bin/flock -n /tmp/reindex.lock -c \"cd /home/ec2-user/app && /usr/bin/docker compose exec -T api python -m app.engine.reindex_from_s3\" >> /home/ec2-user/reindex.log 2>&1") | sort -u | crontab -'
 
 cat <<DONE
 
 ============================================================
 Stack starting on EC2.
-  API:     http://$PUBLIC_IP:8000/docs
-  SSH:     ssh -i $PEM ec2-user@$PUBLIC_IP
-Next (after neo4j is healthy):
-  $SSH 'cd app && docker compose exec api python -m scripts.seed_neo4j'
-  $SSH 'cd app && docker compose exec api python -m scripts.ingest_corpus'
+  API:       http://$PUBLIC_IP:8000/docs
+  SSH:       ssh -i $PEM ec2-user@$PUBLIC_IP
+  Corpus:    s3://$CORPUS_BUCKET/raw/  (drop new files here — reindexed automatically every 15 min)
+  Reindex log: /home/ec2-user/reindex.log
+Manual reindex (skip waiting for cron):
+  $SSH 'cd app && docker compose exec -T api python -m app.engine.reindex_from_s3'
 ============================================================
 DONE
