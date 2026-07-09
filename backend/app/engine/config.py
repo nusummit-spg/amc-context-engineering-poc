@@ -20,6 +20,10 @@ LOG_DIR        = PROJECT_ROOT / "logs"
 for d in (FAISS_DIR, LOG_DIR):
     d.mkdir(parents=True, exist_ok=True)
 
+# S3 bucket new source documents are uploaded to (reindex_from_s3.py syncs
+# this into DATA_DIR before running build_index). Empty = sync step skipped.
+CORPUS_BUCKET = os.environ.get("CORPUS_BUCKET", "")
+
 # ── CLAUDE ────────────────────────────────────────────────────────────
 CLAUDE_API_KEY = os.environ.get("CLAUDE_API_KEY", "")
 
