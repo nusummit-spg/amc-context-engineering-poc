@@ -26,14 +26,33 @@ CSS = """
 .cg-tree-node.active { color:#A8412C; font-weight:600; }
 .cg-sources { font-size:11px; color:#5C574C; margin-top:8px; }
 .cg-graph-note { font-size:11px; color:#8A8378; margin-top:8px; }
+.cg-doc-full { font-size:12px; color:#3A3630; margin-top:6px; line-height:1.5;
+  border-top:1px dashed #E7E1D4; padding-top:6px; white-space:pre-wrap; }
+.cg-doc summary { cursor:pointer; font-size:11px; color:#A8412C; font-weight:600; margin-top:5px; }
 </style>
 """
+import html
+
+def _markdown_to_html(text: str) -> str:
+    """Minimal markdown->HTML for LLM-generated answers — headers, bold,
+    italics, paragraphs. No external dependency needed for this small a
+    subset of markdown."""
+    import re, html
+    text = html.escape(text)
+    text = re.sub(r'^#{1,6}\s*(.+)$', r'<strong>\1</strong>', text, flags=re.MULTILINE)
+    text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
+    text = re.sub(r'(?<!\*)\*(?!\*)(.+?)\*(?!\*)', r'<i>\1</i>', text)
+    text = text.replace('\n\n', '</p><p>').replace('\n', '<br>')
+    return f"<p>{text}</p>"
 
 def render_traditional_panel(r):
     docs_html = "".join(f"""
       <div class="cg-doc">
-        <div class="cg-doc-head"><span>{d['name']}</span><span class="cg-doc-score">score {d['score']}</span></div>
+        <div class="cg-doc-head"><span>{d['name']} · p.{d.get('page','?')}</span><span class="cg-doc-score">score {d['score']}</span></div>
         <div class="cg-doc-snippet">"{d['snippet']}…"</div>
+        <details><summary>Show full source text</summary>
+          <div class="cg-doc-full">{html.escape(d.get('full_text', ''))}</div>
+        </details>
       </div>""" for d in r["docs"]) or "<div class='cg-graph-note'>No matching documents found.</div>"
 
     return f"""{CSS}
@@ -45,9 +64,10 @@ def render_traditional_panel(r):
       <div class="cg-label">Files returned, ranked by similarity</div>
       <div style="margin-top:8px">{docs_html}</div>
       <div class="cg-warning">⚠ No consolidated answer — each document must be reviewed individually.</div>
-      <div class="cg-answer" style="margin-top:12px">{r['answer']}</div>
+      <div class="cg-answer">{_markdown_to_html(r['answer'])}</div>
       <div class="cg-stats">
         <div class="cg-stat"><div class="cg-stat-num">{len(r['docs'])}</div><div class="cg-stat-label">Docs returned</div></div>
+        <div class="cg-stat"><div class="cg-stat-num">{r.get('total_tokens', 0):,}</div><div class="cg-stat-label">Tokens used</div></div>
         <div class="cg-stat"><div class="cg-stat-num">{r['total_time']:.2f}s</div><div class="cg-stat-label">Total time</div></div>
       </div>
     </div>"""
@@ -98,11 +118,12 @@ def render_contextgraph_panel(r, entity_summary):
       </div>
       <div data-view="answer">
         <span class="cg-badge green">{r['confidence_label']}</span>
-        <div class="cg-answer" style="margin-top:8px">{r['answer']}</div>
+        <div class="cg-answer">{_markdown_to_html(r['answer'])}</div>
         <div class="cg-label" style="margin-top:12px">Sources</div>
         <div class="cg-sources">{sources_html}</div>
         <div class="cg-stats">
           <div class="cg-stat"><div class="cg-stat-num">{len(r['graph_nodes'])}</div><div class="cg-stat-label">Graph nodes touched</div></div>
+          <div class="cg-stat"><div class="cg-stat-num">{r.get('total_tokens', 0):,}</div><div class="cg-stat-label">Tokens used</div></div>
           <div class="cg-stat"><div class="cg-stat-num">{r['total_time']:.2f}s</div><div class="cg-stat-label">Total time</div></div>
         </div>
       </div>

@@ -12,6 +12,8 @@ import config
 
 _driver = None
 
+_WRITE_KEYWORDS = re.compile(
+    r"\b(CREATE|MERGE|DELETE|SET|REMOVE|DROP|DETACH|LOAD\s+CSV)\b", re.I)
 
 def get_driver():
     global _driver
@@ -31,6 +33,10 @@ def init_schema():
         session.run("CREATE CONSTRAINT entity_key IF NOT EXISTS "
                      "FOR (e:Entity) REQUIRE e.dedup_key IS UNIQUE")
         session.run("CREATE INDEX entity_label IF NOT EXISTS FOR (e:Entity) ON (e.label)")
+        session.run("CREATE INDEX entity_product_name IF NOT EXISTS "
+                     "FOR (e:Entity) ON (e.product_name)")   # ← new
+        session.run("CREATE INDEX entity_text IF NOT EXISTS "
+                     "FOR (e:Entity) ON (e.text)")
 
 
 def _dedup_key(label: str, text: str) -> str:
@@ -135,15 +141,23 @@ def get_subgraph(limit: int = 200) -> Dict[str, list]:
 # graph_store.py — replace get_subgraph_for_query
 
 def get_subgraph_for_query(query: str, product_names: set | None = None,
-                            hops: int = 1, limit: int = 40) -> Dict[str, list]:
+                            hops: int = 1, limit: int = 15,
+                            query_entities: list | None = None) -> Dict[str, list]:
+    """
+    Three-path fallback ladder, each path progressively less targeted —
+    and progressively tighter-capped, since less-targeted results are
+    more likely to be noise the LLM will pay tokens to read and ignore.
+    """
     import ner_pipeline
     hops = max(int(hops), 1)
-    query_entities = ner_pipeline.run_layers_ab(query)
+    if query_entities is None:
+        query_entities = ner_pipeline.run_layers_ab(query)
     entity_texts = list({e["text"] for e in query_entities})
 
     edges = []
 
-    # Path 1 — literal entity mentions in the query text (works for "who manages Axis X")
+    # Path 1 — literal entity mentions in the query text. Most targeted,
+    # gets the full limit.
     if entity_texts:
         with get_driver().session(database=config.NEO4J_DATABASE) as session:
             result = session.run(
@@ -154,13 +168,14 @@ def get_subgraph_for_query(query: str, product_names: set | None = None,
                 WITH startNode(rel) AS s, rel, endNode(rel) AS o
                 RETURN DISTINCT s.text AS s, s.label AS s_label, type(rel) AS rel,
                        rel.confidence AS conf, o.text AS o, o.label AS o_label
+                ORDER BY rel.confidence DESC
                 LIMIT $limit
                 """, texts=entity_texts, limit=limit)
             edges += [dict(r) for r in result]
 
-    # Path 2 — always fall back to the product(s) vector search already found.
-    # This is what guarantees a graph shows up even for conceptual questions
-    # that never name the scheme literally.
+    # Path 2 — product-name fallback (what vector search already found).
+    # Moderately targeted — still capped at full limit but ordered by
+    # confidence so the best edges survive any later trimming.
     if not edges and product_names:
         with get_driver().session(database=config.NEO4J_DATABASE) as session:
             result = session.run(
@@ -169,11 +184,15 @@ def get_subgraph_for_query(query: str, product_names: set | None = None,
                 MATCH (n)-[r]-(m)
                 RETURN DISTINCT n.text AS s, n.label AS s_label, type(r) AS rel,
                        r.confidence AS conf, m.text AS o, m.label AS o_label
+                ORDER BY r.confidence DESC
                 LIMIT $limit
                 """, products=list(product_names), limit=limit)
             edges += [dict(r) for r in result]
 
-    # Path 3 — last resort, so the panel is never structurally empty
+    # Path 3 — last resort, "most connected nodes globally." Least targeted
+    # by far (not query-specific at all) — hard-capped much tighter than
+    # the other paths regardless of the caller's `limit`, since this is
+    # exactly the case that was inflating token spend on unrelated queries.
     if not edges:
         with get_driver().session(database=config.NEO4J_DATABASE) as session:
             result = session.run(
@@ -183,13 +202,12 @@ def get_subgraph_for_query(query: str, product_names: set | None = None,
                 ORDER BY degree DESC LIMIT $limit
                 RETURN n.text AS s, n.label AS s_label, type(r) AS rel,
                        r.confidence AS conf, m.text AS o, m.label AS o_label
-                """, limit=limit)
+                """, limit=min(limit, 8))
             edges += [dict(r) for r in result]
 
     nodes = list({e["s"] for e in edges} | {e["o"] for e in edges})
-    return {"nodes": nodes, "edges": edges, "matched_by": "entity" if entity_texts else
-            ("product" if product_names else "fallback")}
-
+    matched_by = "entity" if entity_texts else ("product" if product_names else "fallback")
+    return {"nodes": nodes, "edges": edges, "matched_by": matched_by}
 def get_entity_type_summary(active_labels: set | None = None) -> list[dict]:
     """Real counts per entity label — powers the Ontology View tree.
     active_labels marks which types this specific query's matched entities belong to."""
@@ -200,3 +218,184 @@ def get_entity_type_summary(active_labels: set | None = None) -> list[dict]:
     active_labels = active_labels or set()
     return [{"label": r["label"] or "UNLABELED", "count": r["n"],
               "active": r["label"] in active_labels} for r in rows]
+
+def get_all_entity_texts(product_names: set | None = None, limit: int = 500) -> list[dict]:
+    """Distinct entity texts — the candidate pool for embedding-based
+    similarity matching in entity_resolver.py. Scoped by product_names when
+    given, so a candidate pool for one query never leaks into another."""
+    with get_driver().session(database=config.NEO4J_DATABASE) as session:
+        if product_names:
+            result = session.run(
+                """
+                MATCH (n:Entity) WHERE n.product_name IN $products AND n.text IS NOT NULL
+                RETURN DISTINCT n.text AS text, n.label AS label, n.product_name AS product_name
+                LIMIT $limit
+                """, products=list(product_names), limit=limit)
+        else:
+            result = session.run(
+                """
+                MATCH (n:Entity) WHERE n.text IS NOT NULL
+                RETURN DISTINCT n.text AS text, n.label AS label, n.product_name AS product_name
+                LIMIT $limit
+                """, limit=limit)
+        return [dict(r) for r in result]
+
+
+def get_relationship_types() -> list[str]:
+    """Real relationship types present in the graph — fed into the
+    text-to-Cypher prompt so the LLM only writes queries against types
+    that actually exist."""
+    with get_driver().session(database=config.NEO4J_DATABASE) as session:
+        result = session.run("CALL db.relationshipTypes() YIELD relationshipType "
+                              "RETURN relationshipType")
+        return [r["relationshipType"] for r in result]
+
+
+def get_entity_label_values() -> list[str]:
+    """Distinct values of the `label` property (SCHEME_NAME, FUND_MANAGER,
+    etc.) — NOT Neo4j node labels, since every node here is :Entity."""
+    with get_driver().session(database=config.NEO4J_DATABASE) as session:
+        result = session.run(
+            "MATCH (n:Entity) WHERE n.label IS NOT NULL RETURN DISTINCT n.label AS label")
+        return [r["label"] for r in result]
+
+
+def run_safe_cypher(cypher: str, params: dict | None = None,
+                     max_rows: int = 25) -> list[dict] | None:
+    """
+    Executes an LLM-generated Cypher query after validation. Returns None on
+    ANY validation or execution failure — callers must treat None as "this
+    didn't work, fall back to the deterministic path," never as an error to
+    surface directly.
+
+    Validation:
+      - single statement only (no ';' mid-string)
+      - must start with MATCH
+      - no write keywords (CREATE/MERGE/DELETE/SET/REMOVE/DROP/DETACH/LOAD CSV)
+      - LIMIT is enforced (added if the LLM forgot it)
+    """
+    cypher_stripped = cypher.strip().rstrip(";")
+    if ";" in cypher_stripped:
+        print("  [cypher-guard] rejected: multiple statements", flush=True)
+        return None
+    if not re.match(r"^\s*MATCH\b", cypher_stripped, re.I):
+        print("  [cypher-guard] rejected: must start with MATCH", flush=True)
+        return None
+    if _WRITE_KEYWORDS.search(cypher_stripped):
+        print("  [cypher-guard] rejected: write keyword detected", flush=True)
+        return None
+    if not re.search(r"\bLIMIT\s+\d+\b", cypher_stripped, re.I):
+        cypher_stripped += f" LIMIT {max_rows}"
+
+    try:
+        with get_driver().session(database=config.NEO4J_DATABASE) as session:
+            result = session.run(cypher_stripped, params or {})
+            rows = [dict(r) for r in result][:max_rows]
+        return rows
+    except Exception as e:
+        print(f"  [cypher-guard] execution failed: {e}", flush=True)
+        return None
+def get_aggregate_for_entity(entity_texts: list[str], hops: int = 1, limit_sources: int = 25,
+                              product_names: set | None = None) -> dict | None:
+    """
+    Deterministic rollup — now takes a LIST of already-resolved exact entity
+    texts (from entity_resolver's similarity matching), matched via `IN`,
+    NOT a substring CONTAINS on raw query text. This is what prevents a
+    generic word like "debt" from silently matching every debt-related node
+    across the entire corpus.
+    """
+    if not entity_texts:
+        return None
+
+    scope_clause = ""
+    params = {"entity_texts": entity_texts, "limit_sources": limit_sources}
+    if product_names:
+        scope_clause = "AND n.product_name IN $product_names"
+        params["product_names"] = list(product_names)
+
+    with get_driver().session(database=config.NEO4J_DATABASE) as session:
+        result = session.run(
+            f"""
+            MATCH (n:Entity) WHERE n.text IN $entity_texts {scope_clause}
+            MATCH (n)-[r*1..{max(int(hops),1)}]-(m:Entity)
+            UNWIND r AS rel
+            WITH n, rel, m, type(rel) AS rel_type
+            RETURN n.text AS matched_entity,
+                   rel_type,
+                   count(DISTINCT m) AS distinct_related_entities,
+                   count(DISTINCT m.source) AS distinct_documents,
+                   collect(DISTINCT m.source)[0..$limit_sources] AS sources
+            ORDER BY distinct_documents DESC
+            LIMIT 10
+            """, **params)
+        rows = [dict(r) for r in result]
+    if not rows:
+        return None
+    return {"entity_query": ", ".join(entity_texts), "breakdown": rows}
+
+def find_entities_for_comparison(resolved_entities: dict[str, list[str]], hops: int = 1) -> dict:
+    """
+    Takes {original_query_text: [resolved candidate texts]} from
+    entity_resolver — exact `IN` match, not substring CONTAINS. An entity
+    with no resolved candidates (nothing similar enough found) returns an
+    empty list rather than silently matching unrelated nodes.
+    """
+    per_entity = {}
+    with get_driver().session(database=config.NEO4J_DATABASE) as session:
+        for original_text, matched_texts in resolved_entities.items():
+            if not matched_texts:
+                per_entity[original_text] = []
+                continue
+            result = session.run(
+                f"""
+                MATCH (n:Entity) WHERE n.text IN $texts
+                MATCH (n)-[r*1..{max(int(hops),1)}]-(m:Entity)
+                UNWIND r AS rel
+                WITH n, rel, m
+                RETURN DISTINCT n.text AS s, type(rel) AS rel_type,
+                       m.text AS o, m.label AS o_label, m.source AS source
+                LIMIT 20
+                """, texts=matched_texts)
+            per_entity[original_text] = [dict(r) for r in result]
+    return per_entity
+
+def get_node_neighborhood(node_text: str, limit: int = 25) -> Dict[str, list]:
+    """1-hop neighborhood of a single node — powers 'click a node to explore'."""
+    with get_driver().session(database=config.NEO4J_DATABASE) as session:
+        result = session.run(
+            """
+            MATCH (n:Entity {text: $text})-[r]-(m)
+            RETURN DISTINCT n.text AS s, n.label AS s_label, type(r) AS rel,
+                   r.confidence AS conf, m.text AS o, m.label AS o_label
+            LIMIT $limit
+            """, text=node_text, limit=limit)
+        edges = [dict(r) for r in result]
+    nodes = list({e["s"] for e in edges} | {e["o"] for e in edges})
+    return {"nodes": nodes, "edges": edges}
+
+def get_entity_source_info(node_text: str) -> dict | None:
+    """Pulls source doc + first-seen chunk id for a node, so the UI can
+    show the actual passage the entity came from."""
+    with get_driver().session(database=config.NEO4J_DATABASE) as session:
+        result = session.run(
+            "MATCH (n:Entity {text: $text}) "
+            "RETURN n.source AS source, n.product_name AS product_name, "
+            "       n.first_seen_chunk AS chunk_id LIMIT 1",
+            text=node_text)
+        rec = result.single()
+        return dict(rec) if rec else None
+def get_entities_source_info_batch(node_texts: list[str]) -> dict[str, dict]:
+    """Source/product/label info for multiple nodes in one round-trip —
+    powers the 'why is this node here' detail panel without N+1 queries."""
+    if not node_texts:
+        return {}
+    with get_driver().session(database=config.NEO4J_DATABASE) as session:
+        result = session.run(
+            """
+            UNWIND $texts AS t
+            MATCH (n:Entity {text: t})
+            RETURN n.text AS text, n.source AS source, n.product_name AS product_name,
+                   n.label AS label, n.first_seen_chunk AS chunk_id
+            """, texts=node_texts)
+        rows = [dict(r) for r in result]
+    return {r["text"]: r for r in rows}
