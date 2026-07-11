@@ -81,6 +81,11 @@ GLINER_LABELS     = [
 ]
 GLINER_THRESHOLD  = 0.4
 
+# ── ENTITY RESOLUTION (entity_resolver.py) ──────────────────────────────
+# Cosine similarity floor for treating a graph node as a genuine match for a
+# query entity mention (vs. naive substring containment).
+SIMILARITY_MATCH_THRESHOLD = float(os.environ.get("SIMILARITY_MATCH_THRESHOLD", "0.65"))
+
 # ── NEO4J ─────────────────────────────────────────────────────────────
 NEO4J_URI      = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER     = os.environ.get("NEO4J_USER", "neo4j")
