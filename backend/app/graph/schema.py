@@ -1,5 +1,5 @@
 """WS5b — Neo4j graph schema: constraints + indexes for the 9 node labels."""
-from backend.app.graph.client import GraphClient
+from app.graph.client import GraphClient
 
 NODE_LABELS = [
     "Scheme", "Issuer", "IssuerGroup", "Analyst", "Sector",

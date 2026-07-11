@@ -1,42 +1,51 @@
-"""PPTX parser — for any sector outlook / factsheet decks in the corpus."""
-from typing import List
+"""WS2 — PPTX parser (python-pptx): one section per slide + speaker notes."""
+from pathlib import Path
+
 from pptx import Presentation
 
-from ingestion.parsers.base import BaseParser, ParsedSection
+from app.ingestion.parsers.base import BaseParser
+from app.schemas.documents import Document, DocumentType, Section
 
 
-class PPTXParser(BaseParser):
-    supported_extensions = [".pptx"]
+class PptxParser(BaseParser):
+    extensions = (".pptx",)
 
-    def parse(self, filepath: str) -> List[ParsedSection]:
-        prs = Presentation(filepath)
-        sections: List[ParsedSection] = []
+    def parse(self, path: Path) -> Document:
+        prs = Presentation(str(path))
+        sections: list[Section] = []
 
-        for i, slide in enumerate(prs.slides, start=1):
-            title = ""
-            texts = []
+        for index, slide in enumerate(prs.slides, start=1):
+            lines: list[str] = []
+            title = None
             for shape in slide.shapes:
                 if not shape.has_text_frame:
                     continue
-                frame_text = "\n".join(
-                    p.text for p in shape.text_frame.paragraphs if p.text.strip()
-                )
-                if not frame_text:
+                text = shape.text_frame.text.strip()
+                if not text:
                     continue
-                if shape == slide.shapes.title:
-                    title = frame_text
+                if title is None and shape == slide.shapes.title:
+                    title = text
                 else:
-                    texts.append(frame_text)
+                    lines.append(text)
+            notes = ""
+            if slide.has_notes_slide and slide.notes_slide.notes_text_frame:
+                notes = slide.notes_slide.notes_text_frame.text.strip()
+            body = "\n".join(lines)
+            if notes:
+                body += f"\n\n[SPEAKER NOTES]\n{notes}"
+            if title or body.strip():
+                sections.append(Section(
+                    title=title or f"Slide {index}",
+                    text=body.strip() or (title or ""),
+                    order=index - 1,
+                    metadata={"slide": index},
+                ))
 
-            combined = "\n".join(texts).strip()
-            if combined or title:
-                sections.append(
-                    ParsedSection(
-                        heading=title or f"slide_{i}",
-                        text=combined,
-                        source_file=filepath,
-                        route_hint="unstructured",
-                        metadata={"slide_number": i},
-                    )
-                )
-        return sections
+        return Document(
+            filename=path.name,
+            doc_type=DocumentType.PPTX,
+            title=path.stem.replace("_", " "),
+            source_path=str(path),
+            sections=sections or [Section(text="", order=0)],
+            metadata={"slide_count": len(sections)},
+        )

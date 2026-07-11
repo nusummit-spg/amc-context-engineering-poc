@@ -1,77 +1,140 @@
+"""Entity Resolver (WS5e) — maps extracted mentions & query surface forms to
+canonical entities.
+
+Resolution order:
+  1. Exact / alias match against the seed file + known graph entities (cheap).
+  2. Fuzzy containment match (e.g. "Adani exposure" -> "Adani Group").
+  3. LLM disambiguation for ambiguous mentions (only when candidates conflict).
 """
-Entity Resolver — [Entity Resolver] stage. Collapses name variants down to a
-canonical entity keyed on ISIN/amfi_code. The master list is loaded directly
-from your AMFI/ folder (seed data, never touches NER) — point
-AMFI_MASTER_CSV at a normalized export of that folder.
-"""
-import os
-import re
-import pandas as pd
-from dataclasses import dataclass
+import json
+import logging
+from pathlib import Path
 from typing import Optional
-from rapidfuzz import fuzz, process
 
-AMFI_MASTER_CSV = os.environ.get("AMFI_MASTER_CSV", "data/taxonomy/amfi_master.csv")
-FUZZY_THRESHOLD = int(os.environ.get("FUZZY_MATCH_THRESHOLD", "92"))
+from app.core.llm import LLMClient
+from app.extraction.entities import ExtractedMention
+from app.prompts import get_prompt
+from app.schemas.documents import Document
+from app.schemas.entities import ENTITY_CLASS_BY_TYPE, BaseEntity, EntityType
 
-_SUFFIX_PATTERN = re.compile(
-    r"\b(direct|regular|growth|idcw|dividend|payout|reinvestment|plan)\b", re.IGNORECASE
-)
+logger = logging.getLogger("extraction")
 
-
-@dataclass
-class ResolvedEntity:
-    raw_text: str
-    canonical_name: str
-    canonical_key: Optional[str]
-    entity_type: str
-    match_method: str  # exact | normalized | fuzzy | unresolved
-    match_score: float
+_DISAMBIGUATION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "entity_id": {"type": ["string", "null"]},
+    },
+    "required": ["entity_id"],
+    "additionalProperties": False,
+}
 
 
 class EntityResolver:
-    def __init__(self, amfi_master_csv: str = AMFI_MASTER_CSV):
-        try:
-            self.master_df = pd.read_csv(amfi_master_csv)
-        except FileNotFoundError:
-            print(f"[resolver] WARNING: {amfi_master_csv} not found, resolver will unresolved-flag everything")
-            self.master_df = pd.DataFrame(columns=["canonical_name", "isin", "amfi_code", "entity_type"])
+    def __init__(self, llm: LLMClient, alias_seed_path: Path):
+        self._llm = llm
+        self._canonical: dict[str, BaseEntity] = {}   # lower(canonical name) -> entity
+        self._alias_index: dict[str, str] = {}        # lower(alias) -> canonical name
+        self._load_seed(alias_seed_path)
 
-        self._name_to_row = {self._normalize(r["canonical_name"]): r for _, r in self.master_df.iterrows()}
-        self._canonical_names = list(self._name_to_row.keys())
-
-    @staticmethod
-    def _normalize(text: str) -> str:
-        text = _SUFFIX_PATTERN.sub("", str(text))
-        text = re.sub(r"[^a-zA-Z0-9\s]", "", text)
-        return re.sub(r"\s+", " ", text).strip().lower()
-
-    def resolve(self, raw_text: str, entity_type_hint: str = "") -> ResolvedEntity:
-        normalized = self._normalize(raw_text)
-
-        if normalized in self._name_to_row:
-            row = self._name_to_row[normalized]
-            return ResolvedEntity(
-                raw_text=raw_text, canonical_name=row["canonical_name"],
-                canonical_key=row.get("isin") or row.get("amfi_code"),
-                entity_type=row.get("entity_type", entity_type_hint),
-                match_method="normalized", match_score=1.0,
+    def _load_seed(self, path: Path) -> None:
+        if not path.exists():
+            logger.warning("Alias seed file not found: %s", path)
+            return
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for item in data.get("entities", []):
+            entity_type = EntityType(item["entity_type"])
+            cls = ENTITY_CLASS_BY_TYPE[entity_type]
+            entity = cls(
+                name=item["canonical_name"],
+                entity_type=entity_type,
+                aliases=item.get("aliases", []),
             )
+            self._register(entity)
 
-        if self._canonical_names:
-            best = process.extractOne(normalized, self._canonical_names, scorer=fuzz.token_sort_ratio)
-            if best and best[1] >= FUZZY_THRESHOLD:
-                row = self._name_to_row[best[0]]
-                return ResolvedEntity(
-                    raw_text=raw_text, canonical_name=row["canonical_name"],
-                    canonical_key=row.get("isin") or row.get("amfi_code"),
-                    entity_type=row.get("entity_type", entity_type_hint),
-                    match_method="fuzzy", match_score=best[1] / 100.0,
+    def _register(self, entity: BaseEntity) -> None:
+        self._canonical[entity.name.lower()] = entity
+        self._alias_index[entity.name.lower()] = entity.name
+        for alias in entity.aliases:
+            self._alias_index[alias.lower()] = entity.name
+
+    # ---------- public API ----------
+
+    def resolve_surface_form(self, surface: str) -> Optional[BaseEntity]:
+        """Fast, non-LLM resolution used at query time."""
+        s = surface.lower().strip()
+        if s in self._alias_index:
+            return self._canonical[self._alias_index[s].lower()]
+        # containment fallback: longest alias contained in / containing the mention
+        best: Optional[str] = None
+        for alias, canonical in self._alias_index.items():
+            if alias in s or s in alias:
+                if best is None or len(alias) > len(best):
+                    best = alias
+        return self._canonical[self._alias_index[best].lower()] if best else None
+
+    async def resolve_all(
+        self, mentions: list[ExtractedMention], document: Document
+    ) -> list[BaseEntity]:
+        """Resolve extracted mentions to canonical entities; create new entities
+        for genuinely unknown mentions."""
+        resolved: dict[str, BaseEntity] = {}
+        for mention in mentions:
+            entity = self.resolve_surface_form(mention.normalized_name) \
+                or self.resolve_surface_form(mention.surface_form)
+
+            if entity is None:
+                entity = await self._disambiguate_or_create(mention)
+
+            if entity.entity_type.value != mention.type:
+                # Type conflict between extractor and known entity — trust the seed.
+                logger.debug("Type mismatch for %s: extracted %s, known %s",
+                             mention.surface_form, mention.type, entity.entity_type)
+
+            if document.document_id not in entity.source_document_ids:
+                entity.source_document_ids.append(document.document_id)
+            entity.properties.update(
+                {k: v for k, v in mention.properties.items() if v is not None}
+            )
+            resolved[entity.name] = entity
+        return list(resolved.values())
+
+    async def _disambiguate_or_create(self, mention: ExtractedMention) -> BaseEntity:
+        candidates = [
+            e for e in self._canonical.values()
+            if e.entity_type.value == mention.type
+        ]
+        if candidates:
+            prompt = get_prompt("entity_disambiguation")
+            rendered = prompt.render(
+                mention=mention.surface_form,
+                entity_type=mention.type,
+                context=mention.context,
+                candidates="\n".join(
+                    f"- entity_id: {e.name} | name: {e.name} | aliases: {', '.join(e.aliases)}"
+                    for e in candidates
+                ),
+            )
+            try:
+                result = await self._llm.complete_structured(
+                    rendered, _DISAMBIGUATION_SCHEMA, system=prompt.system, fast=True,
                 )
+                match_id = result.get("entity_id")
+                if match_id and match_id.lower() in self._canonical:
+                    entity = self._canonical[match_id.lower()]
+                    if mention.surface_form not in entity.aliases:
+                        entity.aliases.append(mention.surface_form)
+                        self._alias_index[mention.surface_form.lower()] = entity.name
+                    return entity
+            except Exception as exc:
+                logger.warning("Disambiguation failed for %s: %s", mention.surface_form, exc)
 
-        # Unresolved entities still get written to the graph (name-keyed) —
-        # they surface in the ontology review loop rather than being dropped silently.
-        return ResolvedEntity(
-            raw_text=raw_text, canonical_name=raw_text.strip(), canonical_key=None,
-            entity_type=entity_type_hint, match_method="unresolved", match_score=0.0,
+        # Genuinely new entity
+        entity_type = EntityType(mention.type)
+        cls = ENTITY_CLASS_BY_TYPE[entity_type]
+        entity = cls(
+            name=mention.normalized_name,
+            entity_type=entity_type,
+            aliases=[mention.surface_form] if mention.surface_form != mention.normalized_name else [],
         )
+        self._register(entity)
+        return entity

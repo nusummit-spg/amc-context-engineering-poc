@@ -1,62 +1,129 @@
+"""WS2/WS5e — Ingestion pipeline, matching the architecture diagram:
+
+  [Parser] -> [Chunker] -> [PII Scrub] -> [LLM Classifier -> Taxonomy Tagger]
+           -> [NER + Entity Extractor -> Entity Resolver]
+           -> [Relationship Extractor]
+           -> writes: chunks+embeddings to Qdrant, entities+edges to Neo4j
 """
-Ingestion pipeline orchestrator — [Documents] -> [Parser] -> [Chunker] -> [PII Scrub]
-from the architecture diagram. Stops short of [Embedder] (owned by vector/).
+import logging
+from pathlib import Path
 
-This is the boundary Lambda: it can run standalone (e.g. triggered by an S3
-ObjectCreated event on the AMC/ bucket) and hands its output either to:
-  (a) the extraction/ Lambda for unstructured chunks (NER path), or
-  (b) graph/cypher_library.py's direct ETL writer for structured chunks.
+from app.config import get_settings
+from app.extraction.classifier import TaxonomyClassifier
+from app.extraction.entities import EntityExtractor
+from app.extraction.relationships import RelationshipExtractor
+from app.extraction.resolver import EntityResolver
+from app.graph.client import GraphClient
+from app.ingestion.chunker import chunk_document
+from app.ingestion.parsers import build_registry
+from app.ingestion.pii import PiiScrubber
+from app.schemas.documents import Document
+from app.vector.client import VectorStore
 
-See lambda_handlers/ingestion_handler.py for the AWS Lambda entrypoint.
-"""
-import os
-from typing import List
-
-from ingestion.parsers import get_parser, ParsedSection
-from ingestion.chunker import chunk_sections, Chunk
-from ingestion.pii import scrub_sections
-
-
-def parse_file(filepath: str) -> List[ParsedSection]:
-    parser = get_parser(filepath)
-    if parser is None:
-        print(f"[pipeline] no parser for {filepath}, skipping")
-        return []
-    return parser.parse(filepath)
+logger = logging.getLogger("ingestion")
 
 
-def run_ingestion(filepaths: List[str]) -> dict:
-    """
-    Returns {"unstructured_chunks": [...], "structured_chunks": [...]} —
-    pre-split so the caller (Lambda glue / Step Functions) can route each
-    list to the right next stage without re-inspecting route_hint itself.
-    """
-    all_sections: List[ParsedSection] = []
-    for fp in filepaths:
-        all_sections.extend(parse_file(fp))
+class IngestionPipeline:
+    def __init__(
+        self,
+        vector_store: VectorStore,
+        graph_client: GraphClient,
+        classifier: TaxonomyClassifier,
+        entity_extractor: EntityExtractor,
+        resolver: EntityResolver,
+        relationship_extractor: RelationshipExtractor,
+        alias_seed_path: Path | None = None,
+    ) -> None:
+        self._settings = get_settings()
+        self._registry = build_registry()
+        self._scrubber = PiiScrubber(alias_seed_path)
+        self._vector = vector_store
+        self._graph = graph_client
+        self._classifier = classifier
+        self._entity_extractor = entity_extractor
+        self._resolver = resolver
+        self._relationship_extractor = relationship_extractor
 
-    scrubbed = scrub_sections(all_sections)
-    chunks: List[Chunk] = chunk_sections(scrubbed)
+    async def ingest_file(self, path: Path) -> Document:
+        logger.info("Ingesting %s", path.name)
 
-    unstructured = [c for c in chunks if c.route_hint == "unstructured"]
-    structured = [c for c in chunks if c.route_hint == "structured"]
+        # 1. Parse into unified schema
+        parser = self._registry.get(path)
+        document = parser.parse(path)
 
-    print(
-        f"[pipeline] {len(filepaths)} files -> {len(chunks)} chunks "
-        f"({len(unstructured)} unstructured -> NER path, {len(structured)} structured -> direct ETL)"
-    )
-    return {"unstructured_chunks": unstructured, "structured_chunks": structured}
+        # 2. Chunk (heading/clause aware)
+        chunks = chunk_document(document, max_tokens=self._settings.chunk_max_tokens)
 
+        # 3. PII scrub
+        for chunk in chunks:
+            chunk.text, modified = self._scrubber.scrub(chunk.text)
+            chunk.pii_scrubbed = modified
 
-def run_ingestion_for_directory(directory: str) -> dict:
-    filepaths = [
-        os.path.join(directory, f) for f in os.listdir(directory)
-        if os.path.isfile(os.path.join(directory, f))
-    ]
-    return run_ingestion(filepaths)
+        # 4. Taxonomy classification (LLM) — tags document + all its chunks
+        classification = await self._classifier.classify(document)
+        document.category = classification.category
+        for chunk in chunks:
+            chunk.taxonomy_paths = classification.taxonomy_paths
 
+        # 5. Entity extraction (LLM NER) + resolution against known aliases
+        raw_entities = await self._entity_extractor.extract(document)
+        resolved = await self._resolver.resolve_all(raw_entities, document)
+        for chunk in chunks:
+            chunk.entity_ids = [
+                e.name for e in resolved
+                if e.name.lower() in chunk.text.lower()
+                or any(a.lower() in chunk.text.lower() for a in e.aliases)
+            ]
 
-if __name__ == "__main__":
-    import sys
-    result = run_ingestion_for_directory(sys.argv[1] if len(sys.argv) > 1 else "data/raw")
-    print(f"unstructured={len(result['unstructured_chunks'])} structured={len(result['structured_chunks'])}")
+        # 6. Relationship extraction (rule-based first, LLM-assisted second)
+        relationships = await self._relationship_extractor.extract(document, resolved)
+
+        # 7. Persist — graph population (WS5e)
+        await self._graph.run(
+            """
+            MERGE (d:Document {document_id: $document_id})
+            SET d.name = $name, d.doc_type = $doc_type, d.category = $category
+            """,
+            document_id=document.document_id,
+            name=document.title or document.filename,
+            doc_type=document.doc_type.value,
+            category=document.category.value,
+        )
+        for entity in resolved:
+            await self._graph.upsert_entity(entity)
+            await self._graph.run(
+                f"""
+                MATCH (d:Document {{document_id: $document_id}}), (e:{entity.entity_type.value} {{name: $name}})
+                MERGE (d)-[:MENTIONS]->(e)
+                """,
+                document_id=document.document_id,
+                name=entity.name,
+            )
+        for taxonomy_path in classification.taxonomy_paths:
+            await self._graph.run(
+                """
+                MATCH (d:Document {document_id: $document_id})
+                MERGE (t:TaxonomyNode {path: $path})
+                ON CREATE SET t.name = $node_name
+                MERGE (d)-[:TAGGED_AS]->(t)
+                """,
+                document_id=document.document_id,
+                path=taxonomy_path,
+                node_name=taxonomy_path.split("/")[-1],
+            )
+        for rel, source_name, target_name in relationships:
+            rel.source_document_id = document.document_id
+            await self._graph.upsert_relationship(rel, source_name, target_name)
+
+        # 8. Persist — embeddings to Qdrant
+        indexed = await self._vector.index_chunks(chunks, {
+            "title": document.title,
+            "filename": document.filename,
+            "doc_type": document.doc_type.value,
+            "category": document.category.value,
+        })
+        logger.info(
+            "Ingested %s: %d chunks, %d entities, %d relationships",
+            path.name, indexed, len(resolved), len(relationships),
+        )
+        return document

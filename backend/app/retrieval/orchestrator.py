@@ -13,21 +13,21 @@ the left panel of the comparison UI.
 """
 import logging
 
-from backend.app.config import get_settings
-from backend.app.extraction.resolver import EntityResolver
-from backend.app.retrieval.context import ContextAssembler
-from backend.app.retrieval.intent import IntentClassifier
-from backend.app.retrieval.synthesizer import Synthesizer
-from backend.app.retrieval.traversal import GraphTraversal
-from backend.app.schemas.entities import BaseEntity
-from backend.app.schemas.query import (
+from app.config import get_settings
+from app.extraction.resolver import EntityResolver
+from app.retrieval.context import ContextAssembler
+from app.retrieval.intent import IntentClassifier
+from app.retrieval.synthesizer import Synthesizer
+from app.retrieval.traversal import GraphTraversal
+from app.schemas.entities import BaseEntity
+from app.schemas.query import (
     AssembledContext,
     QueryIntent,
     RetrievalResult,
     RetrievedChunk,
     SynthesisOutput,
 )
-from backend.app.vector.client import VectorStore
+from app.vector.client import VectorStore
 
 logger = logging.getLogger("retrieval")
 

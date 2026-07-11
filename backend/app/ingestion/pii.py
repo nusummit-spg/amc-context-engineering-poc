@@ -1,56 +1,50 @@
-"""
-PII scrubber — the [PII Scrub] stage in the pipeline diagram. Regex-based for
-the prototype (fast, no extra Lambda weight); swap in AWS Comprehend PII
-detection or Presidio if you need NER-grade PII coverage later.
+"""WS2 — PII scrubber: regex for PAN / phone / email + light name masking.
 
-Only scrubs PII belonging to *individuals* (investor PAN, Aadhaar, personal
-email/phone) — it deliberately does NOT touch ISIN, AMFI codes, or company
-identifiers, which look similar but are legitimate entities for the graph.
+Runs on chunk text before embedding so no PII lands in Qdrant. Entity names
+required by the domain (schemes, issuers, analysts in the alias seed) are
+whitelisted — analysts are business entities in this graph, not private PII.
 """
+import json
 import re
-from dataclasses import replace
-from typing import List
+from pathlib import Path
 
-from ingestion.parsers.base import ParsedSection
-
-_PATTERNS = {
-    "PAN": re.compile(r"\b[A-Z]{5}[0-9]{4}[A-Z]\b"),
-    "AADHAAR": re.compile(r"\b\d{4}\s?\d{4}\s?\d{4}\b"),
-    "EMAIL": re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b"),
-    "PHONE": re.compile(r"\b(?:\+91[-\s]?)?[6-9]\d{9}\b"),
-}
-
-# ISIN looks like PAN-ish alphanumeric but must never be scrubbed — guard explicitly.
-_ISIN_GUARD = re.compile(r"\bIN[EF][A-Z0-9]{9}\b")
+# Indian PAN: 5 letters, 4 digits, 1 letter
+_PAN_RE = re.compile(r"\b[A-Z]{5}[0-9]{4}[A-Z]\b")
+# Indian mobile numbers (+91 optional) and generic 10-digit runs with separators
+_PHONE_RE = re.compile(r"(?:\+91[\-\s]?)?\b[6-9]\d{4}[\-\s]?\d{5}\b")
+_EMAIL_RE = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.]+\b")
+# Aadhaar-like 12-digit numbers grouped in 4s
+_AADHAAR_RE = re.compile(r"\b\d{4}\s\d{4}\s\d{4}\b")
 
 
-def scrub_text(text: str) -> tuple[str, dict]:
-    """Returns (scrubbed_text, counts_by_type). Replaces matches with [REDACTED_<TYPE>]."""
-    counts = {}
-    isin_spans = {(m.start(), m.end()) for m in _ISIN_GUARD.finditer(text)}
-
-    def _redact(label: str, pattern: re.Pattern, s: str) -> str:
-        def repl(match):
-            if (match.start(), match.end()) in isin_spans:
-                return match.group()  # never touch ISINs
-            counts[label] = counts.get(label, 0) + 1
-            return f"[REDACTED_{label}]"
-
-        return pattern.sub(repl, s)
-
-    for label, pattern in _PATTERNS.items():
-        text = _redact(label, pattern, text)
-    return text, counts
+def _load_whitelist(alias_seed_path: Path | None) -> set[str]:
+    names: set[str] = set()
+    if alias_seed_path and alias_seed_path.exists():
+        data = json.loads(alias_seed_path.read_text(encoding="utf-8"))
+        for entity in data.get("entities", []):
+            names.add(entity["canonical_name"].lower())
+            names.update(a.lower() for a in entity.get("aliases", []))
+    return names
 
 
-def scrub_section(section: ParsedSection) -> ParsedSection:
-    if section.route_hint == "structured":
-        return section  # structured rows go through resolver.py's own field-level checks, not free-text scrub
-    scrubbed_text, counts = scrub_text(section.text)
-    if counts:
-        print(f"[pii] {section.source_file} :: {section.heading} -> redacted {counts}")
-    return replace(section, text=scrubbed_text, metadata={**section.metadata, "pii_redactions": counts})
+class PiiScrubber:
+    def __init__(self, alias_seed_path: Path | None = None):
+        self._whitelist = _load_whitelist(alias_seed_path)
 
+    def scrub(self, text: str) -> tuple[str, bool]:
+        """Returns (scrubbed_text, was_modified)."""
+        original = text
+        text = _PAN_RE.sub("[PAN-REDACTED]", text)
+        text = _AADHAAR_RE.sub("[ID-REDACTED]", text)
+        text = _PHONE_RE.sub("[PHONE-REDACTED]", text)
 
-def scrub_sections(sections: List[ParsedSection]) -> List[ParsedSection]:
-    return [scrub_section(s) for s in sections]
+        def _mask_email(m: re.Match) -> str:
+            addr = m.group(0)
+            # Keep internal business emails' domain visible, mask the local part.
+            local, _, domain = addr.partition("@")
+            if local.lower() in self._whitelist:
+                return addr
+            return f"[EMAIL-REDACTED]@{domain}"
+
+        text = _EMAIL_RE.sub(_mask_email, text)
+        return text, text != original

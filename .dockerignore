@@ -1,0 +1,11 @@
+.git
+**/node_modules
+**/.venv
+**/__pycache__
+**/dist
+frontend/dist
+data
+*.pptx
+*.pdf
+*.log
+.claude
