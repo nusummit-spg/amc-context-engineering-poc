@@ -202,14 +202,12 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
 
     # ── graph section: only when directly relevant (never Path 3 fallback) ─
     top_edges = []
-    include_graph_section = bool(verified_facts) or bool(comparison_blocks)
-    if graph_result.get("matched_by") in ("entity", "product") and graph_result["edges"]:
-        # _select_top_edges sorts by confidence descending before truncating, so
-        # trimming this only drops the *weaker* tail — avg_conf (and therefore
-        # the "high confidence" label below) holds or improves, while cutting
-        # real per-call tokens. 5 was 8; still enough facts for a full answer.
+    if not (verified_facts or comparison_blocks) and graph_result.get("matched_by") in ("entity", "product") and graph_result["edges"]:
+        # Only pull the generic graph section when the specialized aggregation/
+        # comparison branch above didn't already fire — otherwise this duplicates
+        # the same nodes/edges a second time in the prompt (comparison_blocks
+        # already gives per-entity relationships).
         top_edges = _select_top_edges(graph_result["edges"], max_edges=5)
-        include_graph_section = include_graph_section or bool(top_edges)
 
     graph_context_str = "\n".join(f"{e['s']} --{e['rel']}--> {e['o']}" for e in top_edges)
 
@@ -220,13 +218,12 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
         extra_sections += (f"\nPER-ENTITY GRAPH NEIGHBORHOODS (kept separate — do not blend "
                             f"facts across entities):\n{comparison_blocks}\n")
 
-    graph_section = f"\nGRAPH RELATIONSHIPS:\n{graph_context_str}\n" if (top_edges and include_graph_section) else ""
+    graph_section = f"\nGRAPH RELATIONSHIPS:\n{graph_context_str}\n" if top_edges else ""
 
-    prompt = f"""Rank sources by reliability: VERIFIED FACTS are ground truth (cite
-"[graph]"); GRAPH RELATIONSHIPS are structured and reliable when relevant;
-DOCUMENT PROSE is raw text (cite [1], [2]). Flag conflicts; say so if nothing
-answers the question. Be concise — 2-4 sentences by default; expand only for
-questions that explicitly ask for multiple distinct items, listing only what's asked.
+    prompt = f"""Rank sources by reliability: VERIFIED FACTS (graph-computed, cite "[graph]") >
+GRAPH RELATIONSHIPS (structured, cite [1][2] when tied to a doc) > DOCUMENT PROSE (cite [1][2]).
+Note conflicts. Say if nothing answers the question. Answer in 2-4 sentences unless the
+question asks for multiple distinct items — then list only what's asked.
 {extra_sections}{graph_section}
 DOCUMENT PROSE:
 {vector_context}
