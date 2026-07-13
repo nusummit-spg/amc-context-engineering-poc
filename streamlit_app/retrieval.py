@@ -204,11 +204,11 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
     top_edges = []
     include_graph_section = bool(verified_facts) or bool(comparison_blocks)
     if graph_result.get("matched_by") in ("entity", "product") and graph_result["edges"]:
-        # _select_top_edges sorts by confidence descending before truncating.
-        # Trimmed further (5 -> 3) for additional token savings; confidence_label
-        # is allowed to land wherever the data actually supports (not pinned to
-        # "high") — see the avg_conf computation below.
-        top_edges = _select_top_edges(graph_result["edges"], max_edges=3)
+        # _select_top_edges sorts by confidence descending before truncating, so
+        # this only drops the weaker tail of relationships — avg_conf (and the
+        # confidence_label below) tends to hold up well at this size. Tried 3;
+        # reverted to 5 as the better balance of token cost vs. graph grounding.
+        top_edges = _select_top_edges(graph_result["edges"], max_edges=5)
         include_graph_section = include_graph_section or bool(top_edges)
 
     graph_context_str = "\n".join(f"{e['s']} --{e['rel']}--> {e['o']}" for e in top_edges)
