@@ -224,6 +224,10 @@ GRAPH RELATIONSHIPS (if present) are structured extractions, more reliable
 than prose when directly relevant. DOCUMENT PROSE is raw retrieved text, cite
 as [1], [2]. If sources conflict, say so explicitly. If nothing answers the
 question, say so.
+Be direct and concise — answer in 2-4 sentences by default. Only expand into
+a longer list/breakdown when the question explicitly asks for multiple
+distinct items (e.g., several entities, dates, or figures); even then, list
+only what's asked for, without restating source material.
 {extra_sections}{graph_section}
 DOCUMENT PROSE:
 {vector_context}
