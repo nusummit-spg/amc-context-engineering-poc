@@ -1,6 +1,10 @@
-# Thin client — the UI only calls the FastAPI backend over HTTP.
-# All ML/retrieval (torch, faiss, gliner, sentence-transformers, neo4j, Claude)
-# lives in the API now, so none of it is needed here.
+# Thin client for QUERY (calls the FastAPI backend over HTTP — no torch,
+# faiss, gliner, or sentence-transformers here; all retrieval runs in the
+# API). The Analytics tab is the one exception: it reads Neo4j directly via
+# graph_store.py for live graph browsing, hence the plain `neo4j` driver +
+# python-dotenv (graph_store/config have no ML dependencies of their own).
 streamlit
 requests
 pandas
+neo4j
+python-dotenv

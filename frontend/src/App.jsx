@@ -10,7 +10,7 @@ import corpusOntology from './data/ontology';
 import { fetchTraditionalSearch, fetchContextGraphSearch } from './api/contextgraphApi';
 
 function App() {
-  const [mode, setMode] = useState('preset'); // 'preset' | 'custom'
+  const [mode, setMode] = useState('custom'); // 'preset' | 'custom'
   const [activeIndex, setActiveIndex] = useState(0);
   const [openDocId, setOpenDocId] = useState(null);
 

@@ -20,6 +20,10 @@ LOG_DIR        = PROJECT_ROOT / "logs"
 for d in (FAISS_DIR, LOG_DIR):
     d.mkdir(parents=True, exist_ok=True)
 
+# S3 bucket new source documents are uploaded to (reindex_from_s3.py syncs
+# this into DATA_DIR before running build_index). Empty = sync step skipped.
+CORPUS_BUCKET = os.environ.get("CORPUS_BUCKET", "")
+
 # ── CLAUDE ────────────────────────────────────────────────────────────
 CLAUDE_API_KEY = os.environ.get("CLAUDE_API_KEY", "")
 
@@ -76,6 +80,11 @@ GLINER_LABELS     = [
     "fund manager", "asset class", "sector",
 ]
 GLINER_THRESHOLD  = 0.4
+
+# ── ENTITY RESOLUTION (entity_resolver.py) ──────────────────────────────
+# Cosine similarity floor for treating a graph node as a genuine match for a
+# query entity mention (vs. naive substring containment).
+SIMILARITY_MATCH_THRESHOLD = float(os.environ.get("SIMILARITY_MATCH_THRESHOLD", "0.65"))
 
 # ── NEO4J ─────────────────────────────────────────────────────────────
 NEO4J_URI      = os.environ.get("NEO4J_URI", "bolt://localhost:7687")

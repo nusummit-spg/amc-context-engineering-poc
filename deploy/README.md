@@ -1,17 +1,19 @@
 # Deploy — AWS free-tier (single EC2)
 
-Deploys the whole stack (nginx-less for now: FastAPI + Neo4j + Qdrant + Redis via
-Docker Compose) to one EC2 t3.micro. Code is copied over SSH (no GitHub creds on
-the box). Region defaults to **ap-south-1**.
+Deploys the whole stack (FastAPI + Neo4j + Redis + Streamlit UI via Docker
+Compose) to one EC2 instance (t3.medium — the FAISS/GLiNER/sentence-transformer
+stack in `backend/app/engine` needs more than t3.micro's 1GB). Code is copied
+over SSH (no GitHub creds on the box). Region defaults to **ap-south-1**.
 
 ## What gets created
 | Resource | Notes | Cost |
 |---|---|---|
 | Key pair `amc-demo-key` | Private key saved to `~/.ssh/amc-demo-key.pem` | free |
-| Security group `amc-demo-sg` | SSH from your IP only; 80/443/8000 open | free |
-| IAM role + instance profile | grants `secretsmanager:GetSecretValue` on the secret | free |
-| EC2 `t3.micro` + 30 GB gp3 | runs the stack | free tier |
+| Security group `amc-demo-sg` | SSH from your IP only; 80/443/8000/8501 open | free |
+| IAM role + instance profile | `secretsmanager:GetSecretValue` on the secret + `s3:GetObject`/`ListBucket` on the corpus bucket | free |
+| EC2 `t3.medium` + 30 GB gp3 | runs the stack | ~$0.05/hr — stop when idle |
 | Secrets Manager secret (already exists) | `/dev/microsoft-app-id`, JSON field `ANTHROPIC_API_KEY` | free-ish |
+| Cron on the instance | reindexes the S3 corpus bucket every 15 min (see below) | free |
 
 ## Steps
 
@@ -19,17 +21,27 @@ the box). Region defaults to **ap-south-1**.
 # 0. Authenticated? (secret already lives in Secrets Manager, ap-south-1)
 aws sts get-caller-identity
 
-# 1. Deploy (creates infra, copies code, starts the stack):
-bash deploy/deploy.sh
-#    Override defaults if needed:
+# 1. Deploy (creates infra, copies code, starts the stack, installs the reindex cron):
+CORPUS_BUCKET=amc-demo-corpus-<account-id> bash deploy/deploy.sh
+#    Override other defaults if needed:
 #    REGION=ap-south-1 SECRET_ID=/dev/microsoft-app-id bash deploy/deploy.sh
-
-# 2. When the script finishes, seed + ingest:
-ssh -i ~/.ssh/amc-demo-key.pem ec2-user@<IP> 'cd app && docker compose exec api python -m scripts.seed_neo4j'
-ssh -i ~/.ssh/amc-demo-key.pem ec2-user@<IP> 'cd app && docker compose exec api python -m scripts.ingest_corpus'
 ```
 
-API docs land at `http://<IP>:8000/docs`.
+API docs land at `http://<IP>:8000/docs`, Streamlit UI at `http://<IP>:8501`.
+
+## Corpus / reindexing
+
+Drop new source documents into `s3://<corpus-bucket>/raw/` — a cron job on the
+instance (`*/15 * * * *`, `flock`-guarded against overlap) runs
+`app.engine.reindex_from_s3` automatically: syncs new/changed files, then
+indexes only what isn't already in the FAISS/Neo4j cache (already-indexed
+files are skipped for free — no LLM cost). Log: `/home/ec2-user/reindex.log`
+(rotated weekly). To reindex immediately instead of waiting for cron:
+
+```bash
+ssh -i ~/.ssh/amc-demo-key.pem ec2-user@<IP> \
+  'cd app && docker compose exec -T api python -m app.engine.reindex_from_s3'
+```
 
 ## Requirements on your machine
 - `aws` CLI v2, authenticated
@@ -49,5 +61,4 @@ aws iam delete-role --role-name amc-demo-ec2-role
 ```
 
 ## Not included yet (demo scope)
-- **nginx/TLS** — API is served on `:8000` over HTTP. Add nginx + Let's Encrypt (needs a domain) for HTTPS.
-- **S3 + CloudFront frontend** — build `frontend/` and `aws s3 sync` to a bucket, then front with CloudFront. Set the frontend's API base to `http://<IP>:8000`.
+- **nginx/TLS** — API (`:8000`) and Streamlit UI (`:8501`) are served over plain HTTP. Add nginx + Let's Encrypt (needs a domain) for HTTPS.

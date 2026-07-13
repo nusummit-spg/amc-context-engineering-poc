@@ -57,13 +57,18 @@ def _traditional_response(query: str, result: dict) -> QueryResponse:
             "name": d.get("name"),
             "document_id": d.get("name"),
             "score": d.get("score"),
+            "page": d.get("page"),
             "snippet": d.get("snippet"),
+            "full_text": d.get("full_text"),
         } for d in docs],
         snippet=result.get("answer"),
         metrics={
             "docs_returned": len(docs),
             "retrieve_ms": int(result.get("retrieve_time", 0) * 1000),
             "llm_ms": int(result.get("llm_time", 0) * 1000),
+            "input_tokens": result.get("input_tokens", 0),
+            "output_tokens": result.get("output_tokens", 0),
+            "total_tokens": result.get("total_tokens", 0),
             "note": "Vanilla RAG — flat vector search + LLM over retrieved passages.",
         },
     )
@@ -89,6 +94,7 @@ def _contextgraph_response(query: str, result: dict, entity_summary: list | None
         )
         for i, d in enumerate(docs)
     ]
+    edges_used = result.get("graph_edges_used_in_prompt", [])
     resp.graph_highlight = {
         "node_names": sorted({str(n) for n in result.get("graph_nodes", [])}),
         "relationships": sorted({e.get("rel") for e in edges if e.get("rel")}),
@@ -97,7 +103,16 @@ def _contextgraph_response(query: str, result: dict, entity_summary: list | None
         # Full edges + entity-type summary so a thin UI client can render the graph.
         "edges": [{"s": e.get("s"), "rel": e.get("rel"), "o": e.get("o"), "conf": e.get("conf")}
                   for e in edges],
+        "edges_used_in_prompt": [{"s": e.get("s"), "rel": e.get("rel"), "o": e.get("o"), "conf": e.get("conf")}
+                                  for e in edges_used],
         "entity_summary": entity_summary or [],
+        "query_type": result.get("query_type"),
+        "graph_matched_by": result.get("graph_matched_by"),
+        "used_verified_aggregate": result.get("used_verified_aggregate", False),
+        "used_comparison_mode": result.get("used_comparison_mode", False),
+        "input_tokens": result.get("input_tokens", 0),
+        "output_tokens": result.get("output_tokens", 0),
+        "total_tokens": result.get("total_tokens", 0),
     }
     resp.latency_ms = int(result.get("total_time", 0) * 1000)
     return resp

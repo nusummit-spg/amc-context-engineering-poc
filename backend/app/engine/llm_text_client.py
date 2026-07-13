@@ -58,6 +58,38 @@ def call_llm(prompt: str, model_id: str = None) -> str:
     return ""
 
 
+def call_llm_with_usage(prompt: str, model_id: str = None) -> tuple[str, dict]:
+    """Same as call_llm(), but also returns token usage — {"input_tokens",
+    "output_tokens"} — for cost/latency tracking (retrieval.py)."""
+    client = _get_client()
+    empty_usage = {"input_tokens": 0, "output_tokens": 0}
+    if client is None:
+        return "", empty_usage
+    model = model_id or config.CLAUDE_MODEL_RELATIONS
+
+    for attempt in range(CLAUDE_MAX_RETRIES):
+        try:
+            resp = client.messages.create(
+                model=model,
+                max_tokens=4096,
+                temperature=0.0,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = "".join(b.text for b in resp.content if b.type == "text").strip()
+            usage = {"input_tokens": resp.usage.input_tokens, "output_tokens": resp.usage.output_tokens}
+            return text, usage
+        except anthropic.RateLimitError:
+            wait = CLAUDE_RETRY_DELAY * (2 ** attempt)
+            print(f"  [llm_text] rate-limited, waiting {wait}s…", flush=True)
+            time.sleep(wait)
+        except Exception as e:
+            print(f"  [llm_text] call failed (attempt {attempt+1}): {e}", flush=True)
+            if attempt == CLAUDE_MAX_RETRIES - 1:
+                return "", empty_usage
+            time.sleep(1.0)
+    return "", empty_usage
+
+
 def call_llm_json(prompt: str, model_id: str = None) -> Optional[dict | list]:
     raw = call_llm(
         prompt + "\n\nRespond with ONLY valid JSON, no commentary, no markdown fences.",
