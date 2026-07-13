@@ -2,6 +2,7 @@
 services:
   neo4j:
     image: neo4j:5.24
+    restart: unless-stopped
     ports:
       - "7474:7474"   # browser
       - "7687:7687"   # bolt
@@ -25,11 +26,13 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
       - "6379:6379"
 
   api:
     build: ./backend
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
@@ -56,6 +59,7 @@ services:
 
   streamlit:
     build: ./streamlit_app
+    restart: unless-stopped
     ports:
       - "8501:8501"
     environment:
