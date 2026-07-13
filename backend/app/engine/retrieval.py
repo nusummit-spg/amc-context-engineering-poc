@@ -204,7 +204,11 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
     top_edges = []
     include_graph_section = bool(verified_facts) or bool(comparison_blocks)
     if graph_result.get("matched_by") in ("entity", "product") and graph_result["edges"]:
-        top_edges = _select_top_edges(graph_result["edges"], max_edges=8)
+        # _select_top_edges sorts by confidence descending before truncating, so
+        # trimming this only drops the *weaker* tail — avg_conf (and therefore
+        # the "high confidence" label below) holds or improves, while cutting
+        # real per-call tokens. 5 was 8; still enough facts for a full answer.
+        top_edges = _select_top_edges(graph_result["edges"], max_edges=5)
         include_graph_section = include_graph_section or bool(top_edges)
 
     graph_context_str = "\n".join(f"{e['s']} --{e['rel']}--> {e['o']}" for e in top_edges)
@@ -218,16 +222,11 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
 
     graph_section = f"\nGRAPH RELATIONSHIPS:\n{graph_context_str}\n" if (top_edges and include_graph_section) else ""
 
-    prompt = f"""Sources below are ranked by reliability: VERIFIED FACTS (if present) are
-computed directly from the graph — treat as ground truth, cite as "[graph]".
-GRAPH RELATIONSHIPS (if present) are structured extractions, more reliable
-than prose when directly relevant. DOCUMENT PROSE is raw retrieved text, cite
-as [1], [2]. If sources conflict, say so explicitly. If nothing answers the
-question, say so.
-Be direct and concise — answer in 2-4 sentences by default. Only expand into
-a longer list/breakdown when the question explicitly asks for multiple
-distinct items (e.g., several entities, dates, or figures); even then, list
-only what's asked for, without restating source material.
+    prompt = f"""Rank sources by reliability: VERIFIED FACTS are ground truth (cite
+"[graph]"); GRAPH RELATIONSHIPS are structured and reliable when relevant;
+DOCUMENT PROSE is raw text (cite [1], [2]). Flag conflicts; say so if nothing
+answers the question. Be concise — 2-4 sentences by default; expand only for
+questions that explicitly ask for multiple distinct items, listing only what's asked.
 {extra_sections}{graph_section}
 DOCUMENT PROSE:
 {vector_context}
