@@ -203,8 +203,7 @@ with tab_compare:
                 else:
                     results["hybrid"] = _to_hybrid(resp)
                     with ph_ctx.container():
-                        components.html(render_contextgraph_panel(results["hybrid"],
-                                                                  results["hybrid"]["entity_summary"]),
+                        components.html(render_contextgraph_panel(results["hybrid"]),
                                         height=520, scrolling=True)
 
         if "traditional" in results and "hybrid" in results:
