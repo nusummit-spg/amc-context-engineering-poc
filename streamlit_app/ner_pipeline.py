@@ -139,7 +139,7 @@ def layer_c_relations(parent_text: str, parent_id: str,
                        known_entities: List[Dict[str, Any]] | None = None) -> List[Dict[str, Any]]:
     ent_str = ", ".join(sorted({e["text"] for e in (known_entities or [])})) or "none detected"
     prompt = _RELATION_PROMPT.format(text=parent_text[:3000], entities=ent_str, chunk_id=parent_id)
-    result = llm_text_client.call_llm_json(prompt, model_id=config.CLAUDE_MODEL_RELATIONS)
+    result = llm_text_client.call_llm_json(prompt, model_id=config.VERTEX_MODEL_RELATIONS)
     if not isinstance(result, list):
         return []
     clean = []

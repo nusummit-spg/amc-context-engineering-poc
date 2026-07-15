@@ -12,6 +12,7 @@ vector search — no second model, no extra memory or startup cost.
 from __future__ import annotations
 import time
 from typing import Optional
+from typing import Any
 
 import numpy as np
 
@@ -27,6 +28,8 @@ def _cache_key(product_names: frozenset | None) -> str:
     return "|".join(sorted(product_names)) if product_names else "__all__"
 
 
+_embedding_cache: dict[str, Any] = {}  # text -> vector, persists across calls
+
 def _get_candidates(product_names: set | None = None) -> list[dict]:
     key = _cache_key(frozenset(product_names) if product_names else None)
     now = time.time()
@@ -34,20 +37,13 @@ def _get_candidates(product_names: set | None = None) -> list[dict]:
         ts, cached = _candidate_cache[key]
         if now - ts < _CACHE_TTL:
             return cached
-    candidates = graph_store.get_all_entity_texts(product_names=product_names, limit=500)
+    candidates = graph_store.get_all_entity_texts(product_names=product_names, limit=150)  # was 500
     _candidate_cache[key] = (now, candidates)
     return candidates
 
 
 def resolve_entities_for_query(entity_texts: list[str], product_names: set | None = None,
                                 threshold: float = None) -> dict[str, list[str]]:
-    """
-    For each input entity text, returns graph node texts that are genuinely
-    similar by embedding cosine similarity, scoped to product_names if given.
-    A generic word that doesn't closely match any specific node text returns
-    an EMPTY list, rather than a broad substring match — this is the direct
-    fix for the "debt" bug.
-    """
     threshold = threshold if threshold is not None else config.SIMILARITY_MATCH_THRESHOLD
     if not entity_texts:
         return {}
@@ -58,7 +54,15 @@ def resolve_entities_for_query(entity_texts: list[str], product_names: set | Non
 
     model = faiss_store._get_embedder()
     candidate_texts = [c["text"] for c in candidates]
-    candidate_vecs = model.encode(candidate_texts, normalize_embeddings=True).astype("float32")
+
+    # ── embed only texts not already cached — this is the real fix ────────
+    uncached = [t for t in candidate_texts if t not in _embedding_cache]
+    if uncached:
+        new_vecs = model.encode(uncached, normalize_embeddings=True).astype("float32")
+        for t, v in zip(uncached, new_vecs):
+            _embedding_cache[t] = v
+    candidate_vecs = np.array([_embedding_cache[t] for t in candidate_texts])
+
     query_vecs = model.encode(entity_texts, normalize_embeddings=True).astype("float32")
 
     results: dict[str, list[str]] = {}
