@@ -14,6 +14,13 @@ _driver = None
 
 _WRITE_KEYWORDS = re.compile(
     r"\b(CREATE|MERGE|DELETE|SET|REMOVE|DROP|DETACH|LOAD\s+CSV)\b", re.I)
+# CALL isn't a write keyword by itself, but Community Edition has no RBAC —
+# any authenticated session can invoke admin/procedure calls (e.g.
+# dbms.shutdown(), dbms.killQuery()). Since this validator gates
+# LLM-generated Cypher on an internet-facing app, block CALL outright rather
+# than trying to allow-list safe procedures — the intended feature (simple
+# MATCH...RETURN aggregation) never needs it.
+_CALL_KEYWORD = re.compile(r"\bCALL\b", re.I)
 
 def get_driver():
     global _driver
@@ -283,6 +290,9 @@ def run_safe_cypher(cypher: str, params: dict | None = None,
         return None
     if _WRITE_KEYWORDS.search(cypher_stripped):
         print("  [cypher-guard] rejected: write keyword detected", flush=True)
+        return None
+    if _CALL_KEYWORD.search(cypher_stripped):
+        print("  [cypher-guard] rejected: CALL not allowed", flush=True)
         return None
     if not re.search(r"\bLIMIT\s+\d+\b", cypher_stripped, re.I):
         cypher_stripped += f" LIMIT {max_rows}"

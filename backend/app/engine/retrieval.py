@@ -26,6 +26,7 @@ from app.engine import llm_text_client
 from app.engine import ner_pipeline
 from app.engine import query_classifier
 from app.engine import text_to_cypher
+from app.engine import context_engineering
 
 AGGREGATION_SKIP_LABELS = {"ASSET_CLASS", "SECTOR", "DATE"}
 
@@ -73,9 +74,11 @@ def _format_cypher_rows(rows: list[dict]) -> str:
 # ─────────────────────────────────────────────────────────────────────────
 # TRADITIONAL
 # ─────────────────────────────────────────────────────────────────────────
-
+import re
 def traditional_rag(query: str, store) -> Dict[str, Any]:
-    hits, retrieve_time = _time_call(store.retrieve, query, top_k_children=5)
+    period_mentions = len(re.findall(r'\bFY\d{2}\b', query, re.I))
+    k = 5 if period_mentions <= 1 else min(5 * period_mentions, 15)
+    hits, retrieve_time = _time_call(store.retrieve, query, top_k_children=k)
     context = "\n\n---\n\n".join(
         f"[{h['product_name']} | Page {h['page_num']}]\n{h['parent_text']}" for h in hits)
 
@@ -114,22 +117,25 @@ ANSWER:"""
 # ─────────────────────────────────────────────────────────────────────────
 
 def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
+
     query_entities = ner_pipeline.run_layers_ab(query)
     entity_texts = [e["text"] for e in query_entities]
     query_type = query_classifier.classify_query(query)
 
     # ── retrieval stage ──────────────────────────────────────────────────
     t0 = time.perf_counter()
+    period_mentions = len(re.findall(r'\bFY\d{2}\b', query, re.I))
+    k = 5 if period_mentions <= 1 else min(5 * period_mentions, 15)
     if query_entities:
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
-            fut_hits = ex.submit(store.retrieve, query, top_k_children=5)
+            fut_hits = ex.submit(store.retrieve, query, top_k_children=k)
             fut_graph = ex.submit(graph_store.get_subgraph_for_query, query,
                                    product_names=None, hops=1, limit=15,
                                    query_entities=query_entities)
             hits = fut_hits.result()
             graph_result = fut_graph.result()
     else:
-        hits = store.retrieve(query, top_k_children=5)
+        hits = store.retrieve(query, top_k_children=k)
         graph_result = {"nodes": [], "edges": [], "matched_by": "none"}
     retrieve_time = time.perf_counter() - t0
 
@@ -146,18 +152,27 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
     product_names_for_scope = {h["product_name"] for h in hits}
 
     # ── type-specific enrichment — similarity-resolved, schema-aware ──────
+    # ── type-specific enrichment — only attempt when the graph actually has signal ──
+    # ── type-specific enrichment — only attempt when the graph actually has signal ──
     verified_facts = ""
     comparison_blocks = ""
+    hidden_tokens=0
+    verified_facts_trustworthy = False
     t2 = time.perf_counter()
 
-    if query_type == "aggregation" and entity_texts:
-        cypher_rows = text_to_cypher.generate_and_run(query, product_names_for_scope)
+    graph_has_signal = graph_result.get("matched_by") in ("entity", "product") \
+        and len(graph_result.get("edges", [])) >= 3
+
+    if graph_has_signal and query_type == "aggregation" and entity_texts:
+        cypher_rows, cypher_usage = text_to_cypher.generate_and_run(query, product_names_for_scope)
+        hidden_tokens = cypher_usage["input_tokens"] + cypher_usage["output_tokens"]
         if cypher_rows:
             verified_facts = (
                 "[VERIFIED AGGREGATE — generated Cypher query executed directly "
                 "against the graph, scoped to the documents this question is about]\n"
                 + _format_cypher_rows(cypher_rows)
             )
+            verified_facts_trustworthy = True
         else:
             agg_entity = _pick_aggregation_entity(query_entities)
             if agg_entity:
@@ -181,7 +196,7 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
                             f"Entity: {agg['entity_query']}\n" + "\n".join(lines)
                         )
 
-    elif query_type == "comparison" and len(entity_texts) >= 2:
+    elif graph_has_signal and query_type == "comparison" and len(entity_texts) >= 2:
         resolved = entity_resolver.resolve_entities_for_query(entity_texts, product_names_for_scope)
         per_entity = graph_store.find_entities_for_comparison(resolved, hops=1)
         blocks = []
@@ -195,47 +210,29 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
             blocks.append(f"[{entity}]\n" + "\n".join(rel_lines))
         comparison_blocks = "\n\n".join(blocks)
 
+    else:
+        hidden_tokens = 0
+
     enrichment_time = time.perf_counter() - t2
-
-    vector_context = "\n\n---\n\n".join(
-        f"[{h['product_name']} | Page {h['page_num']}]\n{h['parent_text']}" for h in hits)
-
-    # ── graph section: only when directly relevant (never Path 3 fallback) ─
     top_edges = []
     if not (verified_facts or comparison_blocks) and graph_result.get("matched_by") in ("entity", "product") and graph_result["edges"]:
-        # Only pull the generic graph section when the specialized aggregation/
-        # comparison branch above didn't already fire — otherwise this duplicates
-        # the same nodes/edges a second time in the prompt (comparison_blocks
-        # already gives per-entity relationships).
         top_edges = _select_top_edges(graph_result["edges"], max_edges=5)
 
-    graph_context_str = "\n".join(f"{e['s']} --{e['rel']}--> {e['o']}" for e in top_edges)
-
-    extra_sections = ""
-    if verified_facts:
-        extra_sections += f"\n{verified_facts}\n"
-    if comparison_blocks:
-        extra_sections += (f"\nPER-ENTITY GRAPH NEIGHBORHOODS (kept separate — do not blend "
-                            f"facts across entities):\n{comparison_blocks}\n")
-
-    graph_section = f"\nGRAPH RELATIONSHIPS:\n{graph_context_str}\n" if top_edges else ""
-
-    prompt = f"""Rank sources by reliability: VERIFIED FACTS (graph-computed, cite "[graph]") >
-GRAPH RELATIONSHIPS (structured, cite [1][2] when tied to a doc) > DOCUMENT PROSE (cite [1][2]).
-Note conflicts. Say if nothing answers the question. Answer in 2-4 sentences unless the
-question asks for multiple distinct items — then list only what's asked.
-{extra_sections}{graph_section}
-DOCUMENT PROSE:
-{vector_context}
-
-QUESTION: {query}
-
-ANSWER:"""
+    prompt,max_output_tokens= context_engineering.build_prompt(
+    query=query, verified_facts=verified_facts, comparison_blocks=comparison_blocks,
+    top_edges=top_edges, hits=hits, query_type=query_type,
+    trust_verified_facts=verified_facts_trustworthy, total_token_budget=1500)
+    if not isinstance(max_output_tokens, int) or max_output_tokens <= 0:
+        max_output_tokens = 500
 
     t_llm = time.perf_counter()
-    answer, usage = llm_text_client.call_llm_with_usage(prompt, model_id=config.CLAUDE_MODEL_LIGHT)
+    answer, usage = llm_text_client.call_llm_with_usage(prompt, model_id=config.CLAUDE_MODEL_LIGHT,max_tokens=max_output_tokens)
+
     llm_time = time.perf_counter() - t_llm
-    total_tokens = usage["input_tokens"] + usage["output_tokens"]
+    total_tokens = usage["input_tokens"] + usage["output_tokens"]+hidden_tokens
+
+    print(f"[timing] retrieve={retrieve_time:.2f}s graph={graph_time:.2f}s "
+      f"enrichment={enrichment_time:.2f}s llm={llm_time:.2f}s", flush=True)
 
     confs = [e.get("conf") for e in top_edges if isinstance(e.get("conf"), (int, float))]
     avg_conf = sum(confs) / len(confs) if confs else None

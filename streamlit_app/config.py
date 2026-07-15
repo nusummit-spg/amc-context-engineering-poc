@@ -82,6 +82,11 @@ GLINER_THRESHOLD  = 0.4
 # query entity mention (vs. naive substring containment).
 SIMILARITY_MATCH_THRESHOLD = float(os.environ.get("SIMILARITY_MATCH_THRESHOLD", "0.65"))
 
+# ── TEXT-TO-CYPHER (text_to_cypher.py) ──────────────────────────────────
+# Row cap enforced on LLM-generated aggregation queries (added as a LIMIT
+# clause if the model didn't include one).
+CYPHER_MAX_ROWS = int(os.environ.get("CYPHER_MAX_ROWS", "25"))
+
 # ── NEO4J ─────────────────────────────────────────────────────────────
 NEO4J_URI      = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER     = os.environ.get("NEO4J_USER", "neo4j")
