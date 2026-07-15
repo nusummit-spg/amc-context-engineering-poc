@@ -149,6 +149,7 @@ def _to_hybrid(resp: dict) -> dict:
 
 # ── UI ──
 
+
 if "comparisons" not in st.session_state:
     st.session_state.comparisons = []
 if "compare_query" not in st.session_state:
@@ -157,6 +158,23 @@ if "last_hybrid" not in st.session_state:
     st.session_state.last_hybrid = None
 if "last_traditional" not in st.session_state:
     st.session_state.last_traditional = None
+
+@st.cache_resource
+def _warm_models():
+    import ner_pipeline, graph_store, llm_text_client, text_to_cypher
+    ner_pipeline.run_layers_ab("warmup query for model preload")
+    faiss_store._get_embedder()
+    graph_store.get_driver()                    # force Neo4j connection open now
+    llm_text_client._get_client()                # force Anthropic client init now
+    text_to_cypher._get_cached_schema()           # pre-populate schema cache now
+    return True
+
+@st.cache_data(ttl=300)
+def get_cached_entity_summary():
+    return graph_store.get_entity_type_summary(set())
+
+_warm_models()
+store = get_master_store()  
 
 st.set_page_config(page_title="MF Context Engine", layout="wide")
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
