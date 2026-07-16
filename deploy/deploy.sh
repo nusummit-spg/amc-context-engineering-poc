@@ -31,6 +31,7 @@ SECRET_ID="${SECRET_ID:-/dev/microsoft-app-id}"
 SECRET_JSON_KEY="${SECRET_JSON_KEY:-ANTHROPIC_API_KEY}"
 ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
 CORPUS_BUCKET="${CORPUS_BUCKET:-$NAME-corpus-$ACCOUNT_ID}"
+LOG_GROUP="/$NAME/app"   # container logs (all services, awslogs driver) — see docker-compose.yml
 PEM="$HOME/.ssh/$KEY_NAME.pem"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$HERE/.." && pwd)"
@@ -96,6 +97,17 @@ else
 fi
 CORPUS_BUCKET_ARN="arn:aws:s3:::$CORPUS_BUCKET"
 
+# ---------------- 3b. CloudWatch log group (container logs, awslogs driver) ----------------
+if ! aws logs describe-log-groups --log-group-name-prefix "$LOG_GROUP" --region "$REGION" \
+    --query "logGroups[?logGroupName=='$LOG_GROUP']" --output text | grep -q .; then
+  echo ">> Creating CloudWatch log group $LOG_GROUP"
+  aws logs create-log-group --log-group-name "$LOG_GROUP" --region "$REGION"
+  aws logs put-retention-policy --log-group-name "$LOG_GROUP" --retention-in-days 14 --region "$REGION"
+else
+  echo ">> CloudWatch log group $LOG_GROUP exists"
+fi
+LOG_GROUP_ARN="arn:aws:logs:$REGION:$ACCOUNT_ID:log-group:$LOG_GROUP"
+
 # ---------------- 4. IAM role + instance profile ----------------
 # Role/profile creation is one-time (skipped if they already exist), but the
 # policy attachments below always run — put-role-policy is idempotent, and
@@ -113,11 +125,13 @@ else
   NEW_ROLE=0
 fi
 
-echo ">> Applying IAM policies (secret-read, s3-corpus-read) ..."
+echo ">> Applying IAM policies (secret-read, s3-corpus-read, cloudwatch-logs) ..."
 aws iam put-role-policy --role-name "$ROLE_NAME" --policy-name secret-read \
   --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"secretsmanager:GetSecretValue\"],\"Resource\":\"$SECRET_ARN\"}]}" >/dev/null
 aws iam put-role-policy --role-name "$ROLE_NAME" --policy-name s3-corpus-read \
   --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:GetObject\",\"s3:ListBucket\"],\"Resource\":[\"$CORPUS_BUCKET_ARN\",\"$CORPUS_BUCKET_ARN/*\"]}]}" >/dev/null
+aws iam put-role-policy --role-name "$ROLE_NAME" --policy-name cloudwatch-logs \
+  --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"logs:CreateLogStream\",\"logs:PutLogEvents\",\"logs:DescribeLogStreams\"],\"Resource\":\"$LOG_GROUP_ARN:*\"}]}" >/dev/null
 
 if [ "$NEW_ROLE" = "1" ]; then
   sleep 10  # let the instance profile propagate before EC2 tries to use it

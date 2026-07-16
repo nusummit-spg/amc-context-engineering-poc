@@ -23,12 +23,24 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-group: /amc-demo/app
+        awslogs-stream: neo4j
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
       - "6379:6379"
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-group: /amc-demo/app
+        awslogs-stream: redis
 
   api:
     build: ./backend
@@ -56,6 +68,12 @@ services:
     depends_on:
       neo4j:
         condition: service_healthy
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-group: /amc-demo/app
+        awslogs-stream: api
 
   streamlit:
     build: ./streamlit_app
@@ -74,6 +92,12 @@ services:
         condition: service_healthy
       api:
         condition: service_started
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-group: /amc-demo/app
+        awslogs-stream: streamlit
 
 volumes:
   neo4j_data:
