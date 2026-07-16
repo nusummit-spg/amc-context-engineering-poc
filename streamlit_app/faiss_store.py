@@ -67,8 +67,8 @@ _embedder       = None
 # ─────────────────────────────────────────────────────────────────────────────
 # PATHS
 # ─────────────────────────────────────────────────────────────────────────────
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-INDEXES_DIR  = PROJECT_ROOT / "faiss_indexes"
+PROJECT_ROOT = config.PROJECT_ROOT
+INDEXES_DIR  = config.FAISS_DIR
 INDEXES_DIR.mkdir(parents=True, exist_ok=True)
 
 USER_UPLOAD_SLUG = "user_uploads"
@@ -112,9 +112,12 @@ def _get_embedder():
     if _embedder is None:
         print("  [embed] Loading sentence-transformer model…", flush=True)
         from sentence_transformers import SentenceTransformer
+        # NOTE: The amc_master FAISS index was built with all-MiniLM-L6-v2 (384-dim).
+        # This model is fully cached locally — loads offline without any network call.
         _embedder = SentenceTransformer(
-            "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+            "sentence-transformers/all-MiniLM-L6-v2",
             device="cpu",
+            local_files_only=True,
         )
         print("  [embed] Model ready.", flush=True)
     return _embedder

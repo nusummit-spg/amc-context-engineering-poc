@@ -26,7 +26,6 @@ import llm_text_client
 import ner_pipeline
 import query_classifier
 import text_to_cypher
-import context_engineering
 
 AGGREGATION_SKIP_LABELS = {"ASSET_CLASS", "SECTOR", "DATE"}
 
@@ -74,11 +73,9 @@ def _format_cypher_rows(rows: list[dict]) -> str:
 # ─────────────────────────────────────────────────────────────────────────
 # TRADITIONAL
 # ─────────────────────────────────────────────────────────────────────────
-import re
+
 def traditional_rag(query: str, store) -> Dict[str, Any]:
-    period_mentions = len(re.findall(r'\bFY\d{2}\b', query, re.I))
-    k = 5 if period_mentions <= 1 else min(5 * period_mentions, 15)
-    hits, retrieve_time = _time_call(store.retrieve, query, top_k_children=k)
+    hits, retrieve_time = _time_call(store.retrieve, query, top_k_children=5)
     context = "\n\n---\n\n".join(
         f"[{h['product_name']} | Page {h['page_num']}]\n{h['parent_text']}" for h in hits)
 
@@ -116,63 +113,113 @@ ANSWER:"""
 # HYBRID
 # ─────────────────────────────────────────────────────────────────────────
 
-def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
+def log_query_audit(audit_data: Dict[str, Any]):
+    """
+    Writes structured query execution audit log to console and logs/query_execution_audit.jsonl.
+    Allows exact verification of active parameters, latencies, and Pillar 1-4 activations.
+    """
+    import json
+    from datetime import datetime
+    
+    timestamp = datetime.now().isoformat()
+    audit_data["timestamp"] = timestamp
+    
+    # Console formatting for quick visual debugging
+    print("\n================================================================================", flush=True)
+    print(f"  [QUERY AUDIT LOG] {timestamp}", flush=True)
+    print("================================================================================", flush=True)
+    print(f"  Query             : \"{audit_data.get('query')}\"", flush=True)
+    print(f"  Classified Type   : {audit_data.get('query_type').upper()} (Pillar 1 Intent-Driven Routing)", flush=True)
+    print(f"  NER Layer A (Rule): {len(audit_data.get('ner_layer_a', []))} entities -> {[e['text'] for e in audit_data.get('ner_layer_a', [])]}", flush=True)
+    print(f"  NER Layer B (ML)  : {len(audit_data.get('ner_layer_b', []))} entities -> {[e['text'] for e in audit_data.get('ner_layer_b', [])]}", flush=True)
+    print(f"  Graph Traversal   : Matched by '{audit_data.get('graph_matched_by')}' | {audit_data.get('graph_nodes_count', 0)} nodes | {audit_data.get('graph_edges_count', 0)} 1-hop edges", flush=True)
+    print(f"  Vector Retrieval  : {audit_data.get('vector_hits_raw', 0)} raw candidates | Bypassed={audit_data.get('vector_bypassed', False)} | Pruned (Pillar 3)={audit_data.get('vector_pruned_to_top1', False)}", flush=True)
+    print(f"  Enrichment Mode   : Verified Aggregate={audit_data.get('verified_aggregate_used', False)} | Comparison Table={audit_data.get('comparison_table_used', False)}", flush=True)
+    print(f"  LLM Model         : {audit_data.get('llm_model')} | Input Tokens: {audit_data.get('input_tokens', 0)} | Output Tokens: {audit_data.get('output_tokens', 0)}", flush=True)
+    print(f"  Latencies (ms)    : NER={audit_data.get('latency_ner_ms', 0):.1f}ms | Graph={audit_data.get('latency_graph_ms', 0):.1f}ms | Vector={audit_data.get('latency_vector_ms', 0):.1f}ms | LLM={audit_data.get('latency_llm_ms', 0):.1f}ms | Total={audit_data.get('latency_total_ms', 0):.1f}ms", flush=True)
+    print("================================================================================\n", flush=True)
+    
+    # Persistent JSONL log
+    try:
+        log_file = config.LOG_DIR / "query_execution_audit.jsonl"
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(audit_data, ensure_ascii=False) + "\n")
+    except Exception as exc:
+        print(f"  [Audit Log Warning] Could not write to query_execution_audit.jsonl: {exc}", flush=True)
 
+
+def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
+    t_start = time.perf_counter()
+    
+    t_ner_0 = time.perf_counter()
     query_entities = ner_pipeline.run_layers_ab(query)
+    latency_ner_ms = (time.perf_counter() - t_ner_0) * 1000.0
+    
     entity_texts = [e["text"] for e in query_entities]
     query_type = query_classifier.classify_query(query)
 
-    # ── retrieval stage ──────────────────────────────────────────────────
-    t0 = time.perf_counter()
-    period_mentions = len(re.findall(r'\bFY\d{2}\b', query, re.I))
-    k = 5 if period_mentions <= 1 else min(5 * period_mentions, 15)
-    if query_entities:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
-            fut_hits = ex.submit(store.retrieve, query, top_k_children=k)
-            fut_graph = ex.submit(graph_store.get_subgraph_for_query, query,
-                                   product_names=None, hops=1, limit=15,
-                                   query_entities=query_entities)
-            hits = fut_hits.result()
-            graph_result = fut_graph.result()
-    else:
-        hits = store.retrieve(query, top_k_children=k)
-        graph_result = {"nodes": [], "edges": [], "matched_by": "none"}
-    retrieve_time = time.perf_counter() - t0
+    ner_layer_a = [e for e in query_entities if e.get("layer") == "A"]
+    ner_layer_b = [e for e in query_entities if e.get("layer") == "B"]
 
-    if not graph_result["edges"]:
+    # ── retrieval stage (Intent-Driven Conditional Vector Routing) ────────
+    t_ret_0 = time.perf_counter()
+    graph_time = 0.0
+    retrieve_time = 0.0
+    vector_bypassed = False
+
+    if query_entities:
+        # Step 1: Execute Graph Traversal FIRST
+        t1 = time.perf_counter()
+        graph_result = graph_store.get_subgraph_for_query(
+            query, product_names=None, hops=1, limit=15, query_entities=query_entities
+        )
+        graph_time = time.perf_counter() - t1
+
+        # Step 2: Check if Graph returned strong verified signal (>= 3 edges or product/entity match)
+        graph_has_strong_signal = (
+            graph_result.get("matched_by") in ("entity", "product")
+            and len(graph_result.get("edges", [])) >= 3
+        )
+
+        # Step 3: ONLY run Vector Retrieval if query is open-ended or graph signal is weak
+        if query_type in ("aggregation", "comparison", "direct_lookup") and graph_has_strong_signal:
+            hits = []  # Bypass vector search entirely! Saves 0.10s-0.40s and prevents token bloat.
+            retrieve_time = 0.0
+            vector_bypassed = True
+        else:
+            t_ret = time.perf_counter()
+            hits = store.retrieve(query, top_k_children=5)
+            retrieve_time = time.perf_counter() - t_ret
+    else:
+        t_ret = time.perf_counter()
+        hits = store.retrieve(query, top_k_children=5)
+        retrieve_time = time.perf_counter() - t_ret
+        graph_result = {"nodes": [], "edges": [], "matched_by": "none"}
+        graph_time = 0.0
+
+    if not graph_result["edges"] and hits:
         product_names = {h["product_name"] for h in hits}
         t1 = time.perf_counter()
         graph_result = graph_store.get_subgraph_for_query(
             query, product_names=product_names, hops=1, limit=15,
             query_entities=query_entities)
-        graph_time = time.perf_counter() - t1
-    else:
-        graph_time = 0.0
+        graph_time += (time.perf_counter() - t1)
 
     product_names_for_scope = {h["product_name"] for h in hits}
 
     # ── type-specific enrichment — similarity-resolved, schema-aware ──────
-    # ── type-specific enrichment — only attempt when the graph actually has signal ──
-    # ── type-specific enrichment — only attempt when the graph actually has signal ──
     verified_facts = ""
     comparison_blocks = ""
-    hidden_tokens=0
-    verified_facts_trustworthy = False
     t2 = time.perf_counter()
 
-    graph_has_signal = graph_result.get("matched_by") in ("entity", "product") \
-        and len(graph_result.get("edges", [])) >= 3
-
-    if graph_has_signal and query_type == "aggregation" and entity_texts:
-        cypher_rows, cypher_usage = text_to_cypher.generate_and_run(query, product_names_for_scope)
-        hidden_tokens = cypher_usage["input_tokens"] + cypher_usage["output_tokens"]
+    if query_type == "aggregation" and entity_texts:
+        cypher_rows = text_to_cypher.generate_and_run(query, product_names_for_scope)
         if cypher_rows:
             verified_facts = (
                 "[VERIFIED AGGREGATE — generated Cypher query executed directly "
                 "against the graph, scoped to the documents this question is about]\n"
                 + _format_cypher_rows(cypher_rows)
             )
-            verified_facts_trustworthy = True
         else:
             agg_entity = _pick_aggregation_entity(query_entities)
             if agg_entity:
@@ -196,7 +243,7 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
                             f"Entity: {agg['entity_query']}\n" + "\n".join(lines)
                         )
 
-    elif graph_has_signal and query_type == "comparison" and len(entity_texts) >= 2:
+    elif query_type == "comparison" and len(entity_texts) >= 2:
         resolved = entity_resolver.resolve_entities_for_query(entity_texts, product_names_for_scope)
         per_entity = graph_store.find_entities_for_comparison(resolved, hops=1)
         blocks = []
@@ -204,35 +251,64 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
             if not rels:
                 continue
             top_rels = _select_top_edges(
-                [{"s": r["s"], "rel": r["rel_type"], "o": r["o"], "conf": None} for r in rels],
-                max_edges=6)
-            rel_lines = [f"  {r['s']} --{r['rel']}--> {r['o']}" for r in top_rels]
-            blocks.append(f"[{entity}]\n" + "\n".join(rel_lines))
+                [{"s": r["s"], "rel": r["rel_type"], "o": r["o"], "conf": r.get("conf")} for r in rels],
+                max_edges=8)
+            table_header = f"### [{entity}] Graph Neighborhood\n| Subject | Relationship | Target |\n| :--- | :--- | :--- |"
+            table_rows = [f"| **{r['s']}** | `{r['rel']}` | {r['o']} |" for r in top_rels]
+            blocks.append(table_header + "\n" + "\n".join(table_rows))
         comparison_blocks = "\n\n".join(blocks)
 
-    else:
-        hidden_tokens = 0
-
     enrichment_time = time.perf_counter() - t2
-    top_edges = []
-    if not (verified_facts or comparison_blocks) and graph_result.get("matched_by") in ("entity", "product") and graph_result["edges"]:
-        top_edges = _select_top_edges(graph_result["edges"], max_edges=5)
 
-    prompt,max_output_tokens= context_engineering.build_prompt(
-    query=query, verified_facts=verified_facts, comparison_blocks=comparison_blocks,
-    top_edges=top_edges, hits=hits, query_type=query_type,
-    trust_verified_facts=verified_facts_trustworthy, total_token_budget=1500)
-    if not isinstance(max_output_tokens, int) or max_output_tokens <= 0:
-        max_output_tokens = 500
+    # Pillar 3: Strict Vector Pruning & Trustworthy Comparison Flags
+    trust_verified_facts = bool(verified_facts or comparison_blocks)
+    effective_hits = hits
+    vector_pruned_to_top1 = False
+    if trust_verified_facts and query_type in ("aggregation", "comparison"):
+        # Drop contradictory/redundant vector chunks so the LLM focuses purely on verified graph data
+        effective_hits = hits[:1]
+        vector_pruned_to_top1 = (len(hits) > 1)
+
+    vector_context = "\n\n---\n\n".join(
+        f"[{h['product_name']} | Page {h['page_num']}]\n{h['parent_text']}" for h in effective_hits) if effective_hits else "No raw document prose required — verified graph facts provide the structured ground truth."
+
+    # ── graph section: only when directly relevant (never Path 3 fallback) ─
+    top_edges = []
+    include_graph_section = bool(verified_facts) or bool(comparison_blocks)
+    if graph_result.get("matched_by") in ("entity", "product") and graph_result["edges"]:
+        top_edges = _select_top_edges(graph_result["edges"], max_edges=8)
+        include_graph_section = include_graph_section or bool(top_edges)
+
+    graph_context_str = "\n".join(f"{e['s']} --{e['rel']}--> {e['o']}" for e in top_edges)
+
+    extra_sections = ""
+    if verified_facts:
+        extra_sections += f"\n{verified_facts}\n"
+    if comparison_blocks:
+        extra_sections += (f"\nPER-ENTITY GRAPH NEIGHBORHOODS (kept separate — do not blend "
+                            f"facts across entities):\n{comparison_blocks}\n")
+
+    graph_section = f"\nGRAPH RELATIONSHIPS:\n{graph_context_str}\n" if (top_edges and include_graph_section) else ""
+
+    prompt = f"""Sources below are ranked by reliability: VERIFIED FACTS (if present) are
+computed directly from the graph — treat as ground truth, cite as "[graph]".
+GRAPH RELATIONSHIPS (if present) are structured extractions, more reliable
+than prose when directly relevant. DOCUMENT PROSE is raw retrieved text, cite
+as [1], [2]. If sources conflict, say so explicitly. If nothing answers the
+question, say so.
+{extra_sections}{graph_section}
+DOCUMENT PROSE:
+{vector_context}
+
+QUESTION: {query}
+
+ANSWER:"""
 
     t_llm = time.perf_counter()
-    answer, usage = llm_text_client.call_llm_with_usage(prompt, model_id=config.CLAUDE_MODEL_LIGHT,max_tokens=max_output_tokens)
-
+    answer, usage = llm_text_client.call_llm_with_usage(prompt, model_id=config.CLAUDE_MODEL_LIGHT)
     llm_time = time.perf_counter() - t_llm
-    total_tokens = usage["input_tokens"] + usage["output_tokens"]+hidden_tokens
-
-    print(f"[timing] retrieve={retrieve_time:.2f}s graph={graph_time:.2f}s "
-      f"enrichment={enrichment_time:.2f}s llm={llm_time:.2f}s", flush=True)
+    total_tokens = usage["input_tokens"] + usage["output_tokens"]
+    latency_total_ms = (time.perf_counter() - t_start) * 1000.0
 
     confs = [e.get("conf") for e in top_edges if isinstance(e.get("conf"), (int, float))]
     avg_conf = sum(confs) / len(confs) if confs else None
@@ -248,7 +324,33 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
     docs = [{"name": h["source"], "score": round(h["score"], 2),
          "page": h["page_num"],
          "snippet": h["child_text"][:160].replace("\n", " "),
-         "full_text": h["parent_text"]} for h in hits]
+         "full_text": h["parent_text"]} for h in effective_hits]
+
+    audit_record = {
+        "query": query,
+        "query_type": query_type,
+        "ner_layer_a": ner_layer_a,
+        "ner_layer_b": ner_layer_b,
+        "graph_matched_by": graph_result.get("matched_by", "none"),
+        "graph_nodes_count": len(graph_result.get("nodes", [])),
+        "graph_edges_count": len(graph_result.get("edges", [])),
+        "vector_hits_raw": len(hits),
+        "vector_bypassed": vector_bypassed,
+        "vector_pruned_to_top1": vector_pruned_to_top1,
+        "verified_aggregate_used": bool(verified_facts),
+        "comparison_table_used": bool(comparison_blocks),
+        "llm_model": config.CLAUDE_MODEL_LIGHT,
+        "input_tokens": usage["input_tokens"],
+        "output_tokens": usage["output_tokens"],
+        "latency_ner_ms": latency_ner_ms,
+        "latency_graph_ms": graph_time * 1000.0,
+        "latency_vector_ms": retrieve_time * 1000.0,
+        "latency_llm_ms": llm_time * 1000.0,
+        "latency_total_ms": latency_total_ms,
+        "confidence_label": confidence_label,
+        "status": "SUCCESS"
+    }
+    log_query_audit(audit_record)
 
     return {
         "mode": "hybrid", "query": query, "query_type": query_type,

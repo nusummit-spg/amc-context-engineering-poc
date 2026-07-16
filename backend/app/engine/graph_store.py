@@ -344,30 +344,39 @@ def get_aggregate_for_entity(entity_texts: list[str], hops: int = 1, limit_sourc
     return {"entity_query": ", ".join(entity_texts), "breakdown": rows}
 
 def find_entities_for_comparison(resolved_entities: dict[str, list[str]], hops: int = 1) -> dict:
+    """Batch-traverse all comparison entities in a single Neo4j round-trip using UNWIND."""
+    all_targets = []
+    target_to_orig = {}
+    for orig_name, matches in resolved_entities.items():
+        for m in matches:
+            all_targets.append(m)
+            target_to_orig[m] = orig_name
+
+    grouped = {orig: [] for orig in resolved_entities.keys()}
+    if not all_targets:
+        return grouped
+
+    # Single-shot O(V+E) traversal instead of O(N) Python loops
+    cypher = f"""
+    UNWIND $texts AS target
+    MATCH (n:Entity)
+    WHERE n.text = target OR toLower(n.text) = toLower(target)
+    MATCH (n)-[r*1..{max(int(hops),1)}]-(m:Entity)
+    UNWIND r AS rel
+    RETURN DISTINCT target, n.text AS s, type(rel) AS rel_type, m.text AS o, rel.confidence AS conf, m.label AS o_label, m.source AS source
+    LIMIT 150
     """
-    Takes {original_query_text: [resolved candidate texts]} from
-    entity_resolver — exact `IN` match, not substring CONTAINS. An entity
-    with no resolved candidates (nothing similar enough found) returns an
-    empty list rather than silently matching unrelated nodes.
-    """
-    per_entity = {}
     with get_driver().session(database=config.NEO4J_DATABASE) as session:
-        for original_text, matched_texts in resolved_entities.items():
-            if not matched_texts:
-                per_entity[original_text] = []
-                continue
-            result = session.run(
-                f"""
-                MATCH (n:Entity) WHERE n.text IN $texts
-                MATCH (n)-[r*1..{max(int(hops),1)}]-(m:Entity)
-                UNWIND r AS rel
-                WITH n, rel, m
-                RETURN DISTINCT n.text AS s, type(rel) AS rel_type,
-                       m.text AS o, m.label AS o_label, m.source AS source
-                LIMIT 20
-                """, texts=matched_texts)
-            per_entity[original_text] = [dict(r) for r in result]
-    return per_entity
+        result = session.run(cypher, texts=all_targets)
+        for rec in result:
+            orig = target_to_orig.get(rec["target"])
+            if orig:
+                grouped[orig].append({
+                    "s": rec["s"], "rel_type": rec["rel_type"],
+                    "o": rec["o"], "conf": rec.get("conf"),
+                    "o_label": rec.get("o_label"), "source": rec.get("source")
+                })
+        return grouped
 
 def get_node_neighborhood(node_text: str, limit: int = 25) -> Dict[str, list]:
     """1-hop neighborhood of a single node — powers 'click a node to explore'."""
