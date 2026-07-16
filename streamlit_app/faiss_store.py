@@ -114,11 +114,17 @@ def _get_embedder():
         from sentence_transformers import SentenceTransformer
         # NOTE: The amc_master FAISS index was built with all-MiniLM-L6-v2 (384-dim).
         # This model is fully cached locally — loads offline without any network call.
-        _embedder = SentenceTransformer(
-            "sentence-transformers/all-MiniLM-L6-v2",
-            device="cpu",
-            local_files_only=True,
-        )
+        try:
+            _embedder = SentenceTransformer(
+                "sentence-transformers/all-MiniLM-L6-v2",
+                device="cpu",
+                local_files_only=True,
+            )
+        except Exception:
+            _embedder = SentenceTransformer(
+                "sentence-transformers/all-MiniLM-L6-v2",
+                device="cpu",
+            )
         print("  [embed] Model ready.", flush=True)
     return _embedder
 

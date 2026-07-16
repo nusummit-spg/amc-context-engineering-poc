@@ -45,6 +45,27 @@ def _markdown_to_html(text: str) -> str:
     text = text.replace('\n\n', '</p><p>').replace('\n', '<br>')
     return f"<p>{text}</p>"
 
+def _render_telemetry_card(t: dict) -> str:
+    if not t or not isinstance(t, dict):
+        return ""
+    return f"""
+    <details style="margin-top:14px; border:1px solid #E7E1D4; border-radius:8px; padding:10px; background:#FAFAFA;">
+      <summary style="cursor:pointer; font-size:12px; font-weight:700; color:#5C574C;">⚡ Microsecond Telemetry & Execution Ledger</summary>
+      <table style="width:100%; font-size:11.5px; margin-top:8px; border-collapse:collapse;">
+        <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>Vector DB Lookup (FAISS)</b></td><td style="text-align:right;">{t.get('latency_vector_db_ms', 0):.1f} ms</td></tr>
+        <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>Graph Traversal (Neo4j UNWIND)</b></td><td style="text-align:right;">{t.get('latency_graph_db_ms', 0):.1f} ms</td></tr>
+        <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>NER & Entity Resolution</b></td><td style="text-align:right;">{t.get('latency_ner_processing_ms', 0):.1f} ms</td></tr>
+        <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>Post-Retrieval Pruning / Table Prep</b></td><td style="text-align:right;">{t.get('latency_post_retrieval_processing_ms', 0):.1f} ms</td></tr>
+        <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>LLM Synthesis Latency</b></td><td style="text-align:right;">{t.get('latency_llm_generation_ms', 0):.1f} ms</td></tr>
+        <tr style="border-bottom:1px solid #EAEAEA; font-weight:700; background:#EFEAE0;"><td style="padding:4px;"><b>Total Pipeline Execution</b></td><td style="text-align:right; padding:4px;">{t.get('latency_total_pipeline_ms', 0):.1f} ms</td></tr>
+        <tr><td style="padding:6px 0 2px 0;"><b>Tokens (Input / Output / Total)</b></td><td style="text-align:right; padding:6px 0 2px 0;"><b>{t.get('tokens_input', 0):,}</b> in / <b>{t.get('tokens_output', 0):,}</b> out / <b>{t.get('tokens_total', 0):,}</b></td></tr>
+        <tr><td style="padding:2px 0;"><b>DB Candidates Surfaced</b></td><td style="text-align:right; padding:2px 0;">{t.get('db_candidates_surfaced', 0)} {'nodes' if 'ContextGraph' in t.get('pipeline_mode', '') else 'chunks'}</td></tr>
+        <tr><td style="padding:2px 0;"><b>Vector Noise Bypassed (Pillar 1)</b></td><td style="text-align:right; padding:2px 0; font-weight:bold; color:{'#3F6B42' if t.get('vector_bypassed') else '#8A8378'};">{str(t.get('vector_bypassed', False)).upper()}</td></tr>
+      </table>
+    </details>
+"""
+
+
 def render_traditional_panel(r):
     docs_html = "".join(f"""
       <div class="cg-doc">
@@ -54,6 +75,8 @@ def render_traditional_panel(r):
           <div class="cg-doc-full">{html.escape(d.get('full_text', ''))}</div>
         </details>
       </div>""" for d in r["docs"]) or "<div class='cg-graph-note'>No matching documents found.</div>"
+
+    telemetry_html = _render_telemetry_card(r.get("telemetry_breakdown", {}))
 
     return f"""{CSS}
     <div class="cg-wrap cg-panel">
@@ -70,6 +93,7 @@ def render_traditional_panel(r):
         <div class="cg-stat"><div class="cg-stat-num">{r.get('total_tokens', 0):,}</div><div class="cg-stat-label">Tokens used</div></div>
         <div class="cg-stat"><div class="cg-stat-num">{r['total_time']:.2f}s</div><div class="cg-stat-label">Total time</div></div>
       </div>
+      {telemetry_html}
     </div>"""
 
 
@@ -98,8 +122,14 @@ def _render_mini_graph(nodes, edges, matched_texts, width=460):
     return f'<svg width="100%" viewBox="0 0 {width} {height}">{edges_svg}{nodes_svg}</svg>'
 
 
-def render_contextgraph_panel(r):
+def render_contextgraph_panel(r, entity_summary):
     sources_html = "".join(f"<div>[{i+1}] {d['name']}</div>" for i, d in enumerate(r["docs"]))
+    tree_html = "".join(f"""
+      <div class="cg-tree-node {'active' if t['active'] else ''}">
+        <span>{t['label']}</span><span>{t['count']}</span>
+      </div>""" for t in entity_summary)
+    graph_svg = _render_mini_graph(r["graph_nodes"], r["graph_edges"], r["matched_entity_texts"])
+    telemetry_html = _render_telemetry_card(r.get("telemetry_breakdown", {}))
 
     return f"""{CSS}
     <div class="cg-wrap cg-panel">
@@ -107,14 +137,36 @@ def render_contextgraph_panel(r):
         <div class="cg-panel-title"><span class="cg-dot ctx"></span>ContextGraph</div>
         <span class="cg-badge">hybrid graph + vector</span>
       </div>
-      <span class="cg-badge green">{r['confidence_label']}</span>
-      <div class="cg-answer">{_markdown_to_html(r['answer'])}</div>
-      <div class="cg-label" style="margin-top:12px">Sources</div>
-      <div class="cg-sources">{sources_html}</div>
-      <div class="cg-graph-note">See the Analytics tab → "Last query's graph" for an interactive graph explorer of this result.</div>
-      <div class="cg-stats">
-        <div class="cg-stat"><div class="cg-stat-num">{len(r['graph_nodes'])}</div><div class="cg-stat-label">Graph nodes touched</div></div>
-        <div class="cg-stat"><div class="cg-stat-num">{r.get('total_tokens', 0):,}</div><div class="cg-stat-label">Tokens used</div></div>
-        <div class="cg-stat"><div class="cg-stat-num">{r['total_time']:.2f}s</div><div class="cg-stat-label">Total time</div></div>
+      <div class="cg-tabs">
+        <div class="cg-tab active" onclick="cgTab(this,'answer')">Answer</div>
+        <div class="cg-tab" onclick="cgTab(this,'ontology')">Ontology View</div>
       </div>
-    </div>"""
+      <div data-view="answer">
+        <span class="cg-badge green">{r['confidence_label']}</span>
+        <div class="cg-answer">{_markdown_to_html(r['answer'])}</div>
+        <div class="cg-label" style="margin-top:12px">Sources</div>
+        <div class="cg-sources">{sources_html}</div>
+        <div class="cg-stats">
+          <div class="cg-stat"><div class="cg-stat-num">{len(r['graph_nodes'])}</div><div class="cg-stat-label">Graph nodes touched</div></div>
+          <div class="cg-stat"><div class="cg-stat-num">{r.get('total_tokens', 0):,}</div><div class="cg-stat-label">Tokens used</div></div>
+          <div class="cg-stat"><div class="cg-stat-num">{r['total_time']:.2f}s</div><div class="cg-stat-label">Total time</div></div>
+        </div>
+        {telemetry_html}
+      </div>
+      <div data-view="ontology" style="display:none">
+        <div class="cg-label">Entity types touched by this query</div>
+        <div style="margin-top:6px">{tree_html}</div>
+        <div class="cg-label" style="margin-top:12px">Graph neighborhood</div>
+        {graph_svg}
+        <div class="cg-graph-note">Colored nodes/edges matched this query directly; grey nodes are one hop of surrounding context.</div>
+      </div>
+    </div>
+    <script>
+    function cgTab(el, which) {{
+      var tabs = el.parentElement.children;
+      for (var i=0;i<tabs.length;i++) tabs[i].classList.remove('active');
+      el.classList.add('active');
+      el.closest('.cg-panel').querySelectorAll('[data-view]').forEach(v =>
+        v.style.display = (v.dataset.view === which ? 'block' : 'none'));
+    }}
+    </script>"""

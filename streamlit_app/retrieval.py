@@ -76,6 +76,7 @@ def _format_cypher_rows(rows: list[dict]) -> str:
 
 def traditional_rag(query: str, store) -> Dict[str, Any]:
     hits, retrieve_time = _time_call(store.retrieve, query, top_k_children=5)
+    t_post = time.perf_counter()
     context = "\n\n---\n\n".join(
         f"[{h['product_name']} | Page {h['page_num']}]\n{h['parent_text']}" for h in hits)
 
@@ -88,6 +89,7 @@ CONTEXT:
 QUESTION: {query}
 
 ANSWER:"""
+    post_process_time = time.perf_counter() - t_post
     t_llm = time.perf_counter()
     answer, usage = llm_text_client.call_llm_with_usage(prompt, model_id=config.CLAUDE_MODEL_LIGHT)
     llm_time = time.perf_counter() - t_llm
@@ -98,6 +100,22 @@ ANSWER:"""
          "snippet": h["child_text"][:160].replace("\n", " "),
          "full_text": h["parent_text"]} for h in hits]
 
+    telemetry_breakdown = {
+        "pipeline_mode": "Traditional Vector RAG",
+        "latency_vector_db_ms": round(retrieve_time * 1000.0, 2),
+        "latency_graph_db_ms": 0.0,
+        "latency_ner_processing_ms": 0.0,
+        "latency_post_retrieval_processing_ms": round(post_process_time * 1000.0, 2),
+        "latency_llm_generation_ms": round(llm_time * 1000.0, 2),
+        "latency_total_pipeline_ms": round((retrieve_time + post_process_time + llm_time) * 1000.0, 2),
+        "tokens_input": usage["input_tokens"],
+        "tokens_output": usage["output_tokens"],
+        "tokens_total": total_tokens,
+        "db_candidates_surfaced": len(hits),
+        "vector_bypassed": False,
+        "status": "SUCCESS"
+    }
+
     return {
         "mode": "traditional", "query": query,
         "answer": answer or "LLM unavailable — check credentials.",
@@ -105,7 +123,8 @@ ANSWER:"""
         "input_tokens": usage["input_tokens"], "output_tokens": usage["output_tokens"],
         "total_tokens": total_tokens,
         "retrieve_time": retrieve_time, "llm_time": llm_time,
-        "total_time": retrieve_time + llm_time,
+        "total_time": retrieve_time + post_process_time + llm_time,
+        "telemetry_breakdown": telemetry_breakdown,
     }
 
 
@@ -352,6 +371,22 @@ ANSWER:"""
     }
     log_query_audit(audit_record)
 
+    telemetry_breakdown = {
+        "pipeline_mode": "ContextGraph Hybrid RAG",
+        "latency_vector_db_ms": round(retrieve_time * 1000.0, 2),
+        "latency_graph_db_ms": round(graph_time * 1000.0, 2),
+        "latency_ner_processing_ms": round(latency_ner_ms, 2),
+        "latency_post_retrieval_processing_ms": round(enrichment_time * 1000.0, 2),
+        "latency_llm_generation_ms": round(llm_time * 1000.0, 2),
+        "latency_total_pipeline_ms": round(latency_total_ms, 2),
+        "tokens_input": usage["input_tokens"],
+        "tokens_output": usage["output_tokens"],
+        "tokens_total": total_tokens,
+        "db_candidates_surfaced": len(graph_result.get("nodes", [])),
+        "vector_bypassed": vector_bypassed,
+        "status": "SUCCESS"
+    }
+
     return {
         "mode": "hybrid", "query": query, "query_type": query_type,
         "answer": answer or "LLM unavailable — check credentials.",
@@ -368,6 +403,7 @@ ANSWER:"""
         "retrieve_time": retrieve_time, "graph_time": graph_time,
         "enrichment_time": enrichment_time, "llm_time": llm_time,
         "total_time": retrieve_time + graph_time + enrichment_time + llm_time,
+        "telemetry_breakdown": telemetry_breakdown,
     }
 
 
