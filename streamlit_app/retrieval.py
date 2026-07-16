@@ -229,10 +229,12 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
     # ── type-specific enrichment — similarity-resolved, schema-aware ──────
     verified_facts = ""
     comparison_blocks = ""
+    hidden_tokens = 0
     t2 = time.perf_counter()
 
     if query_type == "aggregation" and entity_texts:
-        cypher_rows = text_to_cypher.generate_and_run(query, product_names_for_scope)
+        cypher_rows, cypher_usage = text_to_cypher.generate_and_run(query, product_names_for_scope)
+        hidden_tokens += cypher_usage["input_tokens"] + cypher_usage["output_tokens"]
         if cypher_rows:
             verified_facts = (
                 "[VERIFIED AGGREGATE — generated Cypher query executed directly "
@@ -326,7 +328,7 @@ ANSWER:"""
     t_llm = time.perf_counter()
     answer, usage = llm_text_client.call_llm_with_usage(prompt, model_id=config.CLAUDE_MODEL_LIGHT)
     llm_time = time.perf_counter() - t_llm
-    total_tokens = usage["input_tokens"] + usage["output_tokens"]
+    total_tokens = usage["input_tokens"] + usage["output_tokens"] + hidden_tokens
     latency_total_ms = (time.perf_counter() - t_start) * 1000.0
 
     confs = [e.get("conf") for e in top_edges if isinstance(e.get("conf"), (int, float))]
