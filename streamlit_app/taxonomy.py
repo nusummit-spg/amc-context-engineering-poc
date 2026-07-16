@@ -31,14 +31,28 @@ def _read_tabular(path: Path):
             return [], []
         return rows[0], rows[1:]
     elif path.suffix.lower() in (".xlsx", ".xls"):
-        import openpyxl
-        wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
-        ws = wb[wb.sheetnames[0]]
-        rows = [[str(c).strip() if c is not None else "" for c in r]
-                for r in ws.iter_rows(values_only=True)]
-        if not rows:
+        # Try openpyxl first (handles real xlsx, even with .xls extension)
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
+            ws = wb[wb.sheetnames[0]]
+            rows = [[str(c).strip() if c is not None else "" for c in r]
+                    for r in ws.iter_rows(values_only=True)]
+            if rows:
+                return rows[0], rows[1:]
+        except Exception:
+            pass
+        # Try xlrd next (handles old binary xls format)
+        try:
+            import xlrd
+            wb = xlrd.open_workbook(path)
+            ws = wb.sheet_by_index(0)
+            rows = [[str(ws.cell_value(r, c)).strip() for c in range(ws.ncols)] for r in range(ws.nrows)]
+            if rows:
+                return rows[0], rows[1:]
+        except Exception as e:
+            print(f"  [taxonomy] Could not read {path.name} with either openpyxl or xlrd: {e}", flush=True)
             return [], []
-        return rows[0], rows[1:]
     return [], []
 
 

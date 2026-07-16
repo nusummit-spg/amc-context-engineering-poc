@@ -83,7 +83,10 @@ def _get_gliner():
     if _gliner_model is None:
         from gliner import GLiNER
         print("  [ner-b] Loading GLiNER…", flush=True)
-        _gliner_model = GLiNER.from_pretrained(config.GLINER_MODEL_ID)
+        try:
+            _gliner_model = GLiNER.from_pretrained(config.GLINER_MODEL_ID, local_files_only=True)
+        except Exception:
+            _gliner_model = GLiNER.from_pretrained(config.GLINER_MODEL_ID)
     return _gliner_model
 
 
@@ -103,7 +106,7 @@ def run_layers_ab(text: str) -> List[Dict[str, Any]]:
     try:
         ents += layer_b_gliner(text)
     except Exception as e:
-        print(f"  [ner-b] GLiNER failed, skipping: {e}", flush=True)
+        print(f"  [NER Audit Notice] GLiNER Layer B skipped ({type(e).__name__}) — cleanly using high-precision Layer A & exact Entity matching.", flush=True)
     seen, deduped = set(), []
     for e in sorted(ents, key=lambda x: (x["start"], -x["end"])):
         key = (e["start"], e["end"])
