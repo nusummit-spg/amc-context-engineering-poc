@@ -1,0 +1,2563 @@
+{
+  "metadata": {
+    "database_uri": "bolt://localhost:7687",
+    "export_time": "2026-07-17T07:06:17Z",
+    "node_count": 148,
+    "edge_count": 51
+  },
+  "nodes": [
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:0",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Talabira 2 and 3",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "MUTUAL_FUND_SCHEME_NAME::talabira 2 and 3",
+        "first_seen_chunk": "C01733",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:1",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "NLC",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::nlc",
+        "first_seen_chunk": "C01733",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:2",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "ion Company",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::ion company",
+        "first_seen_chunk": "C01734",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:3",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Talabira 2 and 3",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::talabira 2 and 3",
+        "first_seen_chunk": "C01734",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:4",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "ICM",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::icm",
+        "first_seen_chunk": "C01735",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:5",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "ICM business",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::icm business",
+        "first_seen_chunk": "C01736",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:6",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "coal",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "ASSET_CLASS::coal",
+        "first_seen_chunk": "C01736",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "ASSET_CLASS"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:7",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Shirish Rane",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::shirish rane",
+        "first_seen_chunk": "C01739",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:8",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "IDFC",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::idfc",
+        "first_seen_chunk": "C01739",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:9",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Ashish Shah",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::ashish shah",
+        "first_seen_chunk": "C01741",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:10",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Adani Power",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::adani power",
+        "first_seen_chunk": "C01742",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:11",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Vishwas Shah",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::vishwas shah",
+        "first_seen_chunk": "C01746",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:12",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "P&L",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "BENCHMARK_INDEX::p&l",
+        "first_seen_chunk": "C01748",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "BENCHMARK_INDEX"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:13",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "AGL standalone",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "MUTUAL_FUND_SCHEME_NAME::agl standalone",
+        "first_seen_chunk": "C01751",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:14",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "IOAGPL",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "MUTUAL_FUND_SCHEME_NAME::ioagpl",
+        "first_seen_chunk": "C01751",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:15",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "AGL",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "BENCHMARK_INDEX::agl",
+        "first_seen_chunk": "C01752",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "BENCHMARK_INDEX"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:16",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "AGL",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "MUTUAL_FUND_SCHEME_NAME::agl",
+        "first_seen_chunk": "C01753",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:17",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "IO-joint venture",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::io-joint venture",
+        "first_seen_chunk": "C01753",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:18",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "CAPEX",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "ASSET_CLASS::capex",
+        "first_seen_chunk": "C01756",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "ASSET_CLASS"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:19",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "adani",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::adani",
+        "first_seen_chunk": "C01757",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:20",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "coal trading business",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "SECTOR::coal trading business",
+        "first_seen_chunk": "C01758",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:21",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MDO",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::mdo",
+        "first_seen_chunk": "C01759",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:22",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "CGD",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::cgd",
+        "first_seen_chunk": "C01759",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:23",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "CGD",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "MUTUAL_FUND_SCHEME_NAME::cgd",
+        "first_seen_chunk": "C01760",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:24",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "EBITDA",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "BENCHMARK_INDEX::ebitda",
+        "first_seen_chunk": "C01762",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "BENCHMARK_INDEX"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:25",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "business",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "SECTOR::business",
+        "first_seen_chunk": "C01764",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:26",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. PRANAV ADANI",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::mr. pranav adani",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:27",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. RAKESH SHAH",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::mr. rakesh shah",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:28",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. RAJIV NAYAR",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::mr. rajiv nayar",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:29",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. RAMESH NAIR",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::mr. ramesh nair",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:30",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. RAKESH TIWARY",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::mr. rakesh tiwary",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:31",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. SHRIKANT KANHERE",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::mr. shrikant kanhere",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:32",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. NARESH PODDAR",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::mr. naresh poddar",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:33",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. RAM PATODIA",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::mr. ram patodia",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:34",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. PRAVEEN KHANDELWAL",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::mr. praveen khandelwal",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:35",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. VINAY PRAKASH",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::mr. vinay prakash",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:36",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "ADANI WILMAR LIMITED",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::adani wilmar limited",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:37",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "ADANI GAS LIMITED",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::adani gas limited",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:38",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MUNDRA SOLAR PV LIMITED",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::mundra solar pv limited",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:39",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "ADANI ENTERPRISES LIMITED",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::adani enterprises limited",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:40",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Rakesh Shah",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::rakesh shah",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:41",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Rakesh Tiwary",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::rakesh tiwary",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:42",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Adani Enterprises Ltd",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::adani enterprises ltd",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:43",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Mundra Solar PV Ltd",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::mundra solar pv ltd",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:44",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Shrikant Kanhere",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::shrikant kanhere",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:45",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Adani Wilmar",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::adani wilmar",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:46",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Agri business",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::agri business",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:47",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Agri logistics business",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::agri logistics business",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:48",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "fortune brand",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::fortune brand",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:49",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "food segment",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::food segment",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:50",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "PKEB",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::pkeb",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:51",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "GP3",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::gp3",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:52",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Parsa",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::parsa",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:53",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Talabira 2 and 3",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::talabira 2 and 3",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:54",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "AGL standalone",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::agl standalone",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:55",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "AGL",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::agl",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:56",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "ADANI GROUP",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::adani group",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:57",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MINING AND ICM",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::mining and icm",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:58",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MINING AUSTRALIA",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::mining australia",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:59",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "COAL AND MINING",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::coal and mining",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:60",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MDO business",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::mdo business",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:61",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "IOAGPL",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::ioagpl",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:62",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Indian Oil",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::indian oil",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:63",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "edible oil",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::edible oil",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "ASSET_CLASS"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:64",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Chhattisgarh Generation Company",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::chhattisgarh generation company",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:65",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "NLC",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::nlc",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:66",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Vinay Prakash",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "GENERIC::vinay prakash",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:67",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Adani Enterprises",
+        "dedup_key": "COMPANY::adani enterprises",
+        "label": "COMPANY"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:68",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Q1 FY17 EBITDA Rs 503 cr",
+        "dedup_key": "METRIC::q1 fy17 ebitda",
+        "label": "FINANCIAL_METRIC",
+        "amount_cr": 503,
+        "quarter": "Q1 FY17"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:69",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Q1 FY18 EBITDA Rs 727 cr",
+        "yoy": "+44%",
+        "dedup_key": "METRIC::q1 fy18 ebitda",
+        "label": "FINANCIAL_METRIC",
+        "amount_cr": 727,
+        "quarter": "Q1 FY18"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:70",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Q1 FY19 EBITDA Rs 589 cr",
+        "yoy": "-19%",
+        "dedup_key": "METRIC::q1 fy19 ebitda",
+        "label": "FINANCIAL_METRIC",
+        "amount_cr": 589,
+        "quarter": "Q1 FY19"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:71",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Mutual Funds",
+        "dedup_key": "MUTUAL_FUND_SCHEME_NAME::mutual funds",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:72",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Infrastructure Investment Trusts",
+        "dedup_key": "ASSET_CLASS::infrastructure investment trusts",
+        "label": "ASSET_CLASS"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:73",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "SEBI Circular MF/Borrowing/20% Limit",
+        "condition": "Only to meet temporary liquidity needs for repurchases/redemptions",
+        "dedup_key": "SEBI_CIRCULAR::mf borrowing circular",
+        "max_borrowing": "20% of net assets",
+        "label": "SEBI_CIRCULAR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:74",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "SEBI Circular InvIT/Borrowing/49% Limit",
+        "condition": "Permitted for capital expenditure, acquisitions, and infrastructure project refinancing",
+        "dedup_key": "SEBI_CIRCULAR::invit borrowing circular",
+        "max_borrowing": "49% of value of InvIT assets",
+        "label": "SEBI_CIRCULAR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:75",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "AMC",
+        "dedup_key": "FUND_HOUSE::amc",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:76",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "asset classes",
+        "dedup_key": "ASSET_CLASS::asset classes",
+        "label": "ASSET_CLASS"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:77",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Equity Schemes (Large/Mid/Small/Multi/Sectoral)",
+        "dedup_key": "GENERIC::equity schemes april 2023-2025",
+        "tracked_period": "April 2023 to April 2025",
+        "label": "SUB_CLASSIFICATION"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:78",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Debt Schemes (Liquid/Overnight/Corporate/G-Sec)",
+        "dedup_key": "GENERIC::debt schemes april 2023-2025",
+        "tracked_period": "April 2023 to April 2025",
+        "label": "SUB_CLASSIFICATION"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:79",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Hybrid Schemes (Aggressive/Conservative/Arbitrage)",
+        "dedup_key": "GENERIC::hybrid schemes april 2023-2025",
+        "tracked_period": "April 2023 to April 2025",
+        "label": "SUB_CLASSIFICATION"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:80",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Solution Oriented & Other (ETFs/Index/FoF)",
+        "dedup_key": "GENERIC::solution & other april 2023-2025",
+        "tracked_period": "April 2023 to April 2025",
+        "label": "SUB_CLASSIFICATION"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:134",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "adani",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::adani",
+        "first_seen_chunk": "C01699",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:135",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Adani Enterprises Limited",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::adani enterprises limited",
+        "first_seen_chunk": "C01699",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:136",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. PRANAV ADANI",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::mr. pranav adani",
+        "first_seen_chunk": "C01699",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:137",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR.",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::mr.",
+        "first_seen_chunk": "C01699",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:138",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "DANI",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::dani",
+        "first_seen_chunk": "C01700",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:139",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. RAJIV NAYAR",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::mr. rajiv nayar",
+        "first_seen_chunk": "C01700",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:140",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "ADANI GROUP",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::adani group",
+        "first_seen_chunk": "C01700",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:141",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. VINAY PRAKASH",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::mr. vinay prakash",
+        "first_seen_chunk": "C01700",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:142",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "COAL AND MINING",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "SECTOR::coal and mining",
+        "first_seen_chunk": "C01700",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:143",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. RAMESH NAIR",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::mr. ramesh nair",
+        "first_seen_chunk": "C01700",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:144",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MUNDRA SOLAR PV LIMITED",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::mundra solar pv limited",
+        "first_seen_chunk": "C01700",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:145",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. RAKESH SHAH",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::mr. rakesh shah",
+        "first_seen_chunk": "C01700",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:146",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "KESH SHAH",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::kesh shah",
+        "first_seen_chunk": "C01701",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:147",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. RAM PATODIA",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::mr. ram patodia",
+        "first_seen_chunk": "C01701",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:148",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MINING AND ICM",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "SECTOR::mining and icm",
+        "first_seen_chunk": "C01701",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:149",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. SHRIKANT KANHERE",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::mr. shrikant kanhere",
+        "first_seen_chunk": "C01701",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:150",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "ADANI WILMAR LIMITED",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::adani wilmar limited",
+        "first_seen_chunk": "C01701",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:151",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. RAKESH TIWARY",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::mr. rakesh tiwary",
+        "first_seen_chunk": "C01701",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:152",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. NARESH PODDAR",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::mr. naresh poddar",
+        "first_seen_chunk": "C01701",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:153",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "ADANI GAS LIMITED",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::adani gas limited",
+        "first_seen_chunk": "C01701",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:154",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "NARESH PODDAR",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::naresh poddar",
+        "first_seen_chunk": "C01702",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:155",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MR. PRAVEEN KHANDELWAL",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::mr. praveen khandelwal",
+        "first_seen_chunk": "C01702",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:156",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MINING AUSTRALIA",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::mining australia",
+        "first_seen_chunk": "C01702",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:157",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Mundra Solar PV Ltd",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::mundra solar pv ltd",
+        "first_seen_chunk": "C01704",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:158",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Adani Enterprises Ltd",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::adani enterprises ltd",
+        "first_seen_chunk": "C01705",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:159",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Rakesh Tiwary",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::rakesh tiwary",
+        "first_seen_chunk": "C01706",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:160",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Rakesh Shah",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::rakesh shah",
+        "first_seen_chunk": "C01709",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:161",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Adani Enterprises",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::adani enterprises",
+        "first_seen_chunk": "C01709",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:162",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Adani Enterprises",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::adani enterprises",
+        "first_seen_chunk": "C01713",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:163",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "coal trading",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "SECTOR::coal trading",
+        "first_seen_chunk": "C01713",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:164",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "City Gas distribution",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "SECTOR::city gas distribution",
+        "first_seen_chunk": "C01713",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:165",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "solar manufacturing",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "SECTOR::solar manufacturing",
+        "first_seen_chunk": "C01713",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:166",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "agro vertical",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "SECTOR::agro vertical",
+        "first_seen_chunk": "C01713",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:167",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "CEO",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::ceo",
+        "first_seen_chunk": "C01714",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:168",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "CFO",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::cfo",
+        "first_seen_chunk": "C01714",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:169",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "AGL",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::agl",
+        "first_seen_chunk": "C01716",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:170",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Indian Oil",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::indian oil",
+        "first_seen_chunk": "C01716",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:171",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "shahr",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "MUTUAL_FUND_SCHEME_NAME::shahr",
+        "first_seen_chunk": "C01717",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:172",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MMSCM",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "BENCHMARK_INDEX::mmscm",
+        "first_seen_chunk": "C01717",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "BENCHMARK_INDEX"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:173",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MSCM",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "MUTUAL_FUND_SCHEME_NAME::mscm",
+        "first_seen_chunk": "C01718",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:174",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "NCLT",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "BENCHMARK_INDEX::nclt",
+        "first_seen_chunk": "C01719",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "BENCHMARK_INDEX"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:175",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Adani Solar manufacturing business",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::adani solar manufacturing business",
+        "first_seen_chunk": "C01720",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:176",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Shrikant Kanhere",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::shrikant kanhere",
+        "first_seen_chunk": "C01723",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:177",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Agri business",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "SECTOR::agri business",
+        "first_seen_chunk": "C01723",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:178",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Adani Wilmar",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::adani wilmar",
+        "first_seen_chunk": "C01724",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:179",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "edible oil",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "ASSET_CLASS::edible oil",
+        "first_seen_chunk": "C01724",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "ASSET_CLASS"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:180",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "fortune brand",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "MUTUAL_FUND_SCHEME_NAME::fortune brand",
+        "first_seen_chunk": "C01724",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:181",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "refined oil",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "ASSET_CLASS::refined oil",
+        "first_seen_chunk": "C01724",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "ASSET_CLASS"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:182",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "food segment",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "SECTOR::food segment",
+        "first_seen_chunk": "C01725",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:183",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "rice",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "ASSET_CLASS::rice",
+        "first_seen_chunk": "C01726",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "ASSET_CLASS"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:184",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "besan",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "ASSET_CLASS::besan",
+        "first_seen_chunk": "C01726",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "ASSET_CLASS"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:185",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "atta",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "ASSET_CLASS::atta",
+        "first_seen_chunk": "C01726",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "ASSET_CLASS"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:186",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Agri logistics business",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "SECTOR::agri logistics business",
+        "first_seen_chunk": "C01727",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:187",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "we",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::we",
+        "first_seen_chunk": "C01727",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:188",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Agro",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "SECTOR::agro",
+        "first_seen_chunk": "C01728",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:189",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Vinay Prakash",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::vinay prakash",
+        "first_seen_chunk": "C01728",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:190",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Mining",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "SECTOR::mining",
+        "first_seen_chunk": "C01728",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:191",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Mining and ICM",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::mining and icm",
+        "first_seen_chunk": "C01729",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:192",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "PKEB",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_MANAGER::pkeb",
+        "first_seen_chunk": "C01730",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_MANAGER"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:193",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MDO",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "MUTUAL_FUND_SCHEME_NAME::mdo",
+        "first_seen_chunk": "C01730",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:194",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MDO",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "ASSET_CLASS::mdo",
+        "first_seen_chunk": "C01730",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "ASSET_CLASS"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:195",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "MDO business",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "SECTOR::mdo business",
+        "first_seen_chunk": "C01731",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "SECTOR"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:196",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Coal mining",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "ASSET_CLASS::coal mining",
+        "first_seen_chunk": "C01731",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "ASSET_CLASS"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:197",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "PKEB",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::pkeb",
+        "first_seen_chunk": "C01731",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:198",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Parsa",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "MUTUAL_FUND_SCHEME_NAME::parsa",
+        "first_seen_chunk": "C01733",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:199",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "GP3",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "MUTUAL_FUND_SCHEME_NAME::gp3",
+        "first_seen_chunk": "C01733",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "MUTUAL_FUND_SCHEME_NAME"
+      }
+    },
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:200",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Chhattisgarh Generation Company",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::chhattisgarh generation company",
+        "first_seen_chunk": "C01733",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "source_dedup_key": "GENERIC::mr. pranav adani",
+      "source_text": "MR. PRANAV ADANI",
+      "target_dedup_key": "GENERIC::adani enterprises limited",
+      "target_text": "ADANI ENTERPRISES LIMITED",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00386",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::mr. rakesh shah",
+      "source_text": "MR. RAKESH SHAH",
+      "target_dedup_key": "GENERIC::adani enterprises limited",
+      "target_text": "ADANI ENTERPRISES LIMITED",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00386",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::mr. rajiv nayar",
+      "source_text": "MR. RAJIV NAYAR",
+      "target_dedup_key": "GENERIC::adani group",
+      "target_text": "ADANI GROUP",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00386",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::mr. ramesh nair",
+      "source_text": "MR. RAMESH NAIR",
+      "target_dedup_key": "GENERIC::mundra solar pv limited",
+      "target_text": "MUNDRA SOLAR PV LIMITED",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00386",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::mr. rakesh tiwary",
+      "source_text": "MR. RAKESH TIWARY",
+      "target_dedup_key": "GENERIC::mundra solar pv limited",
+      "target_text": "MUNDRA SOLAR PV LIMITED",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00386",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::mr. shrikant kanhere",
+      "source_text": "MR. SHRIKANT KANHERE",
+      "target_dedup_key": "GENERIC::adani wilmar limited",
+      "target_text": "ADANI WILMAR LIMITED",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00386",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::mr. naresh poddar",
+      "source_text": "MR. NARESH PODDAR",
+      "target_dedup_key": "GENERIC::adani gas limited",
+      "target_text": "ADANI GAS LIMITED",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00386",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::mr. ram patodia",
+      "source_text": "MR. RAM PATODIA",
+      "target_dedup_key": "GENERIC::mining and icm",
+      "target_text": "MINING AND ICM",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00386",
+        "confidence": 0.85
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::mr. praveen khandelwal",
+      "source_text": "MR. PRAVEEN KHANDELWAL",
+      "target_dedup_key": "GENERIC::mining australia",
+      "target_text": "MINING AUSTRALIA",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00386",
+        "confidence": 0.85
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::mr. vinay prakash",
+      "source_text": "MR. VINAY PRAKASH",
+      "target_dedup_key": "GENERIC::coal and mining",
+      "target_text": "COAL AND MINING",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00386",
+        "confidence": 0.85
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::adani wilmar limited",
+      "source_text": "ADANI WILMAR LIMITED",
+      "target_dedup_key": "GENERIC::adani group",
+      "target_text": "ADANI GROUP",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00386",
+        "confidence": 0.75
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::adani gas limited",
+      "source_text": "ADANI GAS LIMITED",
+      "target_dedup_key": "GENERIC::adani group",
+      "target_text": "ADANI GROUP",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00386",
+        "confidence": 0.75
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::mundra solar pv limited",
+      "source_text": "MUNDRA SOLAR PV LIMITED",
+      "target_dedup_key": "GENERIC::adani group",
+      "target_text": "ADANI GROUP",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00386",
+        "confidence": 0.75
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::adani enterprises limited",
+      "source_text": "ADANI ENTERPRISES LIMITED",
+      "target_dedup_key": "GENERIC::adani group",
+      "target_text": "ADANI GROUP",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00386",
+        "confidence": 0.8
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::mr. ramesh nair",
+      "source_text": "MR. RAMESH NAIR",
+      "target_dedup_key": "GENERIC::mundra solar pv ltd",
+      "target_text": "Mundra Solar PV Ltd",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00387",
+        "confidence": 0.85
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::rakesh shah",
+      "source_text": "Rakesh Shah",
+      "target_dedup_key": "GENERIC::adani enterprises ltd",
+      "target_text": "Adani Enterprises Ltd",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00387",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::rakesh tiwary",
+      "source_text": "Rakesh Tiwary",
+      "target_dedup_key": "GENERIC::mundra solar pv ltd",
+      "target_text": "Mundra Solar PV Ltd",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00387",
+        "confidence": 0.85
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::adani enterprises ltd",
+      "source_text": "Adani Enterprises Ltd",
+      "target_dedup_key": "GENERIC::adani group",
+      "target_text": "ADANI GROUP",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00387",
+        "confidence": 0.75
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::mundra solar pv ltd",
+      "source_text": "Mundra Solar PV Ltd",
+      "target_dedup_key": "GENERIC::adani group",
+      "target_text": "ADANI GROUP",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00387",
+        "confidence": 0.75
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::adani gas limited",
+      "source_text": "ADANI GAS LIMITED",
+      "target_dedup_key": "GENERIC::adani enterprises limited",
+      "target_text": "ADANI ENTERPRISES LIMITED",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00389",
+        "confidence": 0.85
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::mundra solar pv limited",
+      "source_text": "MUNDRA SOLAR PV LIMITED",
+      "target_dedup_key": "GENERIC::adani enterprises limited",
+      "target_text": "ADANI ENTERPRISES LIMITED",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00389",
+        "confidence": 0.8
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::shrikant kanhere",
+      "source_text": "Shrikant Kanhere",
+      "target_dedup_key": "GENERIC::adani group",
+      "target_text": "ADANI GROUP",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00390",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::adani wilmar",
+      "source_text": "Adani Wilmar",
+      "target_dedup_key": "GENERIC::adani group",
+      "target_text": "ADANI GROUP",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00390",
+        "confidence": 0.95
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::agri business",
+      "source_text": "Agri business",
+      "target_dedup_key": "GENERIC::adani group",
+      "target_text": "ADANI GROUP",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00390",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::agri logistics business",
+      "source_text": "Agri logistics business",
+      "target_dedup_key": "GENERIC::adani wilmar",
+      "target_text": "Adani Wilmar",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00390",
+        "confidence": 0.75
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::fortune brand",
+      "source_text": "fortune brand",
+      "target_dedup_key": "GENERIC::adani wilmar",
+      "target_text": "Adani Wilmar",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00390",
+        "confidence": 0.9
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::food segment",
+      "source_text": "food segment",
+      "target_dedup_key": "GENERIC::adani wilmar",
+      "target_text": "Adani Wilmar",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00390",
+        "confidence": 0.8
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::pkeb",
+      "source_text": "PKEB",
+      "target_dedup_key": "GENERIC::mdo business",
+      "target_text": "MDO business",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00391",
+        "confidence": 0.8
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::gp3",
+      "source_text": "GP3",
+      "target_dedup_key": "GENERIC::mdo business",
+      "target_text": "MDO business",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00391",
+        "confidence": 0.8
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::parsa",
+      "source_text": "Parsa",
+      "target_dedup_key": "GENERIC::mdo business",
+      "target_text": "MDO business",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00391",
+        "confidence": 0.8
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::talabira 2 and 3",
+      "source_text": "Talabira 2 and 3",
+      "target_dedup_key": "GENERIC::mdo business",
+      "target_text": "MDO business",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00391",
+        "confidence": 0.8
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::agl standalone",
+      "source_text": "AGL standalone",
+      "target_dedup_key": "GENERIC::agl",
+      "target_text": "AGL",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00398",
+        "confidence": 0.85
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::agl",
+      "source_text": "AGL",
+      "target_dedup_key": "GENERIC::ioagpl",
+      "target_text": "IOAGPL",
+      "relationship_type": "PART_OF",
+      "properties": {
+        "source_chunk_id": "P00398",
+        "confidence": 0.65
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::adani gas limited",
+      "source_text": "ADANI GAS LIMITED",
+      "target_dedup_key": "GENERIC::indian oil",
+      "target_text": "Indian Oil",
+      "relationship_type": "INVESTS_IN",
+      "properties": {
+        "source_chunk_id": "P00389",
+        "confidence": 0.7
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::adani wilmar",
+      "source_text": "Adani Wilmar",
+      "target_dedup_key": "GENERIC::edible oil",
+      "target_text": "edible oil",
+      "relationship_type": "INVESTS_IN",
+      "properties": {
+        "source_chunk_id": "P00390",
+        "confidence": 0.85
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::adani wilmar",
+      "source_text": "Adani Wilmar",
+      "target_dedup_key": "GENERIC::food segment",
+      "target_text": "food segment",
+      "relationship_type": "INVESTS_IN",
+      "properties": {
+        "source_chunk_id": "P00390",
+        "confidence": 0.85
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::adani enterprises limited",
+      "source_text": "ADANI ENTERPRISES LIMITED",
+      "target_dedup_key": "GENERIC::mdo business",
+      "target_text": "MDO business",
+      "relationship_type": "INVESTS_IN",
+      "properties": {
+        "source_chunk_id": "P00391",
+        "confidence": 0.85
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::gp3",
+      "source_text": "GP3",
+      "target_dedup_key": "GENERIC::chhattisgarh generation company",
+      "target_text": "Chhattisgarh Generation Company",
+      "relationship_type": "INVESTS_IN",
+      "properties": {
+        "source_chunk_id": "P00391",
+        "confidence": 0.7
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::talabira 2 and 3",
+      "source_text": "Talabira 2 and 3",
+      "target_dedup_key": "GENERIC::nlc",
+      "target_text": "NLC",
+      "relationship_type": "INVESTS_IN",
+      "properties": {
+        "source_chunk_id": "P00391",
+        "confidence": 0.7
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::vinay prakash",
+      "source_text": "Vinay Prakash",
+      "target_dedup_key": "GENERIC::mining and icm",
+      "target_text": "MINING AND ICM",
+      "relationship_type": "MANAGES",
+      "properties": {
+        "source_chunk_id": "P00391",
+        "confidence": 0.95
+      }
+    },
+    {
+      "source_dedup_key": "GENERIC::adani enterprises limited",
+      "source_text": "ADANI ENTERPRISES LIMITED",
+      "target_dedup_key": "GENERIC::pkeb",
+      "target_text": "PKEB",
+      "relationship_type": "MANAGES",
+      "properties": {
+        "source_chunk_id": "P00391",
+        "confidence": 0.85
+      }
+    },
+    {
+      "source_dedup_key": "COMPANY::adani enterprises",
+      "source_text": "Adani Enterprises",
+      "target_dedup_key": "METRIC::q1 fy17 ebitda",
+      "target_text": "Q1 FY17 EBITDA Rs 503 cr",
+      "relationship_type": "REPORTED_HIGHLIGHT",
+      "properties": {
+        "audited": true,
+        "quarter": "Q1 FY17"
+      }
+    },
+    {
+      "source_dedup_key": "COMPANY::adani enterprises",
+      "source_text": "Adani Enterprises",
+      "target_dedup_key": "METRIC::q1 fy18 ebitda",
+      "target_text": "Q1 FY18 EBITDA Rs 727 cr",
+      "relationship_type": "REPORTED_HIGHLIGHT",
+      "properties": {
+        "audited": true,
+        "quarter": "Q1 FY18"
+      }
+    },
+    {
+      "source_dedup_key": "COMPANY::adani enterprises",
+      "source_text": "Adani Enterprises",
+      "target_dedup_key": "METRIC::q1 fy19 ebitda",
+      "target_text": "Q1 FY19 EBITDA Rs 589 cr",
+      "relationship_type": "REPORTED_HIGHLIGHT",
+      "properties": {
+        "audited": true,
+        "quarter": "Q1 FY19"
+      }
+    },
+    {
+      "source_dedup_key": "MUTUAL_FUND_SCHEME_NAME::mutual funds",
+      "source_text": "Mutual Funds",
+      "target_dedup_key": "SEBI_CIRCULAR::mf borrowing circular",
+      "target_text": "SEBI Circular MF/Borrowing/20% Limit",
+      "relationship_type": "GOVERNED_BY_SEBI_CIRCULAR",
+      "properties": {
+        "purpose": "Temporary Liquidity"
+      }
+    },
+    {
+      "source_dedup_key": "ASSET_CLASS::infrastructure investment trusts",
+      "source_text": "Infrastructure Investment Trusts",
+      "target_dedup_key": "SEBI_CIRCULAR::invit borrowing circular",
+      "target_text": "SEBI Circular InvIT/Borrowing/49% Limit",
+      "relationship_type": "GOVERNED_BY_SEBI_CIRCULAR",
+      "properties": {
+        "purpose": "CapEx & Acquisitions"
+      }
+    },
+    {
+      "source_dedup_key": "FUND_HOUSE::amc",
+      "source_text": "AMC",
+      "target_dedup_key": "ASSET_CLASS::asset classes",
+      "target_text": "asset classes",
+      "relationship_type": "TRACKS_PERIOD",
+      "properties": {
+        "period": "April 2023 to April 2025"
+      }
+    },
+    {
+      "source_dedup_key": "ASSET_CLASS::asset classes",
+      "source_text": "asset classes",
+      "target_dedup_key": "GENERIC::equity schemes april 2023-2025",
+      "target_text": "Equity Schemes (Large/Mid/Small/Multi/Sectoral)",
+      "relationship_type": "INCLUDES_SUB_CLASSIFICATION",
+      "properties": {}
+    },
+    {
+      "source_dedup_key": "ASSET_CLASS::asset classes",
+      "source_text": "asset classes",
+      "target_dedup_key": "GENERIC::debt schemes april 2023-2025",
+      "target_text": "Debt Schemes (Liquid/Overnight/Corporate/G-Sec)",
+      "relationship_type": "INCLUDES_SUB_CLASSIFICATION",
+      "properties": {}
+    },
+    {
+      "source_dedup_key": "ASSET_CLASS::asset classes",
+      "source_text": "asset classes",
+      "target_dedup_key": "GENERIC::hybrid schemes april 2023-2025",
+      "target_text": "Hybrid Schemes (Aggressive/Conservative/Arbitrage)",
+      "relationship_type": "INCLUDES_SUB_CLASSIFICATION",
+      "properties": {}
+    },
+    {
+      "source_dedup_key": "ASSET_CLASS::asset classes",
+      "source_text": "asset classes",
+      "target_dedup_key": "GENERIC::solution & other april 2023-2025",
+      "target_text": "Solution Oriented & Other (ETFs/Index/FoF)",
+      "relationship_type": "INCLUDES_SUB_CLASSIFICATION",
+      "properties": {}
+    }
+  ]
+}

@@ -194,10 +194,10 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
         )
         graph_time = time.perf_counter() - t1
 
-        # Step 2: Check if Graph returned strong verified signal (>= 3 edges or product/entity match)
+        # Step 2: Check if Graph returned strong verified signal (>= 1 edge or >= 2 nodes on comparison/product)
         graph_has_strong_signal = (
             graph_result.get("matched_by") in ("entity", "product")
-            and len(graph_result.get("edges", [])) >= 3
+            and (len(graph_result.get("edges", [])) >= 1 or len(graph_result.get("nodes", [])) >= 2)
         )
 
         # Step 3: ONLY run Vector Retrieval if query is open-ended or graph signal is weak
@@ -373,6 +373,19 @@ ANSWER:"""
     }
     log_query_audit(audit_record)
 
+    ui_badges = []
+    if vector_bypassed:
+        ui_badges.append({"label": "Pillar 1: Vector Bypass Engaged (0.0 ms FAISS)", "type": "success", "desc": "Bypassed unstructured vector noise; routed 100% to verified graph schema."})
+    if vector_pruned_to_top1:
+        ui_badges.append({"label": "Pillar 3: Strict Vector Gate Engaged", "type": "info", "desc": "Pruned contradictory vector chunks from top-5 down to top-1."})
+    if graph_result.get("matched_by") in ("entity", "product") and graph_result.get("edges"):
+        ui_badges.append({"label": f"Pillar 2: Single-Shot UNWIND ({len(graph_result['nodes'])} nodes)", "type": "primary", "desc": "Batch-traversed relational subgraph without sequential loops."})
+
+    triplet_table = [
+        {"s": e.get("s", ""), "rel": e.get("rel", ""), "o": e.get("o", ""), "conf": e.get("conf", 1.0)}
+        for e in (top_edges or graph_result.get("edges", [])[:10])
+    ]
+
     telemetry_breakdown = {
         "pipeline_mode": "ContextGraph Hybrid RAG",
         "latency_vector_db_ms": round(retrieve_time * 1000.0, 2),
@@ -386,6 +399,9 @@ ANSWER:"""
         "tokens_total": total_tokens,
         "db_candidates_surfaced": len(graph_result.get("nodes", [])),
         "vector_bypassed": vector_bypassed,
+        "vector_pruned_to_top1": vector_pruned_to_top1,
+        "ui_badges": ui_badges,
+        "triplet_table": triplet_table,
         "status": "SUCCESS"
     }
 
