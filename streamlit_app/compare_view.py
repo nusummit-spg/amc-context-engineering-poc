@@ -131,6 +131,42 @@ def render_contextgraph_panel(r, entity_summary):
     graph_svg = _render_mini_graph(r["graph_nodes"], r["graph_edges"], r["matched_entity_texts"])
     telemetry_html = _render_telemetry_card(r.get("telemetry_breakdown", {}))
 
+    # Render dynamic Intent Traffic Controller badges
+    tb = r.get("telemetry_breakdown", {})
+    badges_list = tb.get("ui_badges", [])
+    badges_html = ""
+    for b in badges_list:
+        bg_col = "#E4EEE1" if b["type"] == "success" else ("#E8F0FE" if b["type"] == "primary" else "#F3E4C9")
+        txt_col = "#3F6B42" if b["type"] == "success" else ("#1A73E8" if b["type"] == "primary" else "#8A5A20")
+        badges_html += f"""
+        <div style="background:{bg_col}; color:{txt_col}; border-radius:6px; padding:6px 10px; font-size:11.5px; font-weight:600; margin-bottom:6px;">
+          ⚡ {b['label']} &mdash; <span style="font-weight:400;">{b['desc']}</span>
+        </div>"""
+
+    # Render Triplet Inspector card
+    triplet_list = tb.get("triplet_table", [])
+    triplet_rows_html = ""
+    for trp in triplet_list:
+        triplet_rows_html += f"""
+        <tr style="border-bottom:1px solid #EAEAEA;">
+          <td style="padding:4px 0;"><b>{html.escape(str(trp.get('s',''))[:30])}</b></td>
+          <td style="padding:4px 8px; color:#A8412C;"><code>{html.escape(str(trp.get('rel','')))}</code></td>
+          <td style="padding:4px 0;">{html.escape(str(trp.get('o',''))[:35])}</td>
+          <td style="text-align:right; padding:4px 0;">{trp.get('conf', 1.0):.2f}</td>
+        </tr>"""
+    triplet_card_html = ""
+    if triplet_rows_html:
+        triplet_card_html = f"""
+        <details style="margin:10px 0; border:1px solid #E7E1D4; border-radius:8px; padding:10px; background:#FDFCFA;">
+          <summary style="cursor:pointer; font-size:12px; font-weight:700; color:#A8412C;">🕸️ Graph Triplet Path Traversed ({len(r.get('graph_nodes', []))} Nodes | {len(r.get('graph_edges', []))} Edges)</summary>
+          <table style="width:100%; font-size:11px; margin-top:8px; border-collapse:collapse;">
+            <tr style="border-bottom:1.5px solid #D8D2C4; text-align:left;">
+              <th style="padding:4px 0;">Subject Node</th><th style="padding:4px 8px;">Relationship</th><th style="padding:4px 0;">Target Node</th><th style="text-align:right;">Conf</th>
+            </tr>
+            {triplet_rows_html}
+          </table>
+        </details>"""
+
     return f"""{CSS}
     <div class="cg-wrap cg-panel">
       <div class="cg-panel-head">
@@ -142,7 +178,11 @@ def render_contextgraph_panel(r, entity_summary):
         <div class="cg-tab" onclick="cgTab(this,'ontology')">Ontology View</div>
       </div>
       <div data-view="answer">
-        <span class="cg-badge green">{r['confidence_label']}</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span class="cg-badge green">{r['confidence_label']}</span>
+        </div>
+        {badges_html}
+        {triplet_card_html}
         <div class="cg-answer">{_markdown_to_html(r['answer'])}</div>
         <div class="cg-label" style="margin-top:12px">Sources</div>
         <div class="cg-sources">{sources_html}</div>
