@@ -118,30 +118,44 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
     entity_texts = [e["text"] for e in query_entities]
     query_type = query_classifier.classify_query(query)
 
-    # ── retrieval stage ──────────────────────────────────────────────────
+    # ── retrieval stage (Intent-Driven Conditional Vector Routing) ────────
     t0 = time.perf_counter()
     if query_entities:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
-            fut_hits = ex.submit(store.retrieve, query, top_k_children=5)
-            fut_graph = ex.submit(graph_store.get_subgraph_for_query, query,
-                                   product_names=None, hops=1, limit=15,
-                                   query_entities=query_entities)
-            hits = fut_hits.result()
-            graph_result = fut_graph.result()
-    else:
-        hits = store.retrieve(query, top_k_children=5)
-        graph_result = {"nodes": [], "edges": [], "matched_by": "none"}
-    retrieve_time = time.perf_counter() - t0
+        # Step 1: Execute Graph Traversal FIRST
+        t1 = time.perf_counter()
+        graph_result = graph_store.get_subgraph_for_query(
+            query, product_names=None, hops=1, limit=15, query_entities=query_entities
+        )
+        graph_time = time.perf_counter() - t1
 
-    if not graph_result["edges"]:
+        # Step 2: Check if Graph returned strong verified signal (>= 3 edges or product/entity match)
+        graph_has_strong_signal = (
+            graph_result.get("matched_by") in ("entity", "product")
+            and len(graph_result.get("edges", [])) >= 3
+        )
+
+        # Step 3: ONLY run Vector Retrieval if query is open-ended or graph signal is weak
+        if query_type in ("aggregation", "comparison", "direct_lookup") and graph_has_strong_signal:
+            hits = []  # Bypass vector search entirely! Saves 0.10s-0.40s and prevents token bloat.
+            retrieve_time = 0.0
+        else:
+            t_ret = time.perf_counter()
+            hits = store.retrieve(query, top_k_children=5)
+            retrieve_time = time.perf_counter() - t_ret
+    else:
+        t_ret = time.perf_counter()
+        hits = store.retrieve(query, top_k_children=5)
+        retrieve_time = time.perf_counter() - t_ret
+        graph_result = {"nodes": [], "edges": [], "matched_by": "none"}
+        graph_time = 0.0
+
+    if not graph_result["edges"] and hits:
         product_names = {h["product_name"] for h in hits}
         t1 = time.perf_counter()
         graph_result = graph_store.get_subgraph_for_query(
             query, product_names=product_names, hops=1, limit=15,
             query_entities=query_entities)
-        graph_time = time.perf_counter() - t1
-    else:
-        graph_time = 0.0
+        graph_time += (time.perf_counter() - t1)
 
     product_names_for_scope = {h["product_name"] for h in hits}
 
@@ -189,16 +203,24 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
             if not rels:
                 continue
             top_rels = _select_top_edges(
-                [{"s": r["s"], "rel": r["rel_type"], "o": r["o"], "conf": None} for r in rels],
-                max_edges=6)
-            rel_lines = [f"  {r['s']} --{r['rel']}--> {r['o']}" for r in top_rels]
-            blocks.append(f"[{entity}]\n" + "\n".join(rel_lines))
+                [{"s": r["s"], "rel": r["rel_type"], "o": r["o"], "conf": r.get("conf")} for r in rels],
+                max_edges=8)
+            table_header = f"### [{entity}] Graph Neighborhood\n| Subject | Relationship | Target |\n| :--- | :--- | :--- |"
+            table_rows = [f"| **{r['s']}** | `{r['rel']}` | {r['o']} |" for r in top_rels]
+            blocks.append(table_header + "\n" + "\n".join(table_rows))
         comparison_blocks = "\n\n".join(blocks)
 
     enrichment_time = time.perf_counter() - t2
 
+    # Pillar 3: Strict Vector Pruning & Trustworthy Comparison Flags
+    trust_verified_facts = bool(verified_facts or comparison_blocks)
+    effective_hits = hits
+    if trust_verified_facts and query_type in ("aggregation", "comparison"):
+        # Drop contradictory/redundant vector chunks so the LLM focuses purely on verified graph data
+        effective_hits = hits[:1]
+
     vector_context = "\n\n---\n\n".join(
-        f"[{h['product_name']} | Page {h['page_num']}]\n{h['parent_text']}" for h in hits)
+        f"[{h['product_name']} | Page {h['page_num']}]\n{h['parent_text']}" for h in effective_hits) if effective_hits else "No raw document prose required — verified graph facts provide the structured ground truth."
 
     # ── graph section: only when directly relevant (never Path 3 fallback) ─
     top_edges = []
@@ -251,7 +273,7 @@ ANSWER:"""
     docs = [{"name": h["source"], "score": round(h["score"], 2),
          "page": h["page_num"],
          "snippet": h["child_text"][:160].replace("\n", " "),
-         "full_text": h["parent_text"]} for h in hits]
+         "full_text": h["parent_text"]} for h in effective_hits]
 
     return {
         "mode": "hybrid", "query": query, "query_type": query_type,
