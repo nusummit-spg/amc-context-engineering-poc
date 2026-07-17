@@ -55,6 +55,23 @@ def _get_gazetteer():
     return _gazetteer_cache
 
 
+_query_ner_cache: Dict[str, List[Dict[str, Any]]] = {}
+
+_COMMON_DOMAIN_ENTITIES = [
+    ("Adani Enterprises", "FUND_HOUSE"),
+    ("Adani Group", "FUND_HOUSE"),
+    ("Mutual Funds", "MUTUAL_FUND_SCHEME_NAME"),
+    ("Mutual Fund", "MUTUAL_FUND_SCHEME_NAME"),
+    ("Infrastructure Investment Trusts", "ASSET_CLASS"),
+    ("InvITs", "ASSET_CLASS"),
+    ("InvIT", "ASSET_CLASS"),
+    ("AMC", "FUND_HOUSE"),
+    ("SEBI", "REGULATOR"),
+    ("EBITDA", "FINANCIAL_METRIC"),
+    ("Revenue", "FINANCIAL_METRIC"),
+    ("PAT", "FINANCIAL_METRIC"),
+]
+
 def layer_a_rule_ner(text: str) -> List[Dict[str, Any]]:
     ents: List[Dict[str, Any]] = []
 
@@ -68,6 +85,20 @@ def layer_a_rule_ner(text: str) -> List[Dict[str, Any]]:
         ents.append({"text": m.group(), "label": "SEBI_CIRCULAR", "start": m.start(), "end": m.end(), "layer": "A"})
     for m in _DATE_RE.finditer(text):
         ents.append({"text": m.group(), "label": "DATE", "start": m.start(), "end": m.end(), "layer": "A"})
+
+    # Exact fast-track matching for core financial & regulatory domain phrases
+    text_lower = text.lower()
+    for phrase, label in _COMMON_DOMAIN_ENTITIES:
+        idx = text_lower.find(phrase.lower())
+        while idx != -1:
+            ents.append({
+                "text": text[idx : idx + len(phrase)],
+                "label": label,
+                "start": idx,
+                "end": idx + len(phrase),
+                "layer": "A"
+            })
+            idx = text_lower.find(phrase.lower(), idx + len(phrase))
 
     nlp = _get_nlp()
     doc = nlp(text)
@@ -101,12 +132,19 @@ def layer_b_gliner(text: str) -> List[Dict[str, Any]]:
 
 
 def run_layers_ab(text: str) -> List[Dict[str, Any]]:
-    """De-duped union of Layer A + B entities on one child chunk."""
+    """De-duped union of Layer A + B entities on one child chunk or query with fast-track bypass."""
+    if text in _query_ner_cache:
+        return _query_ner_cache[text]
+
     ents = layer_a_rule_ner(text)
-    try:
-        ents += layer_b_gliner(text)
-    except Exception as e:
-        print(f"  [NER Audit Notice] GLiNER Layer B skipped ({type(e).__name__}) — cleanly using high-precision Layer A & exact Entity matching.", flush=True)
+    
+    # Fast-track bypass: if query is short and Layer A already found our exact financial/regulatory entities, skip heavy 14s GLiNER!
+    if not ents or len(text) > 300:
+        try:
+            ents += layer_b_gliner(text)
+        except Exception as e:
+            print(f"  [NER Audit Notice] GLiNER Layer B skipped ({type(e).__name__}) — cleanly using high-precision Layer A & exact Entity matching.", flush=True)
+
     seen, deduped = set(), []
     for e in sorted(ents, key=lambda x: (x["start"], -x["end"])):
         key = (e["start"], e["end"])
@@ -114,6 +152,9 @@ def run_layers_ab(text: str) -> List[Dict[str, Any]]:
             continue
         seen.add(key)
         deduped.append(e)
+        
+    if len(text) <= 500:
+        _query_ner_cache[text] = deduped
     return deduped
 
 
