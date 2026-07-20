@@ -197,8 +197,21 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
             and len(graph_result.get("edges", [])) >= 3
         )
 
+        # A densely-connected entity doesn't mean the graph can answer THIS
+        # question — the graph stores relationships, never financial metrics.
+        # For comparison queries specifically, only bypass vector search if
+        # we already have >=2 named entities to compare (the same threshold
+        # the comparison-enrichment step below requires) — otherwise the
+        # LLM gets a few generic graph facts and no prose, and financial/
+        # multi-period comparisons (which rarely resolve to >=2 recognized
+        # entities) come back with nothing to cite.
+        can_bypass_vector = graph_has_strong_signal and (
+            query_type in ("aggregation", "direct_lookup")
+            or (query_type == "comparison" and len(entity_texts) >= 2)
+        )
+
         # Step 3: ONLY run Vector Retrieval if query is open-ended or graph signal is weak
-        if query_type in ("aggregation", "comparison", "direct_lookup") and graph_has_strong_signal:
+        if query_type in ("aggregation", "comparison", "direct_lookup") and can_bypass_vector:
             hits = []  # Bypass vector search entirely! Saves 0.10s-0.40s and prevents token bloat.
             retrieve_time = 0.0
             vector_bypassed = True
