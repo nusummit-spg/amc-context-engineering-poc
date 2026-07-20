@@ -218,6 +218,7 @@ def _to_hybrid(resp: dict) -> dict:
         "entity_summary": gh.get("entity_summary", []),
         "total_tokens": gh.get("total_tokens", 0),
         "total_time": (resp.get("latency_ms") or 0) / 1000,
+        "telemetry_breakdown": gh.get("telemetry_breakdown", {}),
     }
 
 
