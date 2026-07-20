@@ -158,13 +158,14 @@ def log_query_audit(audit_data: Dict[str, Any]):
     print(f"  Latencies (ms)    : NER={audit_data.get('latency_ner_ms', 0):.1f}ms | Graph={audit_data.get('latency_graph_ms', 0):.1f}ms | Vector={audit_data.get('latency_vector_ms', 0):.1f}ms | LLM={audit_data.get('latency_llm_ms', 0):.1f}ms | Total={audit_data.get('latency_total_ms', 0):.1f}ms", flush=True)
     print("================================================================================\n", flush=True)
     
-    # Persistent JSONL log
+    # Persistent JSONL log — one file per query, named by its timestamp
+    safe_ts = timestamp.replace(":", "-")
+    log_file = config.LOG_DIR / f"query_execution_audit_{safe_ts}.jsonl"
     try:
-        log_file = config.LOG_DIR / "query_execution_audit.jsonl"
-        with open(log_file, "a", encoding="utf-8") as f:
+        with open(log_file, "w", encoding="utf-8") as f:
             f.write(json.dumps(audit_data, ensure_ascii=False) + "\n")
     except Exception as exc:
-        print(f"  [Audit Log Warning] Could not write to query_execution_audit.jsonl: {exc}", flush=True)
+        print(f"  [Audit Log Warning] Could not write to {log_file.name}: {exc}", flush=True)
 
 
 def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
