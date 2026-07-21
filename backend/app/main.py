@@ -29,6 +29,19 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Could not apply Neo4j schema at startup (is Neo4j up?): %s", exc)
 
+    # Eagerly load the FAISS index AND the sentence-transformer embedder (the
+    # actual slow part — a lazy singleton only triggered inside .retrieve()).
+    # Without this, the ~25s model-load cost lands silently on whichever real
+    # request happens to be first after a deploy/restart, and the /docs health
+    # check (which never touches the store) reports "healthy" long before the
+    # app can actually serve a query at normal speed.
+    try:
+        store = query._store()
+        store.retrieve("startup warmup", top_k_children=1)
+        logger.info("FAISS store + embedder warmed up at startup")
+    except Exception as exc:
+        logger.warning("Could not warm up FAISS store at startup: %s", exc)
+
     ingest_queue.bind_pipeline(container.pipeline)
     ingest_queue.start()
     logger.info("%s started (env=%s)", settings.app_name, settings.environment)
