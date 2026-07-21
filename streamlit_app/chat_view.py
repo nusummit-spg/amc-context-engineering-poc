@@ -109,7 +109,7 @@ def render_chat_tab():
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    col_ex1, col_ex2, col_q, col_run = st.columns([1.3, 1.3, 3.4, 1])
+    col_ex1, col_ex2, col_q, col_run, col_new = st.columns([1.1, 1.1, 3.0, 0.9, 1.1])
     if col_ex1.button("Example: concentration", use_container_width=True, key="chat_ex1"):
         st.session_state.chat_query = "What's our exposure to Adani Group across all schemes?"
     if col_ex2.button("Example: compliance", use_container_width=True, key="chat_ex2"):
@@ -120,6 +120,14 @@ def render_chat_tab():
                               placeholder="Ask a follow-up — conversation context carries forward…",
                               key="chat_query_input")
     run = col_run.button("Send", type="primary", use_container_width=True, key="chat_run")
+    if col_new.button("🔄 New Session", use_container_width=True, key="chat_new_session"):
+        # Starts a fresh session_id + empty history — clears the screen and
+        # drops all prior turns from the context sent to the LLM. The old
+        # session's JSON file on disk is left alone (still resumable below).
+        st.session_state.chat_session_id = str(uuid.uuid4())
+        st.session_state.chat_history = []
+        st.session_state.chat_query = ""
+        st.rerun()
 
     with st.expander(f"Session: `{st.session_state.chat_session_id}`  ·  resume a previous session"):
         resume_id = st.text_input("Session ID to resume", label_visibility="collapsed",
