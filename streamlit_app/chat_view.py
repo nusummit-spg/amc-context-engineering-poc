@@ -109,11 +109,7 @@ def render_chat_tab():
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    col_ex1, col_ex2, col_q, col_run, col_new = st.columns([1.1, 1.1, 3.0, 0.9, 1.1])
-    if col_ex1.button("Example: concentration", use_container_width=True, key="chat_ex1"):
-        st.session_state.chat_query = "What's our exposure to Adani Group across all schemes?"
-    if col_ex2.button("Example: compliance", use_container_width=True, key="chat_ex2"):
-        st.session_state.chat_query = "Which schemes need exit load disclosure updates after SEBI's latest circular?"
+    col_q, col_run, col_new = st.columns([5.1, 0.9, 1.1])
 
     query = col_q.text_input("query", value=st.session_state.get("chat_query", ""),
                               label_visibility="collapsed",

@@ -241,11 +241,7 @@ tab_compare, tab_chat, tab_analytics = st.tabs(["⚖️ Compare", "💬 Chat", "
 with tab_compare:
     st.caption(f"🟢 Backend: {API_BASE}")
 
-    col_ex1, col_ex2, col_q, col_run = st.columns([1.3, 1.3, 3.4, 1])
-    if col_ex1.button("Example: concentration", use_container_width=True):
-        st.session_state.compare_query = "What's our exposure to Adani Group across all schemes?"
-    if col_ex2.button("Example: compliance", use_container_width=True):
-        st.session_state.compare_query = "Which schemes need exit load disclosure updates after SEBI's latest circular?"
+    col_q, col_run = st.columns([5.6, 1])
     query = col_q.text_input("query", value=st.session_state.compare_query,
                              label_visibility="collapsed",
                              placeholder="Type your query and run it against both search modes…")
