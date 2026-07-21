@@ -48,6 +48,11 @@ def _markdown_to_html(text: str) -> str:
 def _render_telemetry_card(t: dict) -> str:
     if not t or not isinstance(t, dict):
         return ""
+    cypher_gen_ms = t.get('latency_cypher_generation_ms', 0)
+    cypher_row = (
+        f"""<tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>Cypher Generation (LLM + Neo4j exec)</b></td><td style="text-align:right;">{cypher_gen_ms:.1f} ms</td></tr>"""
+        if cypher_gen_ms > 0 else ""
+    )
     return f"""
     <details style="margin-top:14px; border:1px solid #E7E1D4; border-radius:8px; padding:10px; background:#FAFAFA;">
       <summary style="cursor:pointer; font-size:12px; font-weight:700; color:#5C574C;">⚡ Microsecond Telemetry & Execution Ledger</summary>
@@ -55,6 +60,7 @@ def _render_telemetry_card(t: dict) -> str:
         <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>Vector DB Lookup (FAISS)</b></td><td style="text-align:right;">{t.get('latency_vector_db_ms', 0):.1f} ms</td></tr>
         <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>Graph Traversal (Neo4j UNWIND)</b></td><td style="text-align:right;">{t.get('latency_graph_db_ms', 0):.1f} ms</td></tr>
         <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>NER & Entity Resolution</b></td><td style="text-align:right;">{t.get('latency_ner_processing_ms', 0):.1f} ms</td></tr>
+        {cypher_row}
         <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>Post-Retrieval Pruning / Table Prep</b></td><td style="text-align:right;">{t.get('latency_post_retrieval_processing_ms', 0):.1f} ms</td></tr>
         <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>LLM Synthesis Latency</b></td><td style="text-align:right;">{t.get('latency_llm_generation_ms', 0):.1f} ms</td></tr>
         <tr style="border-bottom:1px solid #EAEAEA; font-weight:700; background:#EFEAE0;"><td style="padding:4px;"><b>Total Pipeline Execution</b></td><td style="text-align:right; padding:4px;">{t.get('latency_total_pipeline_ms', 0):.1f} ms</td></tr>

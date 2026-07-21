@@ -63,6 +63,7 @@ def call_llm_with_usage(prompt: str, model_id: str = None, max_tokens: int = 409
         return "", empty_usage
 
     for attempt in range(CLAUDE_MAX_RETRIES):
+        t_attempt = time.perf_counter()
         try:
             resp = client.messages.create(
                 model=model,
@@ -73,6 +74,10 @@ def call_llm_with_usage(prompt: str, model_id: str = None, max_tokens: int = 409
             text = "".join(b.text for b in resp.content if b.type == "text").strip()
             usage = {"input_tokens": resp.usage.input_tokens,
                       "output_tokens": resp.usage.output_tokens}
+            if attempt > 0:
+                elapsed = (time.perf_counter() - t_attempt) * 1000.0
+                print(f"  [llm_text] Claude ({model}) succeeded on attempt {attempt+1}/{CLAUDE_MAX_RETRIES} "
+                      f"({elapsed:.0f}ms for this attempt)", flush=True)
             return text, usage
         except anthropic.RateLimitError:
             wait = CLAUDE_RETRY_DELAY * (2 ** attempt)

@@ -163,7 +163,7 @@ def log_query_audit(audit_data: Dict[str, Any]):
     print(f"  Vector Retrieval  : {audit_data.get('vector_hits_raw', 0)} raw candidates | Bypassed={audit_data.get('vector_bypassed', False)} | Pruned (Pillar 3)={audit_data.get('vector_pruned_to_top1', False)}", flush=True)
     print(f"  Enrichment Mode   : Verified Aggregate={audit_data.get('verified_aggregate_used', False)} | Comparison Table={audit_data.get('comparison_table_used', False)}", flush=True)
     print(f"  LLM Model         : {audit_data.get('llm_model')} | Input Tokens: {audit_data.get('input_tokens', 0)} | Output Tokens: {audit_data.get('output_tokens', 0)}", flush=True)
-    print(f"  Latencies (ms)    : NER={audit_data.get('latency_ner_ms', 0):.1f}ms | Graph={audit_data.get('latency_graph_ms', 0):.1f}ms | Vector={audit_data.get('latency_vector_ms', 0):.1f}ms | LLM={audit_data.get('latency_llm_ms', 0):.1f}ms | Total={audit_data.get('latency_total_ms', 0):.1f}ms", flush=True)
+    print(f"  Latencies (ms)    : NER={audit_data.get('latency_ner_ms', 0):.1f}ms | Graph={audit_data.get('latency_graph_ms', 0):.1f}ms | Vector={audit_data.get('latency_vector_ms', 0):.1f}ms | CypherGen={audit_data.get('latency_cypher_gen_ms', 0):.1f}ms | LLM={audit_data.get('latency_llm_ms', 0):.1f}ms | Total={audit_data.get('latency_total_ms', 0):.1f}ms", flush=True)
     print("================================================================================\n", flush=True)
 
     # Persistent JSONL log — one file per query, named by its timestamp
@@ -257,10 +257,18 @@ def hybrid_graphrag(query: str, store, chat_history: list[dict] | None = None,
     verified_facts = ""
     comparison_blocks = ""
     hidden_tokens = 0
+    cypher_gen_ms = 0.0
     t2 = time.perf_counter()
 
     if query_type == "aggregation" and entity_texts:
+        # This is a SEPARATE Claude call (writes the Cypher) plus its Neo4j
+        # execution — not the cheap in-memory work the rest of this timing
+        # bucket covers for other query types. Timed on its own so a slow
+        # aggregation query is diagnosable instead of vanishing into one
+        # generic "enrichment" number.
+        t_cypher = time.perf_counter()
         cypher_rows, cypher_usage = text_to_cypher.generate_and_run(query, product_names_for_scope)
+        cypher_gen_ms = (time.perf_counter() - t_cypher) * 1000.0
         hidden_tokens += cypher_usage["input_tokens"] + cypher_usage["output_tokens"]
         if cypher_rows:
             verified_facts = (
@@ -400,6 +408,8 @@ ANSWER:"""
         "latency_ner_ms": latency_ner_ms,
         "latency_graph_ms": graph_time * 1000.0,
         "latency_vector_ms": retrieve_time * 1000.0,
+        "latency_cypher_gen_ms": cypher_gen_ms,
+        "latency_enrichment_other_ms": (enrichment_time * 1000.0) - cypher_gen_ms,
         "latency_llm_ms": llm_time * 1000.0,
         "latency_total_ms": latency_total_ms,
         "confidence_label": confidence_label,
@@ -427,7 +437,8 @@ ANSWER:"""
         "latency_vector_db_ms": round(retrieve_time * 1000.0, 2),
         "latency_graph_db_ms": round(graph_time * 1000.0, 2),
         "latency_ner_processing_ms": round(latency_ner_ms, 2),
-        "latency_post_retrieval_processing_ms": round(enrichment_time * 1000.0, 2),
+        "latency_cypher_generation_ms": round(cypher_gen_ms, 2),
+        "latency_post_retrieval_processing_ms": round((enrichment_time * 1000.0) - cypher_gen_ms, 2),
         "latency_llm_generation_ms": round(llm_time * 1000.0, 2),
         "latency_total_pipeline_ms": round(latency_total_ms, 2),
         "tokens_input": usage["input_tokens"],
