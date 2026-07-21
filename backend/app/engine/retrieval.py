@@ -20,6 +20,7 @@ import concurrent.futures
 from typing import Any, Dict, List
 
 from app.engine import config
+from app.engine import context_memory
 from app.engine import entity_resolver
 from app.engine import graph_store
 from app.engine import llm_text_client
@@ -74,15 +75,21 @@ def _format_cypher_rows(rows: list[dict]) -> str:
 # TRADITIONAL
 # ─────────────────────────────────────────────────────────────────────────
 
-def traditional_rag(query: str, store) -> Dict[str, Any]:
+def traditional_rag(query: str, store, chat_history: list[dict] | None = None,
+                     session_id: str | None = None, turn_index: int | None = None,
+                     original_query: str | None = None) -> Dict[str, Any]:
     hits, retrieve_time = _time_call(store.retrieve, query, top_k_children=5)
     t_post = time.perf_counter()
     context = "\n\n---\n\n".join(
         f"[{h['product_name']} | Page {h['page_num']}]\n{h['parent_text']}" for h in hits)
 
+    history_section = ""
+    if chat_history:
+        history_section = f"\nCONVERSATION HISTORY (for context only — answer the QUESTION below):\n{context_memory.compress_history(chat_history)}\n"
+
     prompt = f"""Answer using ONLY the context below. If the answer isn't in the
 context, say so explicitly.
-
+{history_section}
 CONTEXT:
 {context}
 
@@ -169,7 +176,9 @@ def log_query_audit(audit_data: Dict[str, Any]):
         print(f"  [Audit Log Warning] Could not write to {log_file.name}: {exc}", flush=True)
 
 
-def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
+def hybrid_graphrag(query: str, store, chat_history: list[dict] | None = None,
+                     session_id: str | None = None, turn_index: int | None = None,
+                     original_query: str | None = None) -> Dict[str, Any]:
     t_start = time.perf_counter()
 
     t_ner_0 = time.perf_counter()
@@ -212,10 +221,16 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
             or (query_type == "comparison" and len(entity_texts) >= 2)
         )
 
-        # Step 3: ONLY run Vector Retrieval if query is open-ended or graph signal is weak
+        # Step 3: When the graph can answer this, still pull a small vector
+        # safety net (top 2, not the usual 5) rather than skipping retrieval
+        # entirely — the graph never stores financial metrics, so a query
+        # that looks graph-answerable can still need a little prose grounding.
+        # Saves most of the latency/token cost of a full retrieval while
+        # avoiding the "graph facts + zero prose" failure mode.
         if query_type in ("aggregation", "comparison", "direct_lookup") and can_bypass_vector:
-            hits = []  # Bypass vector search entirely! Saves 0.10s-0.40s and prevents token bloat.
-            retrieve_time = 0.0
+            t_ret = time.perf_counter()
+            hits = store.retrieve(query, top_k_children=2)
+            retrieve_time = time.perf_counter() - t_ret
             vector_bypassed = True
         else:
             t_ret = time.perf_counter()
@@ -323,13 +338,17 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
 
     graph_section = f"\nGRAPH RELATIONSHIPS:\n{graph_context_str}\n" if (top_edges and include_graph_section) else ""
 
+    history_section = ""
+    if chat_history:
+        history_section = f"\nCONVERSATION HISTORY (for context only — answer the QUESTION below):\n{context_memory.compress_history(chat_history)}\n"
+
     prompt = f"""Sources below are ranked by reliability: VERIFIED FACTS (if present) are
 computed directly from the graph — treat as ground truth, cite as "[graph]".
 GRAPH RELATIONSHIPS (if present) are structured extractions, more reliable
 than prose when directly relevant. DOCUMENT PROSE is raw retrieved text, cite
 as [1], [2]. If sources conflict, say so explicitly. If nothing answers the
 question, say so.
-{extra_sections}{graph_section}
+{history_section}{extra_sections}{graph_section}
 DOCUMENT PROSE:
 {vector_context}
 
@@ -361,6 +380,9 @@ ANSWER:"""
 
     audit_record = {
         "query": query,
+        "original_query": original_query,
+        "session_id": session_id,
+        "turn_index": turn_index,
         "query_type": query_type,
         "ner_layer_a": ner_layer_a,
         "ner_layer_b": ner_layer_b,
@@ -387,11 +409,13 @@ ANSWER:"""
 
     ui_badges = []
     if vector_bypassed:
-        ui_badges.append({"label": "Pillar 1: Vector Bypass Engaged (0.0 ms FAISS)", "type": "success", "desc": "Bypassed unstructured vector noise; routed 100% to verified graph schema."})
+        ui_badges.append({"label": f"Pillar 1: Vector Gate Reduced (top-2 safety net, {retrieve_time*1000:.0f}ms)", "type": "success", "desc": "Routed primarily to verified graph schema, with a small prose safety net instead of a full vector search."})
     if vector_pruned_to_top1:
         ui_badges.append({"label": "Pillar 3: Strict Vector Gate Engaged", "type": "info", "desc": "Pruned contradictory vector chunks from top-5 down to top-1."})
     if graph_result.get("matched_by") in ("entity", "product") and graph_result.get("edges"):
         ui_badges.append({"label": f"Pillar 2: Single-Shot UNWIND ({len(graph_result['nodes'])} nodes)", "type": "primary", "desc": "Batch-traversed relational subgraph without sequential loops."})
+    if chat_history:
+        ui_badges.append({"label": f"Context Memory Compression Active (Turn {turn_index or '?'})", "type": "info", "desc": "Prior conversation turns compressed and injected into the prompt."})
 
     triplet_table = [
         {"s": e.get("s", ""), "rel": e.get("rel", ""), "o": e.get("o", ""), "conf": e.get("conf", 1.0)}

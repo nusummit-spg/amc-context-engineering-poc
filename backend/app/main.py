@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import deps
-from app.api.routes import docs, graph, ingest, query, status, taxonomy
+from app.api.routes import chat, docs, graph, ingest, query, status, taxonomy
 from app.config import get_settings
 from app.core.errors import AppError, app_error_handler
 from app.core.logging import RequestLoggingMiddleware, setup_logging
@@ -61,7 +61,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestLoggingMiddleware)
     app.add_exception_handler(AppError, app_error_handler)
 
-    for router in (query.router, taxonomy.router, graph.router,
+    for router in (query.router, chat.router, taxonomy.router, graph.router,
                    docs.router, ingest.router, status.router):
         app.include_router(router, prefix="/api")
 

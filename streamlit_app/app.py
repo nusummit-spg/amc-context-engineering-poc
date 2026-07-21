@@ -236,7 +236,7 @@ if "last_traditional" not in st.session_state:
 
 st.set_page_config(page_title="MF Context Engine", layout="wide")
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
-tab_compare, tab_analytics = st.tabs(["⚖️ Compare", "📊 Analytics"])
+tab_compare, tab_chat, tab_analytics = st.tabs(["⚖️ Compare", "💬 Chat", "📊 Analytics"])
 
 with tab_compare:
     st.caption(f"🟢 Backend: {API_BASE}")
@@ -292,6 +292,11 @@ with tab_compare:
                 "traditional_tokens": results["traditional"].get("total_tokens", 0),
                 "hybrid_tokens": results["hybrid"].get("total_tokens", 0),
             })
+
+with tab_chat:
+    st.caption(f"🟢 Backend: {API_BASE}")
+    import chat_view
+    chat_view.render_chat_tab()
 
 with tab_analytics:
     import analytics_view

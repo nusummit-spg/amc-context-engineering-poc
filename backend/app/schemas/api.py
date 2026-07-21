@@ -71,6 +71,26 @@ class QueryResponse(BaseModel):
     latency_ms:      int                          = Field(default=0, ge=0)
 
 
+# ── /chat ─────────────────────────────────────────────────────────────────────
+
+class ChatRequest(BaseModel):
+    query:      str            = Field(min_length=1, max_length=2000)
+    session_id: str
+    history:    list[dict]     = Field(default_factory=list)
+    mode:       str            = Field(default="both", description="'contextgraph' | 'traditional' | 'both'")
+
+
+class ChatResponse(BaseModel):
+    query:          str
+    resolved_query: str
+    mode:           str
+    traditional:    Optional[TraditionalResult] = None
+    hybrid:         Optional[dict]              = None
+    history:        list[dict]
+    session_id:     str
+    turn_index:     int
+
+
 # ── /taxonomy ─────────────────────────────────────────────────────────────────
 
 class TaxonomyNodeOut(BaseModel):
