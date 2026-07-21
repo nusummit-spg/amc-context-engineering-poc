@@ -36,7 +36,11 @@ def _session_path(session_id: str) -> Path:
 
 def _save_session(session_id: str, history: list[dict]) -> None:
     try:
-        _session_path(session_id).write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
+        # default=str is a safety net, not a license to store non-JSON types on
+        # purpose — anything that hits it (e.g. a stray set()) round-trips as a
+        # string on reload, which is a lossy but non-fatal degradation.
+        _session_path(session_id).write_text(
+            json.dumps(history, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
     except Exception as exc:
         st.warning(f"Could not save chat session to disk: {exc}")
 
@@ -79,8 +83,8 @@ def _adapt_hybrid(h: dict) -> dict:
         "graph_nodes": gh.get("node_names", []),
         "graph_edges": gh.get("edges", []),
         "graph_edges_used_in_prompt": gh.get("edges_used_in_prompt", []),
-        "matched_entity_texts": set(gh.get("entities", []) or []),
-        "active_labels": set(gh.get("labels", []) or []),
+        "matched_entity_texts": list(set(gh.get("entities", []) or [])),
+        "active_labels": list(set(gh.get("labels", []) or [])),
         "graph_matched_by": gh.get("graph_matched_by"),
         "used_verified_aggregate": gh.get("used_verified_aggregate", False),
         "used_comparison_mode": gh.get("used_comparison_mode", False),
