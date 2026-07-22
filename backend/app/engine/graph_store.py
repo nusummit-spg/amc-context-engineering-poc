@@ -173,8 +173,8 @@ def get_subgraph_for_query(query: str, product_names: set | None = None,
                 MATCH path = (n)-[r*1..{hops}]-(m)
                 UNWIND relationships(path) AS rel
                 WITH startNode(rel) AS s, rel, endNode(rel) AS o
-                RETURN DISTINCT s.text AS s, s.label AS s_label, type(rel) AS rel,
-                       rel.confidence AS conf, o.text AS o, o.label AS o_label
+                RETURN DISTINCT s.text AS s, s.label AS s_label, s.product_name AS s_product,
+                       type(rel) AS rel, rel.confidence AS conf, o.text AS o, o.label AS o_label
                 ORDER BY rel.confidence DESC
                 LIMIT $limit
                 """, texts=entity_texts, limit=limit)
@@ -189,8 +189,8 @@ def get_subgraph_for_query(query: str, product_names: set | None = None,
                 """
                 MATCH (n:Entity) WHERE n.product_name IN $products
                 MATCH (n)-[r]-(m)
-                RETURN DISTINCT n.text AS s, n.label AS s_label, type(r) AS rel,
-                       r.confidence AS conf, m.text AS o, m.label AS o_label
+                RETURN DISTINCT n.text AS s, n.label AS s_label, n.product_name AS s_product,
+                       type(r) AS rel, r.confidence AS conf, m.text AS o, m.label AS o_label
                 ORDER BY r.confidence DESC
                 LIMIT $limit
                 """, products=list(product_names), limit=limit)
@@ -207,8 +207,8 @@ def get_subgraph_for_query(query: str, product_names: set | None = None,
                 MATCH (n:Entity)-[r]-(m)
                 WITH n, r, m, COUNT { (n)--() } AS degree
                 ORDER BY degree DESC LIMIT $limit
-                RETURN n.text AS s, n.label AS s_label, type(r) AS rel,
-                       r.confidence AS conf, m.text AS o, m.label AS o_label
+                RETURN n.text AS s, n.label AS s_label, n.product_name AS s_product,
+                       type(r) AS rel, r.confidence AS conf, m.text AS o, m.label AS o_label
                 """, limit=min(limit, 8))
             edges += [dict(r) for r in result]
 
