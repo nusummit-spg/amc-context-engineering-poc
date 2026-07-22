@@ -67,7 +67,7 @@ def _adapt_traditional(t: dict) -> dict:
         } for f in t.get("files", [])],
         "total_tokens": m.get("total_tokens", 0),
         "total_time": m.get("llm_ms", 0) / 1000,
-        "telemetry_breakdown": t.get("telemetry_breakdown", {}),
+        "telemetry_breakdown": m.get("telemetry_breakdown", {}),
     }
 
 

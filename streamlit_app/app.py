@@ -195,6 +195,7 @@ def _to_traditional(resp: dict) -> dict:
         } for f in t.get("files", [])],
         "total_tokens": m.get("total_tokens", 0),
         "total_time": (resp.get("latency_ms") or 0) / 1000,
+        "telemetry_breakdown": m.get("telemetry_breakdown", {}),
     }
 
 
