@@ -22,6 +22,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from compare_view import render_traditional_panel, render_contextgraph_panel
+import chat_view
 
 API_BASE = os.environ.get("API_BASE", "http://api:8000")
 
@@ -237,6 +238,7 @@ if "last_traditional" not in st.session_state:
 
 st.set_page_config(page_title="MF Context Engine", layout="wide")
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+chat_view.render_session_sidebar()
 tab_compare, tab_chat, tab_analytics = st.tabs(["⚖️ Compare", "💬 Chat", "📊 Analytics"])
 
 with tab_compare:
@@ -292,7 +294,6 @@ with tab_compare:
 
 with tab_chat:
     st.caption(f"🟢 Backend: {API_BASE}")
-    import chat_view
     chat_view.render_chat_tab()
 
 with tab_analytics:

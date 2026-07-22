@@ -56,6 +56,48 @@ def _load_session(session_id: str) -> list[dict] | None:
         return None
 
 
+def _list_sessions(limit: int = 20) -> list[dict]:
+    """Newest-first, capped list of saved sessions with a short preview.
+    Skips unreadable/corrupt files rather than failing the whole list."""
+    paths = sorted(SESSIONS_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    out = []
+    for path in paths[:limit]:
+        try:
+            history = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        first_query = next((t.get("content", "") for t in history if t.get("role") == "user"), "")
+        out.append({
+            "session_id": path.stem,
+            "preview": (first_query[:45] + "…") if len(first_query) > 45 else first_query,
+            "turn_count": len(history) // 2,
+        })
+    return out
+
+
+def render_session_sidebar():
+    """Always-visible session browser — lets you jump into a past chat
+    without needing to already have its session ID copied somewhere."""
+    with st.sidebar:
+        st.markdown("### 💬 Chat Sessions")
+        current_id = st.session_state.get("chat_session_id")
+        sessions = _list_sessions()
+        if not sessions:
+            st.caption("No saved sessions yet — start a conversation in the Chat tab.")
+            return
+        for s in sessions:
+            is_current = s["session_id"] == current_id
+            label = f"{'🟢 ' if is_current else ''}{s['preview'] or '(empty)'}"
+            help_text = f"{s['turn_count']} turn(s) · {s['session_id']}"
+            if st.button(label, key=f"sidebar_session_{s['session_id']}",
+                         use_container_width=True, disabled=is_current, help=help_text):
+                loaded = _load_session(s["session_id"])
+                if loaded is not None:
+                    st.session_state.chat_session_id = s["session_id"]
+                    st.session_state.chat_history = loaded
+                    st.rerun()
+
+
 def _adapt_traditional(t: dict) -> dict:
     m = t.get("metrics") or {}
     tb = m.get("telemetry_breakdown", {})
