@@ -58,6 +58,7 @@ def _load_session(session_id: str) -> list[dict] | None:
 
 def _adapt_traditional(t: dict) -> dict:
     m = t.get("metrics") or {}
+    tb = m.get("telemetry_breakdown", {})
     return {
         "answer": t.get("snippet") or "",
         "docs": [{
@@ -66,8 +67,12 @@ def _adapt_traditional(t: dict) -> dict:
             "full_text": f.get("full_text") or "",
         } for f in t.get("files", [])],
         "total_tokens": m.get("total_tokens", 0),
-        "total_time": m.get("llm_ms", 0) / 1000,
-        "telemetry_breakdown": m.get("telemetry_breakdown", {}),
+        # ChatResponse.traditional has no top-level latency_ms the way
+        # QueryResponse does (that's what app.py's Compare-tab adapter reads)
+        # - use the true pipeline total from telemetry_breakdown instead of
+        # llm_ms alone, which silently dropped retrieve+rerank time here.
+        "total_time": tb.get("latency_total_pipeline_ms", 0) / 1000,
+        "telemetry_breakdown": tb,
     }
 
 
