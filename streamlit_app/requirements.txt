@@ -8,3 +8,15 @@ requests
 pandas
 neo4j
 python-dotenv
+
+# Local engine sandbox (context_engine/, evals/, the *_eval.py scripts, and
+# faiss_store.py/llm_text_client.py/ner_pipeline.py themselves) — NOT needed
+# by the deployed Streamlit UI (app.py/chat_view.py never import these), only
+# for running the standalone retrieval engine copy directly, e.g.
+# `python -m evals.judge_eval`. gliner/spacy are lazy-imported inside
+# ner_pipeline.py (only needed once hybrid_graphrag's NER step actually runs).
+anthropic>=0.90
+faiss-cpu>=1.8
+sentence-transformers>=3.0
+gliner>=0.2
+spacy>=3.7

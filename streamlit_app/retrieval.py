@@ -26,6 +26,7 @@ import llm_text_client
 import ner_pipeline
 import query_classifier
 import text_to_cypher
+from context_engine import hyde, semantic_cache
 
 AGGREGATION_SKIP_LABELS = {"ASSET_CLASS", "SECTOR", "DATE"}
 
@@ -75,7 +76,22 @@ def _format_cypher_rows(rows: list[dict]) -> str:
 # ─────────────────────────────────────────────────────────────────────────
 
 def traditional_rag(query: str, store) -> Dict[str, Any]:
-    hits, retrieve_time = _time_call(store.retrieve, query, top_k_children=5)
+    t_cache_0 = time.perf_counter()
+    cached = semantic_cache.check(query, mode="traditional")
+    latency_cache_ms = (time.perf_counter() - t_cache_0) * 1000.0
+    if cached is not None:
+        hit_result = dict(cached)
+        hit_result["telemetry_breakdown"] = {
+            **cached.get("telemetry_breakdown", {}),
+            "cache_hit": True,
+            "latency_cache_ms": round(latency_cache_ms, 2),
+            "latency_total_pipeline_ms": round(latency_cache_ms, 2),
+        }
+        return hit_result
+
+    hyde_doc, latency_hyde_ms = hyde.generate_hypothetical_document(query)
+
+    hits, retrieve_time = _time_call(store.retrieve, hyde_doc, top_k_children=5)
     t_post = time.perf_counter()
     context = "\n\n---\n\n".join(
         f"[{h['product_name']} | Page {h['page_num']}]\n{h['parent_text']}" for h in hits)
@@ -105,27 +121,34 @@ ANSWER:"""
         "latency_vector_db_ms": round(retrieve_time * 1000.0, 2),
         "latency_graph_db_ms": 0.0,
         "latency_ner_processing_ms": 0.0,
+        "latency_hyde_ms": round(latency_hyde_ms, 2),
+        "latency_cache_ms": round(latency_cache_ms, 2),
         "latency_post_retrieval_processing_ms": round(post_process_time * 1000.0, 2),
         "latency_llm_generation_ms": round(llm_time * 1000.0, 2),
-        "latency_total_pipeline_ms": round((retrieve_time + post_process_time + llm_time) * 1000.0, 2),
+        "latency_total_pipeline_ms": round(
+            (retrieve_time + post_process_time + llm_time) * 1000.0 + latency_hyde_ms + latency_cache_ms, 2),
         "tokens_input": usage["input_tokens"],
         "tokens_output": usage["output_tokens"],
         "tokens_total": total_tokens,
         "db_candidates_surfaced": len(hits),
         "vector_bypassed": False,
+        "cache_hit": False,
         "status": "SUCCESS"
     }
 
-    return {
+    result = {
         "mode": "traditional", "query": query,
         "answer": answer or "LLM unavailable — check credentials.",
         "docs": docs,
         "input_tokens": usage["input_tokens"], "output_tokens": usage["output_tokens"],
         "total_tokens": total_tokens,
         "retrieve_time": retrieve_time, "llm_time": llm_time,
-        "total_time": retrieve_time + post_process_time + llm_time,
+        "total_time": retrieve_time + post_process_time + llm_time
+                      + (latency_hyde_ms + latency_cache_ms) / 1000.0,
         "telemetry_breakdown": telemetry_breakdown,
     }
+    semantic_cache.store(query, mode="traditional", result=result)
+    return result
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -170,7 +193,22 @@ def log_query_audit(audit_data: Dict[str, Any]):
 
 def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
     t_start = time.perf_counter()
-    
+
+    t_cache_0 = time.perf_counter()
+    cached = semantic_cache.check(query, mode="hybrid")
+    latency_cache_ms = (time.perf_counter() - t_cache_0) * 1000.0
+    if cached is not None:
+        hit_result = dict(cached)
+        hit_result["telemetry_breakdown"] = {
+            **cached.get("telemetry_breakdown", {}),
+            "cache_hit": True,
+            "latency_cache_ms": round(latency_cache_ms, 2),
+            "latency_total_pipeline_ms": round(latency_cache_ms, 2),
+        }
+        return hit_result
+
+    hyde_doc, latency_hyde_ms = hyde.generate_hypothetical_document(query)
+
     t_ner_0 = time.perf_counter()
     query_entities = ner_pipeline.run_layers_ab(query)
     latency_ner_ms = (time.perf_counter() - t_ner_0) * 1000.0
@@ -208,11 +246,11 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
             vector_bypassed = True
         else:
             t_ret = time.perf_counter()
-            hits = store.retrieve(query, top_k_children=5)
+            hits = store.retrieve(hyde_doc, top_k_children=5)
             retrieve_time = time.perf_counter() - t_ret
     else:
         t_ret = time.perf_counter()
-        hits = store.retrieve(query, top_k_children=5)
+        hits = store.retrieve(hyde_doc, top_k_children=5)
         retrieve_time = time.perf_counter() - t_ret
         graph_result = {"nodes": [], "edges": [], "matched_by": "none"}
         graph_time = 0.0
@@ -231,11 +269,13 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
     verified_facts = ""
     comparison_blocks = ""
     hidden_tokens = 0
+    cypher_critique_attempts = 0
     t2 = time.perf_counter()
 
     if query_type == "aggregation" and entity_texts:
         cypher_rows, cypher_usage = text_to_cypher.generate_and_run(query, product_names_for_scope)
         hidden_tokens += cypher_usage["input_tokens"] + cypher_usage["output_tokens"]
+        cypher_critique_attempts = cypher_usage.get("attempts", 0)
         if cypher_rows:
             verified_facts = (
                 "[VERIFIED AGGREGATE — generated Cypher query executed directly "
@@ -403,10 +443,14 @@ ANSWER:"""
         "vector_pruned_to_top1": vector_pruned_to_top1,
         "ui_badges": ui_badges,
         "triplet_table": triplet_table,
+        "latency_hyde_ms": round(latency_hyde_ms, 2),
+        "latency_cache_ms": round(latency_cache_ms, 2),
+        "cache_hit": False,
+        "cypher_critique_attempts": cypher_critique_attempts,
         "status": "SUCCESS"
     }
 
-    return {
+    result = {
         "mode": "hybrid", "query": query, "query_type": query_type,
         "answer": answer or "LLM unavailable — check credentials.",
         "docs": docs, "confidence_label": confidence_label,
@@ -421,9 +465,15 @@ ANSWER:"""
         "total_tokens": total_tokens,
         "retrieve_time": retrieve_time, "graph_time": graph_time,
         "enrichment_time": enrichment_time, "llm_time": llm_time,
-        "total_time": retrieve_time + graph_time + enrichment_time + llm_time,
+        # True wall-clock total (t_start-based) — includes cache-check, HyDE,
+        # and NER time that retrieve_time+graph_time+enrichment_time+llm_time
+        # alone would silently drop, so this matches
+        # telemetry_breakdown["latency_total_pipeline_ms"] exactly.
+        "total_time": latency_total_ms / 1000.0,
         "telemetry_breakdown": telemetry_breakdown,
     }
+    semantic_cache.store(query, mode="hybrid", result=result)
+    return result
 
 
 def relevancy_score(result: Dict[str, Any]) -> float:

@@ -305,6 +305,40 @@ def run_safe_cypher(cypher: str, params: dict | None = None,
     except Exception as e:
         print(f"  [cypher-guard] execution failed: {e}", flush=True)
         return None
+
+
+def run_safe_cypher_verbose(cypher: str, params: dict | None = None,
+                             max_rows: int = 25) -> tuple[list[dict] | None, str | None]:
+    """
+    Same validation + execution as run_safe_cypher(), but returns the
+    rejection/error message instead of swallowing it — used by the Cypher
+    critique retry loop in text_to_cypher.py, which needs the exact error
+    text to feed back to the LLM so it can fix its own query.
+
+    Returns (rows, None) on success, or (None, error_message) on any
+    validation or execution failure.
+    """
+    cypher_stripped = cypher.strip().rstrip(";")
+    if ";" in cypher_stripped:
+        return None, "Rejected: multiple statements are not allowed."
+    if not re.match(r"^\s*MATCH\b", cypher_stripped, re.I):
+        return None, "Rejected: query must start with MATCH."
+    if _WRITE_KEYWORDS.search(cypher_stripped):
+        return None, "Rejected: write keywords (CREATE/MERGE/DELETE/SET/REMOVE/DROP/DETACH/LOAD CSV) are not allowed."
+    if _CALL_KEYWORD.search(cypher_stripped):
+        return None, "Rejected: CALL is not allowed."
+    if not re.search(r"\bLIMIT\s+\d+\b", cypher_stripped, re.I):
+        cypher_stripped += f" LIMIT {max_rows}"
+
+    try:
+        with get_driver().session(database=config.NEO4J_DATABASE) as session:
+            result = session.run(cypher_stripped, params or {})
+            rows = [dict(r) for r in result][:max_rows]
+        return rows, None
+    except Exception as e:
+        return None, str(e)
+
+
 def get_aggregate_for_entity(entity_texts: list[str], hops: int = 1, limit_sources: int = 25,
                               product_names: set | None = None) -> dict | None:
     """

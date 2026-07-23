@@ -86,6 +86,15 @@ SIMILARITY_MATCH_THRESHOLD = float(os.environ.get("SIMILARITY_MATCH_THRESHOLD", 
 # Row cap enforced on LLM-generated aggregation queries (added as a LIMIT
 # clause if the model didn't include one).
 CYPHER_MAX_ROWS = int(os.environ.get("CYPHER_MAX_ROWS", "25"))
+# Max self-correction retries when generated Cypher fails validation/execution
+# (the "critique" loop in text_to_cypher.py) — 2 retries = 3 total attempts.
+CYPHER_CRITIQUE_MAX_RETRIES = int(os.environ.get("CYPHER_CRITIQUE_MAX_RETRIES", "2"))
+
+# ── SEMANTIC CACHE (context_engine/semantic_cache.py) ───────────────────
+# Cosine similarity floor for treating a new query as a repeat/paraphrase of
+# a previously answered one (in-memory FAISS cache, resets on process restart).
+SEMANTIC_CACHE_SIMILARITY_THRESHOLD = float(os.environ.get("SEMANTIC_CACHE_SIMILARITY_THRESHOLD", "0.45"))
+SEMANTIC_CACHE_MAX_ENTRIES = int(os.environ.get("SEMANTIC_CACHE_MAX_ENTRIES", "500"))
 
 # ── NEO4J ─────────────────────────────────────────────────────────────
 NEO4J_URI      = os.environ.get("NEO4J_URI", "bolt://localhost:7687")

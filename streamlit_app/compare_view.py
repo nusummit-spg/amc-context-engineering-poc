@@ -164,7 +164,7 @@ def render_contextgraph_panel(r, entity_summary):
           <td style="padding:4px 0;"><b>{html.escape(str(trp.get('s',''))[:30])}</b></td>
           <td style="padding:4px 8px; color:#A8412C;"><code>{html.escape(str(trp.get('rel','')))}</code></td>
           <td style="padding:4px 0;">{html.escape(str(trp.get('o',''))[:35])}</td>
-          <td style="text-align:right; padding:4px 0;">{trp.get('conf', 1.0):.2f}</td>
+          <td style="text-align:right; padding:4px 0;">{(trp.get('conf') if trp.get('conf') is not None else 1.0):.2f}</td>
         </tr>"""
     triplet_card_html = ""
     if triplet_rows_html:

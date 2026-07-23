@@ -144,10 +144,22 @@ def _adapt_hybrid(h: dict) -> dict:
 
 def _fetch_mode(mode: str, query: str, history: list[dict], session_id: str) -> dict:
     payload = {"query": query, "session_id": session_id, "history": history, "mode": mode}
-    r = requests.post(f"{API_BASE}/api/chat", json=payload, timeout=240)
-    r.raise_for_status()
-    data = r.json()
-    return data.get("traditional") if mode == "traditional" else data.get("hybrid")
+    try:
+        r = requests.post(f"{API_BASE}/api/chat", json=payload, timeout=240)
+        r.raise_for_status()
+        data = r.json()
+        return data.get("traditional") if mode == "traditional" else data.get("hybrid")
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:
+        if API_BASE != "http://api:8000":
+            raise
+        # Transparent fallback to direct local execution when running outside
+        # Docker (mirrors app.py's Compare-tab fallback) — see local_fallback.py
+        # for the one caveat: no conversation-history/coreference resolution
+        # in this mode, each turn is answered as a standalone query.
+        import local_fallback
+        if mode == "traditional":
+            return local_fallback.local_traditional(query)
+        return local_fallback.local_contextgraph(query)
 
 
 def render_chat_tab():
