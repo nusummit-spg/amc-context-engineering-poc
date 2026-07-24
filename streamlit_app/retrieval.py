@@ -21,6 +21,7 @@ from typing import Any, Dict, List
 
 import config
 import entity_resolver
+import faiss_store
 import graph_store
 import llm_text_client
 import ner_pipeline
@@ -96,7 +97,8 @@ def traditional_rag(query: str, store) -> Dict[str, Any]:
     taxonomy_chunks = taxonomy_retrieval.retrieve_taxonomy_chunks(query, top_k=3)
     latency_taxonomy_ms = (time.perf_counter() - t_tax_0) * 1000.0
 
-    hits, retrieve_time = _time_call(store.retrieve, hyde_doc, top_k_children=5)
+    hits, retrieve_time = _time_call(store.retrieve, hyde_doc, top_k_children=5, rerank=True)
+    rerank_ms = faiss_store.get_last_rerank_ms()
     t_post = time.perf_counter()
     context = "\n\n---\n\n".join(
         f"[{h['product_name']} | Page {h['page_num']}]\n{h['parent_text']}" for h in hits)
@@ -127,6 +129,7 @@ ANSWER:"""
     telemetry_breakdown = {
         "pipeline_mode": "Traditional Vector RAG",
         "latency_vector_db_ms": round(retrieve_time * 1000.0, 2),
+        "latency_rerank_ms": round(rerank_ms, 2),
         "latency_graph_db_ms": 0.0,
         "latency_ner_processing_ms": 0.0,
         "latency_hyde_ms": round(latency_hyde_ms, 2),
@@ -189,7 +192,7 @@ def log_query_audit(audit_data: Dict[str, Any]):
     print(f"  Vector Retrieval  : {audit_data.get('vector_hits_raw', 0)} raw candidates | Bypassed={audit_data.get('vector_bypassed', False)} | Pruned (Pillar 3)={audit_data.get('vector_pruned_to_top1', False)}", flush=True)
     print(f"  Enrichment Mode   : Verified Aggregate={audit_data.get('verified_aggregate_used', False)} | Comparison Table={audit_data.get('comparison_table_used', False)}", flush=True)
     print(f"  LLM Model         : {audit_data.get('llm_model')} | Input Tokens: {audit_data.get('input_tokens', 0)} | Output Tokens: {audit_data.get('output_tokens', 0)}", flush=True)
-    print(f"  Latencies (ms)    : NER={audit_data.get('latency_ner_ms', 0):.1f}ms | Graph={audit_data.get('latency_graph_ms', 0):.1f}ms | Vector={audit_data.get('latency_vector_ms', 0):.1f}ms | LLM={audit_data.get('latency_llm_ms', 0):.1f}ms | Total={audit_data.get('latency_total_ms', 0):.1f}ms", flush=True)
+    print(f"  Latencies (ms)    : NER={audit_data.get('latency_ner_ms', 0):.1f}ms | Graph={audit_data.get('latency_graph_ms', 0):.1f}ms | Vector={audit_data.get('latency_vector_ms', 0):.1f}ms | Rerank={audit_data.get('latency_rerank_ms', 0):.1f}ms | LLM={audit_data.get('latency_llm_ms', 0):.1f}ms | Total={audit_data.get('latency_total_ms', 0):.1f}ms", flush=True)
     print("================================================================================\n", flush=True)
     
     # Persistent JSONL log — one file per query, named by its timestamp
@@ -263,14 +266,15 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
             vector_bypassed = True
         else:
             t_ret = time.perf_counter()
-            hits = store.retrieve(hyde_doc, top_k_children=5)
+            hits = store.retrieve(hyde_doc, top_k_children=5, rerank=True)
             retrieve_time = time.perf_counter() - t_ret
     else:
         t_ret = time.perf_counter()
-        hits = store.retrieve(hyde_doc, top_k_children=5)
+        hits = store.retrieve(hyde_doc, top_k_children=5, rerank=True)
         retrieve_time = time.perf_counter() - t_ret
         graph_result = {"nodes": [], "edges": [], "matched_by": "none"}
         graph_time = 0.0
+    rerank_ms = 0.0 if vector_bypassed else faiss_store.get_last_rerank_ms()
 
     if not graph_result["edges"] and hits:
         product_names = {h["product_name"] for h in hits}
@@ -348,15 +352,30 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
         effective_hits = hits[:1]
         vector_pruned_to_top1 = (len(hits) > 1)
 
-    vector_context = "\n\n---\n\n".join(
-        f"[{h['product_name']} | Page {h['page_num']}]\n{h['parent_text']}" for h in effective_hits) if effective_hits else "No raw document prose required — verified graph facts provide the structured ground truth."
-
     # ── graph section: only when directly relevant (never Path 3 fallback) ─
     top_edges = []
     include_graph_section = bool(verified_facts) or bool(comparison_blocks)
     if graph_result.get("matched_by") in ("entity", "product") and graph_result["edges"]:
         top_edges = _select_top_edges(graph_result["edges"], max_edges=8)
         include_graph_section = include_graph_section or bool(top_edges)
+
+    # RRF-style fusion: boost vector chunks that come from the same document
+    # as a graph fact actually being cited, so the prose handed to the LLM
+    # directly supports the structured facts rather than being an unrelated
+    # coincidental match. Only differentiates anything when the graph matched
+    # via literal entity mention — when matched_by=="product" every hit
+    # already shares scope with the graph by construction, so this is a
+    # no-op there (correctly).
+    graph_fact_products = {e.get("s_product") for e in top_edges if e.get("s_product")}
+    if graph_fact_products:
+        for h in effective_hits:
+            if h.get("product_name") in graph_fact_products:
+                h["score"] = h.get("score", 0.0) + 2.0
+                h["graph_aligned"] = True
+        effective_hits = sorted(effective_hits, key=lambda h: h.get("score", 0.0), reverse=True)
+
+    vector_context = "\n\n---\n\n".join(
+        f"[{h['product_name']} | Page {h['page_num']}]\n{h['parent_text']}" for h in effective_hits) if effective_hits else "No raw document prose required — verified graph facts provide the structured ground truth."
 
     graph_context_str = "\n".join(f"{e['s']} --{e['rel']}--> {e['o']}" for e in top_edges)
 
@@ -430,6 +449,7 @@ ANSWER:"""
         "latency_ner_ms": latency_ner_ms,
         "latency_graph_ms": graph_time * 1000.0,
         "latency_vector_ms": retrieve_time * 1000.0,
+        "latency_rerank_ms": rerank_ms,
         "latency_llm_ms": llm_time * 1000.0,
         "latency_total_ms": latency_total_ms,
         "confidence_label": confidence_label,
@@ -453,6 +473,7 @@ ANSWER:"""
     telemetry_breakdown = {
         "pipeline_mode": "ContextGraph Hybrid RAG",
         "latency_vector_db_ms": round(retrieve_time * 1000.0, 2),
+        "latency_rerank_ms": round(rerank_ms, 2),
         "latency_graph_db_ms": round(graph_time * 1000.0, 2),
         "latency_ner_processing_ms": round(latency_ner_ms, 2),
         "latency_post_retrieval_processing_ms": round(enrichment_time * 1000.0, 2),
