@@ -146,8 +146,8 @@ def _fetch_mode(mode: str, query: str, history: list[dict], session_id: str) -> 
     if API_BASE.lower() in ("local", "embedded"):
         import local_fallback
         if mode == "traditional":
-            return local_fallback.local_traditional(query)
-        return local_fallback.local_contextgraph(query)
+            return local_fallback.local_traditional(query, history=history)
+        return local_fallback.local_contextgraph(query, history=history)
 
     payload = {"query": query, "session_id": session_id, "history": history, "mode": mode}
     try:
@@ -159,13 +159,12 @@ def _fetch_mode(mode: str, query: str, history: list[dict], session_id: str) -> 
         if API_BASE != "http://api:8000":
             raise
         # Transparent fallback to direct local execution when running outside
-        # Docker (mirrors app.py's Compare-tab fallback) — see local_fallback.py
-        # for the one caveat: no conversation-history/coreference resolution
-        # in this mode, each turn is answered as a standalone query.
+        # Docker (mirrors app.py's Compare-tab fallback) — history is still
+        # threaded through, see local_fallback.py.
         import local_fallback
         if mode == "traditional":
-            return local_fallback.local_traditional(query)
-        return local_fallback.local_contextgraph(query)
+            return local_fallback.local_traditional(query, history=history)
+        return local_fallback.local_contextgraph(query, history=history)
 
 
 def render_chat_tab():

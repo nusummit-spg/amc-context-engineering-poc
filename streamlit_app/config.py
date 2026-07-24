@@ -49,11 +49,11 @@ if not CLAUDE_API_KEY and _SECRET_ID:
     except Exception as _exc:  # noqa: BLE001
         print(f"  [config] Could not load key from Secrets Manager ({_SECRET_ID}): {_exc}", flush=True)
 
-CLAUDE_MODEL_RELATIONS = os.environ.get("CLAUDE_MODEL_RELATIONS", "claude-sonnet-4-6")
+CLAUDE_MODEL_RELATIONS = os.environ.get("CLAUDE_MODEL_RELATIONS", "claude-haiku-4-5-20251001")
 CLAUDE_MODEL_LIGHT = os.environ.get("CLAUDE_MODEL_LIGHT", "claude-haiku-4-5-20251001")
 
 # Vision (image extraction during indexing) — throttle + model.
-CLAUDE_VISION_MODEL = os.environ.get("CLAUDE_VISION_MODEL", "claude-sonnet-4-6")
+CLAUDE_VISION_MODEL = os.environ.get("CLAUDE_VISION_MODEL", "claude-haiku-4-5-20251001")
 CLAUDE_MAX_CONCURRENT_VISION = int(os.environ.get("CLAUDE_MAX_CONCURRENT_VISION", "4"))
 CLAUDE_VISION_RPM = int(os.environ.get("CLAUDE_VISION_RPM", "50"))
 

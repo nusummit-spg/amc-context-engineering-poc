@@ -8,15 +8,17 @@ return, so app.py's Compare tab and chat_view.py's Chat tab share one
 implementation instead of each inventing (or, in chat_view.py's case,
 forgetting to invent) their own local-execution path.
 
-NOTE: this bypasses the FastAPI backend entirely, including its
-context_memory-based coreference resolution — each call is answered as a
-standalone query against the corpus, with no conversation-history rewrite.
-Fine for local dev/testing; the deployed backend behaves differently (and
-better) for genuine multi-turn chat follow-ups.
+`history` (optional) is a flat [{"role": "user"/"assistant", "content": ...}]
+list, threaded straight through to retrieval.py's traditional_rag/
+hybrid_graphrag, which fold the last few turns into the synthesis prompt so
+follow-ups with pronouns ("is there an exception to that rule?") resolve
+correctly instead of being answered as a standalone query. This is a plain
+prompt-level injection, not the FastAPI backend's context_memory rewrite —
+simpler, but it closes the gap that used to exist here entirely.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import faiss_store
 import graph_store
@@ -32,9 +34,9 @@ def _get_store() -> "faiss_store.BrochureFAISSStore":
     return _store
 
 
-def local_traditional(query: str) -> Dict[str, Any]:
+def local_traditional(query: str, history: List[dict] | None = None) -> Dict[str, Any]:
     """Shape matches QueryResponse.traditional / ChatResponse.traditional."""
-    res = retrieval.traditional_rag(query, _get_store())
+    res = retrieval.traditional_rag(query, _get_store(), history=history)
     docs = res.get("docs", [])
     return {
         "files": [{
@@ -53,9 +55,9 @@ def local_traditional(query: str) -> Dict[str, Any]:
     }
 
 
-def local_contextgraph(query: str) -> Dict[str, Any]:
+def local_contextgraph(query: str, history: List[dict] | None = None) -> Dict[str, Any]:
     """Shape matches the contextgraph body of QueryResponse / ChatResponse.hybrid."""
-    res = retrieval.hybrid_graphrag(query, _get_store())
+    res = retrieval.hybrid_graphrag(query, _get_store(), history=history)
     summary = graph_store.get_entity_type_summary(res.get("active_labels"))
     docs = res.get("docs", [])
     edges = res.get("graph_edges", [])

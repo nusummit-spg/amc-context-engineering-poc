@@ -63,6 +63,19 @@ def _pick_aggregation_entity(query_entities: list) -> str | None:
     return candidates[0]["text"]
 
 
+def _format_history(history: List[dict] | None, max_messages: int = 6) -> str:
+    """Formats the last few chat turns into a prompt-ready block. Empty
+    string when there's no history — callers must not prepend a header in
+    that case, so cache-safety (see traditional_rag/hybrid_graphrag) can key
+    off "history text present or not" directly."""
+    if not history:
+        return ""
+    lines = [f"{m['role'].upper()}: {m['content']}" for m in history[-max_messages:] if m.get("content")]
+    if not lines:
+        return ""
+    return "CONVERSATION HISTORY (most recent last):\n" + "\n".join(lines) + "\n\n"
+
+
 def _format_cypher_rows(rows: list[dict]) -> str:
     if not rows:
         return ""
@@ -77,9 +90,16 @@ def _format_cypher_rows(rows: list[dict]) -> str:
 # TRADITIONAL
 # ─────────────────────────────────────────────────────────────────────────
 
-def traditional_rag(query: str, store) -> Dict[str, Any]:
+def traditional_rag(query: str, store, history: List[dict] | None = None) -> Dict[str, Any]:
+    hist_text = _format_history(history)
+
+    # The semantic cache keys on the query's own embedding, with no notion of
+    # conversation context — the same follow-up phrasing ("is there an
+    # exception to that rule?") can have a different correct answer in a
+    # different conversation. Only cache/reuse for genuinely standalone
+    # (history-free) turns.
     t_cache_0 = time.perf_counter()
-    cached = semantic_cache.check(query, mode="traditional")
+    cached = None if hist_text else semantic_cache.check(query, mode="traditional")
     latency_cache_ms = (time.perf_counter() - t_cache_0) * 1000.0
     if cached is not None:
         hit_result = dict(cached)
@@ -111,10 +131,13 @@ regulatory filings and AMC scheme documentation for a colleague. Precision
 matters — this is used for regulatory compliance decisions.
 
 BEFORE ANSWERING, check: does the question use a pronoun or reference ("it",
-"that", "this", "they", "the rule", "the circular") that isn't clearly named
-anywhere in the CONTEXT below? If so, say so explicitly and state what term
-is missing — do NOT answer a different, adjacent question just because the
-context happens to contain something on a related topic.
+"that", "this", "they", "the rule", "the circular") that isn't resolvable
+from the CONVERSATION HISTORY below (if any) or clearly named in the
+CONTEXT? If it can be resolved from the conversation history, use that
+resolution and answer directly. If it genuinely can't be resolved from
+either, say so explicitly and state what term is missing — do NOT answer a
+different, adjacent question just because the context happens to contain
+something on a related topic.
 
 If the question names a specific fund, scheme category, or entity, address
 that exact one — do not substitute a similarly-themed item from the context.
@@ -126,10 +149,14 @@ context below. If you are inferring rather than quoting, say so explicitly.
 If multiple SEBI circulars or regime dates appear in the context, state
 which regime/date each fact belongs to.
 
-Answer using ONLY the context below. If the answer isn't in the context,
-say so explicitly.
+Answer using the context below. You may also use the conversation history to
+resolve references, and — if your own prior answer in the history already
+stated a relevant fact with its citation — you may repeat that fact,
+attributing it to your earlier answer. Do not invent new facts not present
+in either the context or your own prior turns. If the answer isn't in
+either, say so explicitly.
 
-CONTEXT:
+{hist_text}CONTEXT:
 {context}
 
 QUESTION: {query}
@@ -181,7 +208,8 @@ ANSWER:"""
                       + (latency_hyde_ms + latency_cache_ms + latency_taxonomy_ms) / 1000.0,
         "telemetry_breakdown": telemetry_breakdown,
     }
-    semantic_cache.store(query, mode="traditional", result=result)
+    if not hist_text:
+        semantic_cache.store(query, mode="traditional", result=result)
     return result
 
 
@@ -225,11 +253,14 @@ def log_query_audit(audit_data: Dict[str, Any]):
         print(f"  [Audit Log Warning] Could not write to {log_file.name}: {exc}", flush=True)
 
 
-def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
+def hybrid_graphrag(query: str, store, history: List[dict] | None = None) -> Dict[str, Any]:
     t_start = time.perf_counter()
+    hist_text = _format_history(history)
 
+    # Same cache-safety reasoning as traditional_rag: a follow-up's correct
+    # answer depends on conversation context the cache key doesn't capture.
     t_cache_0 = time.perf_counter()
-    cached = semantic_cache.check(query, mode="hybrid")
+    cached = None if hist_text else semantic_cache.check(query, mode="hybrid")
     latency_cache_ms = (time.perf_counter() - t_cache_0) * 1000.0
     if cached is not None:
         hit_result = dict(cached)
@@ -426,14 +457,17 @@ than prose when directly relevant. DOCUMENT PROSE is raw retrieved text, cite
 as [1], [2]. If sources conflict, say so explicitly.
 
 BEFORE ANSWERING, check: does the question use a pronoun or reference ("it",
-"that", "this", "they", "the rule", "the circular") that isn't clearly named
-anywhere in the sources below?
-  - If one referent is clearly dominant given the sources' topic, answer
-    specifically about that one and state your assumption in one line
-    (e.g. "Assuming you mean X:").
-  - If several referents are plausible, briefly name them and ask which one
-    is meant. Do NOT substitute unrelated facts from the sources as a
-    stand-in for a direct answer.
+"that", "this", "they", "the rule", "the circular") that isn't resolvable
+from the CONVERSATION HISTORY below (if any) or clearly named in the
+sources? If it can be resolved from the conversation history, use that
+resolution and answer directly — do not re-ask for something the history
+already establishes.
+  - If it can't be resolved from history and one referent is clearly
+    dominant given the sources' topic, answer specifically about that one
+    and state your assumption in one line (e.g. "Assuming you mean X:").
+  - If several referents are plausible and history doesn't disambiguate,
+    briefly name them and ask which one is meant. Do NOT substitute
+    unrelated facts from the sources as a stand-in for a direct answer.
 
 If the question names a specific fund, scheme category, or entity, your
 first sentence must directly address that exact one before adding related
@@ -442,8 +476,12 @@ context — do not drift to a different, adjacent item from the sources.
 If both LEGACY_2017 and CURRENT_2026 taxonomy regimes appear in the sources,
 state which regime each fact belongs to.
 
-If nothing in the sources answers the question, say so.
-{extra_sections}{graph_section}
+Use the conversation history to resolve references, and — if your own prior
+answer in the history already stated a relevant fact with its citation —
+you may repeat that fact, attributing it to your earlier answer. Do not
+invent new facts not present in either the sources or your own prior turns.
+If nothing in the sources or your prior turns answers the question, say so.
+{hist_text}{extra_sections}{graph_section}
 DOCUMENT PROSE:
 {vector_context}{taxonomy_prose_section}
 
@@ -562,7 +600,8 @@ ANSWER:"""
         "total_time": latency_total_ms / 1000.0,
         "telemetry_breakdown": telemetry_breakdown,
     }
-    semantic_cache.store(query, mode="hybrid", result=result)
+    if not hist_text:
+        semantic_cache.store(query, mode="hybrid", result=result)
     return result
 
 

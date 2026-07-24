@@ -5,9 +5,15 @@ Offline faithfulness/completeness regression harness.
 
 Runs a small fixed set of known queries against both retrieval pipelines
 (traditional_rag, hybrid_graphrag) using the already-indexed FAISS store,
-then asks a separate, stronger Claude model (config.CLAUDE_MODEL_RELATIONS —
-a judge should not be weaker than the model it's grading) to score each
-answer against the context that was actually retrieved for it.
+then asks config.CLAUDE_MODEL_RELATIONS to score each answer against the
+context that was actually retrieved for it.
+
+NOTE: CLAUDE_MODEL_RELATIONS and CLAUDE_MODEL_LIGHT are both Haiku as of
+this session's cost-reduction pass — the judge is no longer a stronger,
+independent model than the one being graded (it was Sonnet before). Treat
+scores as a same-model self-check, not an independent verification; a
+same-model judge tends to be more lenient/less discriminating than a
+stronger external one.
 
 This is deliberately a lightweight, deterministic harness — not an
 adversarial multi-turn agent — so it's cheap to re-run after every change to
