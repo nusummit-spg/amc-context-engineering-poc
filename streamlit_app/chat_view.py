@@ -143,6 +143,12 @@ def _adapt_hybrid(h: dict) -> dict:
 
 
 def _fetch_mode(mode: str, query: str, history: list[dict], session_id: str) -> dict:
+    if API_BASE.lower() in ("local", "embedded"):
+        import local_fallback
+        if mode == "traditional":
+            return local_fallback.local_traditional(query)
+        return local_fallback.local_contextgraph(query)
+
     payload = {"query": query, "session_id": session_id, "history": history, "mode": mode}
     try:
         r = requests.post(f"{API_BASE}/api/chat", json=payload, timeout=240)

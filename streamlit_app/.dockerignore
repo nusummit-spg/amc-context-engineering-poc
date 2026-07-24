@@ -1,0 +1,11 @@
+.env
+vertex_key.json
+__pycache__/
+*.pyc
+.pytest_cache/
+logs/
+*.log
+data/taxonomy_sources/
+data/AMC/
+data/AMFI/
+data/Sub Classification/

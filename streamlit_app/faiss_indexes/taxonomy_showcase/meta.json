@@ -1,0 +1,10 @@
+{
+  "slug": "taxonomy_showcase",
+  "product_name": "MF Taxonomy Sources",
+  "source_file": "April 2024.pdf, April 2025.pdf, Borrowing by Mutual Funds.pdf, Categorization and Rationalization of Mutual Fund Schemes.pdf, Disclosure of Risk adjusted Return - Information Ratio (IR) for Mutual Fund Schemes.pdf, Guidelines for Investment Advisers.pdf, May 2024.pdf, Safer participation of retail investors in Algorithmic trading.pdf",
+  "num_pdfs": 8,
+  "num_parents": 145,
+  "num_children": 613,
+  "embed_dim": 384,
+  "model": "all-MiniLM-L6-v2"
+}

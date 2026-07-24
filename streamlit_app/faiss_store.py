@@ -367,10 +367,10 @@ def extract_pdf_text_full(
     # ── per-page disk cache, keyed on file content hash ─────────────────────
     pdf_hash   = _file_hash(pdf_path)
     cache_path = config.EXTRACTION_CACHE_DIR / f"{_slugify(pdf_path)}_{pdf_hash}.json"
-    cache: Dict[str, Any] = json.loads(cache_path.read_text()) if cache_path.exists() else {}
+    cache: Dict[str, Any] = json.loads(cache_path.read_text(encoding="utf-8")) if cache_path.exists() else {}
 
     def _save_cache():
-        cache_path.write_text(json.dumps(cache, ensure_ascii=False))
+        cache_path.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
 
     if verbose:
         mode = "smart (local-first, vision on demand)" if config.SMART_EXTRACTION else "vision-first (every page)"
@@ -682,7 +682,7 @@ def build_faiss_index_for_pdf(
         "local_pages":   local_pages,
         "model":         "paraphrase-multilingual-MiniLM-L12-v2",
     }
-    meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False))
+    meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
 
     if verbose:
         print(f"  Saved -> {index_dir}", flush=True)
@@ -866,7 +866,7 @@ def build_user_upload_index(
         "num_parents":  len(all_parents),
         "num_children": len(all_children),
     }
-    (index_dir / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False))
+    (index_dir / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
 
     _store_cache.pop(slug, None)
     return BrochureFAISSStore(slug)

@@ -1,0 +1,267 @@
+{
+  "taxonomy_id": "MF_FULL_SCHEME_TAXONOMY_V0_3",
+  "status": "dual_regime_source_verified",
+  "supersedes": ["MF_OTHER_SCHEMES_TAXONOMY_V0_1", "MF_FULL_SCHEME_TAXONOMY_V0_2"],
+  "redesign_note": "v0_2 was built entirely from SEBI/HO/IMD/DF3/CIR/P/2017/114 (2017) as amended in 2020. The new source corpus contains 'Categorization and Rationalization of Mutual Fund Schemes.pdf', a SEBI circular dated 2026-02-26 (no. HO/24/13/15(2)2026-IMD-RAC4/I/5764/2026) that explicitly SUPERSEDES that basis: Solution Oriented Schemes are discontinued and replaced by a new 'Life Cycle Funds' group, several investment-mandate thresholds changed (e.g. Multi Cap Fund's equity floor moved 65%->75%), several debt categories were renamed, and Section V ('Other Schemes') collapsed from 13 finely-split subtypes down to just 2 broad categories (Index Funds/ETFs; FoFs Overseas/Domestic) at the top level -- with a separate, richer sub-categorization (Annexure C) that applies only to FoFs with multiple underlying funds. Because AMCs have a 6-month compliance window and every dataset in this corpus (the AMFI monthly reports, the scheme-level CSV) predates 2026-02-26, this taxonomy models BOTH regimes explicitly rather than picking one, with an explicit crosswalk between them. This is what actually resolves the graph-underutilization problem flagged in the original AARE baseline report: a query about 'AI disclosure requirements for advisers' now has real clause-level regulatory nodes to traverse, not just corporate-hierarchy edges.",
+
+  "regimes": [
+    {
+      "regime_id": "LEGACY_2017",
+      "label": "2017 Categorization (as amended 2020) -- still in force during the 2026 transition window",
+      "regulatory_basis": {
+        "primary_circular": "SEBI/HO/IMD/DF3/CIR/P/2017/114",
+        "primary_circular_title": "Categorization and Rationalization of Mutual Fund Schemes",
+        "primary_circular_date": "2017-10-06",
+        "key_amendments": [
+          {"circular": "SEBI/HO/IMD/DF3/CIR/P/2020/175", "date": "2020-09-11", "change": "Introduced Flexi Cap Fund."},
+          {"circular": "SEBI/HO/IMD/DF3/CIR/P/2020/26", "date": "2020-02-06", "change": "Tightened Multi Cap Fund to require minimum 25% each in large/mid/small cap."}
+        ]
+      },
+      "effective_from": "2017-10-06",
+      "effective_until": "2026-08-26 (6-month compliance deadline from the CURRENT_2026 circular; existing schemes may still report under this basis until then)",
+      "status": "superseded_but_in_force_during_transition",
+      "evidenced_by": ["April 2024.pdf", "May 2024.pdf", "April 2025.pdf", "mutual_fund_data.csv", "mutual_fund_taxonomy_v0_1.json (Section V, April 2023)"],
+      "groups": [
+        {"section": "I", "label": "Income/Debt Oriented Schemes"},
+        {"section": "II", "label": "Growth/Equity Oriented Schemes"},
+        {"section": "III", "label": "Hybrid Schemes"},
+        {"section": "IV", "label": "Solution Oriented Schemes"},
+        {"section": "V", "label": "Other Schemes (Index Funds/ETFs/FoF)"}
+      ],
+      "scheme_classes": [
+        {"code": "EQ_MULTI_CAP", "canonical_label": "Multi Cap Fund", "section": "II", "investment_mandate": "Min. 65% equity; min. 25% each in large/mid/small cap.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Equity Scheme - Multi Cap Fund", "csv_scheme_count": 126},
+        {"code": "EQ_LARGE_CAP", "canonical_label": "Large Cap Fund", "section": "II", "investment_mandate": "Min. 80% equity of large cap companies.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Equity Scheme - Large Cap Fund", "csv_scheme_count": 165},
+        {"code": "EQ_LARGE_MID_CAP", "canonical_label": "Large & Mid Cap Fund", "section": "II", "investment_mandate": "Min. 35% large cap + min. 35% mid cap equity.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Equity Scheme - Large & Mid Cap Fund", "csv_scheme_count": 151},
+        {"code": "EQ_MID_CAP", "canonical_label": "Mid Cap Fund", "section": "II", "investment_mandate": "Min. 65% equity of mid cap companies.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Equity Scheme - Mid Cap Fund", "csv_scheme_count": 132},
+        {"code": "EQ_SMALL_CAP", "canonical_label": "Small Cap Fund", "section": "II", "investment_mandate": "Min. 65% equity of small cap companies.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Equity Scheme - Small Cap Fund", "csv_scheme_count": 144},
+        {"code": "EQ_DIVIDEND_YIELD", "canonical_label": "Dividend Yield Fund", "section": "II", "investment_mandate": "Min. 65% equity, predominantly dividend-yielding stocks.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Equity Scheme - Dividend Yield Fund", "csv_scheme_count": 46},
+        {"code": "EQ_VALUE", "canonical_label": "Value Fund", "section": "II", "investment_mandate": "Min. 65% equity, value investment strategy. Mutually exclusive with Contra Fund per AMC.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Equity Scheme - Value Fund", "csv_scheme_count": 102},
+        {"code": "EQ_CONTRA", "canonical_label": "Contra Fund", "section": "II", "investment_mandate": "Min. 65% equity, contrarian investment strategy.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Equity Scheme - Contra Fund", "csv_scheme_count": 16},
+        {"code": "EQ_FOCUSED", "canonical_label": "Focused Fund", "section": "II", "investment_mandate": "Min. 65% equity, max. 30 stocks.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Equity Scheme - Focused Fund", "csv_scheme_count": 119},
+        {"code": "EQ_SECTORAL_THEMATIC", "canonical_label": "Sectoral/Thematic Fund", "section": "II", "investment_mandate": "Min. 80% equity of a specified sector/theme. Multiple schemes per AMC permitted.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Equity Scheme - Sectoral/ Thematic", "csv_scheme_count": 1039},
+        {"code": "EQ_ELSS", "canonical_label": "ELSS (Equity Linked Savings Scheme)", "section": "II", "investment_mandate": "Min. 80% equity; statutory 3-year lock-in; Section 80C eligible.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Equity Scheme - ELSS", "csv_scheme_count": 202},
+        {"code": "EQ_FLEXI_CAP", "canonical_label": "Flexi Cap Fund", "section": "II", "investment_mandate": "Min. 65% equity, no market-cap restriction. Introduced 2020-09-11.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Equity Scheme - Flexi Cap Fund", "csv_scheme_count": 187},
+
+        {"code": "DEBT_OVERNIGHT", "canonical_label": "Overnight Fund", "section": "I", "investment_mandate": "Overnight securities, 1-day maturity.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Debt Scheme - Overnight Fund", "csv_scheme_count": 319},
+        {"code": "DEBT_LIQUID", "canonical_label": "Liquid Fund", "section": "I", "investment_mandate": "Debt/money market, maturity <= 91 days.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Debt Scheme - Liquid Fund", "csv_scheme_count": 526},
+        {"code": "DEBT_ULTRA_SHORT", "canonical_label": "Ultra Short Duration Fund", "section": "I", "investment_mandate": "Macaulay duration 3-6 months.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Debt Scheme - Ultra Short Duration Fund", "csv_scheme_count": 311},
+        {"code": "DEBT_LOW_DURATION", "canonical_label": "Low Duration Fund", "section": "I", "investment_mandate": "Macaulay duration 6-12 months.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Debt Scheme - Low Duration Fund", "csv_scheme_count": 285},
+        {"code": "DEBT_MONEY_MARKET", "canonical_label": "Money Market Fund", "section": "I", "investment_mandate": "Money market instruments, maturity <= 1 year.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Debt Scheme - Money Market Fund", "csv_scheme_count": 251},
+        {"code": "DEBT_SHORT_DURATION", "canonical_label": "Short Duration Fund", "section": "I", "investment_mandate": "Macaulay duration 1-3 years.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Debt Scheme - Short Duration Fund", "csv_scheme_count": 293},
+        {"code": "DEBT_MEDIUM_DURATION", "canonical_label": "Medium Duration Fund", "section": "I", "investment_mandate": "Macaulay duration 3-4 years.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Debt Scheme - Medium Duration Fund", "csv_scheme_count": 179},
+        {"code": "DEBT_MEDIUM_LONG_DURATION", "canonical_label": "Medium to Long Duration Fund", "section": "I", "investment_mandate": "Macaulay duration 4-7 years.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Debt Scheme - Medium to Long Duration Fund", "csv_scheme_count": 152},
+        {"code": "DEBT_LONG_DURATION", "canonical_label": "Long Duration Fund", "section": "I", "investment_mandate": "Macaulay duration > 7 years.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Debt Scheme - Long Duration Fund", "csv_scheme_count": 72},
+        {"code": "DEBT_DYNAMIC_BOND", "canonical_label": "Dynamic Bond Fund", "section": "I", "investment_mandate": "Investment across duration, actively managed.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Debt Scheme - Dynamic Bond", "csv_scheme_count": 213},
+        {"code": "DEBT_CORPORATE_BOND", "canonical_label": "Corporate Bond Fund", "section": "I", "investment_mandate": "Min. 80% corporate bonds, AA+ and above.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Debt Scheme - Corporate Bond Fund", "csv_scheme_count": 237},
+        {"code": "DEBT_CREDIT_RISK", "canonical_label": "Credit Risk Fund", "section": "I", "investment_mandate": "Min. 65% corporate bonds, AA and below.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Debt Scheme - Credit Risk Fund", "csv_scheme_count": 208},
+        {"code": "DEBT_BANKING_PSU", "canonical_label": "Banking and PSU Fund", "section": "I", "investment_mandate": "Min. 80% debt of banks/PSUs/PFIs/municipal bonds.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Debt Scheme - Banking and PSU Fund", "csv_scheme_count": 184},
+        {"code": "DEBT_GILT", "canonical_label": "Gilt Fund", "section": "I", "investment_mandate": "Min. 80% G-secs, across maturities.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Debt Scheme - Gilt Fund", "csv_scheme_count": 190},
+        {"code": "DEBT_GILT_10Y", "canonical_label": "Gilt Fund with 10 Year Constant Duration", "section": "I", "investment_mandate": "Min. 80% G-secs, Macaulay duration = 10 years.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Debt Scheme - Gilt Fund with 10 year constant duration", "csv_scheme_count": 42},
+        {"code": "DEBT_FLOATER", "canonical_label": "Floater Fund", "section": "I", "investment_mandate": "Min. 65% floating rate instruments (incl. swapped fixed-rate).", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Debt Scheme - Floater Fund", "csv_scheme_count": 123},
+
+        {"code": "HYB_CONSERVATIVE", "canonical_label": "Conservative Hybrid Fund", "section": "III", "investment_mandate": "10-25% equity; 75-90% debt.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Hybrid Scheme - Conservative Hybrid Fund", "csv_scheme_count": 145},
+        {"code": "HYB_BALANCED", "canonical_label": "Balanced Hybrid Fund", "section": "III", "investment_mandate": "40-60% equity; 40-60% debt; no arbitrage. Mutually exclusive with Aggressive Hybrid per AMC.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Hybrid Scheme - Balanced Hybrid Fund", "csv_scheme_count": 10},
+        {"code": "HYB_AGGRESSIVE", "canonical_label": "Aggressive Hybrid Fund", "section": "III", "investment_mandate": "65-80% equity; 20-35% debt.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Hybrid Scheme - Aggressive Hybrid Fund", "csv_scheme_count": 199},
+        {"code": "HYB_DYNAMIC_BAF", "canonical_label": "Dynamic Asset Allocation / Balanced Advantage Fund", "section": "III", "investment_mandate": "Equity/debt managed dynamically per a stated model.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Hybrid Scheme - Dynamic Asset Allocation or Balanced Advantage Fund", "csv_scheme_count": 159},
+        {"code": "HYB_MULTI_ASSET", "canonical_label": "Multi Asset Allocation Fund", "section": "III", "investment_mandate": "Min. 10% each in >= 3 distinct asset classes.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Hybrid Scheme - Multi Asset Allocation", "csv_scheme_count": 154},
+        {"code": "HYB_ARBITRAGE", "canonical_label": "Arbitrage Fund", "section": "III", "investment_mandate": "Min. 65% equity, arbitrage strategy.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Hybrid Scheme - Arbitrage Fund", "csv_scheme_count": 203},
+        {"code": "HYB_EQUITY_SAVINGS", "canonical_label": "Equity Savings Fund", "section": "III", "investment_mandate": "Min. 65% equity (incl. arbitrage); min. 10% debt.", "data_status": "REPORTED_IN_CSV", "csv_category_string": "Hybrid Scheme - Equity Savings", "csv_scheme_count": 172},
+
+        {"code": "SOL_RETIREMENT", "canonical_label": "Retirement Fund", "section": "IV", "investment_mandate": "Solution-oriented; lock-in 5yr or retirement age, whichever earlier.", "data_status": "REPORTED_IN_CSV; DISCONTINUED_IN_CURRENT_2026", "csv_category_string": "Solution Oriented Scheme - Retirement Fund", "csv_scheme_count": 108},
+        {"code": "SOL_CHILDRENS", "canonical_label": "Children's Fund", "section": "IV", "investment_mandate": "Solution-oriented; lock-in 5yr or child's majority, whichever earlier.", "data_status": "REPORTED_IN_CSV; DISCONTINUED_IN_CURRENT_2026", "csv_category_string": "Solution Oriented Scheme - Children s Fund", "csv_scheme_count": 40},
+
+        {"code": "OTH_INDEX_DOM", "canonical_label": "Equity Index Fund (Domestic)", "section": "V", "data_status": "REPORTED_APR_2023 (v0_1: 86 schemes, INR 54,355.39 cr AUM); coarser 'Other Scheme - Index Funds' bucket in CSV, not split", "csv_category_string": "Other Scheme - Index Funds (shared bucket)"},
+        {"code": "OTH_INDEX_INTL", "canonical_label": "Equity Index Fund (International)", "section": "V", "data_status": "REPORTED_APR_2023 (v0_1: 3 schemes, INR 3,396.94 cr AUM); coarser 'Other Scheme - Index Funds' bucket in CSV, not split", "csv_category_string": "Other Scheme - Index Funds (shared bucket)"},
+        {"code": "OTH_DEBT_INDEX_TM", "canonical_label": "Debt Index Fund (Target Maturity)", "section": "V", "data_status": "REPORTED_APR_2023 (v0_1: 77 schemes, INR 95,319.83 cr AUM); coarser bucket in CSV", "csv_category_string": "Other Scheme - Index Funds (shared bucket)"},
+        {"code": "OTH_DEBT_INDEX_OTHER", "canonical_label": "Debt Index Fund (Other than Target Maturity)", "section": "V", "data_status": "REPORTED_APR_2023 (v0_1: 7 schemes, INR 14,385.82 cr AUM); coarser bucket in CSV", "csv_category_string": "Other Scheme - Index Funds (shared bucket)"},
+        {"code": "OTH_INDEX_OTHER", "canonical_label": "Other Index Funds", "section": "V", "data_status": "REPORTED_APR_2023 (v0_1: 8 schemes, INR 3,635.52 cr AUM)", "csv_category_string": "Other Scheme - Index Funds (shared bucket, 1337 total)"},
+        {"code": "OTH_GOLD_ETF", "canonical_label": "Gold ETF", "section": "V", "data_status": "REPORTED_APR_2023 (v0_1: 13 schemes, INR 22,949.98 cr AUM) AND REPORTED_IN_CSV", "csv_category_string": "Other Scheme - Gold ETF", "csv_scheme_count": 26},
+        {"code": "OTH_EQ_ETF_DOM", "canonical_label": "Equity ETF (Domestic)", "section": "V", "data_status": "REPORTED_APR_2023 (v0_1: 125 schemes, INR 4,08,915.17 cr AUM); coarser 'Other ETFs' bucket in CSV", "csv_category_string": "Other Scheme - Other  ETFs (shared bucket)"},
+        {"code": "OTH_EQ_ETF_INTL", "canonical_label": "Equity ETF (International)", "section": "V", "data_status": "REPORTED_APR_2023 (v0_1: 6 schemes, INR 7,975.68 cr AUM); coarser bucket in CSV", "csv_category_string": "Other Scheme - Other  ETFs (shared bucket)"},
+        {"code": "OTH_DEBT_ETF", "canonical_label": "Debt ETF", "section": "V", "data_status": "REPORTED_APR_2023 (v0_1: 21 schemes, INR 83,483.85 cr AUM); coarser bucket in CSV", "csv_category_string": "Other Scheme - Other  ETFs (shared bucket, 315 total)"},
+        {"code": "OTH_ETF_OTHER_DOM", "canonical_label": "Other Domestic ETFs", "section": "V", "data_status": "REPORTED_APR_2023 (v0_1: 0 schemes)"},
+        {"code": "OTH_SILVER_ETF", "canonical_label": "Silver ETF", "section": "V", "data_status": "REPORTED_APR_2023 (v0_1: 8 schemes, INR 1,785.73 cr AUM); NOT separately broken out in CSV (folded into 'Other ETFs')"},
+        {"code": "OTH_FOF_OVERSEAS_ACTIVE", "canonical_label": "FoF Overseas -- Active Funds", "section": "V", "data_status": "REPORTED_APR_2023 (v0_1: 40 schemes, INR 17,211.62 cr AUM); coarser bucket in CSV", "csv_category_string": "Other Scheme - FoF Overseas (shared bucket)"},
+        {"code": "OTH_FOF_OVERSEAS_PASSIVE", "canonical_label": "FoF Overseas -- Passive Funds", "section": "V", "data_status": "REPORTED_APR_2023 (v0_1: 10 schemes, INR 5,427.23 cr AUM); coarser bucket in CSV", "csv_category_string": "Other Scheme - FoF Overseas (shared bucket, 194 total)"},
+        {"code": "OTH_FOF_DOMESTIC", "canonical_label": "FoF Domestic", "section": "V", "data_status": "GAP_CLOSED -- flagged MISSING by the v0_1/v0_2 gap analysis (only 'overseas' FoF existed in the April 2023 source); the CSV proves this category is real and substantial.", "csv_category_string": "Other Scheme - FoF Domestic", "csv_scheme_count": 547}
+      ],
+      "legacy_unclassified": {
+        "note": "50 raw Scheme_Category strings appear in mutual_fund_data.csv; 8 of them do not map to ANY category name in either the 2017 or 2026 SEBI circulars. These are pre-2017 labels that were apparently never migrated -- almost certainly older/legacy schemes. They total 6,622 of 16,245 rows (40.8% of the whole CSV) and need explicit handling rather than being silently dropped or force-matched to a real category.",
+        "categories": [
+          {"csv_category_string": "Income", "csv_scheme_count": 6124},
+          {"csv_category_string": "Growth", "csv_scheme_count": 357},
+          {"csv_category_string": "ELSS", "csv_scheme_count": 85, "likely_duplicate_of": "EQ_ELSS"},
+          {"csv_category_string": "Liquid", "csv_scheme_count": 26, "likely_duplicate_of": "DEBT_LIQUID"},
+          {"csv_category_string": "Gilt", "csv_scheme_count": 19, "likely_duplicate_of": "DEBT_GILT"},
+          {"csv_category_string": "Balanced", "csv_scheme_count": 5},
+          {"csv_category_string": "Money Market", "csv_scheme_count": 4, "likely_duplicate_of": "DEBT_MONEY_MARKET"},
+          {"csv_category_string": "Assured Return", "csv_scheme_count": 2}
+        ]
+      }
+    },
+
+    {
+      "regime_id": "CURRENT_2026",
+      "label": "2026 Categorization (authoritative from 2026-02-26)",
+      "regulatory_basis": {
+        "primary_circular": "HO/24/13/15(2)2026-IMD-RAC4/I/5764/2026",
+        "primary_circular_title": "Categorization and Rationalization of Mutual Fund Schemes",
+        "primary_circular_date": "2026-02-26",
+        "supersedes_clause": "Clause 2.6, Chapter 2, Master Circular for Mutual Funds dated 2024-06-27 (itself a consolidation of the 2017 and 2020 circulars)."
+      },
+      "effective_from": "2026-02-26",
+      "compliance_deadline": "2026-08-26 (existing schemes have 6 months to align nomenclature/mandate)",
+      "status": "current_authoritative",
+      "evidenced_by": ["Categorization and Rationalization of Mutual Fund Schemes.pdf"],
+      "groups": [
+        {"section": "A", "label": "Equity Scheme"},
+        {"section": "B", "label": "Debt Scheme"},
+        {"section": "C", "label": "Hybrid Scheme"},
+        {"section": "D", "label": "Life Cycle Funds", "note": "NEW group. Replaces the discontinued Solution Oriented Scheme group."},
+        {"section": "E", "label": "Other Schemes (Fund of Funds; Passive Schemes e.g. Index Funds/ETFs)"}
+      ],
+      "structural_changes_vs_legacy": [
+        "Solution Oriented Schemes discontinued outright (clause 2.6.3.16) -- existing Retirement/Children's Fund schemes must stop subscriptions and merge into a comparable scheme with SEBI approval.",
+        "New 'Life Cycle Funds' group (D): target-date glide-path funds, tenure 5-30 years in 5-year multiples, max 6 concurrently open per AMC, with a full duration-banded equity/debt/gold-silver glide table (Annexure B) and a graduated exit load (3%/2%/1% in years 1/2/3).",
+        "Section 'Other Schemes' (E) collapsed from 13 legacy subtypes to 2: 'Index Funds/ETFs' (single category, min. 95% index-tracking, no equity/debt/domestic/international split) and 'FoFs (Overseas/Domestic)' (single category, min. 95% in the underlying fund).",
+        "A separate, much richer sub-categorization applies ONLY to FoFs with multiple underlying funds (Annexure C): Equity-oriented FOF Domestic (Diversified / Sectoral-Thematic), Debt-oriented FOF Domestic, Hybrid FOF Domestic (Aggressive/Conservative/Income+Arbitrage/Dynamic/Multi-Asset), Commodity-based FOF Domestic, Overseas FOF (Country- or Region-specific, Equity or Debt), and Domestic+Overseas FOF -- each further split into Active/Passive/Omni sub-options, with per-AMC quota limits.",
+        "Multiple equity-category minimum-investment thresholds raised, e.g. Multi Cap Fund's equity floor moved from 65% to 75% of total assets (25/25/25 split across large/mid/small cap now computed on the higher base); Dividend Yield/Value/Contra/Focused/Sectoral/Thematic funds' floors moved from 65% to 80%.",
+        "Several debt categories renamed (not just re-thresholded): 'Ultra Short Duration Fund' -> 'Ultra Short Term Fund'; 'Short Duration Fund' -> 'Short Term Fund'; 'Medium Duration Fund' -> 'Medium Term Fund'; 'Medium to Long Duration Fund' -> 'Medium to Long Term Fund'; 'Long Duration Fund' -> 'Long Term Fund'; 'Dynamic Bond Fund' -> 'Dynamic Term Fund'; 'Floater Fund' -> 'Floating Interest Rates Fund'; 'Gilt Fund with 10 Year Constant Duration' -> '10-year Constant Maturity Gilt Fund'.",
+        "'Low Duration Fund' (legacy 6-12mo) is absorbed into a renamed 'Ultra Short to Short Term Fund' band, rather than existing as its own category.",
+        "NEW debt category: 'Sectoral Fund' (debt) -- min. 80% debt of a specified sector (Financial Services, Energy, Infrastructure, Housing, Real Estate), only in AA+ and above rated corporate bonds. Not present in the legacy regime.",
+        "Portfolio-overlap ceilings introduced/tightened for sectoral/thematic equity funds (max 50% overlap with other equity schemes, phased in over 3 years) -- a new compliance dimension with no legacy equivalent."
+      ],
+      "scheme_classes": [
+        {"code": "EQ2_MULTI_CAP", "canonical_label": "Multi Cap Fund", "section": "A", "investment_mandate": "Min. 75% equity; min. 25% each large/mid/small cap.", "crosswalk_from": "EQ_MULTI_CAP"},
+        {"code": "EQ2_LARGE_CAP", "canonical_label": "Large Cap Fund", "section": "A", "investment_mandate": "Min. 80% equity of large cap companies.", "crosswalk_from": "EQ_LARGE_CAP"},
+        {"code": "EQ2_LARGE_MID_CAP", "canonical_label": "Large & Mid Cap Fund", "section": "A", "investment_mandate": "Min. 35% large cap + min. 35% mid cap equity.", "crosswalk_from": "EQ_LARGE_MID_CAP"},
+        {"code": "EQ2_MID_CAP", "canonical_label": "Mid Cap Fund", "section": "A", "investment_mandate": "Min. 65% equity of mid cap companies.", "crosswalk_from": "EQ_MID_CAP"},
+        {"code": "EQ2_SMALL_CAP", "canonical_label": "Small Cap Fund", "section": "A", "investment_mandate": "Min. 65% equity of small cap companies.", "crosswalk_from": "EQ_SMALL_CAP"},
+        {"code": "EQ2_FLEXI_CAP", "canonical_label": "Flexi Cap Fund", "section": "A", "investment_mandate": "Min. 65% equity, dynamic across caps.", "crosswalk_from": "EQ_FLEXI_CAP"},
+        {"code": "EQ2_DIVIDEND_YIELD", "canonical_label": "Dividend Yield Fund", "section": "A", "investment_mandate": "Min. 80% equity, predominantly dividend-yielding stocks.", "crosswalk_from": "EQ_DIVIDEND_YIELD"},
+        {"code": "EQ2_VALUE", "canonical_label": "Value Fund", "section": "A", "investment_mandate": "Min. 80% equity, value strategy. Value/Contra overlap capped at 50%.", "crosswalk_from": "EQ_VALUE"},
+        {"code": "EQ2_CONTRA", "canonical_label": "Contra Fund", "section": "A", "investment_mandate": "Min. 80% equity, contrarian strategy.", "crosswalk_from": "EQ_CONTRA"},
+        {"code": "EQ2_FOCUSED", "canonical_label": "Focused Fund", "section": "A", "investment_mandate": "Min. 80% equity, max. 30 stocks.", "crosswalk_from": "EQ_FOCUSED"},
+        {"code": "EQ2_SECTORAL", "canonical_label": "Sectoral Fund", "section": "A", "investment_mandate": "Min. 80% equity of a specified sector; portfolio-overlap capped at 50% (phased).", "crosswalk_from": "EQ_SECTORAL_THEMATIC (split)"},
+        {"code": "EQ2_THEMATIC", "canonical_label": "Thematic Fund", "section": "A", "investment_mandate": "Min. 80% equity of a specified theme (may span >=2 sectors); portfolio-overlap capped at 50% (phased).", "crosswalk_from": "EQ_SECTORAL_THEMATIC (split)"},
+        {"code": "EQ2_ELSS", "canonical_label": "ELSS -- Tax Saver Fund", "section": "A", "investment_mandate": "Min. 80% equity; statutory lock-in per ELSS notification.", "crosswalk_from": "EQ_ELSS"},
+
+        {"code": "DEBT2_OVERNIGHT", "canonical_label": "Overnight Fund", "section": "B", "investment_mandate": "1-day maturity; up to 5% may sit in G-secs/T-bills <=30d as margin/collateral.", "crosswalk_from": "DEBT_OVERNIGHT"},
+        {"code": "DEBT2_LIQUID", "canonical_label": "Liquid Fund", "section": "B", "investment_mandate": "Debt/money market, maturity <= 91 days.", "crosswalk_from": "DEBT_LIQUID"},
+        {"code": "DEBT2_ULTRA_SHORT_TERM", "canonical_label": "Ultra Short Term Fund", "section": "B", "investment_mandate": "Macaulay duration 3-6 months.", "crosswalk_from": "DEBT_ULTRA_SHORT (renamed)"},
+        {"code": "DEBT2_ULTRA_SHORT_TO_SHORT_TERM", "canonical_label": "Ultra Short to Short Term Fund", "section": "B", "investment_mandate": "Macaulay duration 6-12 months.", "crosswalk_from": "DEBT_LOW_DURATION (renamed/absorbed)"},
+        {"code": "DEBT2_MONEY_MARKET", "canonical_label": "Money Market Fund", "section": "B", "investment_mandate": "Money market instruments, maturity <= 1 year.", "crosswalk_from": "DEBT_MONEY_MARKET"},
+        {"code": "DEBT2_SHORT_TERM", "canonical_label": "Short Term Fund", "section": "B", "investment_mandate": "Macaulay duration 1-3 years.", "crosswalk_from": "DEBT_SHORT_DURATION (renamed)"},
+        {"code": "DEBT2_MEDIUM_TERM", "canonical_label": "Medium Term Fund", "section": "B", "investment_mandate": "Macaulay duration 3-4 years (may drop to 1yr floor under stated adverse-scenario disclosure).", "crosswalk_from": "DEBT_MEDIUM_DURATION (renamed)"},
+        {"code": "DEBT2_MEDIUM_LONG_TERM", "canonical_label": "Medium to Long Term Fund", "section": "B", "investment_mandate": "Macaulay duration 4-7 years (may drop to 1yr floor under stated adverse-scenario disclosure).", "crosswalk_from": "DEBT_MEDIUM_LONG_DURATION (renamed)"},
+        {"code": "DEBT2_LONG_TERM", "canonical_label": "Long Term Fund", "section": "B", "investment_mandate": "Macaulay duration > 7 years.", "crosswalk_from": "DEBT_LONG_DURATION (renamed)"},
+        {"code": "DEBT2_DYNAMIC_TERM", "canonical_label": "Dynamic Term Fund", "section": "B", "investment_mandate": "Investment across duration, actively managed.", "crosswalk_from": "DEBT_DYNAMIC_BOND (renamed)"},
+        {"code": "DEBT2_CORPORATE_BOND", "canonical_label": "Corporate Bond Fund", "section": "B", "investment_mandate": "Min. 80% corporate bonds, AA+ and above.", "crosswalk_from": "DEBT_CORPORATE_BOND"},
+        {"code": "DEBT2_CREDIT_RISK", "canonical_label": "Credit Risk Fund", "section": "B", "investment_mandate": "Min. 65% corporate bonds, AA and below.", "crosswalk_from": "DEBT_CREDIT_RISK"},
+        {"code": "DEBT2_BANKING_PSU", "canonical_label": "Banking and PSU Debt Fund", "section": "B", "investment_mandate": "Min. 80% debt of banks/PSUs/PFIs/municipal bonds.", "crosswalk_from": "DEBT_BANKING_PSU"},
+        {"code": "DEBT2_GILT", "canonical_label": "Gilt Fund", "section": "B", "investment_mandate": "Min. 80% G-secs, across maturities.", "crosswalk_from": "DEBT_GILT"},
+        {"code": "DEBT2_GILT_10Y", "canonical_label": "10-year Constant Maturity Gilt Fund", "section": "B", "investment_mandate": "Min. 80% G-secs, Macaulay duration = 10 years.", "crosswalk_from": "DEBT_GILT_10Y (renamed)"},
+        {"code": "DEBT2_FLOATING_RATE", "canonical_label": "Floating Interest Rates Fund", "section": "B", "investment_mandate": "Min. 65% floating rate instruments (incl. swapped fixed-rate).", "crosswalk_from": "DEBT_FLOATER (renamed)"},
+        {"code": "DEBT2_SECTORAL", "canonical_label": "Sectoral Fund (Debt)", "section": "B", "investment_mandate": "Min. 80% debt of a specified sector (Financial Services/Energy/Infrastructure/Housing/Real Estate), AA+ and above only.", "crosswalk_from": "NEW_NO_LEGACY_EQUIVALENT"},
+
+        {"code": "HYB2_CONSERVATIVE", "canonical_label": "Conservative Hybrid Fund", "section": "C", "investment_mandate": "10-25% equity; 75-90% debt.", "crosswalk_from": "HYB_CONSERVATIVE"},
+        {"code": "HYB2_BALANCED", "canonical_label": "Balanced Hybrid Fund", "section": "C", "investment_mandate": "40-60% equity; 40-60% debt; no arbitrage.", "crosswalk_from": "HYB_BALANCED"},
+        {"code": "HYB2_AGGRESSIVE", "canonical_label": "Aggressive Hybrid Fund", "section": "C", "investment_mandate": "65-80% equity; 20-35% debt.", "crosswalk_from": "HYB_AGGRESSIVE"},
+        {"code": "HYB2_DYNAMIC_ALLOCATION", "canonical_label": "Dynamic Asset Allocation Fund", "section": "C", "investment_mandate": "Equity/debt managed dynamically.", "crosswalk_from": "HYB_DYNAMIC_BAF (renamed)"},
+        {"code": "HYB2_MULTI_ASSET", "canonical_label": "Multi Asset Allocation Fund", "section": "C", "investment_mandate": "Min. 10% each in >= 3 distinct asset classes.", "crosswalk_from": "HYB_MULTI_ASSET"},
+        {"code": "HYB2_ARBITRAGE", "canonical_label": "Arbitrage Fund", "section": "C", "investment_mandate": "Min. 65% equity, arbitrage strategy; debt limited to <1yr G-secs/repo.", "crosswalk_from": "HYB_ARBITRAGE"},
+        {"code": "HYB2_EQUITY_SAVINGS", "canonical_label": "Equity Savings Fund", "section": "C", "investment_mandate": "Min. 65% equity; net equity 15-40%; min. 10% debt.", "crosswalk_from": "HYB_EQUITY_SAVINGS"},
+
+        {"code": "LC_LIFECYCLE_FUND", "canonical_label": "Life Cycle Fund", "section": "D", "investment_mandate": "Target-date glide path across Equity/Debt/InvITs/ETCDs/Gold&Silver ETF; tenure 5-30yr in 5yr steps; max 6 concurrent per AMC; graduated exit load 3%/2%/1% in yr 1/2/3.", "crosswalk_from": "SOL_RETIREMENT + SOL_CHILDRENS (discontinued, replaced)"},
+
+        {"code": "OTH2_INDEX_ETF", "canonical_label": "Index Funds/ETFs", "section": "E", "investment_mandate": "Min. 95% in securities of the tracked index.", "crosswalk_from": "OTH_INDEX_DOM + OTH_INDEX_INTL + OTH_DEBT_INDEX_TM + OTH_DEBT_INDEX_OTHER + OTH_INDEX_OTHER + OTH_GOLD_ETF + OTH_EQ_ETF_DOM + OTH_EQ_ETF_INTL + OTH_DEBT_ETF + OTH_ETF_OTHER_DOM + OTH_SILVER_ETF (all merged into one category)"},
+        {"code": "OTH2_FOF", "canonical_label": "FoFs (Overseas/Domestic)", "section": "E", "investment_mandate": "Min. 95% in the underlying fund.", "crosswalk_from": "OTH_FOF_OVERSEAS_ACTIVE + OTH_FOF_OVERSEAS_PASSIVE + OTH_FOF_DOMESTIC (all merged into one category at the top level; see fof_multi_underlying_subframework for the real sub-split that still applies to multi-underlying FoFs)"}
+      ],
+      "fof_multi_underlying_subframework": {
+        "note": "Applies only to FoFs holding MORE than one underlying fund (Annexure C). Each sub-category further splits into Active / Passive / Active+Passive ('Omni') options, each with a per-AMC quota (Annexure IV).",
+        "categories": [
+          {"code": "FOF_EQ_DOM_DIVERSIFIED", "label": "Equity-oriented FoF (Domestic) -- Diversified", "amc_quota": 2},
+          {"code": "FOF_EQ_DOM_SECTORAL_THEMATIC", "label": "Equity-oriented FoF (Domestic) -- Sectoral/Thematic", "amc_quota": "1 per sector/theme; 1 for multi-sector"},
+          {"code": "FOF_DEBT_DOM", "label": "Debt-oriented FoF (Domestic)", "amc_quota": 2},
+          {"code": "FOF_HYB_AGGRESSIVE", "label": "Hybrid FoF (Domestic) -- Aggressive Hybrid", "amc_quota": 1},
+          {"code": "FOF_HYB_CONSERVATIVE", "label": "Hybrid FoF (Domestic) -- Conservative Hybrid", "amc_quota": 1},
+          {"code": "FOF_HYB_INCOME_ARBITRAGE", "label": "Hybrid FoF (Domestic) -- Income Plus Arbitrage", "amc_quota": 1},
+          {"code": "FOF_HYB_DYNAMIC", "label": "Hybrid FoF (Domestic) -- Dynamic Asset Allocation", "amc_quota": 1},
+          {"code": "FOF_HYB_MULTI_ASSET", "label": "Hybrid FoF (Domestic) -- Multi Asset", "amc_quota": 1},
+          {"code": "FOF_COMMODITY_DOM", "label": "Commodity-based FoF (Domestic)", "amc_quota": "1 (Passive option only)"},
+          {"code": "FOF_OVERSEAS_EQ_COUNTRY", "label": "Overseas FoF -- Country-specific Equity", "amc_quota": "1 per country"},
+          {"code": "FOF_OVERSEAS_EQ_REGION", "label": "Overseas FoF -- Region-specific Equity", "amc_quota": "1 per region"},
+          {"code": "FOF_OVERSEAS_DEBT_COUNTRY", "label": "Overseas FoF -- Country-specific Debt", "amc_quota": "1 per country"},
+          {"code": "FOF_OVERSEAS_DEBT_REGION", "label": "Overseas FoF -- Region-specific Debt", "amc_quota": "1 per region"},
+          {"code": "FOF_DOM_OVERSEAS_DIVERSIFIED_EQ", "label": "Domestic + Overseas FoF -- Diversified Equity", "amc_quota": 2},
+          {"code": "FOF_DOM_OVERSEAS_SECTORAL_EQ", "label": "Domestic + Overseas FoF -- Sectoral/Thematic Equity", "amc_quota": "1 per sector/theme/multi-sector"},
+          {"code": "FOF_DOM_OVERSEAS_DEBT", "label": "Domestic + Overseas FoF -- Debt", "amc_quota": 2}
+        ]
+      }
+    }
+  ],
+
+  "regime_crosswalk_summary": [
+    {"relationship_type": "UNCHANGED", "count": 27, "examples": ["EQ_LARGE_CAP -> EQ2_LARGE_CAP", "DEBT_OVERNIGHT -> DEBT2_OVERNIGHT", "HYB_AGGRESSIVE -> HYB2_AGGRESSIVE"]},
+    {"relationship_type": "RENAMED", "count": 9, "examples": ["DEBT_ULTRA_SHORT -> DEBT2_ULTRA_SHORT_TERM", "DEBT_FLOATER -> DEBT2_FLOATING_RATE", "DEBT_GILT_10Y -> DEBT2_GILT_10Y"]},
+    {"relationship_type": "MANDATE_TIGHTENED", "count": 7, "examples": ["EQ_MULTI_CAP 65%->75%", "EQ_DIVIDEND_YIELD 65%->80%", "EQ_VALUE 65%->80%", "EQ_CONTRA 65%->80%", "EQ_FOCUSED 65%->80%", "EQ_SECTORAL_THEMATIC 65%->80%"]},
+    {"relationship_type": "MERGED_OR_ABSORBED", "count": 1, "examples": ["DEBT_LOW_DURATION -> DEBT2_ULTRA_SHORT_TO_SHORT_TERM"]},
+    {"relationship_type": "SPLIT", "count": 1, "examples": ["EQ_SECTORAL_THEMATIC -> EQ2_SECTORAL + EQ2_THEMATIC"]},
+    {"relationship_type": "DISCONTINUED_REPLACED_BY", "count": 2, "examples": ["SOL_RETIREMENT -> LC_LIFECYCLE_FUND", "SOL_CHILDRENS -> LC_LIFECYCLE_FUND"]},
+    {"relationship_type": "COLLAPSED_INTO_BROADER_CATEGORY", "count": 13, "examples": ["OTH_GOLD_ETF -> OTH2_INDEX_ETF", "OTH_FOF_DOMESTIC -> OTH2_FOF", "OTH_INDEX_DOM -> OTH2_INDEX_ETF"], "note": "All 13 legacy Section V subtypes collapse into just 2 CURRENT_2026 top-level codes; the lost granularity partially re-emerges for multi-underlying FoFs via fof_multi_underlying_subframework, but single-underlying FoFs and all Index Funds/ETFs genuinely lose their asset-class/geography split at the regulatory-taxonomy level going forward."},
+    {"relationship_type": "NEW_NO_LEGACY_EQUIVALENT", "count": 1, "examples": ["DEBT2_SECTORAL (debt sectoral fund)"]}
+  ],
+
+  "adjacent_regulatory_domains": [
+    {
+      "domain": "Investment Adviser Conduct & AI Disclosure",
+      "source_document": "Guidelines for Investment Advisers.pdf",
+      "circular": "SEBI/HO/MIRSD/MIRSD-PoD-1/P/CIR/2025/003",
+      "date": "2025-01-08",
+      "key_rule": "Regulation 18(9): an Investment Adviser using AI tools to generate investment advice must disclose the extent of AI usage to the client."
+    },
+    {
+      "domain": "Algorithmic Trading Safety (Retail)",
+      "source_document": "Safer participation of retail investors in Algorithmic trading.pdf",
+      "circular": "SEBI/HO/MIRSD/MIRSD-PoD/P/CIR/2025/0000013",
+      "date": "2025-02-04"
+    },
+    {
+      "domain": "Performance Disclosure -- Information Ratio",
+      "source_document": "Disclosure of Risk adjusted Return - Information Ratio (IR) for Mutual Fund Schemes.pdf",
+      "circular": "SEBI/HO/IMD/IMD-PoD-2/P/CIR/2025/6",
+      "date": "2025-01-17"
+    },
+    {
+      "domain": "Mutual Fund Borrowing (Intraday & Otherwise)",
+      "source_document": "Borrowing by Mutual Funds.pdf",
+      "circular": "HO/(92)2026-IMD-POD-2/I/6961/2026",
+      "date": "2026-03-13"
+    }
+  ],
+
+  "structured_data_sources": {
+    "mutual_fund_data.csv": {
+      "rows": 16245,
+      "distinct_amcs": 54,
+      "distinct_scheme_types": ["Open Ended", "Close Ended", "Interval Fund"],
+      "distinct_raw_scheme_categories": 50,
+      "regime_of_category_labels": "LEGACY_2017 (predates the 2026 circular; will need a re-tagging pass once AMCs complete their 6-month migration)",
+      "unclassified_legacy_row_count": 6622,
+      "unclassified_legacy_row_pct": "40.8%",
+      "columns_relevant_to_graph": ["Scheme_Code", "Scheme_Name", "AMC", "Scheme_Type", "Scheme_Category", "Average_AUM_Cr", "Launch_Date", "ISIN_Div_Payout/Growth"]
+    },
+    "amfi_monthly_reports": [
+      {"file": "April 2024.pdf", "period": "2024-04", "regime": "LEGACY_2017", "coverage": "Full report: Sections A(I-V)/B(I-III)/C(I-III) -- Open, Close, and Interval fund structures, all scheme groups, plus new-scheme-launch appendix."},
+      {"file": "May 2024.pdf", "period": "2024-05", "regime": "LEGACY_2017", "coverage": "Same full-report structure as April 2024."},
+      {"file": "April 2025.pdf", "period": "2025-04", "regime": "LEGACY_2017", "coverage": "Same full-report structure as April 2024."}
+    ]
+  },
+
+  "known_remaining_gaps": [
+    "Close-ended scheme categories (Fixed Maturity Plans, Capital Protection Oriented Schemes, Interval Funds) are mentioned structurally in the AMFI monthly reports (Sections B/C) but their specific SEBI investment-mandate definitions are not present in the Categorization circular in this corpus -- only their reported instance counts are available.",
+    "The CURRENT_2026 circular's Annexure C multi-underlying FoF sub-framework defines category names, quotas, benchmarks, and naming conventions in detail, but this corpus contains no reported instance data for it yet (too new -- circular is 5 months old as of this corpus's most recent AMFI report).",
+    "TER (expense ratio) slabs, exit-load schedules (outside Life Cycle Funds' stated 3/2/1% schedule), and distributor commission structures remain separate SEBI-regulated domains with no source document in this corpus.",
+    "6,622 CSV rows (40.8%) carry pre-2017 legacy category labels (Income/Growth/ELSS/Liquid/Gilt/Balanced/Money Market/Assured Return) that map to neither regime cleanly -- see legacy_unclassified. These need either a dedicated LEGACY_PRE_2017 bucket in the graph or a semantic-similarity backfill pass against Scheme_Name text before they can be classified with confidence."
+  ]
+}

@@ -188,7 +188,8 @@ echo ">> Copying project (tar over SSH; excludes local junk) ..."
 $SSH 'mkdir -p /home/ec2-user/app'
 tar -C "$PROJECT_ROOT" \
   --exclude='.git' --exclude='node_modules' --exclude='.venv' \
-  --exclude='frontend/dist' --exclude='data' --exclude='__pycache__' \
+  --exclude='frontend/dist' --exclude='./data' --exclude='./backend/data' \
+  --exclude='__pycache__' \
   -czf - . | $SSH 'tar -xzf - -C /home/ec2-user/app'
 
 echo ">> Writing .env and starting the stack ..."

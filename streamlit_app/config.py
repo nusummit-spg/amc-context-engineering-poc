@@ -20,6 +20,14 @@ LOG_DIR        = PROJECT_ROOT / "logs"
 for d in (FAISS_DIR, LOG_DIR):
     d.mkdir(parents=True, exist_ok=True)
 
+# ── MUTUAL FUND TAXONOMY GRAPH (taxonomy_engine/) ───────────────────────
+# Distinct from TAXONOMY_PATH above (the domain-NER taxonomy used by
+# entity_resolver.py/ner_pipeline.py) — this is the dual-regime SEBI scheme
+# categorization taxonomy (LEGACY_2017 / CURRENT_2026) and its source PDFs.
+MF_TAXONOMY_PATH       = PROJECT_ROOT / "data" / "taxonomy" / "mutual_fund_taxonomy_v0_3.json"
+TAXONOMY_SOURCE_DOCS_DIR = PROJECT_ROOT / "data" / "taxonomy_sources"
+TAXONOMY_FAISS_SLUG    = "taxonomy_showcase"
+
 # ── CLAUDE ────────────────────────────────────────────────────────────
 CLAUDE_API_KEY = os.environ.get("CLAUDE_API_KEY", "")
 
@@ -93,7 +101,13 @@ CYPHER_CRITIQUE_MAX_RETRIES = int(os.environ.get("CYPHER_CRITIQUE_MAX_RETRIES", 
 # ── SEMANTIC CACHE (context_engine/semantic_cache.py) ───────────────────
 # Cosine similarity floor for treating a new query as a repeat/paraphrase of
 # a previously answered one (in-memory FAISS cache, resets on process restart).
-SEMANTIC_CACHE_SIMILARITY_THRESHOLD = float(os.environ.get("SEMANTIC_CACHE_SIMILARITY_THRESHOLD", "0.45"))
+# 0.45 was too permissive: judge_eval caught it cross-matching substantively
+# different questions that merely share regulatory/AI vocabulary (e.g.
+# "SEBI AI disclosure requirements" vs "AMFI algorithmic trading guidelines"
+# scored 0.48-0.65) and replaying one cached (in that run, fabricated) answer
+# across all of them. 0.88 requires near-duplicate phrasing, not just topic
+# overlap, on all-MiniLM-L6-v2 embeddings.
+SEMANTIC_CACHE_SIMILARITY_THRESHOLD = float(os.environ.get("SEMANTIC_CACHE_SIMILARITY_THRESHOLD", "0.88"))
 SEMANTIC_CACHE_MAX_ENTRIES = int(os.environ.get("SEMANTIC_CACHE_MAX_ENTRIES", "500"))
 
 # ── NEO4J ─────────────────────────────────────────────────────────────

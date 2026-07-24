@@ -27,6 +27,7 @@ import ner_pipeline
 import query_classifier
 import text_to_cypher
 from context_engine import hyde, semantic_cache
+from taxonomy_engine import taxonomy_retrieval
 
 AGGREGATION_SKIP_LABELS = {"ASSET_CLASS", "SECTOR", "DATE"}
 
@@ -91,10 +92,17 @@ def traditional_rag(query: str, store) -> Dict[str, Any]:
 
     hyde_doc, latency_hyde_ms = hyde.generate_hypothetical_document(query)
 
+    t_tax_0 = time.perf_counter()
+    taxonomy_chunks = taxonomy_retrieval.retrieve_taxonomy_chunks(query, top_k=3)
+    latency_taxonomy_ms = (time.perf_counter() - t_tax_0) * 1000.0
+
     hits, retrieve_time = _time_call(store.retrieve, hyde_doc, top_k_children=5)
     t_post = time.perf_counter()
     context = "\n\n---\n\n".join(
         f"[{h['product_name']} | Page {h['page_num']}]\n{h['parent_text']}" for h in hits)
+    if taxonomy_chunks:
+        context += "\n\n---\n\n" + "\n\n---\n\n".join(
+            f"[Mutual Fund Taxonomy Source]\n{c}" for c in taxonomy_chunks)
 
     prompt = f"""Answer using ONLY the context below. If the answer isn't in the
 context, say so explicitly.
@@ -123,10 +131,13 @@ ANSWER:"""
         "latency_ner_processing_ms": 0.0,
         "latency_hyde_ms": round(latency_hyde_ms, 2),
         "latency_cache_ms": round(latency_cache_ms, 2),
+        "latency_taxonomy_ms": round(latency_taxonomy_ms, 2),
+        "taxonomy_chunks_used": len(taxonomy_chunks),
         "latency_post_retrieval_processing_ms": round(post_process_time * 1000.0, 2),
         "latency_llm_generation_ms": round(llm_time * 1000.0, 2),
         "latency_total_pipeline_ms": round(
-            (retrieve_time + post_process_time + llm_time) * 1000.0 + latency_hyde_ms + latency_cache_ms, 2),
+            (retrieve_time + post_process_time + llm_time) * 1000.0
+            + latency_hyde_ms + latency_cache_ms + latency_taxonomy_ms, 2),
         "tokens_input": usage["input_tokens"],
         "tokens_output": usage["output_tokens"],
         "tokens_total": total_tokens,
@@ -144,7 +155,7 @@ ANSWER:"""
         "total_tokens": total_tokens,
         "retrieve_time": retrieve_time, "llm_time": llm_time,
         "total_time": retrieve_time + post_process_time + llm_time
-                      + (latency_hyde_ms + latency_cache_ms) / 1000.0,
+                      + (latency_hyde_ms + latency_cache_ms + latency_taxonomy_ms) / 1000.0,
         "telemetry_breakdown": telemetry_breakdown,
     }
     semantic_cache.store(query, mode="traditional", result=result)
@@ -208,6 +219,12 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
         return hit_result
 
     hyde_doc, latency_hyde_ms = hyde.generate_hypothetical_document(query)
+
+    t_tax_0 = time.perf_counter()
+    taxonomy_chunks = taxonomy_retrieval.retrieve_taxonomy_chunks(query, top_k=3)
+    taxonomy_graph_facts = taxonomy_retrieval.retrieve_taxonomy_graph(query)
+    taxonomy_graph_text = taxonomy_retrieval.graph_context_to_text(taxonomy_graph_facts)
+    latency_taxonomy_ms = (time.perf_counter() - t_tax_0) * 1000.0
 
     t_ner_0 = time.perf_counter()
     query_entities = ner_pipeline.run_layers_ab(query)
@@ -349,8 +366,14 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
     if comparison_blocks:
         extra_sections += (f"\nPER-ENTITY GRAPH NEIGHBORHOODS (kept separate — do not blend "
                             f"facts across entities):\n{comparison_blocks}\n")
+    if taxonomy_graph_text:
+        extra_sections += f"\nMUTUAL FUND TAXONOMY KNOWLEDGE (SEBI scheme categorization, dual-regime):\n{taxonomy_graph_text}\n"
 
     graph_section = f"\nGRAPH RELATIONSHIPS:\n{graph_context_str}\n" if (top_edges and include_graph_section) else ""
+
+    taxonomy_prose_section = ""
+    if taxonomy_chunks:
+        taxonomy_prose_section = "\n\nMUTUAL FUND TAXONOMY SOURCES (raw SEBI circular excerpts):\n" + "\n\n---\n\n".join(taxonomy_chunks)
 
     prompt = f"""Sources below are ranked by reliability: VERIFIED FACTS (if present) are
 computed directly from the graph — treat as ground truth, cite as "[graph]".
@@ -360,7 +383,7 @@ as [1], [2]. If sources conflict, say so explicitly. If nothing answers the
 question, say so.
 {extra_sections}{graph_section}
 DOCUMENT PROSE:
-{vector_context}
+{vector_context}{taxonomy_prose_section}
 
 QUESTION: {query}
 
@@ -445,6 +468,9 @@ ANSWER:"""
         "triplet_table": triplet_table,
         "latency_hyde_ms": round(latency_hyde_ms, 2),
         "latency_cache_ms": round(latency_cache_ms, 2),
+        "latency_taxonomy_ms": round(latency_taxonomy_ms, 2),
+        "taxonomy_chunks_used": len(taxonomy_chunks),
+        "taxonomy_graph_facts_used": len(taxonomy_graph_facts),
         "cache_hit": False,
         "cypher_critique_attempts": cypher_critique_attempts,
         "status": "SUCCESS"
