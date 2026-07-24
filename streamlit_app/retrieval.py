@@ -274,8 +274,12 @@ def hybrid_graphrag(query: str, store, history: List[dict] | None = None) -> Dic
 
     hyde_doc, latency_hyde_ms = hyde.generate_hypothetical_document(query)
 
+    # top_k narrower than traditional_rag's (3 vs 5, taxonomy 2 vs 3): the
+    # graph facts below carry structured ground truth that substitutes for
+    # some raw prose, so hybrid needs less vector context to stay grounded —
+    # this is the deliberate token-efficiency lever, not an accuracy cut.
     t_tax_0 = time.perf_counter()
-    taxonomy_chunks = taxonomy_retrieval.retrieve_taxonomy_chunks(query, top_k=3)
+    taxonomy_chunks = taxonomy_retrieval.retrieve_taxonomy_chunks(query, top_k=2)
     taxonomy_graph_facts = taxonomy_retrieval.retrieve_taxonomy_graph(query)
     taxonomy_graph_text = taxonomy_retrieval.graph_context_to_text(taxonomy_graph_facts)
     latency_taxonomy_ms = (time.perf_counter() - t_tax_0) * 1000.0
@@ -317,11 +321,11 @@ def hybrid_graphrag(query: str, store, history: List[dict] | None = None) -> Dic
             vector_bypassed = True
         else:
             t_ret = time.perf_counter()
-            hits = store.retrieve(hyde_doc, top_k_children=5, rerank=True)
+            hits = store.retrieve(hyde_doc, top_k_children=3, rerank=True)
             retrieve_time = time.perf_counter() - t_ret
     else:
         t_ret = time.perf_counter()
-        hits = store.retrieve(hyde_doc, top_k_children=5, rerank=True)
+        hits = store.retrieve(hyde_doc, top_k_children=3, rerank=True)
         retrieve_time = time.perf_counter() - t_ret
         graph_result = {"nodes": [], "edges": [], "matched_by": "none"}
         graph_time = 0.0
@@ -407,7 +411,9 @@ def hybrid_graphrag(query: str, store, history: List[dict] | None = None) -> Dic
     top_edges = []
     include_graph_section = bool(verified_facts) or bool(comparison_blocks)
     if graph_result.get("matched_by") in ("entity", "product") and graph_result["edges"]:
-        top_edges = _select_top_edges(graph_result["edges"], max_edges=8)
+        # 5, not 8 — the highest-confidence edges carry the signal; padding
+        # out to 8 mostly added tokens without adding grounding.
+        top_edges = _select_top_edges(graph_result["edges"], max_edges=5)
         include_graph_section = include_graph_section or bool(top_edges)
 
     # RRF-style fusion: boost vector chunks that come from the same document
@@ -445,42 +451,25 @@ def hybrid_graphrag(query: str, store, history: List[dict] | None = None) -> Dic
     if taxonomy_chunks:
         taxonomy_prose_section = "\n\nMUTUAL FUND TAXONOMY SOURCES (raw SEBI circular excerpts):\n" + "\n\n---\n\n".join(taxonomy_chunks)
 
-    prompt = f"""You are a senior mutual-fund compliance analyst reviewing SEBI
-regulatory filings, AMC scheme documentation, and a structured knowledge
-graph for a colleague. Precision matters — this is used for regulatory
-compliance decisions.
+    prompt = f"""You are a senior mutual-fund compliance analyst. Precision
+matters — this is used for regulatory compliance decisions.
 
-Sources below are ranked by reliability: VERIFIED FACTS (if present) are
-computed directly from the graph — treat as ground truth, cite as "[graph]".
-GRAPH RELATIONSHIPS (if present) are structured extractions, more reliable
-than prose when directly relevant. DOCUMENT PROSE is raw retrieved text, cite
-as [1], [2]. If sources conflict, say so explicitly.
+Reliability order: VERIFIED FACTS (from the graph, ground truth, cite
+"[graph]") > GRAPH RELATIONSHIPS (structured, cite "[graph]") > DOCUMENT
+PROSE (raw text, cite [1]/[2]). Flag conflicts between sources explicitly.
 
-BEFORE ANSWERING, check: does the question use a pronoun or reference ("it",
-"that", "this", "they", "the rule", "the circular") that isn't resolvable
-from the CONVERSATION HISTORY below (if any) or clearly named in the
-sources? If it can be resolved from the conversation history, use that
-resolution and answer directly — do not re-ask for something the history
-already establishes.
-  - If it can't be resolved from history and one referent is clearly
-    dominant given the sources' topic, answer specifically about that one
-    and state your assumption in one line (e.g. "Assuming you mean X:").
-  - If several referents are plausible and history doesn't disambiguate,
-    briefly name them and ask which one is meant. Do NOT substitute
-    unrelated facts from the sources as a stand-in for a direct answer.
+Pronoun/reference check ("it"/"that"/"the rule"/etc.): resolve from
+CONVERSATION HISTORY if possible and answer directly, citing your earlier
+turn's fact if that's the source — do not invent facts beyond the sources or
+your own prior turns. If not resolvable from history, either answer the one
+clearly dominant referent (state your assumption in one line) or, if
+several are equally plausible, name them and ask — never substitute
+unrelated source facts as a stand-in for a direct answer.
 
-If the question names a specific fund, scheme category, or entity, your
-first sentence must directly address that exact one before adding related
-context — do not drift to a different, adjacent item from the sources.
-
-If both LEGACY_2017 and CURRENT_2026 taxonomy regimes appear in the sources,
-state which regime each fact belongs to.
-
-Use the conversation history to resolve references, and — if your own prior
-answer in the history already stated a relevant fact with its citation —
-you may repeat that fact, attributing it to your earlier answer. Do not
-invent new facts not present in either the sources or your own prior turns.
-If nothing in the sources or your prior turns answers the question, say so.
+Name a specific fund/category/entity from the question in your first
+sentence before adding related context. Tag facts by regime
+(LEGACY_2017/CURRENT_2026) when both appear. If nothing answers the
+question, say so.
 {hist_text}{extra_sections}{graph_section}
 DOCUMENT PROSE:
 {vector_context}{taxonomy_prose_section}
