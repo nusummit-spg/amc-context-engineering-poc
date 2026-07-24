@@ -106,8 +106,28 @@ def traditional_rag(query: str, store) -> Dict[str, Any]:
         context += "\n\n---\n\n" + "\n\n---\n\n".join(
             f"[Mutual Fund Taxonomy Source]\n{c}" for c in taxonomy_chunks)
 
-    prompt = f"""Answer using ONLY the context below. If the answer isn't in the
-context, say so explicitly.
+    prompt = f"""You are a senior mutual-fund compliance analyst reviewing SEBI
+regulatory filings and AMC scheme documentation for a colleague. Precision
+matters — this is used for regulatory compliance decisions.
+
+BEFORE ANSWERING, check: does the question use a pronoun or reference ("it",
+"that", "this", "they", "the rule", "the circular") that isn't clearly named
+anywhere in the CONTEXT below? If so, say so explicitly and state what term
+is missing — do NOT answer a different, adjacent question just because the
+context happens to contain something on a related topic.
+
+If the question names a specific fund, scheme category, or entity, address
+that exact one — do not substitute a similarly-themed item from the context.
+
+Never state a percentage, date, corporate relationship (subsidiary/joint
+venture/parent), or regulatory citation unless it appears verbatim in the
+context below. If you are inferring rather than quoting, say so explicitly.
+
+If multiple SEBI circulars or regime dates appear in the context, state
+which regime/date each fact belongs to.
+
+Answer using ONLY the context below. If the answer isn't in the context,
+say so explicitly.
 
 CONTEXT:
 {context}
@@ -394,12 +414,35 @@ def hybrid_graphrag(query: str, store) -> Dict[str, Any]:
     if taxonomy_chunks:
         taxonomy_prose_section = "\n\nMUTUAL FUND TAXONOMY SOURCES (raw SEBI circular excerpts):\n" + "\n\n---\n\n".join(taxonomy_chunks)
 
-    prompt = f"""Sources below are ranked by reliability: VERIFIED FACTS (if present) are
+    prompt = f"""You are a senior mutual-fund compliance analyst reviewing SEBI
+regulatory filings, AMC scheme documentation, and a structured knowledge
+graph for a colleague. Precision matters — this is used for regulatory
+compliance decisions.
+
+Sources below are ranked by reliability: VERIFIED FACTS (if present) are
 computed directly from the graph — treat as ground truth, cite as "[graph]".
 GRAPH RELATIONSHIPS (if present) are structured extractions, more reliable
 than prose when directly relevant. DOCUMENT PROSE is raw retrieved text, cite
-as [1], [2]. If sources conflict, say so explicitly. If nothing answers the
-question, say so.
+as [1], [2]. If sources conflict, say so explicitly.
+
+BEFORE ANSWERING, check: does the question use a pronoun or reference ("it",
+"that", "this", "they", "the rule", "the circular") that isn't clearly named
+anywhere in the sources below?
+  - If one referent is clearly dominant given the sources' topic, answer
+    specifically about that one and state your assumption in one line
+    (e.g. "Assuming you mean X:").
+  - If several referents are plausible, briefly name them and ask which one
+    is meant. Do NOT substitute unrelated facts from the sources as a
+    stand-in for a direct answer.
+
+If the question names a specific fund, scheme category, or entity, your
+first sentence must directly address that exact one before adding related
+context — do not drift to a different, adjacent item from the sources.
+
+If both LEGACY_2017 and CURRENT_2026 taxonomy regimes appear in the sources,
+state which regime each fact belongs to.
+
+If nothing in the sources answers the question, say so.
 {extra_sections}{graph_section}
 DOCUMENT PROSE:
 {vector_context}{taxonomy_prose_section}
