@@ -58,10 +58,27 @@ def _render_telemetry_card(t: dict) -> str:
         f"""<tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>Cross-Encoder Reranking</b></td><td style="text-align:right;">{rerank_ms:.1f} ms</td></tr>"""
         if rerank_ms > 0 else ""
     )
+    # HyDE + taxonomy retrieval used to be folded into the total with no row
+    # of their own, so "Total Pipeline Execution" could look far bigger than
+    # the sum of the visible rows above it — both are real, LLM/DB-bound work
+    # (HyDE is a live Claude call made before retrieval even starts), not a
+    # rendering gap.
+    hyde_ms = t.get('latency_hyde_ms', 0)
+    hyde_row = (
+        f"""<tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>HyDE Generation (LLM)</b></td><td style="text-align:right;">{hyde_ms:.1f} ms</td></tr>"""
+        if hyde_ms > 0 else ""
+    )
+    taxonomy_ms = t.get('latency_taxonomy_ms', 0)
+    taxonomy_row = (
+        f"""<tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>Taxonomy Retrieval (FAISS + Neo4j)</b></td><td style="text-align:right;">{taxonomy_ms:.1f} ms</td></tr>"""
+        if taxonomy_ms > 0 else ""
+    )
     return f"""
     <details style="margin-top:14px; border:1px solid #E7E1D4; border-radius:8px; padding:10px; background:#FAFAFA;">
       <summary style="cursor:pointer; font-size:12px; font-weight:700; color:#5C574C;">⚡ Microsecond Telemetry & Execution Ledger</summary>
       <table style="width:100%; font-size:11.5px; margin-top:8px; border-collapse:collapse;">
+        {hyde_row}
+        {taxonomy_row}
         <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>Vector DB Lookup (FAISS)</b></td><td style="text-align:right;">{t.get('latency_vector_db_ms', 0):.1f} ms</td></tr>
         {rerank_row}
         <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>Graph Traversal (Neo4j UNWIND)</b></td><td style="text-align:right;">{t.get('latency_graph_db_ms', 0):.1f} ms</td></tr>
