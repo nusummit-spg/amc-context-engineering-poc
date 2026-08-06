@@ -76,7 +76,7 @@ if [ "$SG_ID" = "None" ] || [ -z "$SG_ID" ]; then
       IpProtocol=tcp,FromPort=80,ToPort=80,IpRanges="[{CidrIp=0.0.0.0/0}]" \
       IpProtocol=tcp,FromPort=443,ToPort=443,IpRanges="[{CidrIp=0.0.0.0/0}]" \
       IpProtocol=tcp,FromPort=8000,ToPort=8000,IpRanges="[{CidrIp=0.0.0.0/0}]" \
-      IpProtocol=tcp,FromPort=8501,ToPort=8501,IpRanges="[{CidrIp=0.0.0.0/0,Description=streamlit}]"
+      IpProtocol=tcp,FromPort=8080,ToPort=8080,IpRanges="[{CidrIp=0.0.0.0/0,Description=streamlit}]"
 else
   echo ">> Security group $SG_NAME exists ($SG_ID)"
 fi
@@ -220,7 +220,7 @@ cat <<DONE
 ============================================================
 Stack starting on EC2.
   API:         http://$PUBLIC_IP:8000/docs
-  Streamlit:   http://$PUBLIC_IP:8501
+  Streamlit:   http://$PUBLIC_IP:8080
   SSH:         ssh -i $PEM ec2-user@$PUBLIC_IP
   Corpus:      s3://$CORPUS_BUCKET/raw/  (drop new files here — reindexed automatically every 15 min)
   Reindex log: /home/ec2-user/reindex.log

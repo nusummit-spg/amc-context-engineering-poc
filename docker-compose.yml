@@ -79,7 +79,7 @@ services:
     build: ./streamlit_app
     restart: unless-stopped
     ports:
-      - "8501:8501"
+      - "8080:8501"
     environment:
       API_BASE: ${API_BASE:-local}   # self-sufficient: runs the local engine in-process
       # Anthropic key: config.py reads CLAUDE_API_KEY directly, falling back
