@@ -34,9 +34,10 @@ def _get_store() -> "faiss_store.BrochureFAISSStore":
     return _store
 
 
-def local_traditional(query: str, history: List[dict] | None = None) -> Dict[str, Any]:
+def local_traditional(query: str, history: List[dict] | None = None,
+                       user_role: str | None = None) -> Dict[str, Any]:
     """Shape matches QueryResponse.traditional / ChatResponse.traditional."""
-    res = retrieval.traditional_rag(query, _get_store(), history=history)
+    res = retrieval.traditional_rag(query, _get_store(), history=history, user_role=user_role)
     docs = res.get("docs", [])
     return {
         "files": [{
@@ -55,9 +56,10 @@ def local_traditional(query: str, history: List[dict] | None = None) -> Dict[str
     }
 
 
-def local_contextgraph(query: str, history: List[dict] | None = None) -> Dict[str, Any]:
+def local_contextgraph(query: str, history: List[dict] | None = None,
+                        user_role: str | None = None) -> Dict[str, Any]:
     """Shape matches the contextgraph body of QueryResponse / ChatResponse.hybrid."""
-    res = retrieval.hybrid_graphrag(query, _get_store(), history=history)
+    res = retrieval.hybrid_graphrag(query, _get_store(), history=history, user_role=user_role)
     summary = graph_store.get_entity_type_summary(res.get("active_labels"))
     docs = res.get("docs", [])
     edges = res.get("graph_edges", [])

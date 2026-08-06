@@ -143,11 +143,12 @@ def _adapt_hybrid(h: dict) -> dict:
 
 
 def _fetch_mode(mode: str, query: str, history: list[dict], session_id: str) -> dict:
+    user_role = st.session_state.get("active_user", {}).get("role")
     if API_BASE.lower() in ("local", "embedded"):
         import local_fallback
         if mode == "traditional":
-            return local_fallback.local_traditional(query, history=history)
-        return local_fallback.local_contextgraph(query, history=history)
+            return local_fallback.local_traditional(query, history=history, user_role=user_role)
+        return local_fallback.local_contextgraph(query, history=history, user_role=user_role)
 
     payload = {"query": query, "session_id": session_id, "history": history, "mode": mode}
     try:
@@ -163,8 +164,8 @@ def _fetch_mode(mode: str, query: str, history: list[dict], session_id: str) -> 
         # threaded through, see local_fallback.py.
         import local_fallback
         if mode == "traditional":
-            return local_fallback.local_traditional(query, history=history)
-        return local_fallback.local_contextgraph(query, history=history)
+            return local_fallback.local_traditional(query, history=history, user_role=user_role)
+        return local_fallback.local_contextgraph(query, history=history, user_role=user_role)
 
 
 def render_chat_tab():

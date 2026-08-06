@@ -19,13 +19,18 @@ import time
 import concurrent.futures
 from typing import Any, Dict, List
 
+import compliance_guardrails
 import config
 import entity_resolver
 import faiss_store
 import graph_store
+import intent_cache
+import language_detector
 import llm_text_client
 import ner_pipeline
+import pii_scrub
 import query_classifier
+import rbac
 import text_to_cypher
 from context_engine import hyde, semantic_cache
 from taxonomy_engine import taxonomy_retrieval
@@ -86,11 +91,53 @@ def _format_cypher_rows(rows: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _blocked_result(mode: str, query: str, risk_flag: str) -> Dict[str, Any]:
+    return {
+        "mode": mode, "query": query,
+        "answer": f"Query blocked by compliance safety guard: {risk_flag}",
+        "confidence_label": "BLOCKED", "docs": [],
+        "total_tokens": 0, "total_time": 0.001, "cache_hit": False,
+        "telemetry_breakdown": {"status": "BLOCKED", "risk_flag": risk_flag},
+    }
+
+
+def _preprocess_query(query: str, mode: str) -> tuple[str, dict, dict | None]:
+    """Shared pre-retrieval pipeline for both traditional_rag and
+    hybrid_graphrag: PII scrub -> language normalization -> domain intent
+    classification -> prompt-injection / unsafe-query guard. Returns
+    (query_for_retrieval, meta, blocked_result_or_None). meta feeds the
+    telemetry breakdown; when blocked_result is not None, callers must
+    return it immediately without touching the semantic cache."""
+    scrubbed_query, pii_count, pii_types = pii_scrub.scrub_text_with_metrics(query)
+    lang_info = language_detector.detect_query_language(scrubbed_query)
+    query_for_retrieval = lang_info.get("normalized_query", scrubbed_query)
+    domain_intent = intent_cache.classify_domain_intent(query_for_retrieval)
+
+    meta = {
+        "detected_language": lang_info.get("language", "en"),
+        "domain_intent": domain_intent,
+        "pii_entities_scrubbed_count": pii_count,
+        "pii_types_found": pii_types,
+    }
+
+    input_guard = compliance_guardrails.validate_input_query(query_for_retrieval)
+    if not input_guard.get("is_safe", True):
+        return query_for_retrieval, meta, _blocked_result(mode, query, input_guard.get("risk_flag", "UNSAFE_QUERY"))
+
+    return query_for_retrieval, meta, None
+
+
 # ─────────────────────────────────────────────────────────────────────────
 # TRADITIONAL
 # ─────────────────────────────────────────────────────────────────────────
 
-def traditional_rag(query: str, store, history: List[dict] | None = None) -> Dict[str, Any]:
+def traditional_rag(query: str, store, history: List[dict] | None = None,
+                     user_role: str | None = None) -> Dict[str, Any]:
+    query, guard_meta, blocked = _preprocess_query(query, "traditional")
+    if blocked:
+        return blocked
+    user_role = user_role or rbac.AMCRole.COMPLIANCE_OFFICER.value
+
     hist_text = _format_history(history)
 
     # The semantic cache keys on the query's own embedding, with no notion of
@@ -119,6 +166,7 @@ def traditional_rag(query: str, store, history: List[dict] | None = None) -> Dic
 
     hits, retrieve_time = _time_call(store.retrieve, hyde_doc, top_k_children=5, rerank=True)
     rerank_ms = faiss_store.get_last_rerank_ms()
+    hits = rbac.filter_chunks_by_role(hits, user_role)
     t_post = time.perf_counter()
     context = "\n\n---\n\n".join(
         f"[{h['product_name']} | Page {h['page_num']}]\n{h['parent_text']}" for h in hits)
@@ -168,6 +216,9 @@ ANSWER:"""
     llm_time = time.perf_counter() - t_llm
     total_tokens = usage["input_tokens"] + usage["output_tokens"]
 
+    out_guard = compliance_guardrails.validate_llm_output(answer, context, guard_meta["domain_intent"])
+    answer = out_guard.get("modified_answer", answer)
+
     docs = [{"name": h["source"], "score": round(h["score"], 2),
          "page": h["page_num"],
          "snippet": h["child_text"][:160].replace("\n", " "),
@@ -194,6 +245,12 @@ ANSWER:"""
         "db_candidates_surfaced": len(hits),
         "vector_bypassed": False,
         "cache_hit": False,
+        "detected_language": guard_meta["detected_language"],
+        "domain_intent": guard_meta["domain_intent"],
+        "pii_entities_scrubbed_count": guard_meta["pii_entities_scrubbed_count"],
+        "advice_shield_triggered": out_guard.get("advice_shield_triggered", False),
+        "guardrail_reasons": out_guard.get("reasons", []),
+        "user_role": user_role,
         "status": "SUCCESS"
     }
 
@@ -253,8 +310,14 @@ def log_query_audit(audit_data: Dict[str, Any]):
         print(f"  [Audit Log Warning] Could not write to {log_file.name}: {exc}", flush=True)
 
 
-def hybrid_graphrag(query: str, store, history: List[dict] | None = None) -> Dict[str, Any]:
+def hybrid_graphrag(query: str, store, history: List[dict] | None = None,
+                     user_role: str | None = None) -> Dict[str, Any]:
     t_start = time.perf_counter()
+    query, guard_meta, blocked = _preprocess_query(query, "hybrid")
+    if blocked:
+        return blocked
+    user_role = user_role or rbac.AMCRole.COMPLIANCE_OFFICER.value
+
     hist_text = _format_history(history)
 
     # Same cache-safety reasoning as traditional_rag: a follow-up's correct
@@ -338,6 +401,9 @@ def hybrid_graphrag(query: str, store, history: List[dict] | None = None) -> Dic
             query, product_names=product_names, hops=1, limit=15,
             query_entities=query_entities)
         graph_time += (time.perf_counter() - t1)
+
+    hits = rbac.filter_chunks_by_role(hits, user_role)
+    graph_result = rbac.filter_graph_by_role(graph_result, user_role)
 
     product_names_for_scope = {h["product_name"] for h in hits}
 
@@ -484,6 +550,9 @@ ANSWER:"""
     total_tokens = usage["input_tokens"] + usage["output_tokens"] + hidden_tokens
     latency_total_ms = (time.perf_counter() - t_start) * 1000.0
 
+    out_guard = compliance_guardrails.validate_llm_output(answer, vector_context, guard_meta["domain_intent"])
+    answer = out_guard.get("modified_answer", answer)
+
     confs = [e.get("conf") for e in top_edges if isinstance(e.get("conf"), (int, float))]
     avg_conf = sum(confs) / len(confs) if confs else None
     confidence_label = (
@@ -523,6 +592,12 @@ ANSWER:"""
         "latency_llm_ms": llm_time * 1000.0,
         "latency_total_ms": latency_total_ms,
         "confidence_label": confidence_label,
+        "detected_language": guard_meta["detected_language"],
+        "domain_intent": guard_meta["domain_intent"],
+        "pii_entities_scrubbed_count": guard_meta["pii_entities_scrubbed_count"],
+        "advice_shield_triggered": out_guard.get("advice_shield_triggered", False),
+        "guardrail_reasons": out_guard.get("reasons", []),
+        "user_role": user_role,
         "status": "SUCCESS"
     }
     log_query_audit(audit_record)
@@ -564,6 +639,12 @@ ANSWER:"""
         "taxonomy_graph_facts_used": len(taxonomy_graph_facts),
         "cache_hit": False,
         "cypher_critique_attempts": cypher_critique_attempts,
+        "detected_language": guard_meta["detected_language"],
+        "domain_intent": guard_meta["domain_intent"],
+        "pii_entities_scrubbed_count": guard_meta["pii_entities_scrubbed_count"],
+        "advice_shield_triggered": out_guard.get("advice_shield_triggered", False),
+        "guardrail_reasons": out_guard.get("reasons", []),
+        "user_role": user_role,
         "status": "SUCCESS"
     }
 

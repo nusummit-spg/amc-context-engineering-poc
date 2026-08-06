@@ -102,24 +102,24 @@ footer { visibility: hidden; display: none; }
 #    and analytics_view.py expect — matching the engine's own retrieval.py
 #    output field-for-field, so those rendering modules need no changes) ──
 
-def _local_api(path: str, query: str) -> dict:
+def _local_api(path: str, query: str, user_role: str | None = None) -> dict:
     """Wraps local_fallback.py's engine calls back into the QueryResponse
     JSON shape (this function's own historical contract) — chat_view.py
     calls local_fallback.py directly instead, since ChatResponse's shape
     for the hybrid side doesn't need the {"query"/"mode"/...} envelope."""
     import local_fallback
     if path == "/api/query/traditional":
-        result = local_fallback.local_traditional(query)
+        result = local_fallback.local_traditional(query, user_role=user_role)
         return {"query": query, "mode": "traditional",
                 "traditional": result, "latency_ms": result.get("latency_ms", 0)}
     else:  # /api/query/contextgraph
-        result = local_fallback.local_contextgraph(query)
+        result = local_fallback.local_contextgraph(query, user_role=user_role)
         return {"query": query, "mode": "contextgraph", **result}
 
 
-def _api(path: str, query: str) -> dict:
+def _api(path: str, query: str, user_role: str | None = None) -> dict:
     if API_BASE.lower() in ("local", "embedded"):
-        return _local_api(path, query)
+        return _local_api(path, query, user_role=user_role)
     try:
         r = requests.post(f"{API_BASE}{path}", json={"query": query}, timeout=240)
         r.raise_for_status()
@@ -127,7 +127,7 @@ def _api(path: str, query: str) -> dict:
     except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:
         if API_BASE == "http://api:8000":
             # Transparent fallback to direct local execution when running outside Docker on Windows
-            return _local_api(path, query)
+            return _local_api(path, query, user_role=user_role)
         raise exc
 
 
@@ -187,11 +187,65 @@ if "last_traditional" not in st.session_state:
 
 st.set_page_config(page_title="MF Context Engine", layout="wide")
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
-chat_view.render_session_sidebar()
-tab_compare, tab_chat, tab_analytics = st.tabs(["⚖️ Compare", "💬 Chat", "📊 Analytics"])
 
-with tab_compare:
-    st.caption(f"🟢 Backend: {API_BASE}")
+# ── ACTIVE USER PROFILE SWITCHER (RBAC) ──────────────────────────────────────
+import rbac
+import admin_view
+
+rbac_mgr = rbac.get_rbac_manager()
+usernames = [u["username"] for u in rbac_mgr.users]
+selected_username = st.sidebar.selectbox(
+    "👤 Active User Profile (RBAC)",
+    usernames,
+    index=0,
+    help="Switch user roles to test Role-Based Access Control and data boundaries."
+)
+active_user = rbac_mgr.get_user_by_username(selected_username) or rbac_mgr.users[0]
+st.session_state.active_user = active_user
+user_role = active_user["role"]
+
+st.sidebar.markdown(f"""
+> **User**: `{active_user['full_name']}`
+> **Role**: `{user_role}`
+> **Dept**: `{active_user['department']}`
+""")
+
+chat_view.render_session_sidebar()
+
+perms = rbac.ROLE_PERMISSIONS.get(rbac.AMCRole(user_role), {})
+can_compare = perms.get("can_access_compare_tab", True)
+can_analytics = perms.get("can_access_analytics_tab", True)
+can_admin = perms.get("can_view_admin_panel", False)
+
+tab_names = []
+if can_compare:
+    tab_names.append("⚖️ Compare")
+tab_names.append("💬 Chat")
+if can_analytics:
+    tab_names.append("📊 Analytics")
+if can_admin:
+    tab_names.append("👥 Admin & Governance")
+
+tabs = st.tabs(tab_names)
+tab_idx = 0
+
+if can_compare:
+    tab_compare = tabs[tab_idx]
+    tab_idx += 1
+else:
+    tab_compare = None
+tab_chat = tabs[tab_idx]
+tab_idx += 1
+if can_analytics:
+    tab_analytics = tabs[tab_idx]
+    tab_idx += 1
+else:
+    tab_analytics = None
+tab_admin = tabs[tab_idx] if can_admin else None
+
+if tab_compare is not None:
+ with tab_compare:
+    st.caption(f"🟢 Backend: {API_BASE} | Role: {user_role}")
 
     col_q, col_run = st.columns([5.6, 1])
     query = col_q.text_input("query", value=st.session_state.compare_query,
@@ -209,8 +263,8 @@ with tab_compare:
         results = {}
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
             futures = {
-                pool.submit(_api, "/api/query/traditional", query): "traditional",
-                pool.submit(_api, "/api/query/contextgraph", query): "hybrid",
+                pool.submit(_api, "/api/query/traditional", query, user_role): "traditional",
+                pool.submit(_api, "/api/query/contextgraph", query, user_role): "hybrid",
             }
             for future in concurrent.futures.as_completed(futures):
                 kind = futures[future]
@@ -242,9 +296,14 @@ with tab_compare:
             })
 
 with tab_chat:
-    st.caption(f"🟢 Backend: {API_BASE}")
+    st.caption(f"🟢 Backend: {API_BASE} | Role: {user_role}")
     chat_view.render_chat_tab()
 
-with tab_analytics:
-    import analytics_view
-    analytics_view.render_analytics_tab(None)
+if tab_analytics is not None:
+    with tab_analytics:
+        import analytics_view
+        analytics_view.render_analytics_tab(None)
+
+if tab_admin is not None:
+    with tab_admin:
+        admin_view.render_admin_view()
