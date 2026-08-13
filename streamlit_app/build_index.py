@@ -30,7 +30,7 @@ import faiss_store  # reused: chunking + embedding + faiss index logic
 def walk_amc_folder(root: Path):
     for path in sorted(root.rglob("*")):
         if path.is_file() and path.suffix.lower() in config.SUPPORTED_EXTS:
-            yield path
+            yield Path(path.as_posix())
 
 
 def build(rebuild: bool = False, use_gemini: bool = True):
@@ -55,6 +55,10 @@ def build(rebuild: bool = False, use_gemini: bool = True):
         print(f"  ↩ resuming — {len(all_children)} children already indexed", flush=True)
 
     already_done_sources = {c["source"] for c in all_children}
+    ledger_path = index_dir / "processed_ledger.txt"
+    if ledger_path.exists() and not rebuild:
+        already_done_sources.update(line.strip() for line in ledger_path.read_text(encoding="utf-8").splitlines() if line.strip())
+
     index = faiss.read_index(str(faiss_path)) if faiss_path.exists() and not rebuild else None
 
     parent_offset = len(all_parents)
@@ -109,16 +113,41 @@ def build(rebuild: bool = False, use_gemini: bool = True):
         if index is None:
             index = faiss.IndexFlatIP(vecs.shape[1])
         index.add(vecs)
+        with open(ledger_path, "a", encoding="utf-8") as lf:
+            lf.write(file_path.name + "\n")
+
+        meta_ledger_path = index_dir / "processed_ledger_meta.json"
+        meta_data = {}
+        if meta_ledger_path.exists():
+            try:
+                meta_data = json.loads(meta_ledger_path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        meta_data[file_path.name] = {
+            "indexed_at": json.dumps(str(file_path.name)),
+            "num_children": len(children),
+            "num_parents": len(parents)
+        }
+        meta_ledger_path.write_text(json.dumps(meta_data, indent=2), encoding="utf-8")
 
     print("\n== Step N: resolving unresolved entities ==", flush=True)
     graph_store.resolve_unresolved_entities()
 
     if index is not None:
-        faiss.write_index(index, str(faiss_path))
-        with open(pkl_path, "wb") as f:
+        import os
+        tmp_faiss = faiss_path.with_name("index.faiss.tmp")
+        tmp_pkl   = pkl_path.with_name("index.pkl.tmp")
+
+        faiss.write_index(index, str(tmp_faiss))
+        with open(tmp_pkl, "wb") as f:
             pickle.dump({"children": all_children, "parents": all_parents}, f)
+
+        os.replace(tmp_faiss, faiss_path)
+        os.replace(tmp_pkl, pkl_path)
+
         (index_dir / "meta.json").write_text(json.dumps({
             "slug": "amc_master",
+            "model_name": faiss_store.EMBED_MODEL_NAME,
             "num_parents": len(all_parents),
             "num_children": len(all_children),
         }, indent=2))

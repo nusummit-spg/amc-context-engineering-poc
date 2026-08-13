@@ -27,9 +27,6 @@ def scrub_text(text: str) -> str:
 
 
 def scrub_text_with_metrics(text: str) -> tuple[str, int, list[str]]:
-    """Same redaction as scrub_text, plus a count and list of PII types
-    found — used at query time so guardrail/audit telemetry can report what
-    was scrubbed without a second regex pass."""
     if not text:
         return text, 0, []
 

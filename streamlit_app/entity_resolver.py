@@ -44,6 +44,10 @@ def _get_candidates(product_names: set | None = None) -> list[dict]:
 
 def resolve_entities_for_query(entity_texts: list[str], product_names: set | None = None,
                                 threshold: float = None) -> dict[str, list[str]]:
+    # P1-1 Fix: Bounded cache to prevent OOM
+    if len(_embedding_cache) > 4000:
+        _embedding_cache.clear()
+
     threshold = threshold if threshold is not None else config.SIMILARITY_MATCH_THRESHOLD
     if not entity_texts:
         return {}
@@ -55,6 +59,7 @@ def resolve_entities_for_query(entity_texts: list[str], product_names: set | Non
     model = faiss_store._get_embedder()
     candidate_texts = [c["text"] for c in candidates]
 
+
     # ── embed only texts not already cached — this is the real fix ────────
     uncached = [t for t in candidate_texts if t not in _embedding_cache]
     if uncached:
@@ -62,6 +67,7 @@ def resolve_entities_for_query(entity_texts: list[str], product_names: set | Non
         for t, v in zip(uncached, new_vecs):
             _embedding_cache[t] = v
     candidate_vecs = np.array([_embedding_cache[t] for t in candidate_texts])
+
 
     query_vecs = model.encode(entity_texts, normalize_embeddings=True).astype("float32")
 

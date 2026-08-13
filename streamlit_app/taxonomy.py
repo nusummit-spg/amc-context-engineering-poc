@@ -88,6 +88,15 @@ def build_taxonomy(verbose: bool = True) -> Dict[str, list]:
             if verbose:
                 print(f"  [taxonomy] {path.name}: matched {list(col_map.keys())}", flush=True)
 
+    _STATIC_BASELINE = {
+        "categories": ["Equity Schemes", "Debt Schemes", "Hybrid Schemes", "Solution Oriented Schemes", "Other Schemes", "Index Funds", "Fund of Funds"],
+        "sub_categories": ["Large Cap Fund", "Mid Cap Fund", "Small Cap Fund", "Flexi Cap Fund", "Multi Cap Fund", "ELSS", "Sectoral/Thematic", "Liquid Fund", "Overnight Fund", "Money Market Fund", "Aggressive Hybrid", "Balanced Advantage"],
+        "fund_houses": ["Adani Mutual Fund", "SBI Mutual Fund", "HDFC Mutual Fund", "ICICI Prudential Mutual Fund", "Nippon India Mutual Fund"],
+    }
+    for k, v in _STATIC_BASELINE.items():
+        if k in taxonomy:
+            taxonomy[k].update(v)
+
     result = {k: sorted(v) for k, v in taxonomy.items()}
     config.TAXONOMY_PATH.write_text(json.dumps(result, indent=2, ensure_ascii=False))
     if verbose:

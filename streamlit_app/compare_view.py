@@ -58,27 +58,10 @@ def _render_telemetry_card(t: dict) -> str:
         f"""<tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>Cross-Encoder Reranking</b></td><td style="text-align:right;">{rerank_ms:.1f} ms</td></tr>"""
         if rerank_ms > 0 else ""
     )
-    # HyDE + taxonomy retrieval used to be folded into the total with no row
-    # of their own, so "Total Pipeline Execution" could look far bigger than
-    # the sum of the visible rows above it — both are real, LLM/DB-bound work
-    # (HyDE is a live Claude call made before retrieval even starts), not a
-    # rendering gap.
-    hyde_ms = t.get('latency_hyde_ms', 0)
-    hyde_row = (
-        f"""<tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>HyDE Generation (LLM)</b></td><td style="text-align:right;">{hyde_ms:.1f} ms</td></tr>"""
-        if hyde_ms > 0 else ""
-    )
-    taxonomy_ms = t.get('latency_taxonomy_ms', 0)
-    taxonomy_row = (
-        f"""<tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>Taxonomy Retrieval (FAISS + Neo4j)</b></td><td style="text-align:right;">{taxonomy_ms:.1f} ms</td></tr>"""
-        if taxonomy_ms > 0 else ""
-    )
     return f"""
     <details style="margin-top:14px; border:1px solid #E7E1D4; border-radius:8px; padding:10px; background:#FAFAFA;">
       <summary style="cursor:pointer; font-size:12px; font-weight:700; color:#5C574C;">⚡ Microsecond Telemetry & Execution Ledger</summary>
       <table style="width:100%; font-size:11.5px; margin-top:8px; border-collapse:collapse;">
-        {hyde_row}
-        {taxonomy_row}
         <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>Vector DB Lookup (FAISS)</b></td><td style="text-align:right;">{t.get('latency_vector_db_ms', 0):.1f} ms</td></tr>
         {rerank_row}
         <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>Graph Traversal (Neo4j UNWIND)</b></td><td style="text-align:right;">{t.get('latency_graph_db_ms', 0):.1f} ms</td></tr>
@@ -88,6 +71,7 @@ def _render_telemetry_card(t: dict) -> str:
         <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:4px 0;"><b>LLM Synthesis Latency</b></td><td style="text-align:right;">{t.get('latency_llm_generation_ms', 0):.1f} ms</td></tr>
         <tr style="border-bottom:1px solid #EAEAEA; font-weight:700; background:#EFEAE0;"><td style="padding:4px;"><b>Total Pipeline Execution</b></td><td style="text-align:right; padding:4px;">{t.get('latency_total_pipeline_ms', 0):.1f} ms</td></tr>
         <tr><td style="padding:6px 0 2px 0;"><b>Tokens (Input / Output / Total)</b></td><td style="text-align:right; padding:6px 0 2px 0;"><b>{t.get('tokens_input', 0):,}</b> in / <b>{t.get('tokens_output', 0):,}</b> out / <b>{t.get('tokens_total', 0):,}</b></td></tr>
+        {f'<tr style="background:#E4EEE1; color:#3F6B42;"><td style="padding:4px;"><b>Token Savings (Vs Cold Run)</b></td><td style="text-align:right; padding:4px;"><b>{t.get("tokens_saved", 0):,} tokens saved</b> ({t.get("tokens_cold_equivalent", 0):,} cold equiv)</td></tr>' if t.get("cache_hit") else ''}
         <tr><td style="padding:2px 0;"><b>DB Candidates Surfaced</b></td><td style="text-align:right; padding:2px 0;">{t.get('db_candidates_surfaced', 0)} {'nodes' if 'ContextGraph' in t.get('pipeline_mode', '') else 'chunks'}</td></tr>
         <tr><td style="padding:2px 0;"><b>Vector Noise Bypassed (Pillar 1)</b></td><td style="text-align:right; padding:2px 0; font-weight:bold; color:{'#3F6B42' if t.get('vector_bypassed') else '#8A8378'};">{str(t.get('vector_bypassed', False)).upper()}</td></tr>
       </table>
@@ -181,7 +165,7 @@ def render_contextgraph_panel(r, entity_summary):
           <td style="padding:4px 0;"><b>{html.escape(str(trp.get('s',''))[:30])}</b></td>
           <td style="padding:4px 8px; color:#A8412C;"><code>{html.escape(str(trp.get('rel','')))}</code></td>
           <td style="padding:4px 0;">{html.escape(str(trp.get('o',''))[:35])}</td>
-          <td style="text-align:right; padding:4px 0;">{(trp.get('conf') if trp.get('conf') is not None else 1.0):.2f}</td>
+          <td style="text-align:right; padding:4px 0;">{trp.get('conf', 1.0):.2f}</td>
         </tr>"""
     triplet_card_html = ""
     if triplet_rows_html:
@@ -193,6 +177,33 @@ def render_contextgraph_panel(r, entity_summary):
               <th style="padding:4px 0;">Subject Node</th><th style="padding:4px 8px;">Relationship</th><th style="padding:4px 0;">Target Node</th><th style="text-align:right;">Conf</th>
             </tr>
             {triplet_rows_html}
+          </table>
+        </details>"""
+
+    # Render Provenance & Citation Panel
+    provenance_list = r.get("provenance", []) or r.get("sources", [])
+    provenance_rows_html = ""
+    for prov in provenance_list:
+        doc_name = html.escape(str(prov.get("doc", prov.get("name", ""))))
+        chunk_id = html.escape(str(prov.get("chunk_id", f"p.{prov.get('page','')}")))
+        snippet = html.escape(str(prov.get("snippet", "")))
+        provenance_rows_html += f"""
+        <tr style="border-bottom:1px solid #EAEAEA;">
+          <td style="padding:4px 0;"><b>{doc_name}</b></td>
+          <td style="padding:4px 8px; color:#5C574C;"><code>{chunk_id}</code></td>
+          <td style="padding:4px 0; font-style:italic;">"{snippet[:120]}…"</td>
+        </tr>"""
+    
+    provenance_card_html = ""
+    if provenance_rows_html:
+        provenance_card_html = f"""
+        <details style="margin:10px 0; border:1px solid #D8D2C4; border-radius:8px; padding:10px; background:#F8F7F3;">
+          <summary style="cursor:pointer; font-size:12px; font-weight:700; color:#3F6B42;">📌 Document Provenance & Exact Page Citations ({len(provenance_list)} Sources)</summary>
+          <table style="width:100%; font-size:11px; margin-top:8px; border-collapse:collapse;">
+            <tr style="border-bottom:1.5px solid #D8D2C4; text-align:left;">
+              <th style="padding:4px 0;">Source Document</th><th style="padding:4px 8px;">Chunk ID / Clause</th><th style="padding:4px 0;">Verbatim Text Snippet</th>
+            </tr>
+            {provenance_rows_html}
           </table>
         </details>"""
 
@@ -208,10 +219,11 @@ def render_contextgraph_panel(r, entity_summary):
       </div>
       <div data-view="answer">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <span class="cg-badge green">{r['confidence_label']}</span>
+          <span class="cg-badge green">{r['confidence_label']} {r.get('confidence_reason', '')}</span>
         </div>
         {badges_html}
         {triplet_card_html}
+        {provenance_card_html}
         <div class="cg-answer">{_markdown_to_html(r['answer'])}</div>
         <div class="cg-label" style="margin-top:12px">Sources</div>
         <div class="cg-sources">{sources_html}</div>

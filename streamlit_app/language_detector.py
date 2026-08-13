@@ -26,13 +26,10 @@ UNICODE_RANGES = {
     "bn": re.compile(r'[\u0980-\u09FF]'),  # Bengali
 }
 
-# Hinglish Common Indicators (Romanized Hindi words in financial queries).
-# Deliberately excludes "fund", "rule", "circular" — standard English terms
-# in this exact domain, which false-positived on almost every plain-English
-# query ("what's the exit load on this fund?") when included.
+# Hinglish Common Indicators (Romanized Hindi words in financial queries)
 HINGLISH_KEYWORDS = {
-    "kya", "hai", "kaise", "kab", "karo", "nivesh", "paisa", "milega",
-    "chahiye", "batao", "kaunsa", "sabse", "accha", "fayda"
+    "kya", "hai", "kaise", "kab", "karo", "kaise", "nivesh", "paisa", "fund", "milega", 
+    "chahiye", "rule", "circular", "batao", "kaunsa", "sabse", "accha", "fayda"
 }
 
 # English term normalization mapping for regional queries

@@ -31,6 +31,9 @@ QUESTION: {query}
 Respond with ONLY the category name, nothing else."""
 
 
+OPEN_ENDED_PATTERNS = re.compile(
+    r"\b(what are|describe|explain|summarize|detail|overview|initiatives|benefits|targets|guidelines)\b", re.I)
+
 def classify_query(query: str) -> str:
     """Fast path: regex. Only calls the LLM if regex is inconclusive."""
     if AGGREGATION_PATTERNS.search(query):
@@ -39,10 +42,12 @@ def classify_query(query: str) -> str:
         return "comparison"
     if LOOKUP_PATTERNS.search(query):
         return "direct_lookup"
+    if OPEN_ENDED_PATTERNS.search(query):
+        return "open_ended"
 
-    # ambiguous — cheap Haiku call rather than guessing wrong
+    # ambiguous — cheap Haiku call capped at 10 tokens rather than guessing wrong
     result = llm_text_client.call_llm(
-        _CLASSIFY_PROMPT.format(query=query), model_id=config.CLAUDE_MODEL_LIGHT)
+        _CLASSIFY_PROMPT.format(query=query), model_id=config.CLAUDE_MODEL_LIGHT, max_tokens=10)
     result = (result or "").strip().lower()
     if result in ("aggregation", "comparison", "direct_lookup", "open_ended"):
         return result

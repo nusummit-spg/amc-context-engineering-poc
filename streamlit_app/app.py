@@ -26,6 +26,17 @@ import chat_view
 
 API_BASE = os.environ.get("API_BASE", "http://api:8000")
 
+@st.cache_resource
+def _startup_warmup():
+    try:
+        import ner_pipeline
+        ner_pipeline.warmup_ner_models()
+    except Exception as e:
+        print(f"  [app] Startup warmup notice: {e}", flush=True)
+    return True
+
+_startup_warmup()
+
 CUSTOM_CSS = """
 <style>
 /* Base App Layout & Background */
@@ -98,37 +109,100 @@ footer { visibility: hidden; display: none; }
 """
 
 
+@st.cache_resource
+def _warm_up_resources():
+    try:
+        import faiss_store
+        import graph_store
+        faiss_store._get_embedder()
+        graph_store.init_schema()
+    except Exception as exc:
+        print(f"  [app] Warm-up notice: {exc}", flush=True)
+
+_warm_up_resources()
+
+
 # ── API client + adapters (QueryResponse JSON -> the dict shape compare_view.py
 #    and analytics_view.py expect — matching the engine's own retrieval.py
 #    output field-for-field, so those rendering modules need no changes) ──
 
-def _local_api(path: str, query: str, user_role: str | None = None) -> dict:
-    """Wraps local_fallback.py's engine calls back into the QueryResponse
-    JSON shape (this function's own historical contract) — chat_view.py
-    calls local_fallback.py directly instead, since ChatResponse's shape
-    for the hybrid side doesn't need the {"query"/"mode"/...} envelope."""
-    import local_fallback
+def _local_api(path: str, query: str) -> dict:
+    import retrieval
+    import faiss_store
+    import graph_store
+    import taxonomy_retrieval
+
     if path == "/api/query/traditional":
-        result = local_fallback.local_traditional(query, user_role=user_role)
-        return {"query": query, "mode": "traditional",
-                "traditional": result, "latency_ms": result.get("latency_ms", 0)}
+        # Traditional path: uses taxonomy FAISS index (same 1,967-vector corpus)
+        res = taxonomy_retrieval.traditional_rag_v2(query)
+        docs = res.get("docs", [])
+        return {
+            "query": query,
+            "mode": "traditional",
+            "traditional": {
+                "files": [{
+                    "name": d.get("name"),
+                    "score": d.get("score", 0.0),
+                    "page": d.get("page", 0),
+                    "snippet": d.get("snippet"),
+                    "full_text": d.get("full_text"),
+                } for d in docs],
+                "snippet": res.get("answer"),
+                "metrics": {
+                    "total_tokens": res.get("total_tokens", 0),
+                }
+            },
+            "latency_ms": int(res.get("total_time", 0) * 1000)
+        }
     else:  # /api/query/contextgraph
-        result = local_fallback.local_contextgraph(query, user_role=user_role)
-        return {"query": query, "mode": "contextgraph", **result}
+        res = taxonomy_retrieval.hybrid_graphrag_v2(query)
+        # entity_summary comes directly from taxonomy_retrieval (not graph_store)
+        docs = res.get("docs", [])
+        edges = res.get("graph_edges", [])
+        edges_used = res.get("graph_edges_used_in_prompt", [])
+        return {
+            "query": query,
+            "mode": "contextgraph",
+            "answer": {
+                "answer": res.get("answer") or "No answer generated.",
+                "confidence": res.get("confidence_label"),
+                "compliance_note": res.get("confidence_label"),
+            },
+            "sources": [{
+                "document_title": d.get("name", ""),
+                "document_id": d.get("name", ""),
+                "snippet": d.get("snippet")
+            } for d in docs],
+            "graph_highlight": {
+                "node_names": sorted({str(n) for n in res.get("graph_nodes", [])}),
+                "relationships": sorted({e.get("rel") for e in edges if e.get("rel")}),
+                "entities": sorted(res.get("matched_entity_texts", []) or []),
+                "labels": sorted(res.get("active_labels", []) or []),
+                "edges": [{"s": e.get("s"), "rel": e.get("rel"), "o": e.get("o"), "conf": e.get("conf")} for e in edges],
+                "edges_used_in_prompt": [{"s": e.get("s"), "rel": e.get("rel"), "o": e.get("o"), "conf": e.get("conf")} for e in edges_used],
+                "entity_summary": res.get("entity_summary", []),
+                "query_type": res.get("query_type"),
+                "graph_matched_by": res.get("graph_matched_by"),
+                "used_verified_aggregate": res.get("used_verified_aggregate", False),
+                "used_comparison_mode": res.get("used_comparison_mode", False),
+                "total_tokens": res.get("total_tokens", 0),
+                "telemetry_breakdown": res.get("telemetry_breakdown", {}),
+            },
+            "latency_ms": int(res.get("total_time", 0) * 1000)
+        }
 
 
-def _api(path: str, query: str, user_role: str | None = None) -> dict:
-    if API_BASE.lower() in ("local", "embedded"):
-        return _local_api(path, query, user_role=user_role)
+def _api(path: str, query: str) -> dict:
+    if not API_BASE or API_BASE.lower() in ("local", "embedded", "none", "off") or not API_BASE.startswith("http"):
+        return _local_api(path, query)
     try:
         r = requests.post(f"{API_BASE}{path}", json={"query": query}, timeout=240)
         r.raise_for_status()
         return r.json()
-    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:
-        if API_BASE == "http://api:8000":
-            # Transparent fallback to direct local execution when running outside Docker on Windows
-            return _local_api(path, query, user_role=user_role)
-        raise exc
+    except Exception as exc:
+        print(f"  [app] Remote API unreachable ({API_BASE}): {exc}. Falling back to local execution.", flush=True)
+        return _local_api(path, query)
+
 
 
 def _to_traditional(resp: dict) -> dict:
@@ -184,6 +258,14 @@ if "last_hybrid" not in st.session_state:
     st.session_state.last_hybrid = None
 if "last_traditional" not in st.session_state:
     st.session_state.last_traditional = None
+if "chat_session_id" not in st.session_state:
+    st.session_state.chat_session_id = None
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+if "chat_query" not in st.session_state:
+    st.session_state.chat_query = ""
+if "active_tab" not in st.session_state:
+    st.session_state.active_tab = 0
 
 st.set_page_config(page_title="MF Context Engine", layout="wide")
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
@@ -200,27 +282,34 @@ selected_username = st.sidebar.selectbox(
     index=0,
     help="Switch user roles to test Role-Based Access Control and data boundaries."
 )
+
 active_user = rbac_mgr.get_user_by_username(selected_username) or rbac_mgr.users[0]
 st.session_state.active_user = active_user
 user_role = active_user["role"]
 
 st.sidebar.markdown(f"""
-> **User**: `{active_user['full_name']}`
-> **Role**: `{user_role}`
+> **User**: `{active_user['full_name']}`  
+> **Role**: `{user_role}`  
 > **Dept**: `{active_user['department']}`
 """)
 
+if st.sidebar.button("🗑️ Clear Intent Cache", use_container_width=True, help="Flush in-memory and disk intent cache so all queries execute fresh LLM synthesis"):
+    import intent_cache
+    intent_cache.clear_cache()
+    st.toast("⚡ Intent Cache cleared cleanly! Next query will execute full LLM synthesis.")
+    st.rerun()
+
 chat_view.render_session_sidebar()
 
+# Check permissions for tab access
 perms = rbac.ROLE_PERMISSIONS.get(rbac.AMCRole(user_role), {})
 can_compare = perms.get("can_access_compare_tab", True)
 can_analytics = perms.get("can_access_analytics_tab", True)
 can_admin = perms.get("can_view_admin_panel", False)
 
-tab_names = []
+tab_names = ["💬 Chat"]
 if can_compare:
     tab_names.append("⚖️ Compare")
-tab_names.append("💬 Chat")
 if can_analytics:
     tab_names.append("📊 Analytics")
 if can_admin:
@@ -229,81 +318,78 @@ if can_admin:
 tabs = st.tabs(tab_names)
 tab_idx = 0
 
-if can_compare:
-    tab_compare = tabs[tab_idx]
-    tab_idx += 1
-else:
-    tab_compare = None
-tab_chat = tabs[tab_idx]
-tab_idx += 1
-if can_analytics:
-    tab_analytics = tabs[tab_idx]
-    tab_idx += 1
-else:
-    tab_analytics = None
-tab_admin = tabs[tab_idx] if can_admin else None
-
-if tab_compare is not None:
- with tab_compare:
-    st.caption(f"🟢 Backend: {API_BASE} | Role: {user_role}")
-
-    col_q, col_run = st.columns([5.6, 1])
-    query = col_q.text_input("query", value=st.session_state.compare_query,
-                             label_visibility="collapsed",
-                             placeholder="Type your query and run it against both search modes…")
-    run = col_run.button("Run query", type="primary", use_container_width=True)
-
-    if run and query:
-        col_left, col_right = st.columns(2)
-        ph_trad = col_left.empty()
-        ph_ctx = col_right.empty()
-        ph_trad.info("Running traditional vector search…")
-        ph_ctx.info("Running graph + vector retrieval…")
-
-        results = {}
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
-            futures = {
-                pool.submit(_api, "/api/query/traditional", query, user_role): "traditional",
-                pool.submit(_api, "/api/query/contextgraph", query, user_role): "hybrid",
-            }
-            for future in concurrent.futures.as_completed(futures):
-                kind = futures[future]
-                try:
-                    resp = future.result()
-                except Exception as exc:
-                    (ph_trad if kind == "traditional" else ph_ctx).error(f"{kind} failed: {exc}")
-                    continue
-                if kind == "traditional":
-                    results["traditional"] = _to_traditional(resp)
-                    with ph_trad.container():
-                        components.html(render_traditional_panel(results["traditional"]),
-                                        height=520, scrolling=True)
-                else:
-                    results["hybrid"] = _to_hybrid(resp)
-                    with ph_ctx.container():
-                        components.html(render_contextgraph_panel(results["hybrid"], results["hybrid"]["entity_summary"]),
-                                        height=520, scrolling=True)
-
-        if "traditional" in results and "hybrid" in results:
-            st.session_state.last_hybrid = results["hybrid"]
-            st.session_state.last_traditional = results["traditional"]
-            st.session_state.comparisons.append({
-                "query": query,
-                "traditional_time": results["traditional"]["total_time"],
-                "hybrid_time": results["hybrid"]["total_time"],
-                "traditional_tokens": results["traditional"].get("total_tokens", 0),
-                "hybrid_tokens": results["hybrid"].get("total_tokens", 0),
-            })
-
-with tab_chat:
+with tabs[tab_idx]:
     st.caption(f"🟢 Backend: {API_BASE} | Role: {user_role}")
     chat_view.render_chat_tab()
 
-if tab_analytics is not None:
-    with tab_analytics:
+if can_compare:
+    tab_idx += 1
+    with tabs[tab_idx]:
+        st.caption(f"🟢 Backend: {API_BASE} | Role: {user_role}")
+
+        col_q, col_run, col_clear = st.columns([4.6, 1, 1])
+        query = col_q.text_input("query", value=st.session_state.compare_query,
+                                 label_visibility="collapsed",
+                                 placeholder="Type your query and run it against both search modes…")
+        run = col_run.button("Run query", type="primary", use_container_width=True, disabled=st.session_state.get("is_running", False))
+        if col_clear.button("🗑️ Clear Cache", use_container_width=True, key="compare_clear_cache", help="Flush intent cache for testing"):
+            import intent_cache
+            intent_cache.clear_cache()
+            st.toast("⚡ Intent Cache cleared cleanly!")
+            st.rerun()
+
+        if run and query:
+            st.session_state.is_running = True
+            col_left, col_right = st.columns(2)
+            ph_trad = col_left.empty()
+            ph_ctx = col_right.empty()
+            ph_trad.info("Running traditional vector search…")
+            ph_ctx.info("Running graph + vector retrieval…")
+
+            results = {}
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+                futures = {
+                    pool.submit(_api, "/api/query/traditional", query): "traditional",
+                    pool.submit(_api, "/api/query/contextgraph", query): "hybrid",
+                }
+                for future in concurrent.futures.as_completed(futures):
+                    kind = futures[future]
+                    try:
+                        resp = future.result()
+                    except Exception as exc:
+                        (ph_trad if kind == "traditional" else ph_ctx).error(f"{kind} failed: {exc}")
+                        continue
+                    if kind == "traditional":
+                        results["traditional"] = _to_traditional(resp)
+                        with ph_trad.container():
+                            components.html(render_traditional_panel(results["traditional"]),
+                                            height=520, scrolling=True)
+                    else:
+                        results["hybrid"] = _to_hybrid(resp)
+                        with ph_ctx.container():
+                            components.html(render_contextgraph_panel(results["hybrid"], results["hybrid"]["entity_summary"]),
+                                            height=520, scrolling=True)
+
+            if "traditional" in results and "hybrid" in results:
+                st.session_state.last_hybrid = results["hybrid"]
+                st.session_state.last_traditional = results["traditional"]
+                st.session_state.comparisons.append({
+                    "query": query,
+                    "traditional_time": results["traditional"]["total_time"],
+                    "hybrid_time": results["hybrid"]["total_time"],
+                    "traditional_tokens": results["traditional"].get("total_tokens", 0),
+                    "hybrid_tokens": results["hybrid"].get("total_tokens", 0),
+                })
+            st.session_state.is_running = False
+
+if can_analytics:
+    tab_idx += 1
+    with tabs[tab_idx]:
         import analytics_view
         analytics_view.render_analytics_tab(None)
 
-if tab_admin is not None:
-    with tab_admin:
+if can_admin:
+    tab_idx += 1
+    with tabs[tab_idx]:
         admin_view.render_admin_view()
+

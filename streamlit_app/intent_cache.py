@@ -68,6 +68,8 @@ def _extract_date_entities(text: str) -> set[str]:
     return set(m.strip() for m in matches)
 
 
+import hashlib
+
 @dataclass
 class CacheEntry:
     query_vec: np.ndarray
@@ -79,8 +81,16 @@ class CacheEntry:
     confidence_label: str
     confidence_reason: str
     total_tokens: int
+    input_tokens_cold: int = 0
+    output_tokens_cold: int = 0
+    graph_nodes: List[str] = field(default_factory=list)
+    graph_edges: List[Dict[str, Any]] = field(default_factory=list)
     created_at: float = field(default_factory=time.time)
     date_entities: set[str] = field(default_factory=set)
+
+    @property
+    def graph_node_count(self) -> int:
+        return len(self.graph_nodes)
 
 
 class IntentAwareCache:
@@ -88,9 +98,14 @@ class IntentAwareCache:
         self.shadow_mode = shadow_mode
         self.disk_path = disk_path or str(Path(__file__).parent / "logs" / "intent_cache_store.json")
         self._entries_by_domain: Dict[str, List[CacheEntry]] = {d: [] for d in DOMAIN_PATTERNS}
+        self._fingerprint_index: Dict[str, CacheEntry] = {}
         self._hits = 0
         self._misses = 0
         self._load_from_disk()
+
+    def _update_fingerprint(self, entry: CacheEntry) -> None:
+        fp = hashlib.md5(entry.query_text.lower().strip().encode()).hexdigest()
+        self._fingerprint_index[fp] = entry
 
     def _persist_to_disk(self) -> None:
         """Persist cache entries to disk so cache hits survive application restarts."""
@@ -109,6 +124,10 @@ class IntentAwareCache:
                         "confidence_label": e.confidence_label,
                         "confidence_reason": e.confidence_reason,
                         "total_tokens": e.total_tokens,
+                        "input_tokens_cold": e.input_tokens_cold,
+                        "output_tokens_cold": e.output_tokens_cold,
+                        "graph_nodes": e.graph_nodes,
+                        "graph_edges": e.graph_edges,
                         "created_at": e.created_at,
                         "date_entities": list(e.date_entities)
                     }
@@ -124,7 +143,6 @@ class IntentAwareCache:
         if not os.path.exists(self.disk_path):
             return
         try:
-            # Try UTF-8 first, then UTF-8-sig (BOM), then recover gracefully
             raw_text = None
             for enc in ("utf-8", "utf-8-sig", "latin-1"):
                 try:
@@ -152,20 +170,52 @@ class IntentAwareCache:
                         confidence_label=item["confidence_label"],
                         confidence_reason=item["confidence_reason"],
                         total_tokens=item["total_tokens"],
+                        input_tokens_cold=item.get("input_tokens_cold", item.get("total_tokens", 0)),
+                        output_tokens_cold=item.get("output_tokens_cold", 0),
+                        graph_nodes=item.get("graph_nodes", []),
+                        graph_edges=item.get("graph_edges", []),
                         created_at=item.get("created_at", time.time()),
                         date_entities=set(item.get("date_entities", []))
                     )
                     self._entries_by_domain[domain].append(entry)
+                    self._update_fingerprint(entry)
             print(f"  [IntentCache] Loaded persistent cache entries from disk ({self.disk_path}).", flush=True)
         except Exception as exc:
             logger.warning("Could not load IntentCache from disk: %s — resetting cache file.", exc)
-            # Reset corrupt cache file to empty
             try:
                 import pathlib
                 pathlib.Path(self.disk_path).write_text("{}", encoding="utf-8")
             except Exception:
                 pass
 
+
+
+    def fingerprint_probe(
+        self,
+        query_text: str,
+        query_type: str = "v2_dual_regime_taxonomy",
+        domain_intent: Optional[str] = None
+    ) -> Optional[CacheEntry]:
+        """Stage 1: O(1) exact text fingerprint probe — avoids embedding computation entirely."""
+        fp = hashlib.md5(query_text.lower().strip().encode()).hexdigest()
+        entry = self._fingerprint_index.get(fp)
+        if not entry:
+            return None
+        if entry.query_type != query_type:
+            return None
+        if domain_intent and entry.domain_intent != domain_intent:
+            return None
+        query_dates = _extract_date_entities(query_text)
+        if query_dates != entry.date_entities:
+            return None
+        now = time.time()
+        ttl = DOMAIN_TTL.get(entry.domain_intent, 86400 * 7)
+        if (now - entry.created_at) > ttl:
+            return None
+
+        self._hits += 1
+        logger.info("IntentCache FINGERPRINT HIT for query: '%s'", query_text[:50])
+        return entry
 
     def lookup(
         self,
@@ -233,9 +283,12 @@ class IntentAwareCache:
         confidence_label: str,
         confidence_reason: str,
         total_tokens: int,
+        input_tokens_cold: int = 0,
+        output_tokens_cold: int = 0,
+        graph_nodes: List[str] = None,
+        graph_edges: List[Dict[str, Any]] = None,
     ) -> None:
         date_ents = _extract_date_entities(query_text)
-        # Pre-normalize stored vector once at store() time for fast dot product
         norm_vec = query_vec / (np.linalg.norm(query_vec) + 1e-9)
         entry = CacheEntry(
             query_vec=norm_vec,
@@ -247,12 +300,17 @@ class IntentAwareCache:
             confidence_label=confidence_label,
             confidence_reason=confidence_reason,
             total_tokens=total_tokens,
+            input_tokens_cold=input_tokens_cold or total_tokens,
+            output_tokens_cold=output_tokens_cold,
+            graph_nodes=graph_nodes or [],
+            graph_edges=graph_edges or [],
             date_entities=date_ents,
         )
 
         if domain_intent not in self._entries_by_domain:
             self._entries_by_domain[domain_intent] = []
         self._entries_by_domain[domain_intent].append(entry)
+        self._update_fingerprint(entry)
         self._persist_to_disk()
 
     def invalidate_domain(self, domain_intent: str) -> None:
@@ -266,6 +324,7 @@ class IntentAwareCache:
         """Clear all cache buckets."""
         for d in self._entries_by_domain:
             self._entries_by_domain[d].clear()
+        self._fingerprint_index.clear()
         self._persist_to_disk()
 
         print("  [IntentCache] Cleared all cache buckets.", flush=True)
@@ -280,7 +339,59 @@ class IntentAwareCache:
         }
 
 
+class SavingsLedger:
+    def __init__(self, disk_path: str = None):
+        self.disk_path = disk_path or str(Path(__file__).parent / "logs" / "savings_ledger.json")
+        self._data = self._load()
+
+    def _load(self) -> dict:
+        if os.path.exists(self.disk_path):
+            try:
+                with open(self.disk_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+        return {
+            "total_hits": 0,
+            "total_misses": 0,
+            "tokens_saved_cumulative": 0,
+            "cost_saved_cumulative_usd": 0.0,
+            "co2_saved_grams": 0.0,
+        }
+
+    def _save(self) -> None:
+        try:
+            os.makedirs(Path(self.disk_path).parent, exist_ok=True)
+            with open(self.disk_path, "w", encoding="utf-8") as f:
+                json.dump(self._data, f, indent=2)
+        except Exception:
+            pass
+
+    def record_hit(self, tokens_saved: int, cold_cost_usd: float = 0.0031) -> None:
+        self._data["total_hits"] += 1
+        self._data["tokens_saved_cumulative"] += tokens_saved
+        self._data["cost_saved_cumulative_usd"] = round(self._data["cost_saved_cumulative_usd"] + cold_cost_usd, 4)
+        self._data["co2_saved_grams"] = round(self._data["co2_saved_grams"] + (tokens_saved * 0.0002), 2)
+        self._save()
+
+    def record_miss(self) -> None:
+        self._data["total_misses"] += 1
+        self._save()
+
+    def summary(self) -> dict:
+        total = self._data["total_hits"] + self._data["total_misses"]
+        return {
+            "total_hits": self._data["total_hits"],
+            "total_misses": self._data["total_misses"],
+            "hit_rate_pct": round(self._data["total_hits"] / max(total, 1) * 100, 1),
+            "tokens_saved_cumulative": self._data["tokens_saved_cumulative"],
+            "cost_saved_cumulative_usd": self._data["cost_saved_cumulative_usd"],
+            "co2_saved_grams": self._data["co2_saved_grams"],
+        }
+
+
 _cache_instance: Optional[IntentAwareCache] = None
+_savings_ledger_instance: Optional[SavingsLedger] = None
 
 
 def get_cache() -> IntentAwareCache:
@@ -288,6 +399,13 @@ def get_cache() -> IntentAwareCache:
     if _cache_instance is None:
         _cache_instance = IntentAwareCache(shadow_mode=False)
     return _cache_instance
+
+
+def get_savings_ledger() -> SavingsLedger:
+    global _savings_ledger_instance
+    if _savings_ledger_instance is None:
+        _savings_ledger_instance = SavingsLedger()
+    return _savings_ledger_instance
 
 
 def clear_cache() -> None:

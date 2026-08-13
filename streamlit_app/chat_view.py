@@ -142,13 +142,124 @@ def _adapt_hybrid(h: dict) -> dict:
     }
 
 
+def _local_chat(mode: str, query: str, history: list[dict]) -> dict:
+    """Local fallback — runs taxonomy_retrieval directly when the Docker
+    API host is unreachable. Returns the same payload shape that
+    _adapt_traditional / _adapt_hybrid expect."""
+    import time as _time
+    import taxonomy_retrieval
+    import llm_text_client
+    import config
+
+    # Force-reset the cached Claude client so it re-reads the (now patched)
+    # config.CLAUDE_API_KEY that taxonomy_retrieval.py fixed at import time.
+    llm_text_client._client = None
+
+    # Build multi-turn history text injected into the prompt
+    hist_text = ""
+    if history:
+        lines = [f"{m['role'].upper()}: {m['content']}" for m in history[-6:]]
+        hist_text = "CONVERSATION HISTORY:\n" + "\n".join(lines) + "\n\n"
+
+    if mode == "traditional":
+        t_start = _time.perf_counter()
+
+        t_vec = _time.perf_counter()
+        index, chunks = taxonomy_retrieval.get_taxonomy_index()
+        hits = taxonomy_retrieval.retrieve_vector(query, index, chunks, top_k=5)
+        vec_ms = (_time.perf_counter() - t_vec) * 1000
+
+        hit_texts = [h.get("text", "") if isinstance(h, dict) else str(h) for h in hits]
+        context = "\n\n---\n\n".join(hit_texts)
+        prompt = (
+            "You are an expert on SEBI Mutual Fund Regulations. "
+            "Answer using ONLY the context below. If the answer isn't in the context, say so.\n\n"
+            f"{hist_text}CONTEXT:\n{context}\n\nQUESTION: {query}\n\nANSWER:"
+        )
+
+        t_llm = _time.perf_counter()
+        answer, usage = llm_text_client.call_llm_with_usage(prompt)
+        llm_ms = (_time.perf_counter() - t_llm) * 1000
+        total_ms = (_time.perf_counter() - t_start) * 1000
+
+        docs = [
+            {
+                "name": f"Taxonomy Chunk {i+1}",
+                "score": float(h.get("score", 0.0)) if isinstance(h, dict) else 0.0,
+                "page": 1,
+                "snippet": (h.get("text", "") if isinstance(h, dict) else str(h))[:160].replace("\n", " "),
+                "full_text": h.get("text", "") if isinstance(h, dict) else str(h),
+            }
+            for i, h in enumerate(hits)
+        ]
+
+        total_tokens = usage.get("input_tokens", 0) + usage.get("output_tokens", 0)
+        # Return shape expected by _adapt_traditional()
+        return {
+            "snippet": answer,
+            "files": [{
+                "name": d["name"], "score": d["score"],
+                "page": d["page"], "snippet": d["snippet"],
+                "full_text": d["full_text"],
+            } for d in docs],
+            "metrics": {
+                "total_tokens": total_tokens,
+                "telemetry_breakdown": {
+                    "latency_vector_db_ms": round(vec_ms, 1),
+                    "latency_llm_generation_ms": round(llm_ms, 1),
+                    "latency_total_pipeline_ms": round(total_ms, 1),
+                    "latency_graph_db_ms": 0.0,
+                    "latency_ner_processing_ms": 0.0,
+                    "latency_post_retrieval_processing_ms": 0.0,
+                    "tokens_input": usage.get("input_tokens", 0),
+                    "tokens_output": usage.get("output_tokens", 0),
+                    "tokens_total": total_tokens,
+                    "db_candidates_surfaced": len(hits),
+                    "vector_bypassed": False,
+                    "pipeline_mode": "Traditional Vector RAG",
+                },
+            },
+        }
+    else:  # contextgraph
+        # Pass clean query and history separately so vector search stays uncluttered
+        res = taxonomy_retrieval.hybrid_graphrag_v2(query, history=history)
+        docs = res.get("docs", [])
+        edges = res.get("graph_edges", [])
+        edges_used = res.get("graph_edges_used_in_prompt", [])
+        # Return shape expected by _adapt_hybrid()
+        return {
+            "answer": {
+                "answer": res.get("answer") or "No answer generated.",
+                "confidence": res.get("confidence_label"),
+                "compliance_note": res.get("confidence_label"),
+            },
+            "sources": [{"document_title": d.get("name", ""),
+                         "document_id": d.get("name", ""),
+                         "snippet": d.get("snippet")} for d in docs],
+            "graph_highlight": {
+                "node_names": sorted({str(n) for n in res.get("graph_nodes", [])}),
+                "relationships": sorted({e.get("rel") for e in edges if e.get("rel")}),
+                "entities": sorted(res.get("matched_entity_texts", []) or []),
+                "labels": sorted(res.get("active_labels", []) or []),
+                "edges": edges,
+                "edges_used_in_prompt": edges_used,
+                "entity_summary": res.get("entity_summary", []),
+                "query_type": res.get("query_type"),
+                "graph_matched_by": res.get("graph_matched_by"),
+                "used_verified_aggregate": False,
+                "used_comparison_mode": False,
+                "total_tokens": res.get("total_tokens", 0),
+                "telemetry_breakdown": res.get("telemetry_breakdown", {}),
+            },
+            "latency_ms": int(res.get("total_time", 0) * 1000),
+        }
+
+
 def _fetch_mode(mode: str, query: str, history: list[dict], session_id: str) -> dict:
-    user_role = st.session_state.get("active_user", {}).get("role")
-    if API_BASE.lower() in ("local", "embedded"):
-        import local_fallback
-        if mode == "traditional":
-            return local_fallback.local_traditional(query, history=history, user_role=user_role)
-        return local_fallback.local_contextgraph(query, history=history, user_role=user_role)
+    """Fire POST /api/chat; fall back to local execution when the Docker
+    API host is not reachable or running in local mode."""
+    if not API_BASE or API_BASE in ("local", "none", "off") or not API_BASE.startswith("http"):
+        return _local_chat(mode, query, history)
 
     payload = {"query": query, "session_id": session_id, "history": history, "mode": mode}
     try:
@@ -156,16 +267,11 @@ def _fetch_mode(mode: str, query: str, history: list[dict], session_id: str) -> 
         r.raise_for_status()
         data = r.json()
         return data.get("traditional") if mode == "traditional" else data.get("hybrid")
-    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:
-        if API_BASE != "http://api:8000":
-            raise
-        # Transparent fallback to direct local execution when running outside
-        # Docker (mirrors app.py's Compare-tab fallback) — history is still
-        # threaded through, see local_fallback.py.
-        import local_fallback
-        if mode == "traditional":
-            return local_fallback.local_traditional(query, history=history, user_role=user_role)
-        return local_fallback.local_contextgraph(query, history=history, user_role=user_role)
+    except Exception as exc:
+        print(f"  [chat_view] Remote API unreachable ({API_BASE}): {exc}. Falling back to local execution.", flush=True)
+        return _local_chat(mode, query, history)
+
+
 
 
 def render_chat_tab():
@@ -174,7 +280,7 @@ def render_chat_tab():
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    col_q, col_run, col_new = st.columns([5.1, 0.9, 1.1])
+    col_q, col_run, col_new, col_clear = st.columns([4.0, 0.8, 1.1, 1.1])
 
     query = col_q.text_input("query", value=st.session_state.get("chat_query", ""),
                               label_visibility="collapsed",
@@ -188,6 +294,12 @@ def render_chat_tab():
         st.session_state.chat_session_id = str(uuid.uuid4())
         st.session_state.chat_history = []
         st.session_state.chat_query = ""
+        st.rerun()
+
+    if col_clear.button("🗑️ Clear Cache", use_container_width=True, key="chat_clear_cache", help="Flush in-memory and disk intent cache so next query performs fresh LLM synthesis"):
+        import intent_cache
+        intent_cache.clear_cache()
+        st.toast("⚡ Intent Cache cleared cleanly! Next query will execute full LLM synthesis.")
         st.rerun()
 
     with st.expander(f"Session: `{st.session_state.chat_session_id}`  ·  resume a previous session"):
@@ -251,35 +363,37 @@ def render_chat_tab():
         # History payload excludes the in-flight (user, loading-assistant) pair
         hist_payload = st.session_state.chat_history[:-2]
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            fut_hybrid = executor.submit(_fetch_mode, "contextgraph", q, hist_payload, session_id)
-            fut_trad = executor.submit(_fetch_mode, "traditional", q, hist_payload, session_id)
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                fut_hybrid = executor.submit(_fetch_mode, "contextgraph", q, hist_payload, session_id)
+                fut_trad = executor.submit(_fetch_mode, "traditional", q, hist_payload, session_id)
 
-            for fut in concurrent.futures.as_completed([fut_hybrid, fut_trad]):
-                try:
-                    result = fut.result()
-                except Exception as exc:
+                for fut in concurrent.futures.as_completed([fut_hybrid, fut_trad]):
+                    try:
+                        result = fut.result()
+                    except Exception as exc:
+                        if fut is fut_hybrid:
+                            ph_right.error(f"ContextGraph failed: {exc}")
+                            asst_msg["error_hybrid"] = str(exc)
+                        else:
+                            ph_left.error(f"Traditional RAG failed: {exc}")
+                            asst_msg["error_trad"] = str(exc)
+                        continue
+
                     if fut is fut_hybrid:
-                        ph_right.error(f"ContextGraph failed: {exc}")
-                        asst_msg["error_hybrid"] = str(exc)
+                        hybrid_clean = _adapt_hybrid(result or {})
+                        asst_msg["hybrid"] = hybrid_clean
+                        with ph_right.container():
+                            components.html(render_contextgraph_panel(hybrid_clean, hybrid_clean.get("entity_summary")),
+                                             height=450, scrolling=True)
                     else:
-                        ph_left.error(f"Traditional RAG failed: {exc}")
-                        asst_msg["error_trad"] = str(exc)
-                    continue
+                        trad_clean = _adapt_traditional(result or {})
+                        asst_msg["traditional"] = trad_clean
+                        with ph_left.container():
+                            components.html(render_traditional_panel(trad_clean), height=450, scrolling=True)
+        finally:
+            asst_msg["loading"] = False
 
-                if fut is fut_hybrid:
-                    hybrid_clean = _adapt_hybrid(result or {})
-                    asst_msg["hybrid"] = hybrid_clean
-                    with ph_right.container():
-                        components.html(render_contextgraph_panel(hybrid_clean, hybrid_clean.get("entity_summary")),
-                                         height=450, scrolling=True)
-                else:
-                    trad_clean = _adapt_traditional(result or {})
-                    asst_msg["traditional"] = trad_clean
-                    with ph_left.container():
-                        components.html(render_traditional_panel(trad_clean), height=450, scrolling=True)
-
-        asst_msg["loading"] = False
         asst_msg["content"] = (asst_msg.get("hybrid") or {}).get("answer", "No answer.")
         _save_session(session_id, st.session_state.chat_history)
         st.rerun()

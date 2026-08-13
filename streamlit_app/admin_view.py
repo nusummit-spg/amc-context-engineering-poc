@@ -15,7 +15,12 @@ def render_admin_view():
 
     manager = get_rbac_manager()
 
-    tab1, tab2, tab3 = st.tabs(["👤 User Profile Management", "🛡️ Role Access Matrix", "📋 Security & Audit Logs"])
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "👤 User Profile Management",
+        "🛡️ Role Access Matrix",
+        "📋 Security & Audit Logs",
+        "📥 Authorized Ingest & Pipeline"
+    ])
 
     # ── TAB 1: USER MANAGEMENT ────────────────────────────────────────────────
     with tab1:
@@ -97,3 +102,106 @@ def render_admin_view():
             st.code("\n".join(lines[-30:]), language="json")
         else:
             st.info("No query audit events recorded yet.")
+
+    # ── TAB 4: AUTHORIZED INGEST & PIPELINE ──────────────────────────────────
+    with tab4:
+        st.subheader("🚀 Production Data Acquisition & Governance Controls")
+
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("▶️ Run Production Ingestion Pipeline", type="primary", use_container_width=True):
+                with st.spinner("Running RSS poll, AMFI fetch, gateway validation, and graph enrichment..."):
+                    import pipeline_scheduler
+                    rep = pipeline_scheduler.run_production_pipeline("incremental")
+                    st.success(f"Pipeline finished in {rep.get('elapsed_seconds')}s! Downloaded: {rep.get('sebi_rss',{}).get('downloaded_count',0)} new circulars.")
+                    st.json(rep)
+
+        with c2:
+            if st.button("🔍 Run Staleness Drift Detection", use_container_width=True):
+                with st.spinner("Checking SHA-256 hashes and HTTP HEAD headers..."):
+                    import staleness_monitor
+                    rep = staleness_monitor.run_drift_check(sample_size=15)
+                    st.markdown(staleness_monitor.generate_staleness_alert(rep))
+
+        st.markdown("---")
+        st.subheader("📥 Authorized Document Ingest (SEBI Reg 16C)")
+
+        with st.form("authorized_ingest_form"):
+            col_a, col_b = st.columns(2)
+            with col_a:
+                ingest_url = st.text_input("Source URL (optional)", placeholder="https://sebi.gov.in/legal/circulars/...")
+                uploaded_pdf = st.file_uploader("Upload PDF Document", type=["pdf", "docx", "txt"])
+                doc_type = st.selectbox("Document Type", ["circular", "master_circular", "faq", "nav_data"])
+            with col_b:
+                department = st.selectbox("Department", ["IMD", "MRD", "MIRSD", "HO", "CFD", "GENERAL"])
+                entity_type = st.selectbox("Entity Type", ["AMC", "Broker", "RA", "All"])
+                authorized_by = st.text_input("Authorizing Officer", value="sarah_compliance")
+
+            if st.form_submit_button("Ingest & Index Document", type="primary"):
+                if uploaded_pdf or ingest_url:
+                    import ingestion_gateway, config
+                    target_dir = config.PROJECT_ROOT / "scratch" / "admin_uploads"
+                    target_dir.mkdir(parents=True, exist_ok=True)
+
+                    if uploaded_pdf:
+                        temp_path = target_dir / uploaded_pdf.name
+                        with open(temp_path, "wb") as f:
+                            f.write(uploaded_pdf.getbuffer())
+                    else:
+                        import sebi_feed_ingester
+                        temp_path = sebi_feed_ingester.download_circular_pdf(ingest_url, target_dir)
+
+                    if temp_path and temp_path.exists():
+                        req = ingestion_gateway.IngestRequest(
+                            filepath=temp_path,
+                            acquisition_channel="admin_authorized_upload" if uploaded_pdf else "admin_authorized_url",
+                            source_url=ingest_url or f"upload://{temp_path.name}",
+                            doc_type=doc_type,
+                            department=department,
+                            entity_type=entity_type,
+                            authorized_by=authorized_by
+                        )
+                        res = ingestion_gateway.process_ingest(req)
+                        if res.accepted:
+                            st.success(f"Document '{temp_path.name}' accepted! SHA-256: `{res.sha256_hash[:12]}`. Indexing in background...")
+                        else:
+                            st.warning(f"Ingest notice: {res.reason} — file already registered in provenance ledger.")
+                    else:
+                        st.error("Failed to acquire document from provided URL.")
+                else:
+                    st.error("Please provide a Source URL or upload a file.")
+
+        st.markdown("---")
+        st.subheader("⚖️ Proposed Regulatory Supersession Edges (Review Queue)")
+        import regulatory_lifecycle_enricher
+        proposed_edges = regulatory_lifecycle_enricher.get_pending_proposed_edges()
+
+        if proposed_edges:
+            st.caption(f"Review {len(proposed_edges)} auto-detected regulatory supersession relationships:")
+            for p in proposed_edges:
+                col_info, col_act1, col_act2 = st.columns([3, 1, 1])
+                col_info.markdown(f"**{p['source']}** `-[{p['rel']}]->` **{p['target']}**")
+                if col_act1.button("Confirm", key=f"conf_{p['edge_id']}"):
+                    regulatory_lifecycle_enricher.confirm_supersession_edge(p["edge_id"], authorized_by="sarah_compliance")
+                    st.success("Edge confirmed!")
+                    st.rerun()
+                if col_act2.button("Reject", key=f"rej_{p['edge_id']}"):
+                    regulatory_lifecycle_enricher.reject_supersession_edge(p["edge_id"])
+                    st.toast("Edge rejected.")
+                    st.rerun()
+        else:
+            st.info("No pending proposed supersession edges requiring review.")
+
+        st.markdown("---")
+        st.subheader("📄 Regulation 16C Legal Audit Report Export")
+        import provenance_ledger
+        report_md = provenance_ledger.generate_compliance_report()
+        st.download_button(
+            "Download Regulation 16C Audit Report (.md)",
+            data=report_md,
+            file_name="SEBI_Reg16C_Compliance_Audit_Report.md",
+            mime="text/markdown"
+        )
+        with st.expander("Preview Compliance Report"):
+            st.markdown(report_md)
+

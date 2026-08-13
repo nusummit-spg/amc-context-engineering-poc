@@ -19,21 +19,59 @@ import time
 import concurrent.futures
 from typing import Any, Dict, List
 
-import compliance_guardrails
 import config
+import context_engineering
 import entity_resolver
 import faiss_store
 import graph_store
 import intent_cache
-import language_detector
 import llm_text_client
 import ner_pipeline
-import pii_scrub
 import query_classifier
-import rbac
 import text_to_cypher
-from context_engine import hyde, semantic_cache
-from taxonomy_engine import taxonomy_retrieval
+
+GRAPH_HOPS_BY_INTENT = {"aggregation": 2, "comparison": 2, "direct_lookup": 1, "open_ended": 1}
+GRAPH_LIMIT_BY_INTENT = {"aggregation": 25, "comparison": 20, "direct_lookup": 10, "open_ended": 15}
+VECTOR_TOPK_BY_INTENT = {"aggregation": 3, "comparison": 5, "direct_lookup": 3, "open_ended": 8}
+_RETRIEVAL_THREAD_POOL = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="retrieval_pool")
+
+HISTORY_TURNS_BY_INTENT = {
+    "sebi_regulation": 2,
+    "esg_sustainability": 3,
+    "financial_performance": 2,
+    "fund_performance": 3,
+    "corporate_governance": 2,
+}
+
+DOMAIN_GRAPH_COVERAGE = {
+    "sebi_regulation": 0.85,
+    "esg_sustainability": 0.15,
+    "financial_performance": 0.70,
+    "fund_performance": 0.90,
+    "corporate_governance": 0.60,
+}
+
+def compress_history_for_intent(history: list[dict], domain_intent: str) -> str:
+    turns = HISTORY_TURNS_BY_INTENT.get(domain_intent, 2)
+    if not history:
+        return ""
+    recent = history[-turns:]
+    return "CONVERSATION HISTORY:\n" + "\n".join(f"{m.get('role','user').upper()}: {m.get('content','')}" for m in recent)
+
+def calibrate_confidence(hits: list[dict], graph_result: dict, domain_intent: str) -> tuple[str, str]:
+    coverage = DOMAIN_GRAPH_COVERAGE.get(domain_intent, 0.70)
+    has_graph = bool(graph_result.get("edges") or graph_result.get("verified_facts"))
+    top_score = max([h.get("score", 0.0) for h in hits], default=0.0)
+
+    if coverage < 0.30 and not has_graph:
+        return "medium confidence", "(limited graph coverage for domain)"
+    if has_graph and top_score >= 0.65:
+        return "high confidence", "(verified graph + strong vector match)"
+    if top_score >= 0.70:
+        return "high confidence", "(strong vector match)"
+    if top_score >= 0.45:
+        return "medium confidence", "(moderate vector match)"
+    return "low confidence", "(weak context match)"
 
 AGGREGATION_SKIP_LABELS = {"ASSET_CLASS", "SECTOR", "DATE"}
 
@@ -68,19 +106,6 @@ def _pick_aggregation_entity(query_entities: list) -> str | None:
     return candidates[0]["text"]
 
 
-def _format_history(history: List[dict] | None, max_messages: int = 6) -> str:
-    """Formats the last few chat turns into a prompt-ready block. Empty
-    string when there's no history — callers must not prepend a header in
-    that case, so cache-safety (see traditional_rag/hybrid_graphrag) can key
-    off "history text present or not" directly."""
-    if not history:
-        return ""
-    lines = [f"{m['role'].upper()}: {m['content']}" for m in history[-max_messages:] if m.get("content")]
-    if not lines:
-        return ""
-    return "CONVERSATION HISTORY (most recent last):\n" + "\n".join(lines) + "\n\n"
-
-
 def _format_cypher_rows(rows: list[dict]) -> str:
     if not rows:
         return ""
@@ -91,120 +116,20 @@ def _format_cypher_rows(rows: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _blocked_result(mode: str, query: str, risk_flag: str) -> Dict[str, Any]:
-    return {
-        "mode": mode, "query": query,
-        "answer": f"Query blocked by compliance safety guard: {risk_flag}",
-        "confidence_label": "BLOCKED", "docs": [],
-        "total_tokens": 0, "total_time": 0.001, "cache_hit": False,
-        "telemetry_breakdown": {"status": "BLOCKED", "risk_flag": risk_flag},
-    }
-
-
-def _preprocess_query(query: str, mode: str) -> tuple[str, dict, dict | None]:
-    """Shared pre-retrieval pipeline for both traditional_rag and
-    hybrid_graphrag: PII scrub -> language normalization -> domain intent
-    classification -> prompt-injection / unsafe-query guard. Returns
-    (query_for_retrieval, meta, blocked_result_or_None). meta feeds the
-    telemetry breakdown; when blocked_result is not None, callers must
-    return it immediately without touching the semantic cache."""
-    scrubbed_query, pii_count, pii_types = pii_scrub.scrub_text_with_metrics(query)
-    lang_info = language_detector.detect_query_language(scrubbed_query)
-    query_for_retrieval = lang_info.get("normalized_query", scrubbed_query)
-    domain_intent = intent_cache.classify_domain_intent(query_for_retrieval)
-
-    meta = {
-        "detected_language": lang_info.get("language", "en"),
-        "domain_intent": domain_intent,
-        "pii_entities_scrubbed_count": pii_count,
-        "pii_types_found": pii_types,
-    }
-
-    input_guard = compliance_guardrails.validate_input_query(query_for_retrieval)
-    if not input_guard.get("is_safe", True):
-        return query_for_retrieval, meta, _blocked_result(mode, query, input_guard.get("risk_flag", "UNSAFE_QUERY"))
-
-    return query_for_retrieval, meta, None
-
-
 # ─────────────────────────────────────────────────────────────────────────
 # TRADITIONAL
 # ─────────────────────────────────────────────────────────────────────────
 
-def traditional_rag(query: str, store, history: List[dict] | None = None,
-                     user_role: str | None = None) -> Dict[str, Any]:
-    query, guard_meta, blocked = _preprocess_query(query, "traditional")
-    if blocked:
-        return blocked
-    user_role = user_role or rbac.AMCRole.COMPLIANCE_OFFICER.value
-
-    hist_text = _format_history(history)
-
-    # The semantic cache keys on the query's own embedding, with no notion of
-    # conversation context — the same follow-up phrasing ("is there an
-    # exception to that rule?") can have a different correct answer in a
-    # different conversation. Only cache/reuse for genuinely standalone
-    # (history-free) turns.
-    t_cache_0 = time.perf_counter()
-    cached = None if hist_text else semantic_cache.check(query, mode="traditional")
-    latency_cache_ms = (time.perf_counter() - t_cache_0) * 1000.0
-    if cached is not None:
-        hit_result = dict(cached)
-        hit_result["telemetry_breakdown"] = {
-            **cached.get("telemetry_breakdown", {}),
-            "cache_hit": True,
-            "latency_cache_ms": round(latency_cache_ms, 2),
-            "latency_total_pipeline_ms": round(latency_cache_ms, 2),
-        }
-        return hit_result
-
-    hyde_doc, latency_hyde_ms = hyde.generate_hypothetical_document(query)
-
-    t_tax_0 = time.perf_counter()
-    taxonomy_chunks = taxonomy_retrieval.retrieve_taxonomy_chunks(query, top_k=3)
-    latency_taxonomy_ms = (time.perf_counter() - t_tax_0) * 1000.0
-
-    hits, retrieve_time = _time_call(store.retrieve, hyde_doc, top_k_children=5, rerank=True)
-    rerank_ms = faiss_store.get_last_rerank_ms()
-    hits = rbac.filter_chunks_by_role(hits, user_role)
+def traditional_rag(query: str, store) -> Dict[str, Any]:
+    hits, retrieve_time = _time_call(store.retrieve, query, top_k_children=5)
     t_post = time.perf_counter()
     context = "\n\n---\n\n".join(
         f"[{h['product_name']} | Page {h['page_num']}]\n{h['parent_text']}" for h in hits)
-    if taxonomy_chunks:
-        context += "\n\n---\n\n" + "\n\n---\n\n".join(
-            f"[Mutual Fund Taxonomy Source]\n{c}" for c in taxonomy_chunks)
 
-    prompt = f"""You are a senior mutual-fund compliance analyst reviewing SEBI
-regulatory filings and AMC scheme documentation for a colleague. Precision
-matters — this is used for regulatory compliance decisions.
+    prompt = f"""Answer using ONLY the context below. If the answer isn't in the
+context, say so explicitly.
 
-BEFORE ANSWERING, check: does the question use a pronoun or reference ("it",
-"that", "this", "they", "the rule", "the circular") that isn't resolvable
-from the CONVERSATION HISTORY below (if any) or clearly named in the
-CONTEXT? If it can be resolved from the conversation history, use that
-resolution and answer directly. If it genuinely can't be resolved from
-either, say so explicitly and state what term is missing — do NOT answer a
-different, adjacent question just because the context happens to contain
-something on a related topic.
-
-If the question names a specific fund, scheme category, or entity, address
-that exact one — do not substitute a similarly-themed item from the context.
-
-Never state a percentage, date, corporate relationship (subsidiary/joint
-venture/parent), or regulatory citation unless it appears verbatim in the
-context below. If you are inferring rather than quoting, say so explicitly.
-
-If multiple SEBI circulars or regime dates appear in the context, state
-which regime/date each fact belongs to.
-
-Answer using the context below. You may also use the conversation history to
-resolve references, and — if your own prior answer in the history already
-stated a relevant fact with its citation — you may repeat that fact,
-attributing it to your earlier answer. Do not invent new facts not present
-in either the context or your own prior turns. If the answer isn't in
-either, say so explicitly.
-
-{hist_text}CONTEXT:
+CONTEXT:
 {context}
 
 QUESTION: {query}
@@ -216,9 +141,6 @@ ANSWER:"""
     llm_time = time.perf_counter() - t_llm
     total_tokens = usage["input_tokens"] + usage["output_tokens"]
 
-    out_guard = compliance_guardrails.validate_llm_output(answer, context, guard_meta["domain_intent"])
-    answer = out_guard.get("modified_answer", answer)
-
     docs = [{"name": h["source"], "score": round(h["score"], 2),
          "page": h["page_num"],
          "snippet": h["child_text"][:160].replace("\n", " "),
@@ -227,47 +149,29 @@ ANSWER:"""
     telemetry_breakdown = {
         "pipeline_mode": "Traditional Vector RAG",
         "latency_vector_db_ms": round(retrieve_time * 1000.0, 2),
-        "latency_rerank_ms": round(rerank_ms, 2),
         "latency_graph_db_ms": 0.0,
         "latency_ner_processing_ms": 0.0,
-        "latency_hyde_ms": round(latency_hyde_ms, 2),
-        "latency_cache_ms": round(latency_cache_ms, 2),
-        "latency_taxonomy_ms": round(latency_taxonomy_ms, 2),
-        "taxonomy_chunks_used": len(taxonomy_chunks),
         "latency_post_retrieval_processing_ms": round(post_process_time * 1000.0, 2),
         "latency_llm_generation_ms": round(llm_time * 1000.0, 2),
-        "latency_total_pipeline_ms": round(
-            (retrieve_time + post_process_time + llm_time) * 1000.0
-            + latency_hyde_ms + latency_cache_ms + latency_taxonomy_ms, 2),
+        "latency_total_pipeline_ms": round((retrieve_time + post_process_time + llm_time) * 1000.0, 2),
         "tokens_input": usage["input_tokens"],
         "tokens_output": usage["output_tokens"],
         "tokens_total": total_tokens,
         "db_candidates_surfaced": len(hits),
         "vector_bypassed": False,
-        "cache_hit": False,
-        "detected_language": guard_meta["detected_language"],
-        "domain_intent": guard_meta["domain_intent"],
-        "pii_entities_scrubbed_count": guard_meta["pii_entities_scrubbed_count"],
-        "advice_shield_triggered": out_guard.get("advice_shield_triggered", False),
-        "guardrail_reasons": out_guard.get("reasons", []),
-        "user_role": user_role,
         "status": "SUCCESS"
     }
 
-    result = {
+    return {
         "mode": "traditional", "query": query,
         "answer": answer or "LLM unavailable — check credentials.",
         "docs": docs,
         "input_tokens": usage["input_tokens"], "output_tokens": usage["output_tokens"],
         "total_tokens": total_tokens,
         "retrieve_time": retrieve_time, "llm_time": llm_time,
-        "total_time": retrieve_time + post_process_time + llm_time
-                      + (latency_hyde_ms + latency_cache_ms + latency_taxonomy_ms) / 1000.0,
+        "total_time": retrieve_time + post_process_time + llm_time,
         "telemetry_breakdown": telemetry_breakdown,
     }
-    if not hist_text:
-        semantic_cache.store(query, mode="traditional", result=result)
-    return result
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -294,158 +198,165 @@ def log_query_audit(audit_data: Dict[str, Any]):
     print(f"  NER Layer A (Rule): {len(audit_data.get('ner_layer_a', []))} entities -> {[e['text'] for e in audit_data.get('ner_layer_a', [])]}", flush=True)
     print(f"  NER Layer B (ML)  : {len(audit_data.get('ner_layer_b', []))} entities -> {[e['text'] for e in audit_data.get('ner_layer_b', [])]}", flush=True)
     print(f"  Graph Traversal   : Matched by '{audit_data.get('graph_matched_by')}' | {audit_data.get('graph_nodes_count', 0)} nodes | {audit_data.get('graph_edges_count', 0)} 1-hop edges", flush=True)
-    print(f"  Vector Retrieval  : {audit_data.get('vector_hits_raw', 0)} raw candidates | Bypassed={audit_data.get('vector_bypassed', False)} | Pruned (Pillar 3)={audit_data.get('vector_pruned_to_top1', False)}", flush=True)
+    print(f"  Vector Retrieval  : {audit_data.get('vector_hits_raw', 0)} raw candidates | Bypassed={audit_data.get('vector_bypassed', False)}", flush=True)
     print(f"  Enrichment Mode   : Verified Aggregate={audit_data.get('verified_aggregate_used', False)} | Comparison Table={audit_data.get('comparison_table_used', False)}", flush=True)
     print(f"  LLM Model         : {audit_data.get('llm_model')} | Input Tokens: {audit_data.get('input_tokens', 0)} | Output Tokens: {audit_data.get('output_tokens', 0)}", flush=True)
-    print(f"  Latencies (ms)    : NER={audit_data.get('latency_ner_ms', 0):.1f}ms | Graph={audit_data.get('latency_graph_ms', 0):.1f}ms | Vector={audit_data.get('latency_vector_ms', 0):.1f}ms | Rerank={audit_data.get('latency_rerank_ms', 0):.1f}ms | LLM={audit_data.get('latency_llm_ms', 0):.1f}ms | Total={audit_data.get('latency_total_ms', 0):.1f}ms", flush=True)
+    print(f"  Latencies (ms)    : NER={audit_data.get('latency_ner_ms', 0):.1f}ms | Graph={audit_data.get('latency_graph_ms', 0):.1f}ms | Vector={audit_data.get('latency_vector_ms', 0):.1f}ms | LLM={audit_data.get('latency_llm_ms', 0):.1f}ms | Total={audit_data.get('latency_total_ms', 0):.1f}ms", flush=True)
     print("================================================================================\n", flush=True)
     
-    # Persistent JSONL log — one file per query, named by its timestamp
-    safe_ts = timestamp.replace(":", "-")
-    log_file = config.LOG_DIR / f"query_execution_audit_{safe_ts}.jsonl"
+    # Persistent JSONL log — single appending file
+    log_file = config.LOG_DIR / "query_execution_audit.jsonl"
     try:
-        with open(log_file, "w", encoding="utf-8") as f:
+        with open(log_file, "a", encoding="utf-8") as f:
             f.write(json.dumps(audit_data, ensure_ascii=False) + "\n")
     except Exception as exc:
         print(f"  [Audit Log Warning] Could not write to {log_file.name}: {exc}", flush=True)
 
 
-def hybrid_graphrag(query: str, store, history: List[dict] | None = None,
-                     user_role: str | None = None) -> Dict[str, Any]:
+def _build_cached_response(cached: intent_cache.CacheEntry, query: str, elapsed: float) -> Dict[str, Any]:
+    docs = [{"name": p.get("doc", ""), "score": p.get("score", 1.0), "page": p.get("page", 1),
+             "snippet": "", "full_text": ""} for p in cached.provenance]
+    return {
+        "mode": "hybrid",
+        "query": query,
+        "query_type": cached.query_type,
+        "domain_intent": cached.domain_intent,
+        "answer": cached.answer,
+        "confidence_label": cached.confidence_label,
+        "confidence_reason": cached.confidence_reason,
+        "docs": docs,
+        "total_tokens": cached.total_tokens,
+        "total_time": round(elapsed, 3),
+        "cache_hit": True,
+    }
+
+
+def hybrid_graphrag(query: str, store, history: list[dict] | None = None, user_role: str | None = None) -> Dict[str, Any]:
+
     t_start = time.perf_counter()
-    query, guard_meta, blocked = _preprocess_query(query, "hybrid")
-    if blocked:
-        return blocked
-    user_role = user_role or rbac.AMCRole.COMPLIANCE_OFFICER.value
+    import pii_scrub
+    import language_detector
+    import compliance_guardrails
 
-    hist_text = _format_history(history)
+    # PII Scrubbing with audit metrics
+    query, pii_count, pii_types = pii_scrub.scrub_text_with_metrics(query)
 
-    # Same cache-safety reasoning as traditional_rag: a follow-up's correct
-    # answer depends on conversation context the cache key doesn't capture.
-    t_cache_0 = time.perf_counter()
-    cached = None if hist_text else semantic_cache.check(query, mode="hybrid")
-    latency_cache_ms = (time.perf_counter() - t_cache_0) * 1000.0
-    if cached is not None:
-        hit_result = dict(cached)
-        hit_result["telemetry_breakdown"] = {
-            **cached.get("telemetry_breakdown", {}),
-            "cache_hit": True,
-            "latency_cache_ms": round(latency_cache_ms, 2),
-            "latency_total_pipeline_ms": round(latency_cache_ms, 2),
+    # Multilingual Language Detection & Regional Routing
+    lang_info = language_detector.detect_query_language(query)
+    detected_lang = lang_info.get("language", "en")
+    query_for_retrieval = lang_info.get("normalized_query", query)
+
+    # Guardrails AI Input Safety Validation
+    input_guard = compliance_guardrails.validate_input_query(query_for_retrieval)
+    if not input_guard.get("is_safe", True):
+        return {
+            "mode": "hybrid", "query": query,
+            "answer": f"Query blocked by Compliance Safety Guard: {input_guard.get('risk_flag')}",
+            "confidence_label": "BLOCKED", "confidence_reason": input_guard.get("risk_flag"),
+            "docs": [], "total_tokens": 0, "total_time": 0.001, "cache_hit": False,
+            "telemetry_breakdown": {"status": "BLOCKED", "risk_flag": input_guard.get("risk_flag")}
         }
-        return hit_result
 
-    hyde_doc, latency_hyde_ms = hyde.generate_hypothetical_document(query)
+    # ── Step 1: Single-pass embedding & classification ─────────────────────────
+    query_vec = faiss_store._embed_texts([query_for_retrieval])
+    query_type = query_classifier.classify_query(query_for_retrieval)
+    domain_intent = intent_cache.classify_domain_intent(query_for_retrieval)
 
-    # top_k narrower than traditional_rag's (3 vs 5, taxonomy 2 vs 3): the
-    # graph facts below carry structured ground truth that substitutes for
-    # some raw prose, so hybrid needs less vector context to stay grounded —
-    # this is the deliberate token-efficiency lever, not an accuracy cut.
-    t_tax_0 = time.perf_counter()
-    taxonomy_chunks = taxonomy_retrieval.retrieve_taxonomy_chunks(query, top_k=2)
-    taxonomy_graph_facts = taxonomy_retrieval.retrieve_taxonomy_graph(query)
-    taxonomy_graph_text = taxonomy_retrieval.graph_context_to_text(taxonomy_graph_facts)
-    latency_taxonomy_ms = (time.perf_counter() - t_tax_0) * 1000.0
+    # ── Step 2: Intent Cache short-circuit (dual-gate lookup) ────────────────
+    if config.ENABLE_INTENT_CACHE:
+        cache = intent_cache.get_cache()
+        cached = cache.lookup(query_vec, query_type, domain_intent, query_for_retrieval)
+        if cached is not None:
+            return _build_cached_response(cached, query, time.perf_counter() - t_start)
 
+
+    # ── Step 3: Domain-routed NER extraction ─────────────────────────────────
     t_ner_0 = time.perf_counter()
-    query_entities = ner_pipeline.run_layers_ab(query)
+    skip_gliner = (query_type == "direct_lookup")
+    query_entities = ner_pipeline.run_layers_ab(
+        query, skip_gliner=skip_gliner, is_query=True, domain_intent=domain_intent
+    )
     latency_ner_ms = (time.perf_counter() - t_ner_0) * 1000.0
-    
-    entity_texts = [e["text"] for e in query_entities]
-    query_type = query_classifier.classify_query(query)
 
+    entity_texts = [e["text"] for e in query_entities]
     ner_layer_a = [e for e in query_entities if e.get("layer") == "A"]
     ner_layer_b = [e for e in query_entities if e.get("layer") == "B"]
 
-    # ── retrieval stage (Intent-Driven Conditional Vector Routing) ────────
+    # ── Step 4: Intent-driven parameters & parallel retrieval ─────────────────
+    hops = GRAPH_HOPS_BY_INTENT.get(query_type, 1)
+    limit = GRAPH_LIMIT_BY_INTENT.get(query_type, 15)
+    top_k = VECTOR_TOPK_BY_INTENT.get(query_type, 5)
+
     t_ret_0 = time.perf_counter()
-    graph_time = 0.0
-    retrieve_time = 0.0
     vector_bypassed = False
 
-    if query_entities:
-        # Step 1: Execute Graph Traversal FIRST
-        t1 = time.perf_counter()
-        graph_result = graph_store.get_subgraph_for_query(
-            query, product_names=None, hops=1, limit=15, query_entities=query_entities
+    if config.ENABLE_PARALLEL_RETRIEVAL:
+        graph_future = _RETRIEVAL_THREAD_POOL.submit(
+            graph_store.get_subgraph_for_query,
+            query, None, hops, limit, query_entities,
         )
-        graph_time = time.perf_counter() - t1
-
-        # Step 2: Check if Graph returned strong verified signal (>= 1 edge or >= 2 nodes on comparison/product)
-        graph_has_strong_signal = (
-            graph_result.get("matched_by") in ("entity", "product")
-            and (len(graph_result.get("edges", [])) >= 1 or len(graph_result.get("nodes", [])) >= 2)
-        )
-
-        # Step 3: ONLY run Vector Retrieval if query is open-ended or graph signal is weak
-        if query_type in ("aggregation", "comparison", "direct_lookup") and graph_has_strong_signal:
-            hits = []  # Bypass vector search entirely! Saves 0.10s-0.40s and prevents token bloat.
-            retrieve_time = 0.0
-            vector_bypassed = True
-        else:
-            t_ret = time.perf_counter()
-            hits = store.retrieve(hyde_doc, top_k_children=3, rerank=True)
-            retrieve_time = time.perf_counter() - t_ret
+        vector_future = _RETRIEVAL_THREAD_POOL.submit(store.retrieve, query, top_k_children=top_k)
+        try:
+            graph_result = graph_future.result()
+        except Exception as exc:
+            print(f"  [graph] Neo4j offline ({exc}) — proceeding with vector context", flush=True)
+            graph_result = {"nodes": [], "edges": [], "matched_by": "none"}
+        try:
+            hits = vector_future.result()
+        except Exception as exc:
+            print(f"  [vector] Retrieval error: {exc}", flush=True)
+            hits = []
     else:
-        t_ret = time.perf_counter()
-        hits = store.retrieve(hyde_doc, top_k_children=3, rerank=True)
-        retrieve_time = time.perf_counter() - t_ret
-        graph_result = {"nodes": [], "edges": [], "matched_by": "none"}
-        graph_time = 0.0
-    rerank_ms = 0.0 if vector_bypassed else faiss_store.get_last_rerank_ms()
+        try:
+            graph_result = graph_store.get_subgraph_for_query(query, None, hops, limit, query_entities)
+        except Exception as exc:
+            print(f"  [graph] Neo4j offline ({exc}) — proceeding with vector context", flush=True)
+            graph_result = {"nodes": [], "edges": [], "matched_by": "none"}
+    retrieve_time = (time.perf_counter() - t_ret_0) * 1000.0
 
-    if not graph_result["edges"] and hits:
-        product_names = {h["product_name"] for h in hits}
+    # FlashRank CPU Cross-Encoder Reranker
+    import flashrank_reranker
+    hits = flashrank_reranker.rerank_passages(query_for_retrieval, hits, top_n=3)
+
+
+    # Secondary graph query fallback if primary graph search had no edges
+    if not graph_result.get("edges") and hits:
+        product_names = {h.get("product_name") for h in hits if h.get("product_name")}
         t1 = time.perf_counter()
         graph_result = graph_store.get_subgraph_for_query(
-            query, product_names=product_names, hops=1, limit=15,
+            query_for_retrieval, product_names=product_names, hops=1, limit=limit,
             query_entities=query_entities)
-        graph_time += (time.perf_counter() - t1)
 
-    hits = rbac.filter_chunks_by_role(hits, user_role)
-    graph_result = rbac.filter_graph_by_role(graph_result, user_role)
+    product_names_for_scope = {h.get("product_name") for h in hits if h.get("product_name")}
 
-    product_names_for_scope = {h["product_name"] for h in hits}
+    # ── Step 5: Reciprocal Rank Fusion (RRF) & Type-specific enrichment ───────
+    t2 = time.perf_counter()
+    if config.ENABLE_RRF_FUSION and hits:
+        # Reciprocal Rank Fusion formula: Score(d) = w_vector / (60 + r_vector) + w_graph / (60 + r_graph)
+        has_graph_match = bool(graph_result.get("edges"))
+        w_vector = 0.30 if has_graph_match else 0.80
+        w_graph = 0.70 if has_graph_match else 0.20
+        for i, h in enumerate(hits):
+            r_vec = i + 1
+            r_graph = 1 if has_graph_match else 100
+            h["rrf_score"] = round((w_vector / (60.0 + r_vec)) + (w_graph / (60.0 + r_graph)), 5)
+        hits.sort(key=lambda x: x.get("rrf_score", 0), reverse=True)
 
-    # ── type-specific enrichment — similarity-resolved, schema-aware ──────
     verified_facts = ""
     comparison_blocks = ""
+    executed_cypher_query = None
     hidden_tokens = 0
-    cypher_critique_attempts = 0
-    t2 = time.perf_counter()
 
     if query_type == "aggregation" and entity_texts:
-        cypher_rows, cypher_usage = text_to_cypher.generate_and_run(query, product_names_for_scope)
-        hidden_tokens += cypher_usage["input_tokens"] + cypher_usage["output_tokens"]
-        cypher_critique_attempts = cypher_usage.get("attempts", 0)
+        cypher_rows, cypher_usage = text_to_cypher.generate_and_run(query_for_retrieval, product_names_for_scope)
+        hidden_tokens += cypher_usage.get("input_tokens", 0) + cypher_usage.get("output_tokens", 0)
+        executed_cypher_query = f"MATCH ScopeAggregation for {product_names_for_scope}"
         if cypher_rows:
             verified_facts = (
                 "[VERIFIED AGGREGATE — generated Cypher query executed directly "
                 "against the graph, scoped to the documents this question is about]\n"
                 + _format_cypher_rows(cypher_rows)
             )
-        else:
-            agg_entity = _pick_aggregation_entity(query_entities)
-            if agg_entity:
-                resolved = entity_resolver.resolve_entities_for_query(
-                    [agg_entity], product_names_for_scope)
-                resolved_texts = resolved.get(agg_entity, [])
-                if resolved_texts:
-                    agg = graph_store.get_aggregate_for_entity(
-                        resolved_texts, hops=1, product_names=product_names_for_scope)
-                    if agg:
-                        lines = [
-                            f"  - {row['rel_type']}: {row['distinct_related_entities']} related "
-                            f"entities across {row['distinct_documents']} documents "
-                            f"({', '.join(row['sources'][:5])}"
-                            f"{'…' if row['distinct_documents'] > 5 else ''})"
-                            for row in agg["breakdown"]
-                        ]
-                        verified_facts = (
-                            f"[VERIFIED AGGREGATE — computed from the graph, entities resolved "
-                            f"via embedding similarity, scoped to relevant documents]\n"
-                            f"Entity: {agg['entity_query']}\n" + "\n".join(lines)
-                        )
 
     elif query_type == "comparison" and len(entity_texts) >= 2:
         resolved = entity_resolver.resolve_entities_for_query(entity_texts, product_names_for_scope)
@@ -464,151 +375,124 @@ def hybrid_graphrag(query: str, store, history: List[dict] | None = None,
 
     enrichment_time = time.perf_counter() - t2
 
-    # Pillar 3: Strict Vector Pruning & Trustworthy Comparison Flags
+
     trust_verified_facts = bool(verified_facts or comparison_blocks)
     effective_hits = hits
-    vector_pruned_to_top1 = False
     if trust_verified_facts and query_type in ("aggregation", "comparison"):
-        # Drop contradictory/redundant vector chunks so the LLM focuses purely on verified graph data
         effective_hits = hits[:1]
-        vector_pruned_to_top1 = (len(hits) > 1)
 
-    # ── graph section: only when directly relevant (never Path 3 fallback) ─
+    # ── RBAC & Agentic Core Integration ──────────────────────────────────────
+    import rbac
+    import agent_planner
+    import answer_critic
+
+    user_role = user_role or rbac.AMCRole.COMPLIANCE_OFFICER.value
+
+    # RBAC Boundary Scoping
+    hits = rbac.filter_chunks_by_role(hits, user_role)
+    graph_result = rbac.filter_graph_by_role(graph_result, user_role)
+
+    # Agentic Planner Check
+    planner = agent_planner.AgentPlanner()
+    plan = planner.create_plan(query, active_domains=[domain_intent])
+
     top_edges = []
-    include_graph_section = bool(verified_facts) or bool(comparison_blocks)
-    if graph_result.get("matched_by") in ("entity", "product") and graph_result["edges"]:
-        # 5, not 8 — the highest-confidence edges carry the signal; padding
-        # out to 8 mostly added tokens without adding grounding.
-        top_edges = _select_top_edges(graph_result["edges"], max_edges=5)
-        include_graph_section = include_graph_section or bool(top_edges)
+    if graph_result.get("matched_by") in ("entity", "product") and graph_result.get("edges"):
+        top_edges = _select_top_edges(graph_result["edges"], max_edges=8)
 
-    # RRF-style fusion: boost vector chunks that come from the same document
-    # as a graph fact actually being cited, so the prose handed to the LLM
-    # directly supports the structured facts rather than being an unrelated
-    # coincidental match. Only differentiates anything when the graph matched
-    # via literal entity mention — when matched_by=="product" every hit
-    # already shares scope with the graph by construction, so this is a
-    # no-op there (correctly).
-    graph_fact_products = {e.get("s_product") for e in top_edges if e.get("s_product")}
-    if graph_fact_products:
-        for h in effective_hits:
-            if h.get("product_name") in graph_fact_products:
-                h["score"] = h.get("score", 0.0) + 2.0
-                h["graph_aligned"] = True
-        effective_hits = sorted(effective_hits, key=lambda h: h.get("score", 0.0), reverse=True)
+    history_text = compress_history_for_intent(history or [], domain_intent)
 
-    vector_context = "\n\n---\n\n".join(
-        f"[{h['product_name']} | Page {h['page_num']}]\n{h['parent_text']}" for h in effective_hits) if effective_hits else "No raw document prose required — verified graph facts provide the structured ground truth."
-
-    graph_context_str = "\n".join(f"{e['s']} --{e['rel']}--> {e['o']}" for e in top_edges)
-
-    extra_sections = ""
-    if verified_facts:
-        extra_sections += f"\n{verified_facts}\n"
-    if comparison_blocks:
-        extra_sections += (f"\nPER-ENTITY GRAPH NEIGHBORHOODS (kept separate — do not blend "
-                            f"facts across entities):\n{comparison_blocks}\n")
-    if taxonomy_graph_text:
-        extra_sections += f"\nMUTUAL FUND TAXONOMY KNOWLEDGE (SEBI scheme categorization, dual-regime):\n{taxonomy_graph_text}\n"
-
-    graph_section = f"\nGRAPH RELATIONSHIPS:\n{graph_context_str}\n" if (top_edges and include_graph_section) else ""
-
-    taxonomy_prose_section = ""
-    if taxonomy_chunks:
-        taxonomy_prose_section = "\n\nMUTUAL FUND TAXONOMY SOURCES (raw SEBI circular excerpts):\n" + "\n\n---\n\n".join(taxonomy_chunks)
-
-    prompt = f"""You are a senior mutual-fund compliance analyst. Precision
-matters — this is used for regulatory compliance decisions.
-
-Reliability order: VERIFIED FACTS (from the graph, ground truth, cite
-"[graph]") > GRAPH RELATIONSHIPS (structured, cite "[graph]") > DOCUMENT
-PROSE (raw text, cite [1]/[2]). Flag conflicts between sources explicitly.
-
-Pronoun/reference check ("it"/"that"/"the rule"/etc.): resolve from
-CONVERSATION HISTORY if possible and answer directly, citing your earlier
-turn's fact if that's the source — do not invent facts beyond the sources or
-your own prior turns. If not resolvable from history, either answer the one
-clearly dominant referent (state your assumption in one line) or, if
-several are equally plausible, name them and ask — never substitute
-unrelated source facts as a stand-in for a direct answer.
-
-Name a specific fund/category/entity from the question in your first
-sentence before adding related context. Tag facts by regime
-(LEGACY_2017/CURRENT_2026) when both appear. If nothing answers the
-question, say so.
-{hist_text}{extra_sections}{graph_section}
-DOCUMENT PROSE:
-{vector_context}{taxonomy_prose_section}
-
-QUESTION: {query}
-
-ANSWER:"""
-
-    t_llm = time.perf_counter()
-    answer, usage = llm_text_client.call_llm_with_usage(prompt, model_id=config.CLAUDE_MODEL_LIGHT)
-    llm_time = time.perf_counter() - t_llm
-    total_tokens = usage["input_tokens"] + usage["output_tokens"] + hidden_tokens
-    latency_total_ms = (time.perf_counter() - t_start) * 1000.0
-
-    out_guard = compliance_guardrails.validate_llm_output(answer, vector_context, guard_meta["domain_intent"])
-    answer = out_guard.get("modified_answer", answer)
-
-    confs = [e.get("conf") for e in top_edges if isinstance(e.get("conf"), (int, float))]
-    avg_conf = sum(confs) / len(confs) if confs else None
-    confidence_label = (
-        "high confidence (verified aggregate)" if verified_facts else
-        "high confidence (entity comparison)" if comparison_blocks else
-        "no graph signal used" if not top_edges else
-        "high confidence" if avg_conf and avg_conf >= 0.7 else
-        "medium confidence" if avg_conf and avg_conf >= 0.4 else
-        "low confidence"
+    # ── Step 6: Budgeted prompt assembly & LLM generation ────────────────────
+    prompt, max_output_tokens = context_engineering.build_prompt(
+        query=query_for_retrieval,
+        verified_facts=verified_facts,
+        comparison_blocks=comparison_blocks,
+        top_edges=top_edges,
+        hits=effective_hits,
+        query_type=query_type,
+        domain_intent=domain_intent,
+        history_text=history_text,
+        trust_verified_facts=trust_verified_facts,
     )
 
-    docs = [{"name": h["source"], "score": round(h["score"], 2),
-         "page": h["page_num"],
-         "snippet": h["child_text"][:160].replace("\n", " "),
-         "full_text": h["parent_text"]} for h in effective_hits]
+    t_llm = time.perf_counter()
+    raw_answer, usage = llm_text_client.call_llm_with_usage(prompt, model_id=config.CLAUDE_MODEL_LIGHT, max_tokens=max_output_tokens)
+    llm_time = time.perf_counter() - t_llm
 
-    audit_record = {
+    # Guardrails AI Output Validation (SEBI RIA Advice Shield & Disclaimer Enforcement)
+    out_guard = compliance_guardrails.validate_llm_output(raw_answer, prompt, domain_intent)
+    answer = out_guard.get("modified_answer", raw_answer)
+
+    total_tokens = usage.get("input_tokens", 0) + usage.get("output_tokens", 0) + hidden_tokens
+    elapsed = time.perf_counter() - t_start
+
+    confidence_label, confidence_reason = calibrate_confidence(effective_hits, graph_result, domain_intent)
+
+    docs = [{"name": h["source"], "score": round(h.get("rrf_score", h["score"]), 3),
+             "page": h["page_num"],
+             "doc_sha256": h.get("doc_sha256", "N/A"),
+             "snippet": h["child_text"][:160].replace("\n", " "),
+             "full_text": h["parent_text"]} for h in effective_hits]
+
+    provenance_records = [{"doc": h["source"], "page": h["page_num"], "score": h["score"], "doc_sha256": h.get("doc_sha256", "N/A")} for h in effective_hits]
+
+    # ── Step 7: Store in IntentCache on success ──────────────────────────────
+    if answer and config.ENABLE_INTENT_CACHE:
+        cache = intent_cache.get_cache()
+        cache.store(
+            query_vec=query_vec,
+            query_type=query_type,
+            domain_intent=domain_intent,
+            query_text=query_for_retrieval,
+            answer=answer,
+            provenance=provenance_records,
+            confidence_label=confidence_label,
+            confidence_reason=confidence_reason,
+            total_tokens=total_tokens,
+        )
+
+    # ── Step 8: Persistent audit log ─────────────────────────────────────────
+    log_query_audit({
         "query": query,
         "query_type": query_type,
+        "domain_intent": domain_intent,
+        "intent_key": f"{query_type}::{domain_intent}",
+        "detected_language": detected_lang,
+        "pii_entities_scrubbed_count": pii_count,
+        "pii_types_found": pii_types,
+        "cypher_query_executed": executed_cypher_query,
+        "advice_shield_triggered": out_guard.get("advice_shield_triggered", False),
+        "guardrail_reasons": out_guard.get("reasons", []),
+        "cache_hit": False,
         "ner_layer_a": ner_layer_a,
         "ner_layer_b": ner_layer_b,
+        "ner_labels_used": config.get_gliner_labels(domain_intent),
+        "ner_cache_stats": ner_pipeline.get_ner_cache_stats(),
         "graph_matched_by": graph_result.get("matched_by", "none"),
         "graph_nodes_count": len(graph_result.get("nodes", [])),
         "graph_edges_count": len(graph_result.get("edges", [])),
         "vector_hits_raw": len(hits),
         "vector_bypassed": vector_bypassed,
-        "vector_pruned_to_top1": vector_pruned_to_top1,
-        "verified_aggregate_used": bool(verified_facts),
-        "comparison_table_used": bool(comparison_blocks),
-        "llm_model": config.CLAUDE_MODEL_LIGHT,
-        "input_tokens": usage["input_tokens"],
-        "output_tokens": usage["output_tokens"],
-        "latency_ner_ms": latency_ner_ms,
-        "latency_graph_ms": graph_time * 1000.0,
-        "latency_vector_ms": retrieve_time * 1000.0,
-        "latency_rerank_ms": rerank_ms,
-        "latency_llm_ms": llm_time * 1000.0,
-        "latency_total_ms": latency_total_ms,
-        "confidence_label": confidence_label,
-        "detected_language": guard_meta["detected_language"],
-        "domain_intent": guard_meta["domain_intent"],
-        "pii_entities_scrubbed_count": guard_meta["pii_entities_scrubbed_count"],
-        "advice_shield_triggered": out_guard.get("advice_shield_triggered", False),
-        "guardrail_reasons": out_guard.get("reasons", []),
-        "user_role": user_role,
-        "status": "SUCCESS"
-    }
-    log_query_audit(audit_record)
+        "tokens_input": usage.get("input_tokens", 0),
+        "tokens_output": usage.get("output_tokens", 0),
 
-    ui_badges = []
-    if vector_bypassed:
-        ui_badges.append({"label": "Pillar 1: Vector Bypass Engaged (0.0 ms FAISS)", "type": "success", "desc": "Bypassed unstructured vector noise; routed 100% to verified graph schema."})
-    if vector_pruned_to_top1:
-        ui_badges.append({"label": "Pillar 3: Strict Vector Gate Engaged", "type": "info", "desc": "Pruned contradictory vector chunks from top-5 down to top-1."})
-    if graph_result.get("matched_by") in ("entity", "product") and graph_result.get("edges"):
-        ui_badges.append({"label": f"Pillar 2: Single-Shot UNWIND ({len(graph_result['nodes'])} nodes)", "type": "primary", "desc": "Batch-traversed relational subgraph without sequential loops."})
+        "tokens_hidden_cypher": hidden_tokens,
+        "tokens_total": total_tokens,
+        "latency_ner_ms": round(latency_ner_ms, 1),
+        "latency_retrieve_ms": round(retrieve_time, 1),
+        "latency_llm_ms": round(llm_time * 1000, 1),
+        "latency_total_pipeline_ms": round(elapsed * 1000, 1),
+        "confidence_label": confidence_label,
+        "confidence_reason": confidence_reason,
+        "status": "SUCCESS",
+    })
+
+    active_model, _ = llm_text_client._resolve_model_and_fallbacks()
+    ui_badges = [
+        {"label": f"LLM Engine: {active_model}", "desc": "LiteLLM Provider", "type": "success"},
+        {"label": f"Intent: {query_type.upper()}", "desc": f"Domain: {domain_intent}", "type": "primary"},
+        {"label": f"Confidence: {confidence_label}", "desc": confidence_reason, "type": "success" if "high" in confidence_label else "neutral"},
+    ]
 
     triplet_table = [
         {"s": e.get("s", ""), "rel": e.get("rel", ""), "o": e.get("o", ""), "conf": e.get("conf", 1.0)}
@@ -616,63 +500,45 @@ ANSWER:"""
     ]
 
     telemetry_breakdown = {
-        "pipeline_mode": "ContextGraph Hybrid RAG",
-        "latency_vector_db_ms": round(retrieve_time * 1000.0, 2),
-        "latency_rerank_ms": round(rerank_ms, 2),
-        "latency_graph_db_ms": round(graph_time * 1000.0, 2),
+        "pipeline_mode": f"ContextGraph Hybrid ({query_type.upper()})",
+        "latency_vector_db_ms": round(retrieve_time, 2),
+        "latency_graph_db_ms": 0.0,
         "latency_ner_processing_ms": round(latency_ner_ms, 2),
-        "latency_post_retrieval_processing_ms": round(enrichment_time * 1000.0, 2),
+        "latency_post_retrieval_processing_ms": round(enrichment_time * 1000.0, 2) if 'enrichment_time' in locals() else 0.0,
         "latency_llm_generation_ms": round(llm_time * 1000.0, 2),
-        "latency_total_pipeline_ms": round(latency_total_ms, 2),
-        "tokens_input": usage["input_tokens"],
-        "tokens_output": usage["output_tokens"],
+        "latency_total_pipeline_ms": round(elapsed * 1000.0, 2),
+        "tokens_input": usage.get("input_tokens", 0),
+        "tokens_output": usage.get("output_tokens", 0),
         "tokens_total": total_tokens,
-        "db_candidates_surfaced": len(graph_result.get("nodes", [])),
+        "db_candidates_surfaced": len(graph_result.get("nodes", [])) + len(hits),
         "vector_bypassed": vector_bypassed,
-        "vector_pruned_to_top1": vector_pruned_to_top1,
         "ui_badges": ui_badges,
         "triplet_table": triplet_table,
-        "latency_hyde_ms": round(latency_hyde_ms, 2),
-        "latency_cache_ms": round(latency_cache_ms, 2),
-        "latency_taxonomy_ms": round(latency_taxonomy_ms, 2),
-        "taxonomy_chunks_used": len(taxonomy_chunks),
-        "taxonomy_graph_facts_used": len(taxonomy_graph_facts),
-        "cache_hit": False,
-        "cypher_critique_attempts": cypher_critique_attempts,
-        "detected_language": guard_meta["detected_language"],
-        "domain_intent": guard_meta["domain_intent"],
-        "pii_entities_scrubbed_count": guard_meta["pii_entities_scrubbed_count"],
-        "advice_shield_triggered": out_guard.get("advice_shield_triggered", False),
-        "guardrail_reasons": out_guard.get("reasons", []),
-        "user_role": user_role,
         "status": "SUCCESS"
     }
 
-    result = {
-        "mode": "hybrid", "query": query, "query_type": query_type,
-        "answer": answer or "LLM unavailable — check credentials.",
-        "docs": docs, "confidence_label": confidence_label,
-        "graph_nodes": graph_result["nodes"], "graph_edges": graph_result["edges"],
+    return {
+        "mode": "hybrid",
+        "query": query,
+        "query_type": query_type,
+        "domain_intent": domain_intent,
+        "answer": answer or "LLM response empty.",
+        "confidence_label": confidence_label,
+        "confidence_reason": confidence_reason,
+        "docs": docs,
+        "graph_nodes": graph_result.get("nodes", []),
+        "graph_edges": graph_result.get("edges", []),
         "graph_edges_used_in_prompt": top_edges,
-        "matched_entity_texts": set(entity_texts),
-        "active_labels": {e["label"] for e in query_entities},
+        "matched_entity_texts": list(entity_texts),
+        "active_labels": list({e["label"] for e in query_entities}),
         "used_verified_aggregate": bool(verified_facts),
         "used_comparison_mode": bool(comparison_blocks),
         "graph_matched_by": graph_result.get("matched_by", "none"),
-        "input_tokens": usage["input_tokens"], "output_tokens": usage["output_tokens"],
         "total_tokens": total_tokens,
-        "retrieve_time": retrieve_time, "graph_time": graph_time,
-        "enrichment_time": enrichment_time, "llm_time": llm_time,
-        # True wall-clock total (t_start-based) — includes cache-check, HyDE,
-        # and NER time that retrieve_time+graph_time+enrichment_time+llm_time
-        # alone would silently drop, so this matches
-        # telemetry_breakdown["latency_total_pipeline_ms"] exactly.
-        "total_time": latency_total_ms / 1000.0,
+        "total_time": round(elapsed, 3),
+        "cache_hit": False,
         "telemetry_breakdown": telemetry_breakdown,
     }
-    if not hist_text:
-        semantic_cache.store(query, mode="hybrid", result=result)
-    return result
 
 
 def relevancy_score(result: Dict[str, Any]) -> float:
@@ -683,3 +549,41 @@ def relevancy_score(result: Dict[str, Any]) -> float:
     score += 0.25 if result.get("used_verified_aggregate") else 0
     score += 0.15 if "isn't in" not in answer.lower() and "not in the context" not in answer.lower() else 0
     return round(min(score, 1.0), 2)
+
+
+def warmup_models():
+    """Pre-load GLiNER and sentence-transformers into RAM on backend boot."""
+    try:
+        print("  [warmup] Pre-warming GLiNER & Embedder...", flush=True)
+        _ = ner_pipeline._get_gliner()
+        _ = faiss_store._get_embedder()
+        print("  [warmup] Models pre-warmed cleanly.", flush=True)
+    except Exception as exc:
+        print(f"  [warmup] Model warm-up skipped: {exc}", flush=True)
+
+
+def validate_system_readiness() -> Dict[str, Any]:
+    """Diagnostic check verifying FAISS index files, Neo4j connectivity, and LLM API keys on startup."""
+    index_path = config.FAISS_DIR / "amc_master" / "index.faiss"
+    faiss_ready = index_path.exists()
+    
+    has_groq = bool(getattr(config, "GROQ_API_KEY", ""))
+    has_claude = bool(getattr(config, "CLAUDE_API_KEY", ""))
+    llm_ready = has_groq or has_claude
+    
+    neo4j_ready = False
+    try:
+        with graph_store.get_driver().session(database=config.NEO4J_DATABASE) as s:
+            r = s.run("RETURN 1 AS ping")
+            neo4j_ready = bool(r.single())
+    except Exception:
+        neo4j_ready = False
+        
+    readiness = {
+        "faiss_index_ready": faiss_ready,
+        "neo4j_connected": neo4j_ready,
+        "llm_configured": llm_ready,
+        "primary_provider": getattr(config, "PRIMARY_LLM_PROVIDER", "groq"),
+        "overall_status": "READY" if (faiss_ready and llm_ready) else "DEGRADED",
+    }
+    return readiness

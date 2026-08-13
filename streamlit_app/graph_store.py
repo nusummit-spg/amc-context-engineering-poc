@@ -32,7 +32,14 @@ def get_driver():
             connection_timeout=30,
             max_transaction_retry_time=30,
         )
-    return _driver
+def close_driver():
+    global _driver
+    if _driver is not None:
+        try:
+            _driver.close()
+        except Exception:
+            pass
+        _driver = None
 
 
 def init_schema():
@@ -77,7 +84,9 @@ def upsert_entities(entities: List[Dict[str, Any]], product_name: str, source: s
                 ON CREATE SET n.text = row.text, n.label = row.label, n.isin = row.isin,
                               n.product_name = row.product_name, n.source = row.source,
                               n.first_seen_chunk = row.chunk_id
-                ON MATCH SET n.isin = coalesce(n.isin, row.isin)
+                ON MATCH SET n.isin = coalesce(n.isin, row.isin),
+                              n.product_name = coalesce(n.product_name, row.product_name),
+                              n.source = coalesce(n.source, row.source)
                 """,
                 rows=batch,
             )
@@ -124,13 +133,13 @@ def resolve_unresolved_entities():
     """
     Post-pass: for UNRESOLVED nodes created by relation MERGE (because the
     subject/object text wasn't seen by NER Layer A/B directly), try to match
-    them onto an existing resolved Entity node with the same normalized text.
+    them onto an existing resolved Entity node using the indexed dedup_key.
     """
     with get_driver().session(database=config.NEO4J_DATABASE) as session:
         session.run("""
             MATCH (u:Entity {label: 'UNRESOLVED'})
             MATCH (r:Entity) WHERE r.label <> 'UNRESOLVED'
-              AND toLower(trim(r.text)) = toLower(trim(u.text))
+              AND r.dedup_key = u.dedup_key
             SET u.label = r.label, u.isin = coalesce(u.isin, r.isin)
         """)
 
@@ -162,90 +171,88 @@ def get_subgraph_for_query(query: str, product_names: set | None = None,
     entity_texts = list({e["text"] for e in query_entities})
 
     edges = []
-
-    # Path 1 — literal entity mentions in the query text. Most targeted,
-    # gets the full limit.
+    path_matched = "none"
+    # Path 1 — literal entity mentions in the query text.
     if entity_texts:
-        with get_driver().session(database=config.NEO4J_DATABASE) as session:
-            result = session.run(
-                f"""
-                MATCH (n:Entity) WHERE n.text IN $texts
-                MATCH path = (n)-[r*1..{hops}]-(m)
-                UNWIND relationships(path) AS rel
-                WITH startNode(rel) AS s, rel, endNode(rel) AS o
-                RETURN DISTINCT s.text AS s, s.label AS s_label, s.product_name AS s_product,
-                       type(rel) AS rel, rel.confidence AS conf, o.text AS o, o.label AS o_label
-                ORDER BY rel.confidence DESC
-                LIMIT $limit
-                """, texts=entity_texts, limit=limit)
-            edges += [dict(r) for r in result]
+        try:
+            with get_driver().session(database=config.NEO4J_DATABASE) as session:
+                result = session.run(
+                    f"""
+                    MATCH (n:Entity) WHERE n.text IN $texts
+                    MATCH path = (n)-[r*1..{hops}]-(m)
+                    UNWIND relationships(path) AS rel
+                    WITH startNode(rel) AS s, rel, endNode(rel) AS o
+                    RETURN DISTINCT s.text AS s, s.label AS s_label, type(rel) AS rel,
+                           rel.confidence AS conf, o.text AS o, o.label AS o_label
+                    ORDER BY rel.confidence DESC
+                    LIMIT $limit
+                    """, texts=entity_texts, limit=limit)
+                edges += [dict(r) for r in result]
+                if edges:
+                    path_matched = "entity"
+        except Exception as exc:
+            print(f"  [graph] Neo4j Path 1 offline: {exc}", flush=True)
 
     # Path 2 — product-name fallback (what vector search already found).
-    # Moderately targeted — still capped at full limit but ordered by
-    # confidence so the best edges survive any later trimming.
     if not edges and product_names:
-        with get_driver().session(database=config.NEO4J_DATABASE) as session:
-            result = session.run(
-                """
-                MATCH (n:Entity) WHERE n.product_name IN $products
-                MATCH (n)-[r]-(m)
-                RETURN DISTINCT n.text AS s, n.label AS s_label, n.product_name AS s_product,
-                       type(r) AS rel, r.confidence AS conf, m.text AS o, m.label AS o_label
-                ORDER BY r.confidence DESC
-                LIMIT $limit
-                """, products=list(product_names), limit=limit)
-            edges += [dict(r) for r in result]
-
-    # Path 3 — last resort, "most connected nodes globally." Least targeted
-    # by far (not query-specific at all) — hard-capped much tighter than
-    # the other paths regardless of the caller's `limit`, since this is
-    # exactly the case that was inflating token spend on unrelated queries.
-    if not edges:
-        with get_driver().session(database=config.NEO4J_DATABASE) as session:
-            result = session.run(
-                """
-                MATCH (n:Entity)-[r]-(m)
-                WITH n, r, m, COUNT { (n)--() } AS degree
-                ORDER BY degree DESC LIMIT $limit
-                RETURN n.text AS s, n.label AS s_label, n.product_name AS s_product,
-                       type(r) AS rel, r.confidence AS conf, m.text AS o, m.label AS o_label
-                """, limit=min(limit, 8))
-            edges += [dict(r) for r in result]
+        try:
+            with get_driver().session(database=config.NEO4J_DATABASE) as session:
+                result = session.run(
+                    """
+                    MATCH (n:Entity) WHERE n.product_name IN $products
+                    MATCH (n)-[r]-(m)
+                    RETURN DISTINCT n.text AS s, n.label AS s_label, type(r) AS rel,
+                           r.confidence AS conf, m.text AS o, m.label AS o_label
+                    ORDER BY r.confidence DESC
+                    LIMIT $limit
+                    """, products=list(product_names), limit=limit)
+                edges += [dict(r) for r in result]
+                if edges:
+                    path_matched = "product"
+        except Exception as exc:
+            print(f"  [graph] Neo4j Path 2 offline: {exc}", flush=True)
 
     nodes = list({e["s"] for e in edges} | {e["o"] for e in edges})
-    matched_by = "entity" if entity_texts else ("product" if product_names else "fallback")
-    return {"nodes": nodes, "edges": edges, "matched_by": matched_by}
+    return {"nodes": nodes, "edges": edges, "matched_by": path_matched}
+
 def get_entity_type_summary(active_labels: set | None = None) -> list[dict]:
     """Real counts per entity label — powers the Ontology View tree.
     active_labels marks which types this specific query's matched entities belong to."""
-    with get_driver().session(database=config.NEO4J_DATABASE) as session:
-        result = session.run(
-            "MATCH (n:Entity) RETURN n.label AS label, count(*) AS n ORDER BY n DESC")
-        rows = [dict(r) for r in result]
-    active_labels = active_labels or set()
-    return [{"label": r["label"] or "UNLABELED", "count": r["n"],
-              "active": r["label"] in active_labels} for r in rows]
+    try:
+        with get_driver().session(database=config.NEO4J_DATABASE) as session:
+            result = session.run(
+                "MATCH (n:Entity) RETURN n.label AS label, count(*) AS n ORDER BY n DESC")
+            rows = [dict(r) for r in result]
+        active_labels = active_labels or set()
+        return [{"label": r["label"] or "UNLABELED", "count": r["n"],
+                  "active": r["label"] in active_labels} for r in rows]
+    except Exception:
+        return []
 
 def get_all_entity_texts(product_names: set | None = None, limit: int = 500) -> list[dict]:
     """Distinct entity texts — the candidate pool for embedding-based
     similarity matching in entity_resolver.py. Scoped by product_names when
     given, so a candidate pool for one query never leaks into another."""
-    with get_driver().session(database=config.NEO4J_DATABASE) as session:
-        if product_names:
-            result = session.run(
-                """
-                MATCH (n:Entity) WHERE n.product_name IN $products AND n.text IS NOT NULL
-                RETURN DISTINCT n.text AS text, n.label AS label, n.product_name AS product_name
-                LIMIT $limit
-                """, products=list(product_names), limit=limit)
-        else:
-            result = session.run(
-                """
-                MATCH (n:Entity) WHERE n.text IS NOT NULL
-                RETURN DISTINCT n.text AS text, n.label AS label, n.product_name AS product_name
-                LIMIT $limit
-                """, limit=limit)
-        return [dict(r) for r in result]
+    try:
+        with get_driver().session(database=config.NEO4J_DATABASE) as session:
+            if product_names:
+                result = session.run(
+                    """
+                    MATCH (n:Entity) WHERE n.product_name IN $products AND n.text IS NOT NULL
+                    RETURN DISTINCT n.text AS text, n.label AS label, n.product_name AS product_name
+                    LIMIT $limit
+                    """, products=list(product_names), limit=limit)
+            else:
+                result = session.run(
+                    """
+                    MATCH (n:Entity) WHERE n.text IS NOT NULL
+                    RETURN DISTINCT n.text AS text, n.label AS label, n.product_name AS product_name
+                    LIMIT $limit
+                    """, limit=limit)
+            return [dict(r) for r in result]
+    except Exception:
+        return []
+
 
 
 def get_relationship_types() -> list[str]:
@@ -285,60 +292,28 @@ def run_safe_cypher(cypher: str, params: dict | None = None,
     if ";" in cypher_stripped:
         print("  [cypher-guard] rejected: multiple statements", flush=True)
         return None
-    if not re.match(r"^\s*MATCH\b", cypher_stripped, re.I):
-        print("  [cypher-guard] rejected: must start with MATCH", flush=True)
+    if not re.match(r"^\s*(MATCH|CALL)\b", cypher_stripped, re.I):
+        print("  [cypher-guard] rejected: must start with MATCH or CALL", flush=True)
+        return None
+    if getattr(config, "READ_ONLY_MODE", False) and not re.match(r"^\s*(MATCH|CALL)\b", cypher_stripped, re.I):
+        print("  [cypher-guard] rejected: READ_ONLY_MODE active — non-MATCH/CALL query prohibited", flush=True)
         return None
     if _WRITE_KEYWORDS.search(cypher_stripped):
         print("  [cypher-guard] rejected: write keyword detected", flush=True)
         return None
-    if _CALL_KEYWORD.search(cypher_stripped):
-        print("  [cypher-guard] rejected: CALL not allowed", flush=True)
-        return None
+
     if not re.search(r"\bLIMIT\s+\d+\b", cypher_stripped, re.I):
         cypher_stripped += f" LIMIT {max_rows}"
 
     try:
         with get_driver().session(database=config.NEO4J_DATABASE) as session:
-            result = session.run(cypher_stripped, params or {})
-            rows = [dict(r) for r in result][:max_rows]
+            rows = session.execute_read(
+                lambda tx: [dict(r) for r in tx.run(cypher_stripped, params or {})]
+            )[:max_rows]
         return rows
     except Exception as e:
         print(f"  [cypher-guard] execution failed: {e}", flush=True)
         return None
-
-
-def run_safe_cypher_verbose(cypher: str, params: dict | None = None,
-                             max_rows: int = 25) -> tuple[list[dict] | None, str | None]:
-    """
-    Same validation + execution as run_safe_cypher(), but returns the
-    rejection/error message instead of swallowing it — used by the Cypher
-    critique retry loop in text_to_cypher.py, which needs the exact error
-    text to feed back to the LLM so it can fix its own query.
-
-    Returns (rows, None) on success, or (None, error_message) on any
-    validation or execution failure.
-    """
-    cypher_stripped = cypher.strip().rstrip(";")
-    if ";" in cypher_stripped:
-        return None, "Rejected: multiple statements are not allowed."
-    if not re.match(r"^\s*MATCH\b", cypher_stripped, re.I):
-        return None, "Rejected: query must start with MATCH."
-    if _WRITE_KEYWORDS.search(cypher_stripped):
-        return None, "Rejected: write keywords (CREATE/MERGE/DELETE/SET/REMOVE/DROP/DETACH/LOAD CSV) are not allowed."
-    if _CALL_KEYWORD.search(cypher_stripped):
-        return None, "Rejected: CALL is not allowed."
-    if not re.search(r"\bLIMIT\s+\d+\b", cypher_stripped, re.I):
-        cypher_stripped += f" LIMIT {max_rows}"
-
-    try:
-        with get_driver().session(database=config.NEO4J_DATABASE) as session:
-            result = session.run(cypher_stripped, params or {})
-            rows = [dict(r) for r in result][:max_rows]
-        return rows, None
-    except Exception as e:
-        return None, str(e)
-
-
 def get_aggregate_for_entity(entity_texts: list[str], hops: int = 1, limit_sources: int = 25,
                               product_names: set | None = None) -> dict | None:
     """
