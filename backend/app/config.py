@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     embedding_model: str = "BAAI/bge-small-en-v1.5"  # fastembed local model
     embedding_dim: int = 384
 
+    # --- Database ---
+    database_url: str = "sqlite:///./data/contextgraph.db"
+
     # --- Retrieval / context engineering (WS5d) ---
     context_token_budget: int = 12000
     max_traversal_depth: int = 3

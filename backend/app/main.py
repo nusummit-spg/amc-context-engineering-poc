@@ -1,5 +1,9 @@
 """WS3 — FastAPI application: routing, CORS, structured errors, request logging,
 startup wiring (DI container, Qdrant collection, Neo4j schema, ingest worker)."""
+import truststore
+
+truststore.inject_into_ssl()
+
 import logging
 from contextlib import asynccontextmanager
 
@@ -7,12 +11,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import deps
-from app.api.routes import docs, graph, ingest, query, status, taxonomy
+from app.api.routes import docs, graph, ingest, query, status, taxonomy, feedback
 from app.config import get_settings
 from app.core.errors import AppError, app_error_handler
 from app.core.logging import RequestLoggingMiddleware, setup_logging
 from app.graph.schema import apply_schema
 from app.tasks.queue import ingest_queue
+
+from app.core.database import init_db
 
 logger = logging.getLogger("app")
 
@@ -21,6 +27,11 @@ logger = logging.getLogger("app")
 async def lifespan(app: FastAPI):
     settings = get_settings()
     setup_logging(settings.log_level)
+
+    # Initialize SQLite database
+    # Creates feedback_records and unified_evaluation_records
+    # if they don't already exist.
+    init_db()
 
     container = deps.init_container()
     container.vector.ensure_collection()
@@ -62,7 +73,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(AppError, app_error_handler)
 
     for router in (query.router, taxonomy.router, graph.router,
-                   docs.router, ingest.router, status.router):
+                   docs.router, ingest.router, feedback.router, status.router):
         app.include_router(router, prefix="/api")
 
     return app
