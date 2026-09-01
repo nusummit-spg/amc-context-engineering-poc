@@ -1,0 +1,41 @@
+[
+  {
+    "test_name": "Batch_50_funds",
+    "fund_count": 50,
+    "rule_count": 10,
+    "total_time_seconds": 0.001651099999435246,
+    "throughput_funds_per_sec": 30282.841752227218,
+    "avg_time_per_fund_ms": 0.03276000003097579,
+    "p50_per_fund_ms": 0.024250000933534466,
+    "p95_per_fund_ms": 0.02750000021478627,
+    "p99_per_fund_ms": 0.510900001245318,
+    "violations_found": 214,
+    "timestamp": "2026-08-27T12:28:05"
+  },
+  {
+    "test_name": "Batch_100_funds",
+    "fund_count": 100,
+    "rule_count": 10,
+    "total_time_seconds": 0.0024805000011838274,
+    "throughput_funds_per_sec": 40314.452712063954,
+    "avg_time_per_fund_ms": 0.02451800004564575,
+    "p50_per_fund_ms": 0.02370000038354192,
+    "p95_per_fund_ms": 0.03370000013092067,
+    "p99_per_fund_ms": 0.09969999882741831,
+    "violations_found": 409,
+    "timestamp": "2026-08-27T12:28:05"
+  },
+  {
+    "test_name": "Batch_500_funds",
+    "fund_count": 500,
+    "rule_count": 10,
+    "total_time_seconds": 0.01251849999971455,
+    "throughput_funds_per_sec": 39940.88748743069,
+    "avg_time_per_fund_ms": 0.02467619996969006,
+    "p50_per_fund_ms": 0.022000000171829015,
+    "p95_per_fund_ms": 0.03950000063923653,
+    "p99_per_fund_ms": 0.04999999873689376,
+    "violations_found": 2176,
+    "timestamp": "2026-08-27T12:28:05"
+  }
+]

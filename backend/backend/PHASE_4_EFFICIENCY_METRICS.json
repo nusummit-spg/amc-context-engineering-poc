@@ -1,0 +1,61 @@
+{
+  "opt1_precompiled": {
+    "rules_loaded": 17,
+    "compilation_time_ms": 4241.346120834351,
+    "per_rule_ms": 249.49094828437356,
+    "estimated_savings_s": 2.55,
+    "speedup_vs_compile": 0.6012242168763081
+  },
+  "opt2_direct_compare": {
+    "lambda_dict_ms": 1.0318756103515625,
+    "direct_if_elif_ms": 3.5238265991210938,
+    "speedup": 0.29282814614343705,
+    "savings_ms": -2.4919509887695312
+  },
+  "opt3_metric_paths": {
+    "string_split_ms": 14.02735710144043,
+    "pre_split_ms": 7.545709609985352,
+    "speedup": 1.8589844860817089,
+    "savings_ms": 6.481647491455078
+  },
+  "opt4_buffering": {
+    "per_write_ms": 13.591527938842773,
+    "buffered_ms": 109.6041202545166,
+    "speedup": 0.12400562959933698,
+    "savings_ms": -96.01259231567383,
+    "io_calls_old": 1000,
+    "io_calls_new": 20.0,
+    "io_reduction": 50.0
+  },
+  "opt5_parallelization": {
+    "sequential_ms": 607.3751449584961,
+    "parallel_ms": 18.164634704589844,
+    "speedup": 33.43723421011183,
+    "savings_ms": 589.2105102539062,
+    "num_rules": 30
+  },
+  "combined_100_funds": {
+    "funds": 100,
+    "total_ms": 48769.508838653564,
+    "per_fund_ms": 487.69508838653564,
+    "per_rule_ms": 28.687946375678568,
+    "throughput_rules_per_sec": 34.85784541370283,
+    "violations_detected": 10
+  },
+  "combined_500_funds": {
+    "funds": 500,
+    "total_ms": 48760.84637641907,
+    "per_fund_ms": 97.52169275283813,
+    "per_rule_ms": 5.736570161931655,
+    "throughput_rules_per_sec": 174.3201898995468,
+    "violations_detected": 10
+  },
+  "combined_1000_funds": {
+    "funds": 1000,
+    "total_ms": 48842.19694137573,
+    "per_fund_ms": 48.84219694137573,
+    "per_rule_ms": 2.8730704083162197,
+    "throughput_rules_per_sec": 348.0596915082412,
+    "violations_detected": 10
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "version": "1.0",
+  "domain": "AMC",
+  "description": "4-level taxonomy for the AMC demo corpus (WS5b). Paths are slash-joined.",
+  "tree": {
+    "Research": {
+      "Equity": {
+        "Infrastructure": ["Coverage Notes", "Sector Outlook"],
+        "BFSI": ["Coverage Notes", "Sector Outlook"]
+      },
+      "Sector": {
+        "BFSI": ["NBFC", "Banks"],
+        "Infrastructure": ["Ports", "Power"]
+      },
+      "Internal": {
+        "Analyst Calls": ["Transcripts"],
+        "Ratings": ["Credit Rating Updates"]
+      }
+    },
+    "Compliance": {
+      "Regulatory Circulars": {
+        "Exit Load": ["FY26"],
+        "Disclosure": ["FY26"]
+      },
+      "Scheme Documents": {
+        "SID": ["Equity Schemes", "Debt Schemes"],
+        "Trackers": ["Circular Compliance"]
+      },
+      "Legal": {
+        "Reviews": ["Quarterly"]
+      }
+    },
+    "Risk": {
+      "Concentration Exposure": {
+        "Issuer Group": ["Monitoring", "Limits"],
+        "Sector": ["Monitoring"]
+      },
+      "Market Risk": {
+        "Liquidity": ["Funding Cost", "System Liquidity"]
+      }
+    },
+    "Investor Communications": {
+      "Fund Updates": {
+        "Factsheets": ["Monthly"],
+        "Commentary": ["Quarterly"]
+      }
+    }
+  }
+}

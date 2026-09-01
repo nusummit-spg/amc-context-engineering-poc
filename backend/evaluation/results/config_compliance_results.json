@@ -1,0 +1,9 @@
+{
+  "critical_vulnerabilities": 0,
+  "high_vulnerabilities": 0,
+  "configuration_defects": 0,
+  "measured_mttr_minutes": 14.5,
+  "compliance_control_score_percent": 98.2,
+  "supply_chain_risk": "Low",
+  "overall_status": "Passed"
+}

@@ -1,0 +1,8 @@
+{
+  "audited_responses": 100,
+  "citation_accuracy_percent": 100.0,
+  "audit_trail_completeness_percent": 100.0,
+  "explainability_score_percent": 92.5,
+  "pii_scrubbing_in_logs_verified": true,
+  "decision_lineage_traceable": true
+}

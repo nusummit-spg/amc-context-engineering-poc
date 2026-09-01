@@ -1,0 +1,110 @@
+{
+  "description": "WS1/WS5b — Manually curated alias seed for the demo corpus. Maps surface forms to canonical entities.",
+  "entities": [
+    {
+      "canonical_name": "NuSummit Bluechip Fund",
+      "entity_type": "Scheme",
+      "aliases": ["Bluechip Fund", "Bluechip", "NS Bluechip"]
+    },
+    {
+      "canonical_name": "NuSummit Infra Fund",
+      "entity_type": "Scheme",
+      "aliases": ["Infra Fund", "Infrastructure Fund", "NuSummit Infrastructure Fund", "NS Infra"]
+    },
+    {
+      "canonical_name": "NuSummit Balanced Advantage Fund",
+      "entity_type": "Scheme",
+      "aliases": ["Balanced Advantage", "Balanced Adv.", "BAF", "Balanced Advantage Fund"]
+    },
+    {
+      "canonical_name": "NuSummit Debt Fund",
+      "entity_type": "Scheme",
+      "aliases": ["Debt Fund", "NS Debt"]
+    },
+    {
+      "canonical_name": "Adani Group",
+      "entity_type": "IssuerGroup",
+      "aliases": ["Adani", "the Adani group", "Adani conglomerate"]
+    },
+    {
+      "canonical_name": "Adani Ports & SEZ",
+      "entity_type": "Issuer",
+      "aliases": ["Adani Ports", "APSEZ", "Adani Ports and SEZ"]
+    },
+    {
+      "canonical_name": "Adani Green Energy",
+      "entity_type": "Issuer",
+      "aliases": ["Adani Green", "AGEL"]
+    },
+    {
+      "canonical_name": "Adani Enterprises",
+      "entity_type": "Issuer",
+      "aliases": ["Adani Ent.", "AEL"]
+    },
+    {
+      "canonical_name": "Bajaj Finance",
+      "entity_type": "Issuer",
+      "aliases": ["Bajaj Fin.", "Bajaj", "BAF Finance"]
+    },
+    {
+      "canonical_name": "Shriram Finance",
+      "entity_type": "Issuer",
+      "aliases": ["Shriram Fin.", "Shriram"]
+    },
+    {
+      "canonical_name": "LIC Housing Finance",
+      "entity_type": "Issuer",
+      "aliases": ["LIC Housing", "LICHF"]
+    },
+    {
+      "canonical_name": "Cholamandalam Investment & Finance",
+      "entity_type": "Issuer",
+      "aliases": ["Cholamandalam", "Chola", "CIFC"]
+    },
+    {
+      "canonical_name": "R. Iyer",
+      "entity_type": "Analyst",
+      "aliases": ["R Iyer", "Iyer"]
+    },
+    {
+      "canonical_name": "P. Sharma",
+      "entity_type": "Analyst",
+      "aliases": ["P Sharma", "Sharma"]
+    },
+    {
+      "canonical_name": "NBFC",
+      "entity_type": "Sector",
+      "aliases": ["NBFCs", "non-banking financial companies", "non-bank lenders"]
+    },
+    {
+      "canonical_name": "Infrastructure",
+      "entity_type": "Sector",
+      "aliases": ["Infra", "infrastructure sector"]
+    },
+    {
+      "canonical_name": "Concentration Risk",
+      "entity_type": "RiskTheme",
+      "aliases": ["concentration exposure", "single-group limit", "10% cap", "group-level concentration"]
+    },
+    {
+      "canonical_name": "Funding Cost Pressure",
+      "entity_type": "RiskTheme",
+      "aliases": ["funding cost", "borrowing cost pressure", "higher funding costs"]
+    },
+    {
+      "canonical_name": "Sector Liquidity Tightening",
+      "entity_type": "RiskTheme",
+      "aliases": ["liquidity tightening", "system liquidity", "tighter system liquidity"]
+    },
+    {
+      "canonical_name": "Exit Load Clause",
+      "entity_type": "ClauseType",
+      "aliases": ["exit load", "exit load disclosure", "Section 9 exit load"]
+    },
+    {
+      "canonical_name": "SEBI Circular May2026/0142",
+      "entity_type": "RegulatoryCircular",
+      "aliases": ["SEBI exit load circular", "May 2026 circular", "SEBI/HO/IMD/May2026/0142", "Schedule III circular"]
+    }
+  ]
+}

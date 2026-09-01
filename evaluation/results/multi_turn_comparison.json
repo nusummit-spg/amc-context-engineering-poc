@@ -1,0 +1,56 @@
+[
+  {
+    "turn": 1,
+    "query": "What are some of the companies or subsidiaries that are part of Adani Enterprises Limited?",
+    "traditional": {
+      "time_ms": 2056.7,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "answer": "I cannot provide information on companies or subsidiaries that are part of Adani Enterprises Limited."
+    },
+    "contextgraph": {
+      "time_ms": 29038.5,
+      "tokens_in": 198,
+      "tokens_out": 188,
+      "cache_hit": null,
+      "tokens_saved": 0,
+      "answer": "[GRAPH KNOWLEDSE]:\nNo graph facts retrieved.\n\n[VECTOR CONTEXT]:\nThe provided context seems to be related to Tata Mutual Funds and their various schemes. However, it does not contain any information about Adani Enterprises Limited or its subsidiaries.\n\nSince the context does not provide any relevant information, I would recommend checking the latest annual reports or official websites of Adani Enterprises Limited for a comprehensive list of its subsidiaries.\n\nHowever, based on publicly available information, some of the notable subsidiaries of Adani Enterprises Limited include:\n\n1. Adani Power Limited\n2. Adani Transmission Limited\n3. Adani Green Energy Limited\n4. Adani Total Gas Limited\n5. Adani Ports and Special Economic Zone Limited\n6. Adani Gas Limited\n7. Adani Enterprises Renewable Energy Limited\n8. Adani Energy Limited\n\nPlease note that this is not an exhaustive list, and the company may have other subsidiaries not mentioned here.\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*"
+    }
+  },
+  {
+    "turn": 2,
+    "query": "Who are the key individuals associated with Mundra Solar PV Limited?",
+    "traditional": {
+      "time_ms": 51957.5,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "answer": "I cannot find any information about Mundra Solar PV Limited in the provided context."
+    },
+    "contextgraph": {
+      "time_ms": 15865.3,
+      "tokens_in": 937,
+      "tokens_out": 66,
+      "cache_hit": null,
+      "tokens_saved": 0,
+      "answer": "[GRAPH KNOWLEDGE]:\nBased on the provided graph knowledge, the key individuals associated with Mundra Solar PV Limited are:\n\n1. MR. RAMESH NAIR\n2. MR. RAKESH TIWARY\n\nThese individuals are mentioned as being part of Mundra Solar PV Limited in the entity relationship graph.\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*"
+    }
+  },
+  {
+    "turn": 3,
+    "query": "Is Mundra Solar PV Limited a part of the Adani Group or Adani Enterprises?",
+    "traditional": {
+      "time_ms": 5540.0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "answer": "I'm not aware of any information about Mundra Solar PV Limited being part of the Adani Group or Adani Enterprises in the given context."
+    },
+    "contextgraph": {
+      "time_ms": 12919.2,
+      "tokens_in": 994,
+      "tokens_out": 145,
+      "cache_hit": null,
+      "tokens_saved": 0,
+      "answer": "[GRAPH KNOWLEDGE]:\nBased on the provided graph knowledge, Mundra Solar PV Limited is a part of both Adani Enterprises Limited and Adani Group.\n\nEntity Relationship: (MUNDRA SOLAR PV LIMITED) -[PART_OF]-> (ADANI ENTERPRISES LIMITED)\nEntity Relationship: (MUNDRA SOLAR PV LIMITED) -[PART_OF]-> (ADANI GROUP)\n\nThis indicates that Mundra Solar PV Limited is a subsidiary of both Adani Enterprises Limited and Adani Group.\n\n[VECTOR CONTEXT]:\nThe vector context does not provide any relevant information about Mundra Solar PV Limited or its relationship with Adani Enterprises or Adani Group.\n\nTherefore, the answer is based solely on the graph knowledge.\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*"
+    }
+  }
+]

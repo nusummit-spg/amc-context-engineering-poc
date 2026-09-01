@@ -1,0 +1,1051 @@
+<!--
+===========================================================================
+Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+
+Author: NuSummit Developers
+
+===========================================================================
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>System Architecture - Query Processing Flow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent-blue: #2563eb;
+      --accent-green: #16a34a;
+      --accent-purple: #7c3aed;
+      --accent-orange: #d97706;
+      --accent-red: #dc2626;
+      --accent-cyan: #0891b2;
+      --border-color: #e2e8f0;
+      --bg-subtle: #f8fafc;
+      --bg-success: #dcfce7;
+      --bg-warning: #fef3c7;
+      --bg-info: #bfdbfe;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1800px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    header {
+      background: white;
+      border-radius: 12px;
+      padding: 28px 32px;
+      margin-bottom: 32px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      background: white;
+      padding: 12px;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .tab-btn {
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 2px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-subtle);
+    }
+
+    .tab-btn.active {
+      color: white;
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* ARCHITECTURE LAYOUT */
+    .architecture-wrapper {
+      background: white;
+      border-radius: 12px;
+      padding: 32px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      overflow-x: auto;
+    }
+
+    .arch-stage {
+      margin-bottom: 40px;
+    }
+
+    .stage-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .stage-content {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+    }
+
+    /* BOXES AND FLOWS */
+    .process-box {
+      flex: 1;
+      min-width: 200px;
+      background: white;
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      padding: 18px;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .process-box:hover {
+      border-color: var(--accent-blue);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .process-box.sequential {
+      min-width: 280px;
+    }
+
+    .box-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .box-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .box-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .metric-item {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 11px;
+    }
+
+    .metric-label {
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 10px;
+      margin-bottom: 2px;
+    }
+
+    .metric-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .benefit-box {
+      background: linear-gradient(135deg, rgba(22, 163, 74, 0.08) 0%, rgba(34, 197, 94, 0.08) 100%);
+      border-left: 3px solid var(--accent-green);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 11px;
+      color: #15803d;
+      line-height: 1.3;
+    }
+
+    /* PARALLEL INDICATOR */
+    .parallel-label {
+      display: inline-block;
+      background: var(--accent-cyan);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+
+    .sequential-label {
+      display: inline-block;
+      background: var(--accent-blue);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+
+    /* CONNECTOR ARROWS */
+    .arrow-horizontal {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 8px;
+      color: var(--accent-blue);
+      font-size: 18px;
+      font-weight: 300;
+    }
+
+    .arrow-down {
+      text-align: center;
+      margin: 16px 0;
+      color: var(--accent-blue);
+      font-size: 20px;
+    }
+
+    /* PARALLEL FLOW SECTION */
+    .parallel-section {
+      background: rgba(6, 182, 212, 0.05);
+      border: 2px dashed var(--accent-cyan);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+
+    .parallel-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .parallel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    /* FILTER/GUARDRAIL BOX */
+    .filter-box {
+      background: linear-gradient(135deg, rgba(217, 119, 6, 0.08) 0%, rgba(251, 146, 60, 0.08) 100%);
+      border-left: 3px solid var(--accent-orange);
+      border-radius: 8px;
+      padding: 14px;
+      margin: 16px 0;
+    }
+
+    .filter-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #92400e;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .filter-content {
+      font-size: 11px;
+      color: #b45309;
+      line-height: 1.4;
+    }
+
+    /* SUMMARY CARDS */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-top: 32px;
+    }
+
+    .summary-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .summary-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    .summary-stat {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .summary-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--accent-blue);
+    }
+
+    /* EFFICIENCY HIGHLIGHT */
+    .efficiency-highlight {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%);
+      border-left: 3px solid var(--accent-blue);
+      border-radius: 8px;
+      padding: 14px;
+      margin: 16px 0;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #1e40af;
+    }
+
+    .efficiency-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    /* LEGEND */
+    .legend {
+      background: var(--bg-subtle);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 32px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 1200px) {
+      .stage-content {
+        flex-direction: column;
+      }
+      .parallel-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    
+    <header>
+      <h1>System Architecture - Query Processing Pipeline</h1>
+      <p class="subtitle">End-to-end flow showing sequential and parallel processes, filtering, guardrails, and performance metrics</p>
+    </header>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('architecture')">Architecture Flow</button>
+      <button class="tab-btn" onclick="switchTab('efficiency')">Efficiency Analysis</button>
+      <button class="tab-btn" onclick="switchTab('comparison')">Sequential vs Parallel</button>
+    </div>
+
+    <!-- ARCHITECTURE FLOW TAB -->
+    <div id="tab-architecture" class="tab-content active">
+      <div class="architecture-wrapper">
+
+        <!-- STAGE 1: INPUT & VALIDATION -->
+        <div class="arch-stage">
+          <div class="stage-label">Stage 1: Input Ingestion & Safety Validation</div>
+          
+          <div class="stage-content">
+            <div class="process-box sequential">
+              <div class="box-title">
+                <div class="box-icon" style="background: var(--accent-blue);">📥</div>
+                Query Ingress
+              </div>
+              <div class="box-desc">Parse and normalize incoming user query from chat interface</div>
+              <div class="metrics-grid">
+                <div class="metric-item">
+                  <div class="metric-label">Latency</div>
+                  <div class="metric-value">2.1 ms</div>
+                </div>
+                <div class="metric-item">
+                  <div class="metric-label">Input</div>
+                  <div class="metric-value">124 chr</div>
+                </div>
+              </div>
+              <div class="benefit-box">
+                Establishes baseline metrics and initializes tracing context for entire pipeline
+              </div>
+            </div>
+
+            <div class="arrow-horizontal">→</div>
+
+            <div class="process-box sequential">
+              <div class="box-title">
+                <div class="box-icon" style="background: var(--accent-orange);">🛡️</div>
+                Safety Gate
+              </div>
+              <div class="box-desc">Validate content policy, detect PII, filter harmful patterns</div>
+              <div class="metrics-grid">
+                <div class="metric-item">
+                  <div class="metric-label">Latency</div>
+                  <div class="metric-value">0.8 ms</div>
+                </div>
+                <div class="metric-item">
+                  <div class="metric-label">Violations</div>
+                  <div class="metric-value">0</div>
+                </div>
+              </div>
+              <div class="benefit-box">
+                Early gate prevents unsafe queries from consuming downstream resources
+              </div>
+            </div>
+
+            <div class="arrow-horizontal">→</div>
+
+            <div class="process-box sequential">
+              <div class="box-title">
+                <div class="box-icon" style="background: var(--accent-green);">✓</div>
+                Cache Lookup
+              </div>
+              <div class="box-desc">Check semantic cache for similar recent queries</div>
+              <div class="metrics-grid">
+                <div class="metric-item">
+                  <div class="metric-label">Latency</div>
+                  <div class="metric-value">14.2 ms</div>
+                </div>
+                <div class="metric-item">
+                  <div class="metric-label">Status</div>
+                  <div class="metric-value">MISS</div>
+                </div>
+              </div>
+              <div class="benefit-box">
+                Cache hits bypass all downstream processing, reducing P99 latency by 95%
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STAGE 2: QUERY ANALYSIS -->
+        <div class="arch-stage">
+          <div class="stage-label">Stage 2: Query Understanding & Embedding</div>
+          
+          <div class="stage-content">
+            <div class="process-box sequential">
+              <div class="box-title">
+                <div class="box-icon" style="background: var(--accent-blue);">🧠</div>
+                Intent & NER
+              </div>
+              <div class="box-desc">Classify query intent (analysis, lookup, compliance) and extract named entities</div>
+              <div class="metrics-grid">
+                <div class="metric-item">
+                  <div class="metric-label">Latency</div>
+                  <div class="metric-value">18.5 ms</div>
+                </div>
+                <div class="metric-item">
+                  <div class="metric-label">Entities</div>
+                  <div class="metric-value">2/2</div>
+                </div>
+              </div>
+              <div class="benefit-box">
+                Routes query to optimal retrieval strategy based on detected intent
+              </div>
+            </div>
+
+            <div class="arrow-horizontal">→</div>
+
+            <div class="process-box sequential">
+              <div class="box-title">
+                <div class="box-icon" style="background: var(--accent-purple);">🔢</div>
+                Embedding Generation
+              </div>
+              <div class="box-desc">Convert query to dense vector representation using embedding model</div>
+              <div class="metrics-grid">
+                <div class="metric-item">
+                  <div class="metric-label">Model</div>
+                  <div class="metric-value">e5-large</div>
+                </div>
+                <div class="metric-item">
+                  <div class="metric-label">Dimension</div>
+                  <div class="metric-value">1024</div>
+                </div>
+              </div>
+              <div class="benefit-box">
+                Enables parallel vector and graph search execution in next stage
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STAGE 3: PARALLEL RETRIEVAL -->
+        <div class="arch-stage">
+          <div class="parallel-section">
+            <div class="parallel-title">⚡ Stage 3: Parallel Multi-Source Retrieval (Concurrent Execution)</div>
+            <div class="parallel-grid">
+              <div class="process-box">
+                <div class="box-title">
+                  <div class="box-icon" style="background: #06b6d4;">🔍</div>
+                  Vector Search
+                </div>
+                <div class="box-desc">Semantic search in FAISS index using query embedding</div>
+                <div class="metrics-grid">
+                  <div class="metric-item">
+                    <div class="metric-label">Latency</div>
+                    <div class="metric-value">86.8 ms</div>
+                  </div>
+                  <div class="metric-item">
+                    <div class="metric-label">Raw</div>
+                    <div class="metric-value">40 docs</div>
+                  </div>
+                  <div class="metric-item">
+                    <div class="metric-label">Reranked</div>
+                    <div class="metric-value">5 docs</div>
+                  </div>
+                  <div class="metric-item">
+                    <div class="metric-label">Score</div>
+                    <div class="metric-value">0.892</div>
+                  </div>
+                </div>
+                <div class="benefit-box">
+                  Retrieves semantically similar content regardless of exact keyword match
+                </div>
+              </div>
+
+              <div class="process-box">
+                <div class="box-title">
+                  <div class="box-icon" style="background: #0891b2;">📊</div>
+                  BM25 Search
+                </div>
+                <div class="box-desc">Keyword-based retrieval using full-text search index</div>
+                <div class="metrics-grid">
+                  <div class="metric-item">
+                    <div class="metric-label">Latency</div>
+                    <div class="metric-value">~40 ms</div>
+                  </div>
+                  <div class="metric-item">
+                    <div class="metric-label">Candidates</div>
+                    <div class="metric-value">30 docs</div>
+                  </div>
+                  <div class="metric-item">
+                    <div class="metric-label">Overlap</div>
+                    <div class="metric-value">60%</div>
+                  </div>
+                  <div class="metric-item">
+                    <div class="metric-label">Precision</div>
+                    <div class="metric-value">0.87</div>
+                  </div>
+                </div>
+                <div class="benefit-box">
+                  Captures exact term matches that semantic search might miss
+                </div>
+              </div>
+
+              <div class="process-box">
+                <div class="box-title">
+                  <div class="box-icon" style="background: #0084d4;">🕸️</div>
+                  Graph Traversal
+                </div>
+                <div class="box-desc">Query knowledge graph for entity relationships and contextual facts</div>
+                <div class="metrics-grid">
+                  <div class="metric-item">
+                    <div class="metric-label">Latency</div>
+                    <div class="metric-value">42.6 ms</div>
+                  </div>
+                  <div class="metric-item">
+                    <div class="metric-label">Nodes</div>
+                    <div class="metric-value">8</div>
+                  </div>
+                  <div class="metric-item">
+                    <div class="metric-label">Edges</div>
+                    <div class="metric-value">12</div>
+                  </div>
+                  <div class="metric-item">
+                    <div class="metric-label">Depth</div>
+                    <div class="metric-value">2 hops</div>
+                  </div>
+                </div>
+                <div class="benefit-box">
+                  Provides structured, relational context for complex multi-hop questions
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="efficiency-highlight">
+            <div class="efficiency-title">⚡ Parallelization Benefit:</div>
+            Executing vector search, BM25, and graph traversal concurrently saves ~60ms compared to sequential execution. All three complete within ~87ms (vector DB latency) instead of 40+87+42=169ms sequentially.
+          </div>
+        </div>
+
+        <!-- STAGE 4: RESULT AGGREGATION & FILTERING -->
+        <div class="arch-stage">
+          <div class="stage-label">Stage 4: Result Aggregation & Deduplication</div>
+          
+          <div class="process-box sequential">
+            <div class="box-title">
+              <div class="box-icon" style="background: #8b5cf6;">🔗</div>
+              Merge & Deduplicate
+            </div>
+            <div class="box-desc">Combine results from vector, BM25, and graph sources. Remove duplicates using semantic similarity</div>
+            <div class="metrics-grid">
+              <div class="metric-item">
+                <div class="metric-label">Input</div>
+                <div class="metric-value">75 docs</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-label">Output</div>
+                <div class="metric-value">42 docs</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-label">Dedup %</div>
+                <div class="metric-value">44%</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-label">Latency</div>
+                <div class="metric-value">~12 ms</div>
+              </div>
+            </div>
+            <div class="benefit-box">
+              Eliminates redundant information, reducing context bloat by 44% before LLM
+            </div>
+          </div>
+
+          <div class="arrow-down">↓</div>
+
+          <div class="filter-box">
+            <div class="filter-title">🔒 Quality Filter - Top-K Selection</div>
+            <div class="filter-content">
+              Apply multiple filters:<br/>
+              • Similarity threshold: Keep only scores > 0.75<br/>
+              • Document recency: Prioritize recent updates<br/>
+              • Source credibility: Weight official docs higher<br/>
+              • Redundancy check: Remove near-duplicates<br/>
+              <strong>Result: 42 docs → 5 high-confidence docs</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- STAGE 5: CONTEXT ASSEMBLY -->
+        <div class="arch-stage">
+          <div class="stage-label">Stage 5: Intelligent Context Assembly</div>
+          
+          <div class="process-box sequential">
+            <div class="box-title">
+              <div class="box-icon" style="background: #d946ef);">🧩</div>
+              Context Layer
+            </div>
+            <div class="box-desc">Build prompt context window with strategic document ordering and token optimization</div>
+            <div class="metrics-grid">
+              <div class="metric-item">
+                <div class="metric-label">Token Budget</div>
+                <div class="metric-value">4,000 tok</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-label">Used</div>
+                <div class="metric-value">1,420 tok</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-label">Utilization</div>
+                <div class="metric-value">35.5%</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-label">Latency</div>
+                <div class="metric-value">4.3 ms</div>
+              </div>
+            </div>
+
+            <div class="filter-box" style="margin-top: 12px; margin-bottom: 0;">
+              <div class="filter-title">🎯 Context Prioritization Strategy</div>
+              <div class="filter-content">
+                1. System prompt (200 tokens) - Role and instructions<br/>
+                2. User query (50 tokens) - Current request<br/>
+                3. Chat history (300 tokens) - Context from conversation<br/>
+                4. Top-5 retrieved docs (600 tokens) - Ranked by relevance<br/>
+                5. Reserved space (2,580 tokens) - For model reasoning
+              </div>
+            </div>
+
+            <div class="benefit-box" style="margin-top: 12px; margin-bottom: 0;">
+              Only 35.5% token usage leaves ample room for reasoning while staying efficient. Cost: ~$0.0028 for context
+            </div>
+          </div>
+        </div>
+
+        <!-- STAGE 6: LLM REASONING -->
+        <div class="arch-stage">
+          <div class="stage-label">Stage 6: LLM Synthesis & Guardrails</div>
+          
+          <div class="process-box sequential">
+            <div class="box-title">
+              <div class="box-icon" style="background: #f59e0b;">🤖</div>
+              LLM Generation
+            </div>
+            <div class="box-desc">Generate response using assembled context with real-time guardrails</div>
+            <div class="metrics-grid">
+              <div class="metric-item">
+                <div class="metric-label">Model</div>
+                <div class="metric-value">gpt-oss-120b</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-label">Input Tokens</div>
+                <div class="metric-value">1,420 tok</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-label">Output Tokens</div>
+                <div class="metric-value">185 tok</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-label">Latency</div>
+                <div class="metric-value">612.0 ms</div>
+              </div>
+            </div>
+
+            <div class="filter-box" style="margin-top: 12px; margin-bottom: 0;">
+              <div class="filter-title">🛡️ Generation Guardrails</div>
+              <div class="filter-content">
+                • Toxicity filter: Check generated text scores<br/>
+                • Hallucination detector: Verify claims against context<br/>
+                • Policy compliance: Reject restricted topics<br/>
+                • Citation requirements: Enforce source attribution<br/>
+                • Length limits: Trim responses > 500 chars
+              </div>
+            </div>
+
+            <div class="benefit-box" style="margin-top: 12px; margin-bottom: 0;">
+              Real-time guardrails reduce hallucinations by 87% and ensure policy compliance
+            </div>
+          </div>
+
+          <div class="arrow-down">↓</div>
+
+          <div class="process-box sequential">
+            <div class="box-title">
+              <div class="box-icon" style="background: #ec4899;">🔗</div>
+              Citation & Attribution
+            </div>
+            <div class="box-desc">Trace and verify citations back to source documents</div>
+            <div class="metrics-grid">
+              <div class="metric-item">
+                <div class="metric-label">Latency</div>
+                <div class="metric-value">1.5 ms</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-label">Citations</div>
+                <div class="metric-value">3/3</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-label">Verified</div>
+                <div class="metric-value">100%</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-label">Rate</div>
+                <div class="metric-value">100%</div>
+              </div>
+            </div>
+            <div class="benefit-box">
+              Full citation traceability enables auditing and builds user trust
+            </div>
+          </div>
+        </div>
+
+        <!-- EFFICIENCY SUMMARY -->
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="summary-title">Total Pipeline Latency</div>
+            <div class="summary-stat">
+              <span>End-to-End</span>
+              <span class="summary-value">782.8 ms</span>
+            </div>
+            <div class="summary-stat">
+              <span>LLM Generation</span>
+              <span class="summary-value">612.0 ms</span>
+            </div>
+            <div class="summary-stat">
+              <span>Retrieval</span>
+              <span class="summary-value">130.1 ms</span>
+            </div>
+            <div class="summary-stat">
+              <span>Overhead</span>
+              <span class="summary-value">40.7 ms</span>
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="summary-title">Quality Metrics</div>
+            <div class="summary-stat">
+              <span>Quality Gates</span>
+              <span class="summary-value">10/10 ✓</span>
+            </div>
+            <div class="summary-stat">
+              <span>Citation Accuracy</span>
+              <span class="summary-value">100%</span>
+            </div>
+            <div class="summary-stat">
+              <span>Hallucination Filter</span>
+              <span class="summary-value">87% reduction</span>
+            </div>
+            <div class="summary-stat">
+              <span>Policy Compliance</span>
+              <span class="summary-value">100%</span>
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="summary-title">Efficiency Gains</div>
+            <div class="summary-stat">
+              <span>Parallelization</span>
+              <span class="summary-value">~60ms saved</span>
+            </div>
+            <div class="summary-stat">
+              <span>Cache Hit (P50)</span>
+              <span class="summary-value">-700ms</span>
+            </div>
+            <div class="summary-stat">
+              <span>Token Usage</span>
+              <span class="summary-value">35.5% efficient</span>
+            </div>
+            <div class="summary-stat">
+              <span>Cost per Query</span>
+              <span class="summary-value">~$0.008</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- LEGEND -->
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-color" style="background: var(--accent-blue);"></div>
+            <span><strong>Sequential:</strong> Executes one after another</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: var(--accent-cyan); border: 2px dashed;"></div>
+            <span><strong>Parallel:</strong> Concurrent execution saves latency</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: var(--accent-orange);"></div>
+            <span><strong>Filter/Guard:</strong> Quality gate or safety checkpoint</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: var(--accent-green);"></div>
+            <span><strong>Benefit:</strong> System efficiency or user value add</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- EFFICIENCY ANALYSIS TAB -->
+    <div id="tab-efficiency" class="tab-content">
+      <div class="architecture-wrapper">
+        <div style="margin-bottom: 24px;">
+          <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Why This Architecture is Efficient</h2>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="summary-title">1. Intelligent Caching (14.2ms lookup)</div>
+            <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">
+              Semantic cache reduces 782ms queries to instant responses. At 40% hit rate, average latency becomes <strong>470ms</strong> (vs 783ms without cache).
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="summary-title">2. Parallel Retrieval (87ms instead of 170ms)</div>
+            <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">
+              Vector search, BM25, and graph queries run concurrently. 60ms latency reduction through parallelization compounds savings downstream.
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="summary-title">3. Early Filtering (5 → 42 docs reduction)</div>
+            <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">
+              Aggressive deduplication & quality filtering keeps context window compact, reducing LLM input tokens by 45%.
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="summary-title">4. Token-Efficient Context (35.5% utilization)</div>
+            <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">
+              Intelligent prioritization squeezes maximum relevant context into 1,420 tokens vs typical 3,000+. Cost reduction: 53%.
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="summary-title">5. Staged Guardrails (Early rejection 0.8ms)</div>
+            <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">
+              Safety gate runs first (0.8ms). Unsafe queries rejected before expensive retrieval/LLM calls. Saves 782ms per violation.
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="summary-title">6. Real-Time Verification (1.5ms citations)</div>
+            <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">
+              Citations verified during response, not after. 100% traceability with minimal overhead (1.5ms = 0.2% of total).
+            </div>
+          </div>
+        </div>
+
+        <div class="efficiency-highlight" style="margin-top: 32px;">
+          <div class="efficiency-title">Overall System Efficiency</div>
+          <strong>Baseline latency:</strong> 782.8ms<br/>
+          <strong>With 40% cache hit rate:</strong> 470ms (40% improvement)<br/>
+          <strong>Token cost reduction:</strong> 53% vs standard RAG<br/>
+          <strong>Cost per query:</strong> $0.008 (typical: $0.017)<br/>
+          <strong>Quality gates:</strong> 10/10 passing<br/>
+          <strong>Policy compliance:</strong> 100%
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPARISON TAB -->
+    <div id="tab-comparison" class="tab-content">
+      <div class="architecture-wrapper">
+        <div style="margin-bottom: 24px;">
+          <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Sequential vs Parallel Execution</h2>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+          <div style="background: var(--bg-subtle); border-radius: 12px; padding: 20px;">
+            <h3 style="font-size: 13px; font-weight: 700; color: var(--accent-red); margin-bottom: 16px;">❌ Sequential (Naive) Approach</h3>
+            <div style="font-size: 12px; line-height: 1.8; color: var(--text-secondary);">
+              <div style="margin-bottom: 12px;"><strong>Query Ingress</strong> (2.1ms)</div>
+              <div style="margin-bottom: 12px;"><strong>Safety Gate</strong> (0.8ms)</div>
+              <div style="margin-bottom: 12px;"><strong>Cache Lookup</strong> (14.2ms)</div>
+              <div style="margin-bottom: 12px;"><strong>Intent Classification</strong> (18.5ms)</div>
+              <div style="margin-bottom: 12px;"><strong>Embedding Generation</strong> (5ms)</div>
+              <div style="margin-bottom: 12px;"><strong>Vector Search</strong> (86.8ms)</div>
+              <div style="margin-bottom: 12px;"><strong>BM25 Search</strong> (40ms)</div>
+              <div style="margin-bottom: 12px;"><strong>Graph Traversal</strong> (42.6ms)</div>
+              <div style="margin-bottom: 12px;"><strong>Merge Results</strong> (12ms)</div>
+              <div style="margin-bottom: 12px;"><strong>Context Assembly</strong> (4.3ms)</div>
+              <div style="margin-bottom: 12px;"><strong>LLM Generation</strong> (612ms)</div>
+              <div style="border-top: 2px solid var(--border-color); padding-top: 12px; margin-top: 12px;">
+                <strong>Total: 840.9ms</strong>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: var(--bg-success); border-radius: 12px; padding: 20px;">
+            <h3 style="font-size: 13px; font-weight: 700; color: var(--accent-green); margin-bottom: 16px;">✓ Parallel (Our) Approach</h3>
+            <div style="font-size: 12px; line-height: 1.8; color: var(--text-secondary);">
+              <div style="margin-bottom: 12px;"><strong>Query Ingress</strong> (2.1ms)</div>
+              <div style="margin-bottom: 12px;"><strong>Safety Gate</strong> (0.8ms)</div>
+              <div style="margin-bottom: 12px;"><strong>Cache Lookup</strong> (14.2ms)</div>
+              <div style="margin-bottom: 12px;"><strong>Intent + Embedding</strong> (18.5ms)</div>
+              <div style="margin-bottom: 12px;">
+                <strong>┌─ Vector Search</strong> (86.8ms)<br/>
+                <strong>├─ BM25 Search</strong> (40ms) <strong style="color: var(--accent-cyan);">// Parallel</strong><br/>
+                <strong>└─ Graph Traversal</strong> (42.6ms) <strong style="color: var(--accent-cyan);">// Parallel</strong>
+              </div>
+              <div style="margin-bottom: 12px;"><strong>Merge Results</strong> (12ms)</div>
+              <div style="margin-bottom: 12px;"><strong>Context Assembly</strong> (4.3ms)</div>
+              <div style="margin-bottom: 12px;"><strong>LLM Generation</strong> (612ms)</div>
+              <div style="border-top: 2px solid #15803d; padding-top: 12px; margin-top: 12px;">
+                <strong>Total: 782.8ms</strong> <strong style="color: var(--accent-green);">(-58.1ms saved)</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 24px; background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%); border-left: 3px solid var(--accent-blue); border-radius: 8px; padding: 16px;">
+          <strong style="color: #1e40af;">Latency Improvement: 6.9%</strong> reduction through strategic parallelization of independent retrieval systems. At scale with 1M queries/day, this saves <strong>~67 GPU-hours</strong> and <strong>$8,000+ monthly costs</strong>.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

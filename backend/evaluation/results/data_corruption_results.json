@@ -1,0 +1,78 @@
+{
+  "total_scenarios": 10,
+  "passed": 10,
+  "failed": 0,
+  "resilience_score_percent": 100.0,
+  "results": [
+    {
+      "id": "DC-01",
+      "name": "Concurrent Write-Read Race Condition",
+      "category": "Concurrency",
+      "passed": true,
+      "detail": "Passed (Atomic Commits Enforced)"
+    },
+    {
+      "id": "DC-02",
+      "name": "Neo4j Constraint Violation Under Heavy Load",
+      "category": "Integrity",
+      "passed": true,
+      "detail": "Passed (Constraints Retained)"
+    },
+    {
+      "id": "DC-03",
+      "name": "Ingestion Interruption Recovery (at 10%, 50%, 90%)",
+      "category": "Fault Tolerance",
+      "passed": true,
+      "detail": "Passed (Transaction Rollback Verified)"
+    },
+    {
+      "id": "DC-04",
+      "name": "Connection Pool Exhaustion Simulation",
+      "category": "Resource Limits",
+      "passed": true,
+      "detail": "Passed (Graceful Queue Backpressure)"
+    },
+    {
+      "id": "DC-05",
+      "name": "Memory Leak & GC Pause Stress Test",
+      "category": "Resource Limits",
+      "passed": true,
+      "detail": "Passed (Memory Bounded)"
+    },
+    {
+      "id": "DC-06",
+      "name": "Byzantine State Inconsistency Chaos Test",
+      "category": "Chaos Engineering",
+      "passed": true,
+      "detail": "Passed (Self-Healing Active)"
+    },
+    {
+      "id": "DC-07",
+      "name": "TOCTOU Cache Coherency Race Attack",
+      "category": "Timing",
+      "passed": true,
+      "detail": "Passed (Atomic Cache Invalidation)"
+    },
+    {
+      "id": "DC-08",
+      "name": "Cypher Recursive Loop Complexity Explosion",
+      "category": "Query DoS",
+      "passed": true,
+      "detail": "Passed (Query Timeout Enforced @ 3000ms)"
+    },
+    {
+      "id": "DC-09",
+      "name": "ReDoS Pattern Amplification Attack",
+      "category": "Query DoS",
+      "passed": true,
+      "detail": "Passed (Regex Engine Hardened)"
+    },
+    {
+      "id": "DC-10",
+      "name": "Vector Search Dimensionality Flooding",
+      "category": "Query DoS",
+      "passed": true,
+      "detail": "Passed (Payload Truncated Safely)"
+    }
+  ]
+}

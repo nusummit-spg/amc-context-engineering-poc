@@ -1,0 +1,173 @@
+# ===========================================================================
+# Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+# 
+# Author: NuSummit Developers
+#
+# Streamlit app-specific .gitignore for compliance dashboard
+# ===========================================================================
+
+# ===========================================================================
+# SENSITIVE DATA & CREDENTIALS
+# ===========================================================================
+
+# Environment files - CRITICAL
+.env
+.env.*
+!.env.example
+.envrc
+
+# API keys and cloud credentials
+api_keys.json
+credentials.json
+vertex_key.json
+service-account*.json
+google-services.json
+
+# ===========================================================================
+# PYTHON VIRTUAL ENVIRONMENTS & DEPENDENCIES
+# ===========================================================================
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Dependency caches
+.pip-cache/
+pip-log.txt
+
+# ===========================================================================
+# PYTHON BUILD & ARTIFACTS
+# ===========================================================================
+
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# Build directories
+build/
+dist/
+*.egg-info/
+
+# ===========================================================================
+# STREAMLIT SPECIFIC
+# ===========================================================================
+
+# Streamlit configuration and cache
+.streamlit/
+!.streamlit/config.toml.example
+
+# Streamlit user session data
+.streamlit/cache/
+streamlit_cache/
+streamlit_widget_state/
+
+# ===========================================================================
+# TESTING & COVERAGE
+# ===========================================================================
+
+# Pytest
+.pytest_cache/
+pytest-results/
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+
+# ===========================================================================
+# TYPE CHECKING & LINTING
+# ===========================================================================
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+
+# Ruff
+.ruff_cache/
+
+# ===========================================================================
+# IDE / EDITOR
+# ===========================================================================
+
+# PyCharm
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ===========================================================================
+# LOGS & DEBUG OUTPUT
+# ===========================================================================
+
+# Application logs
+logs/
+*.log
+*.log.*
+debug.log
+error.log
+
+# ===========================================================================
+# RUNTIME & DATA
+# ===========================================================================
+
+# SQLite databases
+*.sqlite
+*.sqlite3
+*.db
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Cache directories
+.cache/
+cache/
+
+# ===========================================================================
+# OS FILES
+# ===========================================================================
+
+.DS_Store
+Thumbs.db
+ehthumbs.db
+.directory
+
+# ===========================================================================
+# PROJECT-SPECIFIC ARTIFACTS
+# ===========================================================================
+
+# Large data dumps (unless part of project definition)
+# Uncomment if needed
+# amc_master_full_dump.json
+# amc_master_full_dump.cypher
+
+# Chat and session history
+chat_history.json
+chat_history_v2.json
+
+# Benchmark results
+phase2_benchmark_results/
+benchmark_results/
+
+# ===========================================================================
+# ALLOW EXCEPTIONS
+# ===========================================================================
+
+!.gitkeep
+!.env.example
+!requirements.txt
+!README.md
+!config/

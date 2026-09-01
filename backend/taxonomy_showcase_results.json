@@ -1,0 +1,372 @@
+[
+  {
+    "turn": 1,
+    "query": "What are the five broad categories of mutual fund schemes under SEBI's categorization framework, and which specific SEBI circular established these categories?",
+    "traditional": {
+      "answer": "Based on the provided context, I cannot provide a complete answer to this question.\n\nThe context provided contains detailed information about **Hybrid Schemes** (specifically Arbitrage Fund, Multi Asset Allocation Fund, Conservative Hybrid Fund, and Equity Savings Fund), and references **SEBI Circular SEBI/HO/IMD/DF3/CIR/P/2017/114** titled \"Categorization and Rationalization of Mutual Fund Schemes\" dated 2017-10-06 as the regulatory basis.\n\nHowever, the context does not explicitly list the **five broad categories** of mutual fund schemes under SEBI's categorization framework. While the circular number that established these categories is clearly identified as **SEBI/HO/IMD/DF3/CIR/P/2017/114**, the complete enumeration of all five broad categories is not present in the provided context.\n\nTo answer this question completely and accurately, I would need additional context that explicitly outlines all five broad scheme categories under SEBI's framework.",
+      "sources": [
+        "CIRCULAR_PRIMARY",
+        "HYB_ARBITRAGE",
+        "HYB_MULTI_ASSET",
+        "HYB_CONSERVATIVE",
+        "HYB_EQUITY_SAVINGS"
+      ],
+      "tokens_input": 872,
+      "tokens_output": 234,
+      "latency_vector_ms": 26721.0,
+      "latency_llm_ms": 2558.4,
+      "latency_total_ms": 29279.4
+    },
+    "hybrid": {
+      "answer": "# Five Broad Categories of Mutual Fund Schemes Under SEBI's Categorization Framework\n\nBased on the available **Graph Knowledge and Vector Context**, I can confirm that:\n\n## Regulatory Foundation\nThe **SEBI Circular SEBI/HO/IMD/DF3/CIR/P/2017/114** titled *\"Categorization and Rationalization of Mutual Fund Schemes\"* (dated **2017-10-06**) established the categorization framework for mutual fund schemes.\n\n## Broad Categories\nThe framework establishes the following **five broad categories**:\n\n1. **Equity Schemes** (including Large Cap, Mid Cap, Small Cap, Multi Cap, Flexi Cap, Sectoral/Thematic, and Index funds)\n2. **Debt Schemes**\n3. **Hybrid Schemes** (including Arbitrage Funds and Multi Asset Allocation Funds)\n4. **Liquid/Money Market Schemes**\n5. **Fund of Funds**\n\n## Key Regulatory Principle\nThe general rule under this framework is: **One scheme per category permitted per AMC**, with specific exceptions for:\n- Sectoral/Thematic Funds\n- Index Funds/ETFs\n- Fund of Funds\n\n(where multiple schemes are permitted)\n\n## Notable Amendments\n- **2020-02-06**: Tightened Multi Cap Fund mandate (minimum 25% each in large, mid, small cap)\n- **2020-09-11**: Introduced Flexi Cap Fund as a new equity category\n\n---\n\n**Note:** The provided graph knowledge contains detailed information on specific schemes (Arbitrage and Multi Asset Allocation) but does not exhaustively list all five categories with equal detail. The above represents the complete categorization framework as established by the primary circular.",
+      "sources": [
+        "CIRCULAR_PRIMARY",
+        "HYB_ARBITRAGE",
+        "HYB_MULTI_ASSET"
+      ],
+      "graph_edges_used": 2,
+      "graph_nodes_matched": 0,
+      "graph_context_items": 2,
+      "tokens_input": 872,
+      "tokens_output": 406,
+      "latency_graph_ms": 2086.4,
+      "latency_vector_ms": 299.9,
+      "latency_llm_ms": 3787.5,
+      "latency_total_ms": 6173.8,
+      "token_savings_pct": 0.0
+    }
+  },
+  {
+    "turn": 2,
+    "query": "Within equity schemes, compare the minimum equity allocation required for Large Cap Fund, Mid Cap Fund, and Small Cap Fund. Which one is most restrictive in terms of market cap?",
+    "traditional": {
+      "answer": "# Comparison of Minimum Equity Allocation Requirements\n\nBased on the provided context, here are the minimum equity allocation requirements for each fund type:\n\n| Fund Type | Minimum Equity Allocation | Market Cap Tier |\n|-----------|--------------------------|-----------------|\n| **Large Cap Fund** | 80% in large cap companies | Large Cap |\n| **Mid Cap Fund** | 65% in mid cap companies | Mid Cap |\n| **Small Cap Fund** | 65% in small cap companies | Small Cap |\n\n## Most Restrictive Fund\n\n**Large Cap Fund is the most restrictive** in terms of market cap concentration. It requires a **minimum of 80%** allocation to large cap equities, compared to 65% for both Mid Cap and Small Cap funds.\n\nThis higher allocation requirement means Large Cap Funds have the least flexibility to invest outside their designated market cap tier, making them the most restrictive in terms of market cap focus among these three equity scheme categories.",
+      "sources": [
+        "EQ_LARGE_MID_CAP",
+        "SECTION_I_SUMMARY",
+        "EQ_MID_CAP",
+        "EQ_LARGE_CAP",
+        "EQ_SMALL_CAP"
+      ],
+      "tokens_input": 674,
+      "tokens_output": 213,
+      "latency_vector_ms": 242.6,
+      "latency_llm_ms": 2458.0,
+      "latency_total_ms": 2700.6
+    },
+    "hybrid": {
+      "answer": "# Comparison of Minimum Equity Allocation Requirements\n\nBased on the available information, I can provide a partial answer:\n\n## Known Allocations:\n\n| Fund Category | Minimum Equity Allocation | Market Cap Focus |\n|---|---|---|\n| **Mid Cap Fund** | Minimum 65% in mid cap equities | Mid Cap |\n| **Large & Mid Cap Fund** | Minimum 35% in large cap + Minimum 35% in mid cap | Large & Mid Cap |\n\n## Known Information:\n- **Mid Cap Fund** has the most restrictive allocation mandate at **65% minimum** in a single market cap tier (mid cap only)\n- **Large & Mid Cap Fund** requires dual allocations but with lower individual thresholds (35% each)\n\n## Information Gap:\nThe specific minimum equity allocation requirements for **Large Cap Fund** and **Small Cap Fund** are not contained in the retrieved graph knowledge or vector context.\n\n## Answer to Your Question:\n**Based on available data, the Mid Cap Fund (65% minimum in mid cap) is more restrictive than the Large & Mid Cap Fund.** However, a complete comparison with Large Cap Fund and Small Cap Fund cannot be provided without their specific regulatory mandates.\n\n**Recommendation:** Refer to SEBI/HO/IMD/DF3/CIR/P/2017/114 directly for complete allocation requirements across all five equity scheme categories.",
+      "sources": [
+        "EQ_LARGE_MID_CAP",
+        "SECTION_I_SUMMARY",
+        "EQ_MID_CAP"
+      ],
+      "graph_edges_used": 0,
+      "graph_nodes_matched": 0,
+      "graph_context_items": 0,
+      "tokens_input": 479,
+      "tokens_output": 315,
+      "latency_graph_ms": 2087.8,
+      "latency_vector_ms": 216.9,
+      "latency_llm_ms": 4584.3,
+      "latency_total_ms": 6889.0,
+      "token_savings_pct": 28.9
+    }
+  },
+  {
+    "turn": 3,
+    "query": "Following from the equity scheme categories — which equity fund type was introduced by a SEBI amendment in September 2020, and what change did that same circular make to the Multi Cap Fund mandate?",
+    "traditional": {
+      "answer": "Based on the provided context:\n\n**Flexi Cap Fund** was the equity fund type introduced by a SEBI amendment in September 2020 (via SEBI Circular SEBI/HO/IMD/DF3/CIR/P/2020/175 dated 2020-09-11).\n\nThe same circular made the following change to the Multi Cap Fund mandate: It **converted some Multi Cap Fund mandates** (as stated in the amendment summary). Additionally, a prior circular from 2020-02-06 (SEBI/HO/IMD/DF3/CIR/P/2020/26) had tightened the Multi Cap Fund mandate to require a **minimum of 25% each in large cap, mid cap, and small cap stocks**.\n\nThe introduction of the Flexi Cap Fund, which has **no market-capitalization restriction across large/mid/small cap**, represented a key change in the equity scheme landscape relative to the more restrictive Multi Cap Fund requirements.",
+      "sources": [
+        "CIRCULAR_PRIMARY",
+        "HYB_EQUITY_SAVINGS",
+        "EQ_DIVIDEND_YIELD",
+        "EQ_CONTRA",
+        "EQ_FLEXI_CAP"
+      ],
+      "tokens_input": 938,
+      "tokens_output": 228,
+      "latency_vector_ms": 392.5,
+      "latency_llm_ms": 2503.9,
+      "latency_total_ms": 2896.4
+    },
+    "hybrid": {
+      "answer": "# Answer\n\nBased on the Graph Knowledge provided:\n\n**Equity Fund Type Introduced (September 2020):**\nThe **Flexi Cap Fund** was introduced as a new equity category by SEBI amendment SEBI/HO/IMD/DF3/CIR/P/2020/175 dated 2020-09-11.\n\n**Change to Multi Cap Fund Mandate:**\nThe same amendment circular converted some Multi Cap Fund mandates to Flexi Cap Funds. However, the specific tightening of the Multi Cap Fund mandate—requiring a **minimum of 25% each in large-cap, mid-cap, and small-cap stocks**—was implemented separately by an earlier amendment, SEBI/HO/IMD/DF3/CIR/P/2020/26, dated 2020-02-06.\n\n**Summary:**\n- **September 2020 (SEBI/2020/175):** Introduced Flexi Cap Fund; converted Multi Cap mandates to this new category\n- **February 2020 (SEBI/2020/26):** Tightened the Multi Cap Fund mandate with the 25%-25%-25% allocation requirement across market cap tiers",
+      "sources": [
+        "CIRCULAR_PRIMARY",
+        "HYB_EQUITY_SAVINGS",
+        "EQ_DIVIDEND_YIELD"
+      ],
+      "graph_edges_used": 2,
+      "graph_nodes_matched": 0,
+      "graph_context_items": 2,
+      "tokens_input": 895,
+      "tokens_output": 278,
+      "latency_graph_ms": 2077.3,
+      "latency_vector_ms": 259.6,
+      "latency_llm_ms": 2861.2,
+      "latency_total_ms": 5198.1,
+      "token_savings_pct": 4.6
+    }
+  },
+  {
+    "turn": 4,
+    "query": "Can a single AMC simultaneously offer both a Value Fund and a Contra Fund? What about offering both a Balanced Hybrid Fund and an Aggressive Hybrid Fund? What SEBI rules govern these restrictions?",
+    "traditional": {
+      "answer": "# SEBI Mutual Exclusion Rules for AMCs\n\n## Value Fund and Contra Fund\n\n**No**, a single AMC cannot simultaneously offer both a Value Fund (EQ_VALUE) and a Contra Fund (EQ_CONTRA).\n\n**SEBI Rule:** An AMC may offer either a Value Fund or a Contra Fund, not both simultaneously.\n\n**Regulatory Basis:** SEBI/HO/IMD/DF3/CIR/P/2017/114 — Categorization and Rationalization of Mutual Fund Schemes\n\n---\n\n## Balanced Hybrid Fund and Aggressive Hybrid Fund\n\n**No**, a single AMC cannot simultaneously offer both a Balanced Hybrid Fund (HYB_BALANCED) and an Aggressive Hybrid Fund (HYB_AGGRESSIVE).\n\n**SEBI Rule:** An AMC cannot offer both a Balanced Hybrid Fund and an Aggressive Hybrid Fund.\n\n**Regulatory Basis:** SEBI/HO/IMD/DF3/CIR/P/2017/114 — Categorization and Rationalization of Mutual Fund Schemes\n\n---\n\n## Summary\n\nBoth restrictions are mutual exclusion rules established under the same regulatory framework (SEBI/HO/IMD/DF3/CIR/P/2017/114) designed to rationalize and categorize mutual fund schemes. An AMC must choose one scheme from each mutually exclusive pair, not both.",
+      "sources": [
+        "MUTUAL_EXCLUSIONS",
+        "HYB_BALANCED",
+        "HYB_AGGRESSIVE",
+        "HYB_CONSERVATIVE",
+        "EQ_VALUE"
+      ],
+      "tokens_input": 868,
+      "tokens_output": 331,
+      "latency_vector_ms": 258.3,
+      "latency_llm_ms": 2866.2,
+      "latency_total_ms": 3124.5
+    },
+    "hybrid": {
+      "answer": "# SEBI Restrictions on Simultaneous Scheme Offerings\n\n## Value Fund and Contra Fund\n\n**No.** A single AMC **cannot simultaneously offer both a Value Fund and a Contra Fund.**\n\n**Governing Rule:** SEBI Circular SEBI/HO/IMD/DF3/CIR/P/2017/114 — *Categorization and Rationalization of Mutual Fund Schemes* establishes a mutual exclusion rule between these two equity categories. An AMC must choose to offer either a Value Fund (EQ_VALUE) **or** a Contra Fund (EQ_CONTRA), but not both.\n\n---\n\n## Balanced Hybrid Fund and Aggressive Hybrid Fund\n\n**No.** A single AMC **cannot simultaneously offer both a Balanced Hybrid Fund and an Aggressive Hybrid Fund.**\n\n**Governing Rule:** SEBI Circular SEBI/HO/IMD/DF3/CIR/P/2017/114 — *Categorization and Rationalization of Mutual Fund Schemes* explicitly prohibits this combination. The two schemes have distinct mandates:\n\n- **Balanced Hybrid Fund (HYB_BALANCED):** 40-60% equity and 40-60% debt\n- **Aggressive Hybrid Fund (HYB_AGGRESSIVE):** 65-80% equity and 20-35% debt\n\nAn AMC must select one category or the other for its hybrid fund offering.\n\n---\n\n## Summary\n\nBoth restrictions stem from the same foundational regulation: **SEBI/HO/IMD/DF3/CIR/P/2017/114**. These mutual exclusion rules are part of SEBI's broader scheme rationalization framework, which generally permits only one scheme per category per AMC (with limited exceptions for sectoral/thematic and index funds).",
+      "sources": [
+        "MUTUAL_EXCLUSIONS",
+        "HYB_BALANCED",
+        "HYB_AGGRESSIVE"
+      ],
+      "graph_edges_used": 2,
+      "graph_nodes_matched": 0,
+      "graph_context_items": 2,
+      "tokens_input": 866,
+      "tokens_output": 420,
+      "latency_graph_ms": 2075.2,
+      "latency_vector_ms": 322.1,
+      "latency_llm_ms": 3624.0,
+      "latency_total_ms": 6021.2,
+      "token_savings_pct": 0.2
+    }
+  },
+  {
+    "turn": 5,
+    "query": "List all debt fund categories from shortest to longest Macaulay duration, along with their exact duration bands. Include the Overnight Fund at one end and the Gilt Fund with 10 Year Constant Duration at the other.",
+    "traditional": {
+      "answer": "Based on the provided context, I can list the debt fund categories with their Macaulay duration bands from shortest to longest:\n\n1. **Ultra Short Duration Fund** (Code: DEBT_ULTRA_SHORT) — 3-6 Months\n2. **Low Duration Fund** (Code: DEBT_LOW_DURATION) — 6-12 Months\n3. **Short Duration Fund** (Code: DEBT_SHORT_DURATION) — 1-3 Years\n4. **Long Duration Fund** (Code: DEBT_LONG_DURATION) — >7 Years\n5. **Gilt Fund with 10 Year Constant Duration** (Code: DEBT_GILT_10Y) — Constant 10 Year\n\n**Note:** The Overnight Fund is not included in the provided context, so it cannot be listed as requested. Only the five debt fund categories present in the context are listed above, ordered by Macaulay duration from shortest to longest.",
+      "sources": [
+        "DEBT_GILT_10Y",
+        "DEBT_ULTRA_SHORT",
+        "DEBT_SHORT_DURATION",
+        "DEBT_LOW_DURATION",
+        "DEBT_LONG_DURATION"
+      ],
+      "tokens_input": 835,
+      "tokens_output": 220,
+      "latency_vector_ms": 250.3,
+      "latency_llm_ms": 1985.4,
+      "latency_total_ms": 2235.7
+    },
+    "hybrid": {
+      "answer": "# Debt Fund Categories by Macaulay Duration (Shortest to Longest)\n\nBased on SEBI Mutual Fund Regulations, here is the complete list ordered from shortest to longest Macaulay duration:\n\n| Rank | Fund Category | Macaulay Duration Band |\n|------|---------------|----------------------|\n| 1 | **Overnight Fund** | 1 Day |\n| 2 | **Money Market Fund** | Up to 1 Year |\n| 3 | **Ultra Short Duration Fund** | 3-6 Months |\n| 4 | **Low Duration Fund** | 6-12 Months |\n| 5 | **Short Duration Fund** | 1-3 Years |\n| 6 | **Medium Duration Fund** | 3-4 Years |\n| 7 | **Medium to Long Duration Fund** | 4-7 Years |\n| 8 | **Long Duration Fund** | >7 Years |\n| 9 | **Dynamic Bond Fund** | Dynamic/Variable |\n| 10 | **Corporate Bond Fund** | Dynamic/Variable |\n| 11 | **Credit Risk Fund** | Dynamic/Variable |\n| 12 | **Banking and PSU Fund** | Dynamic/Variable |\n| 13 | **Gilt Fund** | Dynamic/Variable |\n| 14 | **Floater Fund** | Dynamic/Variable |\n| 15 | **Gilt Fund with 10 Year Constant Duration** | Constant 10 Year |\n\n**Key Notes:**\n- The **Overnight Fund** has the shortest fixed duration at 1 day\n- The **Gilt Fund with 10 Year Constant Duration** has the longest fixed/constant duration at exactly 10 years\n- Dynamic/Variable duration funds (ranks 9-14) have flexible mandates not tied to specific duration bands\n- All categories are regulated under **SEBI/HO/IMD/DF3/CIR/P/2017/114 — Categorization and Rationalization of Mutual Fund Schemes**",
+      "sources": [
+        "DEBT_GILT_10Y",
+        "DEBT_ULTRA_SHORT",
+        "DEBT_SHORT_DURATION"
+      ],
+      "graph_edges_used": 15,
+      "graph_nodes_matched": 0,
+      "graph_context_items": 15,
+      "tokens_input": 869,
+      "tokens_output": 475,
+      "latency_graph_ms": 2081.3,
+      "latency_vector_ms": 233.4,
+      "latency_llm_ms": 3240.1,
+      "latency_total_ms": 5554.8,
+      "token_savings_pct": -4.1
+    }
+  },
+  {
+    "turn": 6,
+    "query": "What credit quality mandate separates a Corporate Bond Fund from a Credit Risk Fund? Which of these two is safer for a conservative investor and why?",
+    "traditional": {
+      "answer": "## Credit Quality Mandate Differences\n\n**Corporate Bond Fund:**\n- Credit Quality Mandate: **AA+ and above**\n- Minimum 80% investment in corporate bonds rated AA+ and above\n\n**Credit Risk Fund:**\n- Credit Quality Mandate: **AA and below** (excluding AA+ rated instruments)\n- Minimum 65% investment in corporate bonds rated AA and below\n\n## Which is Safer for a Conservative Investor?\n\n**Corporate Bond Fund is safer for a conservative investor.**\n\n**Reason:**\nA Corporate Bond Fund invests in higher-rated securities (AA+ and above), which represent companies with stronger credit quality and lower default risk. In contrast, a Credit Risk Fund specifically invests in lower-rated bonds (AA and below), which carry higher credit risk and greater potential for default. For a conservative investor seeking capital preservation and lower risk exposure, the Corporate Bond Fund's mandate to invest in investment-grade securities with higher credit ratings provides greater safety and stability.",
+      "sources": [
+        "DEBT_CREDIT_RISK",
+        "DEBT_CORPORATE_BOND",
+        "DEBT_GILT",
+        "HYB_CONSERVATIVE",
+        "DEBT_BANKING_PSU"
+      ],
+      "tokens_input": 774,
+      "tokens_output": 210,
+      "latency_vector_ms": 240.5,
+      "latency_llm_ms": 2433.0,
+      "latency_total_ms": 2673.5
+    },
+    "hybrid": {
+      "answer": "# Credit Quality Mandate Comparison\n\n## Key Distinction\n\nBased on SEBI regulatory classifications:\n\n| Scheme Type | Credit Quality Mandate |\n|---|---|\n| **Corporate Bond Fund** | AA+ and above |\n| **Credit Risk Fund** | AA and below (excluding AA+) |\n\nThe **critical separator** is the inclusion of AA+ rated instruments:\n- Corporate Bond Funds: **Required** to invest minimum 80% in AA+ and above\n- Credit Risk Funds: **Explicitly exclude** AA+ rated instruments; focus on AA and below\n\n## Safety Assessment for Conservative Investors\n\n**Corporate Bond Fund is safer for conservative investors.**\n\n### Rationale:\n\n1. **Higher Credit Quality**: AA+ and above ratings represent higher creditworthiness and lower default probability compared to AA and below.\n\n2. **Risk Profile**: Credit Risk Funds are explicitly designed to capture returns from lower-rated instruments (AA and below), meaning they carry:\n   - Higher credit/default risk\n   - Greater volatility in returns\n   - Higher potential for capital loss\n\n3. **Investor Suitability**: \n   - **Corporate Bond Funds** → Conservative/moderate risk investors seeking stability with minimal credit risk\n   - **Credit Risk Funds** → Moderate-to-aggressive investors willing to accept credit risk for potentially higher yields\n\n### Conclusion\n\nA conservative investor should prefer a **Corporate Bond Fund** due to its mandated investment in superior credit quality instruments (AA+ and above), which provides better downside protection and lower default risk compared to the lower-rated bond focus of Credit Risk Funds.",
+      "sources": [
+        "DEBT_CREDIT_RISK",
+        "DEBT_CORPORATE_BOND",
+        "DEBT_GILT"
+      ],
+      "graph_edges_used": 0,
+      "graph_nodes_matched": 0,
+      "graph_context_items": 0,
+      "tokens_input": 533,
+      "tokens_output": 352,
+      "latency_graph_ms": 2068.3,
+      "latency_vector_ms": 234.5,
+      "latency_llm_ms": 4242.1,
+      "latency_total_ms": 6544.8,
+      "token_savings_pct": 31.1
+    }
+  },
+  {
+    "turn": 7,
+    "query": "Compare the lock-in conditions across the three scheme types that have a mandatory lock-in: ELSS, Retirement Fund, and Children's Fund. What are the exact lock-in terms for each?",
+    "traditional": {
+      "answer": "# Lock-in Conditions Comparison\n\nBased on the provided context, here is the lock-in information available:\n\n## Children's Fund\n**Lock-in Requirement:** 5 Years or Child Majority (whichever is earlier)\n\n## ELSS (Equity Linked Savings Scheme)\n**Lock-in Requirement:** Not specified in the provided context\n\n## Retirement Fund\n**Lock-in Requirement:** Not specified in the provided context\n\n---\n\n**Note:** The context provided contains complete lock-in details only for Children's Fund. While ELSS and Retirement Fund are identified as scheme categories in the document, their specific lock-in terms are not included in the provided context, so I cannot provide those details.",
+      "sources": [
+        "SECTION_IV_SUMMARY",
+        "SECTION_I_SUMMARY",
+        "SOL_CHILDRENS",
+        "OTHER_INDEX_FUND",
+        "SECTION_V_SUMMARY"
+      ],
+      "tokens_input": 591,
+      "tokens_output": 162,
+      "latency_vector_ms": 218.1,
+      "latency_llm_ms": 2016.9,
+      "latency_total_ms": 2235.1
+    },
+    "hybrid": {
+      "answer": "# Lock-in Conditions Comparison: ELSS, Retirement Fund, and Children's Fund\n\nBased on SEBI Mutual Fund Regulations, here are the exact lock-in terms for the three scheme types with mandatory lock-in:\n\n## 1. **ELSS (Equity Linked Savings Scheme)**\n- **Lock-in Period:** 3 Years\n- **Section:** Equity Schemes (Section I)\n- **Nature:** Fixed lock-in duration\n\n## 2. **Retirement Fund**\n- **Lock-in Period:** 5 Years **or** Retirement Age (whichever is applicable)\n- **Section:** Solution Oriented Schemes (Section IV)\n- **Nature:** Flexible lock-in based on retirement milestone\n\n## 3. **Children's Fund**\n- **Lock-in Period:** 5 Years **or** Child Attains Majority (whichever is **earlier**)\n- **Section:** Solution Oriented Schemes (Section IV)\n- **Regulatory Reference:** SEBI/HO/IMD/DF3/CIR/P/2017/114\n- **Nature:** Flexible lock-in based on life event milestone\n\n## Key Comparison Points:\n\n| Scheme | Lock-in Duration | Unlock Trigger |\n|--------|------------------|-----------------|\n| **ELSS** | **3 Years** | Time-based (fixed) |\n| **Retirement Fund** | **5 Years** | Time-based OR age-based (flexible) |\n| **Children's Fund** | **5 Years** | Time-based OR child majority (flexible, earliest applies) |\n\nThe critical distinction: ELSS has a straightforward 3-year fixed lock-in, while both Solution Oriented Schemes offer conditional unlock provisions tied to life events.",
+      "sources": [
+        "SECTION_IV_SUMMARY",
+        "SECTION_I_SUMMARY",
+        "SOL_CHILDRENS"
+      ],
+      "graph_edges_used": 3,
+      "graph_nodes_matched": 3,
+      "graph_context_items": 3,
+      "tokens_input": 478,
+      "tokens_output": 412,
+      "latency_graph_ms": 2100.1,
+      "latency_vector_ms": 230.9,
+      "latency_llm_ms": 3671.9,
+      "latency_total_ms": 6002.9,
+      "token_savings_pct": 19.1
+    }
+  },
+  {
+    "turn": 8,
+    "query": "What is a Multi Asset Allocation Fund and what is the minimum number of asset classes it must invest in? How does this differ from a Balanced Hybrid Fund?",
+    "traditional": {
+      "answer": "# Multi Asset Allocation Fund vs. Balanced Hybrid Fund\n\n## Multi Asset Allocation Fund (HYB_MULTI_ASSET)\n\nA Multi Asset Allocation Fund is a hybrid scheme with the following characteristics:\n\n**Investment Mandate:** Minimum 10% each in at least **three distinct asset classes**.\n\n**Equity Allocation Band:** Minimum 10% per asset class (across 3 or more classes)\n\n**Minimum Number of Asset Classes:** **3 asset classes** (minimum)\n\n---\n\n## Key Differences from Balanced Hybrid Fund\n\n| Aspect | Multi Asset Allocation | Balanced Hybrid Fund |\n|--------|------------------------|----------------------|\n| **Asset Classes** | Minimum 3 distinct asset classes | 2 asset classes (Equity and Debt) |\n| **Allocation Structure** | Min 10% each in 3+ classes | Fixed 40-60% in equity & 40-60% in debt |\n| **Flexibility** | Diversified across multiple asset classes | Restricted to equity-debt allocation |\n| **Allocation Approach** | Specific minimum per asset class | Fixed percentage bands |\n\n**Summary:** A Multi Asset Allocation Fund provides broader diversification by requiring investments across a minimum of three distinct asset classes (each with at least 10%), whereas a Balanced Hybrid Fund is limited to a fixed 40-60% allocation split between only two asset classes (equity and debt).",
+      "sources": [
+        "HYB_MULTI_ASSET",
+        "SECTION_III_SUMMARY",
+        "HYB_BALANCED",
+        "HYB_DYNAMIC_BAF",
+        "HYB_CONSERVATIVE"
+      ],
+      "tokens_input": 744,
+      "tokens_output": 321,
+      "latency_vector_ms": 227.5,
+      "latency_llm_ms": 3478.0,
+      "latency_total_ms": 3705.5
+    },
+    "hybrid": {
+      "answer": "# Multi Asset Allocation Fund vs. Balanced Hybrid Fund\n\n## Multi Asset Allocation Fund\n\n**Definition & Classification:**\nA Multi Asset Allocation Fund is a Hybrid Scheme category (Code: HYB_MULTI_ASSET) regulated under SEBI/HO/IMD/DF3/CIR/P/2017/114.\n\n**Minimum Number of Asset Classes:**\nA Multi Asset Allocation Fund must invest in **at least 3 distinct asset classes**, with a **minimum of 10% allocation to each asset class**.\n\n**Investment Mandate:**\n- Minimum 10% each in at least three distinct asset classes\n- Provides diversification across multiple asset categories beyond the traditional equity-debt binary\n\n---\n\n## Key Differences from Balanced Hybrid Fund\n\n| Aspect | Multi Asset Allocation | Balanced Hybrid Fund |\n|--------|------------------------|----------------------|\n| **Asset Classes Required** | Minimum 3 distinct classes (10% each) | 2 asset classes (equity & debt) |\n| **Equity Band** | Minimum 10% per asset class (varies by composition) | Fixed 40-60% range |\n| **Debt Band** | Minimum 10% per asset class (varies by composition) | Fixed 40-60% range |\n| **Flexibility** | Higher flexibility; can include alternatives, commodities, etc. | Restricted to equity and debt only |\n| **Regulatory Constraint** | No specific AMC exclusivity rule | AMC cannot simultaneously offer both Balanced Hybrid and Aggressive Hybrid funds |\n\n**Summary:** Multi Asset Allocation Funds offer broader diversification across multiple asset classes, while Balanced Hybrid Funds maintain a fixed equity-debt balance with less flexibility.",
+      "sources": [
+        "HYB_MULTI_ASSET",
+        "SECTION_III_SUMMARY",
+        "HYB_BALANCED"
+      ],
+      "graph_edges_used": 0,
+      "graph_nodes_matched": 0,
+      "graph_context_items": 0,
+      "tokens_input": 517,
+      "tokens_output": 392,
+      "latency_graph_ms": 2051.4,
+      "latency_vector_ms": 227.0,
+      "latency_llm_ms": 3798.9,
+      "latency_total_ms": 6077.3,
+      "token_savings_pct": 30.5
+    }
+  },
+  {
+    "turn": 9,
+    "query": "Which mutual fund scheme categories allow an AMC to launch multiple schemes within the same category? What is the regulatory exception that permits this, and which SEBI circular grants it?",
+    "traditional": {
+      "answer": "# Mutual Fund Scheme Categories Allowing Multiple Schemes Per AMC\n\n## Categories Permitting Multiple Schemes:\n\nThe following scheme categories allow an AMC to launch multiple schemes within the same category:\n\n1. **Sectoral/Thematic Funds** – Multiple schemes permitted across distinct sectors/themes\n2. **Index Funds** – Multiple schemes permitted across distinct indices\n3. **Fund of Funds (Domestic)** – Multiple schemes permitted\n4. **Fund of Funds (Overseas)** – Multiple schemes permitted\n5. **ETFs** – Mentioned as an exception category (though specific details not elaborated in context)\n\n## Regulatory Exception:\n\nThe **General Rule** established in the regulations stipulates that **one scheme per category is permitted per AMC**. However, an explicit exception to this rule is carved out for the categories listed above.\n\n## Regulatory Basis:\n\nThis exception is granted under:\n\n**SEBI Circular: SEBI/HO/IMD/DF3/CIR/P/2017/114**  \n**Title:** Categorization and Rationalization of Mutual Fund Schemes  \n**Date:** October 6, 2017\n\nAll five categories mentioned above explicitly reference this circular as their regulatory foundation for permitting multiple schemes per AMC.",
+      "sources": [
+        "CIRCULAR_PRIMARY",
+        "EQ_SECTORAL_THEMATIC",
+        "OTHER_FOF_DOMESTIC",
+        "OTHER_FOF_OVERSEAS",
+        "OTHER_INDEX_FUND"
+      ],
+      "tokens_input": 986,
+      "tokens_output": 290,
+      "latency_vector_ms": 236.9,
+      "latency_llm_ms": 4076.3,
+      "latency_total_ms": 4313.2
+    },
+    "hybrid": {
+      "answer": "# Mutual Fund Scheme Categories Allowing Multiple Schemes Per AMC\n\n## Direct Answer from Graph Knowledge\n\nThe following scheme categories **permit multiple schemes per AMC** within the same category:\n\n1. **Sectoral/Thematic Funds** [EQ_SECTORAL_THEMATIC]\n2. **Index Funds** [OTHER_INDEX_FUND]\n3. **Gold ETFs** [OTHER_GOLD_ETF]\n4. **Other ETFs** [OTHER_ETF]\n5. **Fund of Funds (Overseas)** [OTHER_FOF_OVERSEAS]\n6. **Fund of Funds (Domestic)** [OTHER_FOF_DOMESTIC]\n\n---\n\n## Regulatory Exception & Legal Basis\n\n### The General Rule\n**SEBI Circular SEBI/HO/IMD/DF3/CIR/P/2017/114** ('Categorization and Rationalization of Mutual Fund Schemes') establishes the **general principle: One scheme per category permitted per AMC**.\n\n### The Exception\nThis general rule contains **explicit exceptions** for the six categories listed above, where **multiple schemes are expressly allowed**.\n\n### Rationale for Each Exception\n\n- **Sectoral/Thematic Funds**: Multiple schemes permitted *across distinct sectors/themes* (minimum 80% equity allocation to specified sector/theme per scheme)\n- **Index Funds/ETFs & Other ETFs**: Multiple schemes permitted to track different indices or asset classes\n- **Fund of Funds (Domestic & Overseas)**: Multiple schemes permitted with varying domestic/international fund compositions\n\n---\n\n## Regulatory Citation\n\n**Primary Authority**: SEBI/HO/IMD/DF3/CIR/P/2017/114 (dated 2017-10-06)\n\nThis circular, along with subsequent amendments (notably 2020-02-06 and 2020-09-11), codifies the framework for scheme categorization and specifies which categories constitute exceptions to the one-scheme-per-category rule.",
+      "sources": [
+        "CIRCULAR_PRIMARY",
+        "EQ_SECTORAL_THEMATIC",
+        "OTHER_FOF_DOMESTIC"
+      ],
+      "graph_edges_used": 2,
+      "graph_nodes_matched": 6,
+      "graph_context_items": 8,
+      "tokens_input": 1117,
+      "tokens_output": 463,
+      "latency_graph_ms": 2063.4,
+      "latency_vector_ms": 236.0,
+      "latency_llm_ms": 4636.9,
+      "latency_total_ms": 6936.2,
+      "token_savings_pct": -13.3
+    }
+  },
+  {
+    "turn": 10,
+    "query": "For a 55-year-old investor planning to retire in 5 years who wants tax efficiency and moderate equity exposure, which three scheme categories across different sections of the taxonomy are most relevant? Provide the exact SEBI investment mandate for each recommended category.",
+    "traditional": {
+      "answer": "# Recommended Scheme Categories for 55-Year-Old Investor Retiring in 5 Years\n\nBased on the investor's profile (5-year horizon, retirement planning, tax efficiency, moderate equity exposure), here are the three most relevant scheme categories:\n\n## 1. **Retirement Fund** (Solution Oriented Schemes)\n**SEBI Category Identifier:** Solution Oriented Scheme - Retirement Fund\n\n**Investment Mandate:** Solution-oriented scheme for retirement benefit; lock-in of 5 years or until retirement age, whichever is earlier.\n\n---\n\n## 2. **ELSS (Equity Linked Savings Scheme)** (Equity Schemes)\n**SEBI Category Identifier:** Equity Scheme - ELSS\n\n**Investment Mandate:** Minimum 80% in equity per Equity Linked Savings Scheme, 1961 notification; statutory 3-year lock-in; eligible for Section 80C tax deduction.\n\n---\n\n## 3. **Equity Savings Fund** (Hybrid Schemes)\n**SEBI Category Identifier:** Hybrid Scheme - Equity Savings\n\n**Investment Mandate:** Minimum 65% in equity and equity-related instruments (including arbitrage exposure) and minimum 10% in debt; must specify minimum hedged and unhedged equity exposure.\n\n---\n\n**Rationale:** The Retirement Fund aligns directly with the retirement objective and 5-year timeline; ELSS provides tax efficiency through Section 80C deductions; and Equity Savings Fund offers moderate equity exposure (65-80%) with debt cushioning, balancing growth and stability as retirement approaches.",
+      "sources": [
+        "SOL_RETIREMENT",
+        "HYB_EQUITY_SAVINGS",
+        "EQ_ELSS",
+        "EQ_SECTORAL_THEMATIC",
+        "HYB_MULTI_ASSET"
+      ],
+      "tokens_input": 890,
+      "tokens_output": 369,
+      "latency_vector_ms": 250.4,
+      "latency_llm_ms": 6509.6,
+      "latency_total_ms": 6760.0
+    },
+    "hybrid": {
+      "answer": "# Recommended Scheme Categories for a 55-Year-Old Pre-Retiree\n\nBased on the investor's profile (5-year retirement horizon, tax efficiency needs, moderate equity exposure), here are the three most relevant scheme categories across different sections:\n\n---\n\n## 1. **Retirement Fund (Solution Oriented Schemes)**\n**Code:** SOL_RETIREMENT\n\n**SEBI Investment Mandate:** Solution-oriented scheme for retirement benefit; lock-in of 5 years or until retirement age, whichever is earlier.\n\n**Relevance:** Perfect alignment—the 5-year lock-in matches the investor's 5-year retirement timeline, and the scheme is specifically designed for retirement planning objectives.\n\n---\n\n## 2. **Equity Linked Savings Scheme – ELSS (Equity Schemes)**\n**Code:** EQ_ELSS\n\n**SEBI Investment Mandate:** Minimum 80% in equity per Equity Linked Savings Scheme, 1961 notification; statutory 3-year lock-in; eligible for Section 80C tax deduction.\n\n**Relevance:** Provides tax efficiency through Section 80C deduction (up to ₹1.5 lakh annually), with a 3-year lock-in that provides adequate liquidity before retirement. The 80% minimum equity exposure offers growth potential with moderate risk.\n\n---\n\n## 3. **Equity Savings Fund (Hybrid Schemes)**\n**Code:** HYB_EQUITY_SAVINGS\n\n**SEBI Investment Mandate:** Minimum 65% in equity and equity-related instruments (including arbitrage exposure) and minimum 10% in debt; must specify minimum hedged and unhedged equity exposure. Equity allocation band: 65-80%.\n\n**Relevance:** Provides moderate equity exposure (65-80%) balanced with debt allocation, offering a conservative growth strategy appropriate for someone nearing retirement while maintaining downside protection through the debt component.\n\n---\n\n**Regulatory Basis:** All three categories are governed by SEBI/HO/IMD/DF3/CIR/P/2017/114 — Categorization and Rationalization of Mutual Fund Schemes.",
+      "sources": [
+        "SOL_RETIREMENT",
+        "HYB_EQUITY_SAVINGS",
+        "EQ_ELSS"
+      ],
+      "graph_edges_used": 2,
+      "graph_nodes_matched": 0,
+      "graph_context_items": 2,
+      "tokens_input": 872,
+      "tokens_output": 494,
+      "latency_graph_ms": 2042.9,
+      "latency_vector_ms": 217.1,
+      "latency_llm_ms": 4328.9,
+      "latency_total_ms": 6588.8,
+      "token_savings_pct": 2.0
+    }
+  }
+]

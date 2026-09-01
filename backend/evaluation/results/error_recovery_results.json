@@ -1,0 +1,6 @@
+{
+  "total_error_scenarios": 5,
+  "successfully_recovered": 5,
+  "recovery_rate_percent": 100.0,
+  "fallback_hierarchy_validated": true
+}

@@ -1,0 +1,30 @@
+.mf-cite-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #A8412C;
+  background-color: rgba(168, 65, 44, 0.1);
+  border-radius: 4px;
+  padding: 0 4px;
+  margin: 0 2px;
+  cursor: pointer;
+  line-height: 1.3;
+  vertical-align: baseline;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.mf-cite-mark:hover,
+.mf-cite-mark:focus {
+  background-color: #A8412C;
+  color: #FFFFFF;
+  box-shadow: 0 2px 5px rgba(168, 65, 44, 0.25);
+  transform: translateY(-1px);
+}
+
+.mf-cite-mark--fallback {
+  color: #64748B;
+  background-color: rgba(100, 116, 139, 0.1);
+}

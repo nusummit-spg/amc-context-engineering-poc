@@ -1,0 +1,22 @@
+# ==========================================================
+# Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+#
+# Author: NuSummit Developers
+#
+# ==========================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-config
+  namespace: amc-compliance
+data:
+  APP_ENV: "production"
+  DEFAULT_REGION: "SEBI"
+  SCORECARD_CACHE_TTL_SEC: "60"
+  RATE_LIMIT_GENERAL_RPM: "100"
+  RATE_LIMIT_WRITE_RPM: "10"
+  SLA_SCORECARD_MS: "500"
+  SLA_AUDIT_MS: "5000"
+  SLA_VIOLATIONS_MS: "2000"
+  NEO4J_DATABASE: "neo4j"

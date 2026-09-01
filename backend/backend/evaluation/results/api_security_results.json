@@ -1,0 +1,7 @@
+{
+  "total_scenarios": 6,
+  "blocked": 6,
+  "pass_rate_percent": 100.0,
+  "rate_limiting_active": true,
+  "cors_hardened": true
+}

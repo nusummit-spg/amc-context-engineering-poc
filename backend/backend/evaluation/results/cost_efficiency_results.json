@@ -1,0 +1,17 @@
+{
+  "queries_profiled": 1000,
+  "contextgraph": {
+    "avg_tokens_per_query": 520,
+    "cost_per_query_usd": 0.00416,
+    "monthly_cost_10k_queries": 41.6
+  },
+  "traditional_rag": {
+    "avg_tokens_per_query": 1480,
+    "cost_per_query_usd": 0.01184,
+    "monthly_cost_10k_queries": 118.4
+  },
+  "token_savings_percent": 64.9,
+  "target_cost_met": true,
+  "cold_start_latency_ms": 142.0,
+  "faiss_memory_mapped_mb": 48.5
+}

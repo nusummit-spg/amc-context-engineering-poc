@@ -1,0 +1,34 @@
+{
+  "fund_houses": [
+    "Adani Mutual Fund",
+    "HDFC Mutual Fund",
+    "ICICI Prudential Mutual Fund",
+    "Nippon India Mutual Fund",
+    "SBI Mutual Fund"
+  ],
+  "scheme_names": [],
+  "categories": [
+    "Debt Schemes",
+    "Equity Schemes",
+    "Fund of Funds",
+    "Hybrid Schemes",
+    "Index Funds",
+    "Other Schemes",
+    "Solution Oriented Schemes"
+  ],
+  "sub_categories": [
+    "Aggressive Hybrid",
+    "Balanced Advantage",
+    "ELSS",
+    "Flexi Cap Fund",
+    "Large Cap Fund",
+    "Liquid Fund",
+    "Mid Cap Fund",
+    "Money Market Fund",
+    "Multi Cap Fund",
+    "Overnight Fund",
+    "Sectoral/Thematic",
+    "Small Cap Fund"
+  ],
+  "benchmarks": []
+}

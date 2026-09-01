@@ -1,0 +1,59 @@
+# ==========================================================
+# Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+#
+# Author: NuSummit Developers
+#
+# ==========================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: compliance-api
+  namespace: amc-compliance
+  labels:
+    app: compliance-api
+    tier: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: compliance-api
+  template:
+    metadata:
+      labels:
+        app: compliance-api
+        tier: backend
+    spec:
+      containers:
+        - name: api
+          image: amc-compliance-api:v3.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: compliance-config
+            - secretRef:
+                name: compliance-secrets
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          readinessProbe:
+            httpGet:
+              path: /api/compliance/health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /api/compliance/health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5

@@ -1,0 +1,55 @@
+# ==========================================================
+# Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+#
+# Author: NuSummit Developers
+#
+# ==========================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: compliance-dashboard
+  namespace: amc-compliance
+  labels:
+    app: compliance-dashboard
+    tier: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: compliance-dashboard
+  template:
+    metadata:
+      labels:
+        app: compliance-dashboard
+        tier: frontend
+    spec:
+      containers:
+        - name: dashboard
+          image: amc-compliance-dashboard:v3.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8501
+              name: http
+          env:
+            - name: API_BASE
+              value: "http://compliance-api-service.amc-compliance.svc.cluster.local:8000"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 15
+            periodSeconds: 20

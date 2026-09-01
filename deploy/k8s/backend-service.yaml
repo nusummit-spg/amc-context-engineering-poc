@@ -1,0 +1,22 @@
+# ==========================================================
+# Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+#
+# Author: NuSummit Developers
+#
+# ==========================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: compliance-api-service
+  namespace: amc-compliance
+  labels:
+    app: compliance-api
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+  selector:
+    app: compliance-api

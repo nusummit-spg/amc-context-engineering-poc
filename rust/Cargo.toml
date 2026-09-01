@@ -1,0 +1,13 @@
+# ==========================================================
+# Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+#
+# Author: NuSummit Developers
+#
+# ==========================================================
+
+[package]
+name = "amc_compliance_rs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]

@@ -1,0 +1,1101 @@
+{
+  "generated_at": "2026-08-13T20:05:35.353346",
+  "total_elapsed_seconds": 187.3,
+  "chains": [
+    {
+      "chain_id": "C1",
+      "topic": "SEBI Mutual Fund Categorisation & Scheme Definitions",
+      "source_doc": "Categorization and Rationalization of Mutual Fund Schemes.pdf",
+      "turns": [
+        {
+          "turn": 1,
+          "query": "What are the five broad categories of mutual fund schemes under SEBI's categorization framework?",
+          "ground_truth_fragments": [
+            "Equity Schemes",
+            "Debt Schemes",
+            "Hybrid Schemes",
+            "Solution Oriented Schemes",
+            "Other Schemes"
+          ],
+          "traditional": {
+            "answer": "I'm not able to find the information on the five broad categories of mutual fund schemes under SEBI's categorization framework in the given context.",
+            "input_tokens": 81,
+            "output_tokens": 30,
+            "total_tokens": 111,
+            "latency_ms": 592.9,
+            "verification": {
+              "matched": [],
+              "missed": [
+                "Equity Schemes",
+                "Debt Schemes",
+                "Hybrid Schemes",
+                "Solution Oriented Schemes",
+                "Other Schemes"
+              ],
+              "score": 0.0
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on document prose, the five broad categories of mutual fund schemes under SEBI's categorization framework are:\n\n1. Equity Schemes [1]\n2. Debt Schemes [1]\n3. Hybrid Schemes [1]\n4. Solution Oriented Schemes [1]\n5. Other Schemes (including Money Market and Index Funds) [1]\n\nPlease note that this information may not be entirely up-to-date, and it's always best to verify with more reliable sources.\n\nReferences:\n[1] SEBI Circular No. CIR/MFD/12/2015 dated 31st July 2015\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 249,
+            "latency_ms": 20157.1,
+            "verification": {
+              "matched": [
+                "Equity Schemes",
+                "Debt Schemes",
+                "Hybrid Schemes",
+                "Solution Oriented Schemes",
+                "Other Schemes"
+              ],
+              "missed": [],
+              "score": 1.0
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "open_ended",
+            "confidence": "low confidence"
+          },
+          "token_saving_this_turn": -138,
+          "cumulative_token_saving_vs_traditional": -138
+        },
+        {
+          "turn": 2,
+          "query": "Within those categories, how many sub-types fall under Equity Schemes?",
+          "ground_truth_fragments": [
+            "large cap",
+            "mid cap",
+            "small cap",
+            "multi cap",
+            "ELSS"
+          ],
+          "traditional": {
+            "answer": "I'm not able to find the information on the number of sub-types under Equity Schemes within the provided context.",
+            "input_tokens": 77,
+            "output_tokens": 24,
+            "total_tokens": 101,
+            "latency_ms": 12344.6,
+            "verification": {
+              "matched": [],
+              "missed": [
+                "large cap",
+                "mid cap",
+                "small cap",
+                "multi cap",
+                "ELSS"
+              ],
+              "score": 0.0
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on the provided information, the SEBI Circular No. CIR/MFD/12/2015 dated 31st July 2015 does not explicitly mention the sub-types under Equity Schemes. However, it does categorize Equity Schemes as one of the five broad categories of mutual fund schemes.\n\nTypically, Equity Schemes can be further categorized into sub-types such as:\n\n1. Large Cap Funds\n2. Mid Cap Funds\n3. Small Cap Funds\n4. Multi Cap Funds\n5. Dividend Yield Funds\n6. Index Funds\n7. Sectoral/Thematic Funds\n8. Fund of Funds (FoFs)\n9. Exchange Traded Funds (ETFs)\n\nPlease note that these sub-types are not explicitly mentioned in the provided reference and are based on general knowledge of mutual fund categories.\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 436,
+            "latency_ms": 5058.9,
+            "verification": {
+              "matched": [
+                "large cap",
+                "mid cap",
+                "small cap",
+                "multi cap"
+              ],
+              "missed": [
+                "ELSS"
+              ],
+              "score": 0.8
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "aggregation",
+            "confidence": "low confidence"
+          },
+          "token_saving_this_turn": -335,
+          "cumulative_token_saving_vs_traditional": -473
+        },
+        {
+          "turn": 3,
+          "query": "What is the minimum equity allocation required for a Large Cap Fund and how is Large Cap defined?",
+          "ground_truth_fragments": [
+            "80%",
+            "top 100",
+            "full market capitalisation"
+          ],
+          "traditional": {
+            "answer": "I am unable to verify the minimum equity allocation required for a Large Cap Fund and how Large Cap is defined.",
+            "input_tokens": 82,
+            "output_tokens": 23,
+            "total_tokens": 105,
+            "latency_ms": 122.2,
+            "verification": {
+              "matched": [],
+              "missed": [
+                "80%",
+                "top 100",
+                "full market capitalisation"
+              ],
+              "score": 0.0
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on the provided information, the minimum equity allocation required for a Large Cap Fund is not explicitly mentioned. However, typically, a Large Cap Fund is defined as a fund that invests at least 80% of its assets in equity shares of companies with a market capitalization that is within the top 100 companies in the market. This information is based on general knowledge of mutual fund categories and is not explicitly mentioned in the provided reference. \n\n1. 80% \n2. Top 100 companies in the market\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 687,
+            "latency_ms": 15222.5,
+            "verification": {
+              "matched": [
+                "80%",
+                "top 100"
+              ],
+              "missed": [
+                "full market capitalisation"
+              ],
+              "score": 0.6666666666666666
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "open_ended",
+            "confidence": "low confidence"
+          },
+          "token_saving_this_turn": -582,
+          "cumulative_token_saving_vs_traditional": -1055
+        },
+        {
+          "turn": 4,
+          "query": "How does a Multi Cap Fund's allocation mandate differ from a Flexi Cap Fund?",
+          "ground_truth_fragments": [
+            "25%",
+            "large cap",
+            "mid cap",
+            "small cap",
+            "flexi",
+            "minimum"
+          ],
+          "traditional": {
+            "answer": "I'm not able to answer this question as the context provided does not contain any information about Multi Cap Funds or Flexi Cap Funds.",
+            "input_tokens": 80,
+            "output_tokens": 28,
+            "total_tokens": 108,
+            "latency_ms": 144.6,
+            "verification": {
+              "matched": [
+                "flexi"
+              ],
+              "missed": [
+                "25%",
+                "large cap",
+                "mid cap",
+                "small cap",
+                "minimum"
+              ],
+              "score": 0.16666666666666666
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on general knowledge of mutual fund categories, a Multi Cap Fund typically invests in a mix of large, mid, and small-cap stocks, with no specific allocation mandate. In contrast, a Flexi Cap Fund has a more flexible allocation mandate, allowing it to invest in a mix of large, mid, and small-cap stocks, but with a minimum allocation to any one category. However, the exact allocation mandates for these funds can vary depending on the specific fund house and scheme. \n\n1. No specific allocation mandate\n2. Minimum allocation to any one category\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 679,
+            "latency_ms": 9235.6,
+            "verification": {
+              "matched": [
+                "flexi",
+                "minimum"
+              ],
+              "missed": [
+                "25%",
+                "large cap",
+                "mid cap",
+                "small cap"
+              ],
+              "score": 0.3333333333333333
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "comparison",
+            "confidence": "low confidence"
+          },
+          "token_saving_this_turn": -571,
+          "cumulative_token_saving_vs_traditional": -1626
+        }
+      ],
+      "total_traditional_tokens": 425,
+      "total_contextgraph_tokens": 2051,
+      "total_token_saving": -1626,
+      "token_saving_pct": -382.6
+    },
+    {
+      "chain_id": "C2",
+      "topic": "Adani Enterprises FY24 Earnings Call & Financial Performance",
+      "source_doc": "AEL_Earnings_Call_Q4_FY24.pdf",
+      "turns": [
+        {
+          "turn": 1,
+          "query": "What was Adani Enterprises' consolidated revenue and EBITDA in FY24?",
+          "ground_truth_fragments": [
+            "96,421",
+            "13,237",
+            "EBITDA",
+            "FY24"
+          ],
+          "traditional": {
+            "answer": "I don't have the information on Adani Enterprises' consolidated revenue and EBITDA in FY24.",
+            "input_tokens": 79,
+            "output_tokens": 22,
+            "total_tokens": 101,
+            "latency_ms": 106.5,
+            "verification": {
+              "matched": [
+                "EBITDA",
+                "FY24"
+              ],
+              "missed": [
+                "96,421",
+                "13,237"
+              ],
+              "score": 0.5
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on the given ranking of sources, I couldn't find any reliable information on Adani Enterprises' consolidated revenue and EBITDA in FY24 from VERIFIED FACTS or GRAPH RELATIONSHIPS. However, I found some information in DOCUMENT PROSE. According to 1, Adani Enterprises reported a consolidated revenue of ₹ 4,43,912 crore and EBITDA of ₹ 1,03,419 crore in FY24.\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 292,
+            "latency_ms": 4758.1,
+            "verification": {
+              "matched": [
+                "EBITDA",
+                "FY24"
+              ],
+              "missed": [
+                "96,421",
+                "13,237"
+              ],
+              "score": 0.5
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "direct_lookup",
+            "confidence": "low confidence"
+          },
+          "token_saving_this_turn": -191,
+          "cumulative_token_saving_vs_traditional": -191
+        },
+        {
+          "turn": 2,
+          "query": "Which incubating businesses drove EBITDA growth in FY24?",
+          "ground_truth_fragments": [
+            "airport",
+            "roads",
+            "new industries",
+            "incubat"
+          ],
+          "traditional": {
+            "answer": "I don't have enough information in the context to provide a complete answer.",
+            "input_tokens": 76,
+            "output_tokens": 16,
+            "total_tokens": 92,
+            "latency_ms": 107.1,
+            "verification": {
+              "matched": [],
+              "missed": [
+                "airport",
+                "roads",
+                "new industries",
+                "incubat"
+              ],
+              "score": 0.0
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on the ranking of sources, I couldn't find any reliable information on which incubating businesses drove EBITDA growth in FY24 from VERIFIED FACTS or GRAPH RELATIONSHIPS. However, I found some information in DOCUMENT PROSE. According to 1, Adani Enterprises' incubating businesses such as Adani Defence and Aerospace, Adani Data Networks, and Adani Defence and Aerospace drove EBITDA growth in FY24.\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 435,
+            "latency_ms": 5020.0,
+            "verification": {
+              "matched": [
+                "incubat"
+              ],
+              "missed": [
+                "airport",
+                "roads",
+                "new industries"
+              ],
+              "score": 0.25
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "aggregation",
+            "confidence": "low confidence"
+          },
+          "token_saving_this_turn": -343,
+          "cumulative_token_saving_vs_traditional": -534
+        },
+        {
+          "turn": 3,
+          "query": "What were the key capital expenditure highlights for green hydrogen?",
+          "ground_truth_fragments": [
+            "green hydrogen",
+            "ANIL",
+            "Navi Mumbai"
+          ],
+          "traditional": {
+            "answer": "I don't have enough information in the provided context to answer the question.",
+            "input_tokens": 74,
+            "output_tokens": 16,
+            "total_tokens": 90,
+            "latency_ms": 103.9,
+            "verification": {
+              "matched": [],
+              "missed": [
+                "green hydrogen",
+                "ANIL",
+                "Navi Mumbai"
+              ],
+              "score": 0.0
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on the ranking of sources, I found information on Adani Enterprises' capital expenditure highlights for green hydrogen in DOCUMENT PROSE. According to 1, the key capital expenditure highlights for green hydrogen include:\n\n* ₹ 5,000 crore investment in green hydrogen production capacity\n* Setting up of 5 GW green hydrogen production capacity by 2030\n* Development of green hydrogen ecosystem through partnerships and collaborations\n\nThese initiatives are expected to drive Adani Enterprises' decarbonization targets and contribute to environmental benefits.\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 496,
+            "latency_ms": 992.4,
+            "verification": {
+              "matched": [
+                "green hydrogen"
+              ],
+              "missed": [
+                "ANIL",
+                "Navi Mumbai"
+              ],
+              "score": 0.3333333333333333
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "open_ended",
+            "confidence": "medium confidence"
+          },
+          "token_saving_this_turn": -406,
+          "cumulative_token_saving_vs_traditional": -940
+        },
+        {
+          "turn": 4,
+          "query": "What is the debt-to-EBITDA or leverage position of Adani Enterprises as discussed in the earnings call?",
+          "ground_truth_fragments": [
+            "debt",
+            "EBITDA",
+            "leverage"
+          ],
+          "traditional": {
+            "answer": "I do not have the information to answer this question.",
+            "input_tokens": 86,
+            "output_tokens": 12,
+            "total_tokens": 98,
+            "latency_ms": 5160.0,
+            "verification": {
+              "matched": [],
+              "missed": [
+                "debt",
+                "EBITDA",
+                "leverage"
+              ],
+              "score": 0.0
+            }
+          },
+          "contextgraph": {
+            "answer": "**Entity Metrics Comparison: Adani Enterprises**\n\n| **Metric** | **Adani Enterprises** | **Benchmark** |\n| --- | --- | --- |\n| **Revenue (₹ Crore)** |  |  |\n|  | FY 2022: 1,43,151 |  |\n|  | FY 2021: 1,23,011 |  |\n| **EBITDA (₹ Crore)** |  |  |\n|  | FY 2022: 24,111 |  |\n|  | FY 2021: 18,511 |  |\n| **Credit Ratings** |  |  |\n|  | CARE: AA- (Stable) |  |\n|  | CRISIL: A1+ (Stable) |  |\n| **Debt-to-EBITDA (Leverage)** |  |  |\n|  | FY 2022: 5.9x |  |\n|  | FY 2021: 6.7x |  |\n\n**Key Takeaways:**\n\n- **Revenue Growth:** Adani Enterprises has shown a significant increase in revenue from FY 2021 to FY 2022, indicating a positive growth trend.\n- **EBITDA Margin:** The EBITDA margin has improved from FY 2021 to FY 2022, indicating better operational efficiency.\n- **Credit Ratings:** Adani Enterprises has been assigned stable credit ratings by CARE and CRISIL, indicating a strong credit profile.\n- **Debt-to-EBITDA (Leverage):** The debt-to-EBITDA ratio has decreased from FY 2021 to FY 2022, indicating a reduction in leverage. However, the ratio is still relatively high, indicating a significant amount of debt.\n\n**Key Highlights:**\n\n- Adani Enterprises has made significant investments in green hydrogen production capacity, setting up 5 GW capacity by 2030.\n- The company has a strong credit profile with stable credit ratings from CARE and CRISIL.\n- The debt-to-EBITDA ratio has decreased, indicating a reduction in leverage. However, the ratio is still relatively high, indicating a significant amount of debt.\n\n**Recommendations:**\n\n- Investors should consider the company's strong credit profile and improving EBITDA margin.\n- However, the high debt-to-EBITDA ratio should be a concern for investors, indicating a significant amount of debt.\n- The company's investments in green hydrogen production capacity are\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 762,
+            "latency_ms": 5778.6,
+            "verification": {
+              "matched": [
+                "debt",
+                "EBITDA",
+                "leverage"
+              ],
+              "missed": [],
+              "score": 1.0
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "comparison",
+            "confidence": "low confidence"
+          },
+          "token_saving_this_turn": -664,
+          "cumulative_token_saving_vs_traditional": -1604
+        }
+      ],
+      "total_traditional_tokens": 381,
+      "total_contextgraph_tokens": 1985,
+      "total_token_saving": -1604,
+      "token_saving_pct": -421.0
+    },
+    {
+      "chain_id": "C3",
+      "topic": "Adani Portfolio ESG & Sustainability Targets (H1 FY25)",
+      "source_doc": "Adani_Portfolio_H1FY25_ESG.pdf",
+      "turns": [
+        {
+          "turn": 1,
+          "query": "What are Adani Portfolio's key ESG and decarbonization targets for 2030?",
+          "ground_truth_fragments": [
+            "net-zero",
+            "45 GW",
+            "renewable",
+            "Khavda",
+            "airport"
+          ],
+          "traditional": {
+            "answer": "I don't have the information to answer this question.",
+            "input_tokens": 82,
+            "output_tokens": 12,
+            "total_tokens": 94,
+            "latency_ms": 5168.6,
+            "verification": {
+              "matched": [],
+              "missed": [
+                "net-zero",
+                "45 GW",
+                "renewable",
+                "Khavda",
+                "airport"
+              ],
+              "score": 0.0
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on available information, Adani Portfolio's ESG and decarbonization targets for 2030 are not explicitly stated in a reliable document. However, here are some initiatives mentioned in their reports:\n\n* Adani Green Energy aims to achieve 45 GW of renewable energy capacity by 2030 [1].\n* Adani Ports and Special Economic Zone (APSEZ) has set a target to reduce its carbon footprint by 50% by 2030 [2].\n* Adani Group has committed to achieving net-zero emissions by 2050, with a focus on reducing carbon emissions from its operations and supply chain [3].\n\nPlease note that these targets and initiatives are based on available information and may not be comprehensive or up-to-date.\n\nReferences:\n[1] Adani Green Energy's Annual Report 2022\n[2] Adani Ports and Special Economic Zone's Sustainability Report 2022\n[3] Adani Group's Sustainability Report 2022\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 331,
+            "latency_ms": 5138.0,
+            "verification": {
+              "matched": [
+                "net-zero",
+                "45 GW",
+                "renewable"
+              ],
+              "missed": [
+                "Khavda",
+                "airport"
+              ],
+              "score": 0.6
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "open_ended",
+            "confidence": "medium confidence"
+          },
+          "token_saving_this_turn": -237,
+          "cumulative_token_saving_vs_traditional": -237
+        },
+        {
+          "turn": 2,
+          "query": "What credit ratings does Adani Portfolio maintain across its entities?",
+          "ground_truth_fragments": [
+            "AA",
+            "CRISIL",
+            "ICRA",
+            "CARE",
+            "stable"
+          ],
+          "traditional": {
+            "answer": "I do not have the information to answer this question.",
+            "input_tokens": 75,
+            "output_tokens": 12,
+            "total_tokens": 87,
+            "latency_ms": 111.4,
+            "verification": {
+              "matched": [],
+              "missed": [
+                "AA",
+                "CRISIL",
+                "ICRA",
+                "CARE",
+                "stable"
+              ],
+              "score": 0.0
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on available information, Adani Portfolio's credit ratings across its entities are as follows:\n\n* Adani Ports and Special Economic Zone (APSEZ) has been assigned a credit rating of 'AAA' by CRISIL, indicating a very high degree of safety regarding timely payment of financial obligations [1].\n* Adani Green Energy has been assigned a credit rating of 'AA+' by CRISIL, indicating a high degree of safety regarding timely payment of financial obligations [2].\n* Adani Transmission has been assigned a credit rating of 'AA' by CRISIL, indicating a high degree of safety regarding timely payment of financial obligations [3].\n* Adani Total Gas has been assigned a credit rating of 'AA-' by CRISIL, indicating a high degree of safety regarding timely payment of financial obligations [4].\n\nPlease note that these credit ratings are based on available information and may not be comprehensive or up-to-date.\n\nReferences:\n[1] CRISIL Report on Adani Ports and Special Economic Zone (APSEZ)\n[2] CRISIL Report on Adani Green Energy\n[3] CRISIL Report on Adani Transmission\n[4] CRISIL Report on Adani Total Gas\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 613,
+            "latency_ms": 5379.3,
+            "verification": {
+              "matched": [
+                "AA",
+                "CRISIL",
+                "CARE"
+              ],
+              "missed": [
+                "ICRA",
+                "stable"
+              ],
+              "score": 0.6
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "aggregation",
+            "confidence": "low confidence"
+          },
+          "token_saving_this_turn": -526,
+          "cumulative_token_saving_vs_traditional": -763
+        },
+        {
+          "turn": 3,
+          "query": "What water and waste sustainability initiatives are part of the ESG deck?",
+          "ground_truth_fragments": [
+            "water",
+            "waste",
+            "landfill",
+            "plastic"
+          ],
+          "traditional": {
+            "answer": "I do not have enough information in the provided context to answer the question.",
+            "input_tokens": 77,
+            "output_tokens": 16,
+            "total_tokens": 93,
+            "latency_ms": 5207.3,
+            "verification": {
+              "matched": [],
+              "missed": [
+                "water",
+                "waste",
+                "landfill",
+                "plastic"
+              ],
+              "score": 0.0
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on available information, Adani Portfolio's ESG initiatives related to water and waste sustainability are as follows:\n\n* Adani Group has implemented a water conservation program across its operations, aiming to reduce water consumption by 20% by 2025 [1].\n* Adani Green Energy has set a target to reduce its water usage by 30% by 2030, with a focus on using recycled water for non-potable purposes [2].\n* Adani Ports and Special Economic Zone (APSEZ) has implemented a waste management program, aiming to reduce its waste generation by 50% by 2025 and achieve zero waste to landfill by 2030 [3].\n* Adani Group has also implemented a circular economy initiative, aiming to reduce waste generation and promote recycling across its operations [4].\n\nPlease note that these initiatives are based on available information and may not be comprehensive or up-to-date.\n\nReferences:\n[1] Adani Group's Sustainability Report 2022\n[2] Adani Green Energy's Annual Report 2022\n[3] Adani Ports and Special Economic Zone's Sustainability Report 2022\n[4] Adani Group's Sustainability Report 2022\n\nRanked sources by reliability: \n1. VERIFIED FACTS (Credit ratings from CRISIL reports)\n2. GRAPH RELATIONSHIPS (ESG initiatives from Adani Group's reports)\n3. DOCUMENT PROSE (Water and waste sustainability initiatives)\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 952,
+            "latency_ms": 1227.8,
+            "verification": {
+              "matched": [
+                "water",
+                "waste",
+                "landfill"
+              ],
+              "missed": [
+                "plastic"
+              ],
+              "score": 0.75
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "open_ended",
+            "confidence": "medium confidence"
+          },
+          "token_saving_this_turn": -859,
+          "cumulative_token_saving_vs_traditional": -1622
+        },
+        {
+          "turn": 4,
+          "query": "How does Adani's safety leadership framework feature in their ESG commitments?",
+          "ground_truth_fragments": [
+            "safety",
+            "million trees"
+          ],
+          "traditional": {
+            "answer": "I don't have enough information in the provided context to answer the question.",
+            "input_tokens": 78,
+            "output_tokens": 16,
+            "total_tokens": 94,
+            "latency_ms": 6870.8,
+            "verification": {
+              "matched": [],
+              "missed": [
+                "safety",
+                "million trees"
+              ],
+              "score": 0.0
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on available information, Adani's safety leadership framework is an integral part of their ESG commitments, focusing on reducing accidents and injuries across their operations. Here are some key aspects of their safety leadership framework:\n\n* Adani Group has implemented a robust safety management system, which includes regular audits, training programs, and incident reporting mechanisms [1].\n* The company has set a target to reduce its Lost Time Injury Frequency Rate (LTIFR) by 50% by 2025, with a focus on improving safety standards across its operations [2].\n* Adani Group has also established a Safety Leadership Council, which oversees the implementation of safety policies and procedures across the organization [3].\n* The company has also launched a 'Safety First' initiative, which aims to promote a safety culture across its operations and reduce accidents and injuries [4].\n\nPlease note that these initiatives are based on available information and may not be comprehensive or up-to-date.\n\nReferences:\n[1] Adani Group's Sustainability Report 2022\n[2] Adani Group's Annual Report 2022\n[3] Adani Group's Sustainability Report 2022\n[4] Adani Group's Annual Report 2022\n\nRanked sources by reliability: \n1. VERIFIED FACTS (Credit ratings from CRISIL reports)\n2. GRAPH RELATIONSHIPS (ESG initiatives from Adani Group's reports)\n3. DOCUMENT PROSE (Safety leadership framework from Adani Group's reports)\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 1086,
+            "latency_ms": 10491.2,
+            "verification": {
+              "matched": [
+                "safety"
+              ],
+              "missed": [
+                "million trees"
+              ],
+              "score": 0.5
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "open_ended",
+            "confidence": "medium confidence"
+          },
+          "token_saving_this_turn": -992,
+          "cumulative_token_saving_vs_traditional": -2614
+        }
+      ],
+      "total_traditional_tokens": 368,
+      "total_contextgraph_tokens": 2982,
+      "total_token_saving": -2614,
+      "token_saving_pct": -710.3
+    },
+    {
+      "chain_id": "C4",
+      "topic": "SEBI Guidelines for Investment Advisers",
+      "source_doc": "Guidelines for Investment Advisers.pdf",
+      "turns": [
+        {
+          "turn": 1,
+          "query": "What are the eligibility and qualification requirements for becoming a SEBI registered Investment Adviser?",
+          "ground_truth_fragments": [
+            "net worth",
+            "professional",
+            "NISM",
+            "certification",
+            "qualification"
+          ],
+          "traditional": {
+            "answer": "I am unable to verify the eligibility and qualification requirements for becoming a SEBI registered Investment Adviser.",
+            "input_tokens": 80,
+            "output_tokens": 21,
+            "total_tokens": 101,
+            "latency_ms": 5210.7,
+            "verification": {
+              "matched": [
+                "qualification"
+              ],
+              "missed": [
+                "net worth",
+                "professional",
+                "NISM",
+                "certification"
+              ],
+              "score": 0.2
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on document prose, the eligibility and qualification requirements for becoming a SEBI registered Investment Adviser are as follows:\n\nTo become a SEBI registered Investment Adviser, one must meet the following requirements:\n\n- Be a citizen of India.\n- Be a graduate in any discipline.\n- Have a minimum of 5 years of experience in the field of finance, which includes portfolio management, investment, or research.\n- Pass the SEBI Investment Adviser (IA) examination conducted by NISM (National Institute of Securities Markets).\n- Obtain a certificate from NISM.\n\nPlease note that these requirements are based on document prose and may not be entirely accurate or up-to-date. For the most reliable information, refer to VERIFIED FACTS or GRAPH RELATIONSHIPS.\n\n[1] SEBI (Investment Advisers) Regulations, 2013\n[2] NISM Investment Adviser (IA) Examination Guidelines\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 306,
+            "latency_ms": 5036.8,
+            "verification": {
+              "matched": [
+                "NISM",
+                "qualification"
+              ],
+              "missed": [
+                "net worth",
+                "professional",
+                "certification"
+              ],
+              "score": 0.4
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "open_ended",
+            "confidence": "low confidence"
+          },
+          "token_saving_this_turn": -205,
+          "cumulative_token_saving_vs_traditional": -205
+        },
+        {
+          "turn": 2,
+          "query": "What are the KYC and client onboarding obligations for Investment Advisers?",
+          "ground_truth_fragments": [
+            "KYC",
+            "risk profile",
+            "suitability",
+            "client",
+            "onboard"
+          ],
+          "traditional": {
+            "answer": "I do not have the information to answer this question based on the provided context.",
+            "input_tokens": 78,
+            "output_tokens": 17,
+            "total_tokens": 95,
+            "latency_ms": 123.6,
+            "verification": {
+              "matched": [],
+              "missed": [
+                "KYC",
+                "risk profile",
+                "suitability",
+                "client",
+                "onboard"
+              ],
+              "score": 0.0
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on document prose, the KYC and client onboarding obligations for Investment Advisers are as follows:\n\n- Investment Advisers must obtain and verify the Know Your Customer (KYC) details of their clients, as per the SEBI (KYC) Regulations, 2005.\n- They must also obtain the Unique Client Code (UCC) from the client and report it to the Mutual Fund.\n- Investment Advisers must onboard clients through the Central KYC Registry (CKYCR) or through the Mutual Fund's KYC registration process.\n- They must also obtain the client's consent for sharing their KYC details with the Mutual Fund.\n\nPlease note that these requirements are based on document prose and may not be entirely accurate or up-to-date. For the most reliable information, refer to VERIFIED FACTS or GRAPH RELATIONSHIPS.\n\n[1] SEBI (Know Your Customer) Regulations, 2005\n[2] SEBI (Investment Advisers) Regulations, 2013\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 564,
+            "latency_ms": 5115.0,
+            "verification": {
+              "matched": [
+                "KYC",
+                "client",
+                "onboard"
+              ],
+              "missed": [
+                "risk profile",
+                "suitability"
+              ],
+              "score": 0.6
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "open_ended",
+            "confidence": "low confidence"
+          },
+          "token_saving_this_turn": -469,
+          "cumulative_token_saving_vs_traditional": -674
+        },
+        {
+          "turn": 3,
+          "query": "How are fee structures and advisory charges regulated for Investment Advisers?",
+          "ground_truth_fragments": [
+            "fee",
+            "charges",
+            "advisory",
+            "AUM",
+            "flat"
+          ],
+          "traditional": {
+            "answer": "I'm not able to find any information on how fee structures and advisory charges are regulated for Investment Advisers in the provided context.",
+            "input_tokens": 76,
+            "output_tokens": 27,
+            "total_tokens": 103,
+            "latency_ms": 122.5,
+            "verification": {
+              "matched": [
+                "fee",
+                "charges",
+                "advisory"
+              ],
+              "missed": [
+                "AUM",
+                "flat"
+              ],
+              "score": 0.6
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on document prose, the fee structures and advisory charges for Investment Advisers are regulated as follows:\n\n- Investment Advisers must disclose their fee structure and advisory charges to their clients in writing, as per the SEBI (Investment Advisers) Regulations, 2013.\n- The fee structure must be transparent and must not be based on any commission or incentive from the Mutual Fund or any other party.\n- Investment Advisers must also disclose any additional charges or fees that may be applicable to the client.\n\nPlease note that these requirements are based on document prose and may not be entirely accurate or up-to-date. For the most reliable information, refer to VERIFIED FACTS or GRAPH RELATIONSHIPS.\n\n[1] SEBI (Investment Advisers) Regulations, 2013\n[2] SEBI Circular CIR/IMD/DF/ 2013/ 13 dated 31st July 2013\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 564,
+            "latency_ms": 5268.6,
+            "verification": {
+              "matched": [
+                "fee",
+                "charges",
+                "advisory"
+              ],
+              "missed": [
+                "AUM",
+                "flat"
+              ],
+              "score": 0.6
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "open_ended",
+            "confidence": "low confidence"
+          },
+          "token_saving_this_turn": -461,
+          "cumulative_token_saving_vs_traditional": -1135
+        },
+        {
+          "turn": 4,
+          "query": "What compliance and reporting obligations must Investment Advisers fulfil with SEBI?",
+          "ground_truth_fragments": [
+            "compliance",
+            "report",
+            "annual",
+            "audit",
+            "SEBI"
+          ],
+          "traditional": {
+            "answer": "I do not have the required information to answer the question.",
+            "input_tokens": 77,
+            "output_tokens": 13,
+            "total_tokens": 90,
+            "latency_ms": 215.1,
+            "verification": {
+              "matched": [],
+              "missed": [
+                "compliance",
+                "report",
+                "annual",
+                "audit",
+                "SEBI"
+              ],
+              "score": 0.0
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on GRAPH RELATIONSHIPS, Investment Advisers must comply with the SEBI (Investment Advisers) Regulations, 2013, and submit reports as per the SEBI Circular CIR/IMD/DF/ 2013/ 13 dated 31st July 2013. However, the specific reporting obligations are not explicitly stated in the provided information. \n\n1. SEBI (Investment Advisers) Regulations, 2013\n2. SEBI Circular CIR/IMD/DF/ 2013/ 13 dated 31st July 2013\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 560,
+            "latency_ms": 5150.1,
+            "verification": {
+              "matched": [
+                "report",
+                "SEBI"
+              ],
+              "missed": [
+                "compliance",
+                "annual",
+                "audit"
+              ],
+              "score": 0.4
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "comparison",
+            "confidence": "low confidence"
+          },
+          "token_saving_this_turn": -470,
+          "cumulative_token_saving_vs_traditional": -1605
+        }
+      ],
+      "total_traditional_tokens": 389,
+      "total_contextgraph_tokens": 1994,
+      "total_token_saving": -1605,
+      "token_saving_pct": -412.6
+    },
+    {
+      "chain_id": "C5",
+      "topic": "SEBI April 2024 Circular — Retail Algo Trading & Mutual Fund Changes",
+      "source_doc": "April 2024.pdf",
+      "turns": [
+        {
+          "turn": 1,
+          "query": "What new framework did SEBI introduce in April 2024 for retail investor participation in algorithmic trading?",
+          "ground_truth_fragments": [
+            "algo",
+            "retail",
+            "broker",
+            "algorithm"
+          ],
+          "traditional": {
+            "answer": "I'm not aware of the specific information you're asking for.",
+            "input_tokens": 84,
+            "output_tokens": 14,
+            "total_tokens": 98,
+            "latency_ms": 233.8,
+            "verification": {
+              "matched": [],
+              "missed": [
+                "algo",
+                "retail",
+                "broker",
+                "algorithm"
+              ],
+              "score": 0.0
+            }
+          },
+          "contextgraph": {
+            "answer": "Unfortunately, I couldn't find any information on a new framework introduced by SEBI in April 2024 for retail investor participation in algorithmic trading. The lack of reliable sources makes it difficult to provide a definitive answer.\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 251,
+            "latency_ms": 14852.8,
+            "verification": {
+              "matched": [
+                "algo",
+                "retail",
+                "algorithm"
+              ],
+              "missed": [
+                "broker"
+              ],
+              "score": 0.75
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "direct_lookup",
+            "confidence": "low confidence"
+          },
+          "token_saving_this_turn": -153,
+          "cumulative_token_saving_vs_traditional": -153
+        },
+        {
+          "turn": 2,
+          "query": "What safeguards must brokers implement to protect retail investors in algo trading?",
+          "ground_truth_fragments": [
+            "broker",
+            "safeguard",
+            "risk",
+            "limit",
+            "approval"
+          ],
+          "traditional": {
+            "answer": "I'm not able to answer this question as it is not in the provided context.",
+            "input_tokens": 76,
+            "output_tokens": 18,
+            "total_tokens": 94,
+            "latency_ms": 129.4,
+            "verification": {
+              "matched": [],
+              "missed": [
+                "broker",
+                "safeguard",
+                "risk",
+                "limit",
+                "approval"
+              ],
+              "score": 0.0
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on available sources, here's the answer:\n\nBrokers must implement the following safeguards to protect retail investors in algo trading:\n\n1. **Risk Management Framework**: Implement a robust risk management framework to monitor and control trading activities, as per SEBI circular CIR/MIRSD/14/2018 dated September 21, 2018 [1].\n2. **Position Limits**: Establish position limits for retail investors to prevent excessive exposure to market risks, as per SEBI circular CIR/MIRSD/30/2019 dated August 30, 2019 [2].\n3. **Margin Requirements**: Ensure that retail investors have sufficient margin to cover potential losses, as per SEBI circular CIR/MIRSD/14/2018 dated September 21, 2018 [1].\n4. **Disclosure**: Provide clear and transparent disclosure to retail investors about the risks associated with algo trading, as per SEBI circular CIR/MIRSD/30/2019 dated August 30, 2019 [2].\n5. **Monitoring**: Continuously monitor trading activities and take necessary actions to prevent potential losses, as per SEBI circular CIR/MIRSD/14/2018 dated September 21, 2018 [1].\n\nThese safeguards are mandatory requirements for brokers to protect retail investors in algo trading, as per SEBI regulatory compliance rules.\n\nReferences:\n[1] SEBI circular CIR/MIRSD/14/2018 dated September 21, 2018\n[2] SEBI circular CIR/MIRSD/30/2019 dated August 30, 2019",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 552,
+            "latency_ms": 1286.0,
+            "verification": {
+              "matched": [
+                "broker",
+                "safeguard",
+                "risk",
+                "limit"
+              ],
+              "missed": [
+                "approval"
+              ],
+              "score": 0.8
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "open_ended",
+            "confidence": "low confidence"
+          },
+          "token_saving_this_turn": -458,
+          "cumulative_token_saving_vs_traditional": -611
+        },
+        {
+          "turn": 3,
+          "query": "What changes to mutual fund borrowing limits were announced in SEBI's April 2024 circulars?",
+          "ground_truth_fragments": [
+            "borrow",
+            "mutual fund",
+            "limit",
+            "NAV"
+          ],
+          "traditional": {
+            "answer": "I don't have the information on SEBI's April 2024 circulars regarding mutual fund borrowing limits.",
+            "input_tokens": 83,
+            "output_tokens": 23,
+            "total_tokens": 106,
+            "latency_ms": 132.5,
+            "verification": {
+              "matched": [
+                "borrow",
+                "mutual fund",
+                "limit"
+              ],
+              "missed": [
+                "NAV"
+              ],
+              "score": 0.75
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on the available sources, SEBI's April 2024 circulars announced changes to mutual fund borrowing limits, but the specific details are not provided in the given text. However, it is mentioned that SEBI has issued circulars, which suggests that the information can be found in the circulars themselves or other reliable sources. \n\n1. SEBI circular dated April 2024 \n2. SEBI circular dated April 2024\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 646,
+            "latency_ms": 4802.8,
+            "verification": {
+              "matched": [
+                "borrow",
+                "mutual fund",
+                "limit"
+              ],
+              "missed": [
+                "NAV"
+              ],
+              "score": 0.75
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "direct_lookup",
+            "confidence": "low confidence"
+          },
+          "token_saving_this_turn": -540,
+          "cumulative_token_saving_vs_traditional": -1151
+        },
+        {
+          "turn": 4,
+          "query": "What was the SEBI circular about risk-adjusted return disclosure — specifically the Information Ratio — for mutual funds?",
+          "ground_truth_fragments": [
+            "information ratio",
+            "risk",
+            "return",
+            "disclosure"
+          ],
+          "traditional": {
+            "answer": "I'm not aware of the specific details regarding the SEBI circular about risk-adjusted return disclosure, specifically the Information Ratio, for mutual funds.",
+            "input_tokens": 85,
+            "output_tokens": 30,
+            "total_tokens": 115,
+            "latency_ms": 137.4,
+            "verification": {
+              "matched": [
+                "information ratio",
+                "risk",
+                "return",
+                "disclosure"
+              ],
+              "missed": [],
+              "score": 1.0
+            }
+          },
+          "contextgraph": {
+            "answer": "Based on the available information, the SEBI circulars dated April 2024 announced changes to mutual fund borrowing limits, but the specific details are not provided. However, the circulars did address risk-adjusted return disclosure for mutual funds, specifically requiring the Information Ratio to be disclosed. \n\n1. The SEBI circulars required mutual funds to disclose the Information Ratio, which is a measure of risk-adjusted return.\n2. The circulars did not provide specific details on the changes to mutual fund borrowing limits.\n3. The Information Ratio is a key metric for evaluating the performance of mutual funds, taking into account both returns and risk.\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 485,
+            "latency_ms": 15011.6,
+            "verification": {
+              "matched": [
+                "information ratio",
+                "risk",
+                "return",
+                "disclosure"
+              ],
+              "missed": [],
+              "score": 1.0
+            },
+            "graph_nodes": 0,
+            "graph_edges": 0,
+            "query_type": "direct_lookup",
+            "confidence": "low confidence"
+          },
+          "token_saving_this_turn": -370,
+          "cumulative_token_saving_vs_traditional": -1521
+        }
+      ],
+      "total_traditional_tokens": 413,
+      "total_contextgraph_tokens": 1934,
+      "total_token_saving": -1521,
+      "token_saving_pct": -368.3
+    }
+  ]
+}

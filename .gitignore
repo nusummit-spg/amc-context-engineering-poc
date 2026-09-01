@@ -1,0 +1,718 @@
+# ===========================================================================
+# Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+# 
+# Author: NuSummit Developers
+#
+# Global .gitignore for context-engineering project
+# Covers Python, Node.js, Rust, sensitive files, logs, caches, and OS artifacts
+# ===========================================================================
+
+# ============================================================================
+# SENSITIVE DATA & CREDENTIALS - HIGHEST PRIORITY
+# ============================================================================
+
+# Environment files with secrets
+.env
+.env.*
+!.env.example
+!.env.template
+.envrc
+.envrc.local
+
+# API keys, tokens, and credentials
+*.key
+*.pem
+*.pfx
+*.p12
+*.jks
+*.keystore
+credentials.json
+secrets.json
+creds.json
+api_keys.json
+token*
+!.gitkeep
+
+# Private SSH/SSL certificates and keys
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+*.pub
+private_key
+public_key
+*.crt
+*.cer
+*.p8
+
+# AWS, Azure, GCP, and cloud credentials
+~/.aws/credentials
+~/.aws/config
+~/.azure/*
+~/.gcp/*
+.aws/
+.azure/
+.gcp/
+google-services.json
+gcloud/
+
+# Database credentials and connection strings
+db_connection.json
+db_config.json
+database.yml
+database.json
+db_transport.json
+
+# Vertex AI and other ML credentials
+vertex_key.json
+service-account*.json
+
+# OAuth tokens and refresh tokens
+oauth_token
+refresh_token
+bearer_token
+
+# ============================================================================
+# PYTHON ARTIFACTS & VIRTUAL ENVIRONMENTS
+# ============================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.py[z]
+*$py.class
+
+# C extensions
+*.so
+*.pyd
+*.so.*
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-wheel-metadata/
+
+# PyInstaller artifacts
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+pip-errors.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py.cover
+.hypothesis/
+cover/
+.testmondata
+.testmon.json
+
+# Type checking caches
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.mypy_reports/
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff
+instance/
+.webassets-cache
+
+# Scrapy stuff
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Virtual environments - CRITICAL for multi-environment projects
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+.python-env
+.pyenv
+.pixi
+.pixi/
+pixi.lock
+
+# Python version management
+.python-version
+
+# Package managers - lockfiles are committed, but caches/temp files are not
+.pdm-python
+.pdm-build/
+__pypackages__/
+
+# PEP 582
+__pypackages__/
+
+# Poetry (lockfile should be committed)
+# poetry.lock
+# poetry.toml
+
+# pdm (lockfile should be committed)
+# pdm.lock
+# pdm.toml
+
+# Pipenv (lockfile should be committed)
+# Pipfile.lock
+
+# UV (lockfile should be committed)
+# uv.lock
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+celery_worker.log
+
+# Redis
+*.rdb
+*.aof
+dump.rdb
+
+# RabbitMQ
+mnesia/
+rabbitmq/
+rabbitmq-data/
+.rabbitmq
+
+# ActiveMQ
+activemq-data/
+
+# SageMath parsed files
+*.sage.py
+
+# Cython debug symbols
+cython_debug/
+
+# PyCharm/JetBrains
+.idea/
+*.iml
+*.iws
+*.ipr
+.gradle/
+
+# Abstra
+.abstra/
+
+# Marimo
+marimo/_static/
+marimo/_lsp/
+__marimo__/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# Temporary Python files
+tempCodeRunnerFile.py
+*.pyo
+
+# ============================================================================
+# NODE.JS / JAVASCRIPT / TYPESCRIPT ARTIFACTS
+# ============================================================================
+
+# Dependencies
+node_modules/
+npm-debug.log*
+npm-error.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+pnpm-error.log*
+lerna-debug.log*
+
+# npm caches and temp files
+.npm/
+.npmrc
+.npmignore
+
+# Yarn caches
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+.yarn/tmp/
+.yarnrc
+.yarnrc.local
+
+# pnpm
+.pnp
+.pnp.js
+.pnpm-store/
+.pnpm/
+
+# Build outputs
+dist/
+dist-ssr/
+build/
+out/
+*.tsbuildinfo
+.turbo/
+
+# Next.js
+.next/
+out/
+*.next/
+
+# Nuxt
+.nuxt/
+dist/
+
+# Vite
+.vite/
+
+# Testing
+coverage/
+.nyc_output/
+lcov.info
+junit.xml
+test-results/
+
+# Logs
+logs/
+*.log
+
+# Local files for development
+*.local
+.local
+local_modules/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*~
+.sublime-project
+.sublime-workspace
+
+# Misc
+.parcel-cache/
+.cache/
+.cache-loader/
+.eslintcache
+.prettier-ignore
+
+# ============================================================================
+# RUST / CARGO ARTIFACTS
+# ============================================================================
+
+# Build artifacts
+/target/
+target/
+Cargo.lock
+
+# Rust artifacts
+*.rlib
+*.rmeta
+*.so
+*.dylib
+*.dll
+*.exe
+*.pdb
+
+# Rust profiling and debugging
+*.profraw
+*.profdata
+.flamegraph
+
+# IDE and editor files for Rust
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ============================================================================
+# LOGS, DEBUG DUMPS, AND RUNTIME OUTPUT
+# ============================================================================
+
+# Logs
+logs/
+log/
+*.log
+*.log.*
+.log
+debug.log
+error.log
+app.log
+application.log
+server.log
+trace.log
+
+# Debug dumps and crash data
+*.dump
+*.dmp
+*.core
+core.*
+vgcore.*
+*.crash
+crash-*.txt
+
+# PID files
+*.pid
+*.pidlock
+
+# Temporary runtime data
+run/
+tmp/
+temp/
+tempdir/
+.tmp/
+
+# SQLite and local databases
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Docker volumes and data
+docker-volumes/
+postgres-data/
+mysql-data/
+mongo-data/
+redis-data/
+
+# ============================================================================
+# IDE / EDITOR CONFIGURATION & SETTINGS
+# ============================================================================
+
+# Visual Studio Code
+.vscode/
+.vscode-test/
+.history/
+.vscode-insiders/
+
+# JetBrains IDEs (IntelliJ, PyCharm, WebStorm, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+.gradle/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# VS
+.vs/
+.vscode/
+
+# Vim
+*.swp
+*.swo
+*~
+.vim/
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Atom
+.atom/
+
+# netbeans
+.netbeans/
+
+# Zed
+.zed/
+
+# ============================================================================
+# OPERATING SYSTEM FILES
+# ============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+*.exe.config
+*.exe.manifest
+
+# Linux
+.directory
+.Trash-*
+
+# ============================================================================
+# BUILD & GENERATED FILES
+# ============================================================================
+
+# General build artifacts
+build/
+dist/
+out/
+output/
+bin/
+obj/
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+*.exe
+*.so
+*.dylib
+
+# Gradle
+.gradle/
+gradle-app.setting
+gradlew
+gradlew.bat
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Ant
+build.xml
+dist/
+
+# ============================================================================
+# DOCKER SPECIFIC
+# ============================================================================
+
+# Docker build cache
+.docker/
+.dockerignore
+
+# Docker compose
+docker-compose.override.yml
+docker-compose.local.yml
+docker-compose.dev.yml
+
+# ============================================================================
+# INFRASTRUCTURE & IaC (Terraform, CloudFormation, etc.)
+# ============================================================================
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+terraform.tfstate*
+.terraform/
+.terraform.lock.hcl
+crash.log
+
+# CloudFormation
+*.cfn.json
+*.cfn.yaml
+
+# Ansible
+*.retry
+
+# ============================================================================
+# MONITORING & METRICS
+# ============================================================================
+
+# Prometheus
+prometheus.yml.bak
+
+# Grafana
+grafana-storage/
+
+# ELK Stack
+elasticsearch-data/
+logstash-data/
+kibana-data/
+
+# ============================================================================
+# CACHES
+# ============================================================================
+
+# General caches
+.cache/
+cache/
+*.cache
+
+# Sass/SCSS
+.sass-cache/
+
+# Less
+.less-cache/
+
+# Webpack
+.webpack-cache/
+
+# Turbo
+.turbo/
+
+# ============================================================================
+# MISCELLANEOUS PROJECT-SPECIFIC FILES
+# ============================================================================
+
+# Benchmark and profiling outputs
+benchmark-*.json
+profile-*.json
+profiling-results/
+*.prof
+*.cProfile
+
+# Test outputs and reports
+test-results/
+test-reports/
+test-output/
+*-test-results.json
+*-test-report.html
+
+# Temporary test files
+test-temp/
+test-tmp/
+
+# Lock files (in general, these should be committed, but some temporary ones should not)
+# Keeping yarn.lock, package-lock.json, pnpm-lock.yaml, Cargo.lock for reproducibility
+
+# Scratch directories
+scratch/
+scratch-*
+tmp-*
+.scratch/
+
+# ============================================================================
+# STREAMLIT SPECIFIC
+# ============================================================================
+
+# Streamlit secrets
+.streamlit/secrets.toml
+.streamlit/config.toml.local
+
+# Streamlit cache
+.streamlit/cache/
+streamlit_app_cache/
+
+# ============================================================================
+# NEO4J / GRAPH DATABASE
+# ============================================================================
+
+# Neo4j data and logs
+data/
+logs/
+neo4j-data/
+neo4j-logs/
+
+# ============================================================================
+# FAISS INDEXES & VECTOR STORES
+# ============================================================================
+
+# Large index files (if exceeding size limits)
+faiss_indexes/
+vector-db/
+*.faiss
+*.index
+
+# ============================================================================
+# EVALUATION & BENCHMARK OUTPUT (Keep documentation, exclude large data)
+# ============================================================================
+
+# Large evaluation data
+evaluation-data/
+evaluation-cache/
+benchmark-cache/
+
+# ============================================================================
+# ALLOW EXCEPTIONS - Files that SHOULD be tracked
+# ============================================================================
+
+# These are exceptions to the above rules - they should be committed
+!.gitkeep
+!.env.example
+!.env.template
+!.npmrc.example
+!.yarnrc.example
+!.editorconfig
+!.prettier-ignore.example
+!.eslintignore.example
+!README*
+!LICENSE*
+!Makefile
+!makefile

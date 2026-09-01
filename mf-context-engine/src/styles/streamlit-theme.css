@@ -1,0 +1,1082 @@
+/* ==========================================================================
+   Base Streamlit chrome — reproduces the default Streamlit "light" theme
+   frame (sidebar, block-container, headers, base widget look) that every
+   Streamlit app ships with, before app.py's CUSTOM_CSS is layered on top.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&family=Source+Code+Pro&display=swap');
+
+:root {
+  --st-primary: #FF4B4B; /* streamlit default primary, unused once overridden */
+  --st-text: #31333F;
+  --st-sidebar-bg: #F0F2F6;
+  --st-border: rgba(49, 51, 63, 0.2);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "Source Sans Pro", "Segoe UI", Arial, sans-serif;
+  font-size: 16px;
+  color: var(--st-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.stApp {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  background-color: #F8F7F3;
+  background-image: radial-gradient(#E5E0D8 1px, transparent 0);
+  background-size: 24px 24px;
+  position: relative;
+}
+
+/* ── Sidebar ── */
+.stSidebar {
+  width: 21rem;
+  min-width: 21rem;
+  max-width: 21rem;
+  flex-shrink: 0;
+  background-color: var(--st-sidebar-bg);
+  padding: 1.25rem 1.25rem 3rem 1.25rem;
+  border-right: 1px solid rgba(49, 51, 63, 0.1);
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  transition: width 0.2s ease, min-width 0.2s ease, padding 0.2s ease;
+}
+
+.stSidebar--collapsed {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  overflow: hidden !important;
+}
+
+/* Sidebar Top Bar with Collapse Toggle */
+.stSidebar-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+
+.stSidebar-brand {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(49, 51, 63, 0.6);
+}
+
+.stSidebarCollapseButton {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #5C574C;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+.stSidebarCollapseButton:hover {
+  background-color: rgba(151, 166, 195, 0.25);
+  color: #A8412C;
+  border-color: rgba(168, 65, 44, 0.2);
+}
+
+/* Floating Open/Expand Button when Sidebar is Collapsed */
+.stSidebarOpenButton {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 999;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  border: 1px solid #E7E1D4;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #5C574C;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+.stSidebarOpenButton:hover {
+  background-color: #F8F7F3;
+  border-color: #A8412C;
+  color: #A8412C;
+  box-shadow: 0 4px 12px rgba(168, 65, 44, 0.15);
+  transform: scale(1.05);
+}
+
+/* ── Streamlit Multipage Navigation (stSidebarNav) ── */
+.stSidebarNav {
+  margin-bottom: 1.25rem;
+}
+.stSidebarNav-header {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(49, 51, 63, 0.5);
+  margin: 0 0 0.4rem 0.5rem;
+}
+.stSidebarNav-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stSidebarNav-item {
+  margin: 0;
+  padding: 0;
+}
+.stSidebarNav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 6px;
+  color: #31333F;
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.stSidebarNav-link:hover {
+  background-color: rgba(151, 166, 195, 0.18);
+  color: #A8412C;
+}
+.stSidebarNav-link.active {
+  background-color: rgba(168, 65, 44, 0.12);
+  color: #A8412C;
+  font-weight: 700;
+  border-left: 3px solid #A8412C;
+  padding-left: calc(0.75rem - 3px);
+}
+.stSidebarNav-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.stSidebarNav-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stSidebar h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 1.1rem 0 0.45rem 0;
+  color: #31333F;
+}
+.stSidebar hr {
+  border: none;
+  border-top: 1px solid rgba(49,51,63,0.15);
+  margin: 0.9rem 0;
+}
+.stSidebar .stCaption, .stSidebar .element-caption {
+  color: rgba(49,51,63,0.6);
+  font-size: 0.8rem;
+}
+
+/* ── Main content ── */
+.stMain {
+  flex: 1 1 0%;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+.block-container {
+  padding: 2rem 3rem 2rem 3rem !important;
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+header.stHeader {
+  background-color: transparent !important;
+  height: 2.5rem;
+}
+
+footer.stFooter { visibility: hidden; display: none; }
+
+/* ── Headings / captions ── */
+.stCaption {
+  color: rgba(49,51,63,0.6);
+  font-size: 0.875rem;
+  margin: 0 0 0.6rem 0;
+}
+h1.stTitle { font-size: 2.25rem; font-weight: 700; margin: 0 0 0.25rem 0; }
+h2.stHeader2 { font-size: 1.5rem; font-weight: 700; margin: 0.6rem 0; }
+h3.stSubheader { font-size: 1.2rem; font-weight: 700; margin: 1rem 0 0.5rem 0; }
+
+.stMarkdownBlockquote {
+  border-left: 4px solid rgba(49,51,63,0.2);
+  padding: 0 0 0 1rem;
+  margin: 0.5rem 0;
+  color: #31333F;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+.stMarkdownBlockquote code {
+  background: rgba(151,166,195,0.15);
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+  font-family: "Source Code Pro", monospace;
+  font-size: 0.85em;
+}
+
+/* ── Columns / rows ── */
+.stRow {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 0.6rem;
+}
+.stCol { min-width: 0; }
+
+/* ── Divider ── */
+hr.stDivider {
+  border: none;
+  border-top: 1px solid rgba(49,51,63,0.15);
+  margin: 1.5rem 0;
+}
+
+/* ==========================================================================
+   app.py CUSTOM_CSS — reproduced verbatim (selectors translated to classes)
+   ========================================================================== */
+
+/* Tabs Layout */
+.stTabs-list { display: flex; gap: 24px; border-bottom: 1px solid rgba(49,51,63,0.15); }
+.stTabs-tab {
+  padding-top: 1rem;
+  padding-bottom: 0.5rem;
+  color: #8A8378;
+  font-weight: 600;
+  font-size: 1rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+}
+.stTabs-tab[aria-selected="true"] {
+  color: #A8412C !important;
+  border-bottom-color: #A8412C !important;
+}
+.stTabs-panel { padding-top: 1.25rem; }
+
+/* Text Inputs */
+.stTextInput input, .stTextInput textarea {
+  background-color: #EFEAE0 !important;
+  border: 1px solid #E7E1D4 !important;
+  border-radius: 8px !important;
+  color: #5C574C !important;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  width: 100%;
+  font-family: inherit;
+  outline: none;
+}
+.stTextInput input::placeholder { color: #A69E8E; }
+.stTextInput input:focus, .stTextInput textarea:focus {
+  border-color: #A8412C !important;
+  box-shadow: 0 0 0 1px #A8412C !important;
+}
+.stTextInput input:disabled { opacity: 0.6; }
+
+/* Selectbox */
+.stSelectbox select {
+  background-color: #FFFFFF;
+  border: 1px solid rgba(49,51,63,0.2);
+  border-radius: 8px;
+  color: #31333F;
+  padding: 0.45rem 0.6rem;
+  font-size: 1rem;
+  width: 100%;
+  font-family: inherit;
+}
+.stSelectbox-label { font-size: 0.875rem; font-weight: 400; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.3rem; color: #31333F; }
+.stHelpIcon {
+  color: rgba(49,51,63,0.5);
+  font-size: 0.8rem;
+  cursor: help;
+  border: 1px solid rgba(49,51,63,0.35);
+  border-radius: 50%;
+  width: 14px; height: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.stHelpIcon .tooltip {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.15s;
+  position: absolute;
+  bottom: 130%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #262730;
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  width: 220px;
+  z-index: 20;
+  line-height: 1.4;
+}
+.stHelpIcon:hover .tooltip { visibility: visible; opacity: 1; }
+
+/* ── BUTTONS STYLED EXACTLY LIKE DISPLAY BOXES (2D FLAT) ── */
+.stButton {
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  padding: 0.6rem 1.2rem !important;
+  font-size: 1rem;
+  font-family: inherit;
+  cursor: pointer;
+  line-height: 1.2;
+  width: 100%;
+}
+.stButton:disabled { cursor: not-allowed; opacity: 0.55; }
+
+/* Example Buttons / Secondary Buttons */
+.stButton.kind-secondary {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E7E1D4 !important;
+  color: #5C574C !important;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.stButton.kind-secondary:hover:not(:disabled) {
+  border-color: #A8412C !important;
+  color: #A8412C !important;
+  background-color: #F8F7F3 !important;
+}
+
+/* Action Button / Primary Button */
+.stButton.kind-primary {
+  background-color: #A8412C !important;
+  color: white !important;
+  border: 1px solid #8C3523 !important;
+  font-weight: 600;
+}
+.stButton.kind-primary:hover:not(:disabled) {
+  background-color: #8C3523 !important;
+  border-color: #6A281A !important;
+  color: white !important;
+}
+
+/* Metrics Styling */
+.stMetric { padding: 0; }
+.stMetric-label { font-size: 0.875rem; color: #8A8378; }
+.stMetric-value { font-size: 2.25rem; font-weight: 600; color: #231F1C; line-height: 1.3; }
+.stMetric-delta { font-size: 0.875rem; font-weight: 400; display: flex; align-items: center; gap: 0.2rem; }
+.stMetric-delta.up { color: #09AB3B; }
+.stMetric-delta.down { color: #FF2B2B; }
+.stMetric-delta.inverse-up { color: #FF2B2B; }
+.stMetric-delta.inverse-down { color: #09AB3B; }
+
+/* ── CUSTOM THEMED LOADERS (st.info / st.spinner / st.success / st.error / st.warning) ── */
+.stAlert {
+  background-color: #EFEAE0 !important;
+  border: 1px solid #E7E1D4 !important;
+  border-radius: 12px !important;
+  color: #5C574C !important;
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 0.6rem;
+}
+.stAlert svg {
+  color: #A8412C !important;
+  fill: #A8412C !important;
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.1rem;
+}
+.stAlert-body { flex: 1; white-space: pre-wrap; }
+.stAlert-body b, .stAlert-body strong { font-weight: 700; }
+.stAlert-body em, .stAlert-body i { font-style: italic; }
+
+/* Fix the bottom white space edge case */
+.stAppBottom { padding-bottom: 2rem !important; }
+
+/* ==========================================================================
+   Extra widgets used by the app (expander, dataframe, progress, code,
+   toast, file uploader, form) — styled to match default Streamlit look,
+   left un-touched by CUSTOM_CSS (so these keep Streamlit's stock styling).
+   ========================================================================== */
+
+.stExpander {
+  border: 1px solid rgba(49,51,63,0.2);
+  border-radius: 0.5rem;
+  margin-bottom: 0.6rem;
+  overflow: hidden;
+  background: #fff;
+}
+.stExpander-header {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  user-select: none;
+  background: #fff;
+}
+.stExpander-header .chevron {
+  transition: transform 0.15s ease;
+  font-size: 0.7rem;
+  color: rgba(49,51,63,0.6);
+}
+.stExpander.open .stExpander-header .chevron { transform: rotate(90deg); }
+.stExpander-body {
+  padding: 0 1rem 1rem 1rem;
+  border-top: 1px solid rgba(49,51,63,0.1);
+  padding-top: 0.75rem;
+}
+
+.stDataFrameWrap {
+  border: 1px solid rgba(49,51,63,0.15);
+  border-radius: 0.5rem;
+  overflow: auto;
+  margin-bottom: 0.6rem;
+}
+table.stDataFrame {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.85rem;
+  background: #fff;
+}
+table.stDataFrame thead th {
+  background: #F0F2F6;
+  text-align: left;
+  font-weight: 600;
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid rgba(49,51,63,0.15);
+  position: sticky; top: 0;
+  white-space: nowrap;
+}
+table.stDataFrame tbody td {
+  padding: 0.4rem 0.7rem;
+  border-bottom: 1px solid rgba(49,51,63,0.08);
+  white-space: nowrap;
+}
+table.stDataFrame tbody tr:hover { background: #F8F9FB; }
+table.stDataFrame td.idx, table.stDataFrame th.idx { color: rgba(49,51,63,0.45); font-weight: 400; }
+
+.stProgressWrap { margin: 0.4rem 0 0.8rem 0; }
+.stProgressTrack {
+  width: 100%;
+  height: 0.5rem;
+  background: rgba(49,51,63,0.12);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+.stProgressFill {
+  height: 100%;
+  background: #A8412C;
+  border-radius: 1rem;
+  transition: width 0.3s ease;
+}
+.stProgressText { font-size: 0.8rem; color: rgba(49,51,63,0.6); margin-top: 0.25rem; }
+
+.stCode {
+  background: #F0F2F6;
+  border-radius: 0.5rem;
+  padding: 0.9rem 1rem;
+  font-family: "Source Code Pro", monospace;
+  font-size: 0.8rem;
+  overflow-x: auto;
+  white-space: pre;
+  color: #262730;
+  margin-bottom: 0.6rem;
+}
+
+.stFileUploader {
+  border: 1px dashed rgba(49,51,63,0.3);
+  border-radius: 0.5rem;
+  padding: 1.1rem;
+  background: #FAFAFA;
+  text-align: left;
+  margin-bottom: 0.6rem;
+}
+.stFileUploader-drop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+.stFileUploader-hint { font-size: 0.8rem; color: rgba(49,51,63,0.55); }
+.stFileUploader-browse {
+  border: 1px solid rgba(49,51,63,0.2);
+  border-radius: 0.4rem;
+  background: #fff;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.stFileUploader-fileitem {
+  margin-top: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border: 1px solid rgba(49,51,63,0.15);
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.82rem;
+}
+
+.stForm {
+  border: 1px solid rgba(49,51,63,0.15);
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  margin-bottom: 0.6rem;
+  background: rgba(255,255,255,0.4);
+}
+
+.stRadioRow { display: flex; gap: 1.5rem; align-items: center; }
+.stRadioOpt { display: flex; align-items: center; gap: 0.4rem; font-size: 0.95rem; cursor: pointer; }
+.stRadioOpt input { accent-color: #A8412C; cursor: pointer; }
+
+.stToastStack {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.stToast {
+  background: #262730;
+  color: #fafafa;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  max-width: 22rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  animation: st-toast-in 0.2s ease;
+}
+@keyframes st-toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stSpinnerRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: rgba(49,51,63,0.6);
+  font-size: 0.9rem;
+  margin-bottom: 0.6rem;
+}
+.stSpinnerDot {
+  width: 1rem; height: 1rem;
+  border: 2px solid rgba(49,51,63,0.25);
+  border-top-color: #A8412C;
+  border-radius: 50%;
+  animation: st-spin 0.7s linear infinite;
+}
+@keyframes st-spin { to { transform: rotate(360deg); } }
+
+.stDownloadLink {
+  display: inline-block;
+  text-decoration: none;
+}
+
+/* ==========================================================================
+   compare_view.py CSS (cg-*) — reproduced verbatim, used by Chat + Compare
+   panels (originally rendered inside a components.html iframe).
+   ========================================================================== */
+.cg-wrap { font-family:'Segoe UI',Arial,sans-serif; color:#231F1C; }
+.cg-panel { border:1px solid #1C1917; border-radius:10px; background:#FFFFFF; padding:18px; }
+.cg-panel-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.cg-panel-title { font-weight:700; font-size:14px; display:flex; align-items:center; }
+.cg-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:8px; }
+.cg-dot.trad { background:#5C574C; } .cg-dot.ctx { background:#A8412C; }
+.cg-badge { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px;
+  font-weight:600; background:#EFEAE0; color:#5C574C; text-transform:uppercase; }
+.cg-badge.green { background:#E4EEE1; color:#3F6B42; }
+.cg-label { font-size:10.5px; letter-spacing:.05em; color:#8A8378; text-transform:uppercase; font-weight:600; }
+.cg-doc { border:1px solid #E7E1D4; border-radius:8px; padding:9px 11px; margin-bottom:7px; }
+.cg-doc-head { display:flex; justify-content:space-between; font-size:12.5px; font-weight:600; }
+.cg-doc-score { background:#EFEAE0; padding:1px 8px; border-radius:6px; font-size:10.5px; color:#5C574C; }
+.cg-doc-snippet { font-size:11.5px; font-style:italic; color:#6B6558; margin-top:3px; }
+.cg-warning { background:#F3E4C9; color:#8A5A20; border-radius:8px; padding:9px 11px; font-size:12px; margin-top:8px; }
+.cg-stats { display:flex; gap:8px; margin-top:10px; }
+.cg-stat { flex:1; border:1px solid #E7E1D4; border-radius:8px; padding:8px; }
+.cg-stat-num { font-size:17px; font-weight:700; } .cg-stat-label { font-size:10.5px; color:#8A8378; }
+.cg-tabs { display:flex; gap:16px; border-bottom:1px solid #E7E1D4; margin-bottom:12px; }
+.cg-tab { padding-bottom:7px; font-size:12.5px; font-weight:600; color:#8A8378; cursor:pointer; background:none; border:none; font-family:inherit; }
+.cg-tab.active { color:#A8412C; border-bottom:2px solid #A8412C; }
+.cg-answer { font-size:13px; line-height:1.55; }
+.cg-answer p { margin: 0 0 0.7em 0; }
+.cg-tree-node { padding:5px 0; display:flex; justify-content:space-between; font-size:12px; border-bottom:1px solid #F0ECE2; }
+.cg-tree-node.active { color:#A8412C; font-weight:600; }
+.cg-sources { font-size:11px; color:#5C574C; margin-top:8px; }
+.cg-graph-note { font-size:11px; color:#8A8378; margin-top:8px; }
+.cg-doc-full { font-size:12px; color:#3A3630; margin-top:6px; line-height:1.5;
+  border-top:1px dashed #E7E1D4; padding-top:6px; white-space:pre-wrap; }
+.cg-doc details summary { cursor:pointer; font-size:11px; color:#A8412C; font-weight:600; margin-top:5px; }
+.cg-telemetry-details { margin-top:14px; border:1px solid #E7E1D4; border-radius:8px; padding:10px; background:#FAFAFA; }
+.cg-telemetry-details summary { cursor:pointer; font-size:12px; font-weight:700; color:#5C574C; }
+.cg-telemetry-table { width:100%; font-size:11.5px; margin-top:8px; border-collapse:collapse; }
+.cg-telemetry-table tr { border-bottom:1px solid #EAEAEA; }
+.cg-telemetry-table td { padding:4px 0; }
+.cg-telemetry-table td:last-child { text-align:right; }
+.cg-telemetry-table tr.total { font-weight:700; background:#EFEAE0; }
+.cg-telemetry-table tr.total td { padding:4px; }
+.cg-telemetry-table tr.savings { background:#E4EEE1; color:#3F6B42; }
+.cg-badges-block { margin-bottom: 6px; }
+.cg-triplet-details, .cg-provenance-details { margin:10px 0; border-radius:8px; padding:10px; }
+.cg-triplet-details { border:1px solid #E7E1D4; background:#FDFCFA; }
+.cg-triplet-details summary { cursor:pointer; font-size:12px; font-weight:700; color:#A8412C; }
+.cg-provenance-details { border:1px solid #D8D2C4; background:#F8F7F3; }
+.cg-provenance-details summary { cursor:pointer; font-size:12px; font-weight:700; color:#3F6B42; }
+.cg-mini-table { width:100%; font-size:11px; margin-top:8px; border-collapse:collapse; }
+.cg-mini-table th { padding:4px 0; text-align:left; border-bottom:1.5px solid #D8D2C4; }
+.cg-mini-table th:nth-child(2) { padding:4px 8px; }
+.cg-mini-table td { padding:4px 0; border-bottom:1px solid #EAEAEA; }
+.cg-mini-table td:nth-child(2) { padding:4px 8px; color:#A8412C; }
+.cg-mini-table td code { font-family:'Source Code Pro', monospace; }
+.cg-mini-table td:last-child { text-align:right; }
+
+/* ==========================================================================
+   analytics_view.py CSS (og-*) — reproduced verbatim.
+   ========================================================================== */
+.og-wrap { font-family:'Segoe UI',Arial,sans-serif; color:#231F1C; }
+.og-row { display:flex; gap:20px; }
+.og-graph-col { flex: 1.4; min-width:0; }
+.og-detail-col { flex: 1; min-width:0; border-left:1px solid #E7E1D4; padding-left:20px; }
+.og-label { font-size:10.5px; letter-spacing:.05em; color:#8A8378; text-transform:uppercase; font-weight:600; margin-bottom:8px; }
+.og-node-name { font-size:17px; font-weight:700; margin-bottom:10px; }
+.og-reason { border:1px solid #E7E1D4; border-radius:8px; padding:10px 12px; margin-bottom:8px; font-size:12.5px; line-height:1.5; }
+.og-reason b { color:#A8412C; }
+.og-badge { display:inline-block; padding:3px 10px; border-radius:999px; font-size:10.5px;
+  font-weight:600; background:#EFEAE0; color:#5C574C; text-transform:uppercase; margin-bottom:10px; }
+.og-badge.green { background:#E4EEE1; color:#3F6B42; }
+.og-badge.amber { background:#F3E4C9; color:#8A5A20; }
+.og-empty { color:#8A8378; font-size:12.5px; padding:20px 0; }
+.og-source { font-size:11.5px; color:#5C574C; margin-top:6px; }
+.og-note { font-size:11px; color:#8A8378; margin-top:10px; }
+.og-node-dot { transition: r 0.1s; cursor:pointer; }
+.og-node-dot.og-active { stroke:#231F1C; stroke-width:2px; }
+
+/* ==========================================================================
+   Feedback Container & Clickable Citation Link Styles
+   ========================================================================== */
+
+/* ── Feedback Container ── */
+.cg-feedback-container {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #E7E1D4;
+}
+
+.cg-feedback-header {
+  margin-bottom: 10px;
+}
+
+.cg-feedback-eyebrow {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: #8A8378;
+  text-transform: uppercase;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cg-feedback-badge-active {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #2F5932;
+  background: #E4EEE1;
+  border: 1px solid #C5DEBF;
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.cg-feedback-badge-closed {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #7A7468;
+  background: #EFEAE0;
+  border: 1px solid #DFD9CD;
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.cg-feedback-subtitle {
+  font-size: 11.5px;
+  color: #6B6558;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.cg-feedback-container--disabled {
+  opacity: 0.72;
+}
+
+/* ── Failure Taxonomy Checkbox Grid ── */
+.cg-failure-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  margin: 10px 0 12px 0;
+}
+
+@media (max-width: 640px) {
+  .cg-failure-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Checkbox Row & Tooltip Wrapper ── */
+.cg-tooltip-wrapper {
+  position: relative;
+  display: flex;
+  width: 100%;
+}
+
+.cg-failure-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 6px 9px;
+  border-radius: 6px;
+  border: 1px solid #EAE5D9;
+  background: #FCFBF9;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.cg-failure-checkbox-row:hover:not(.disabled) {
+  background: #F3EFE6;
+  border-color: #D8D1C2;
+}
+
+.cg-failure-checkbox-row.checked {
+  background: #FDF3F1;
+  border-color: #E6B5AC;
+}
+
+.cg-failure-checkbox-row.disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  background: #F8F6F2;
+  border-color: #E6E1D5;
+}
+
+.cg-failure-checkbox-row.disabled .cg-failure-checkbox-code {
+  opacity: 0.7;
+}
+
+.cg-failure-checkbox-row.disabled .cg-failure-checkbox-label {
+  color: #7A7367;
+}
+
+.cg-failure-checkbox-input {
+  accent-color: #A8412C;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.cg-failure-checkbox-code {
+  font-family: 'Source Code Pro', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #8A5A20;
+  background: #F3E4C9;
+  padding: 1px 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.cg-failure-checkbox-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #231F1C;
+  flex: 1;
+  line-height: 1.25;
+}
+
+.cg-failure-checkbox-info {
+  font-size: 12px;
+  color: #A89F91;
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Tooltip Popover ── */
+.cg-tooltip-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background: #1C1917;
+  color: #F8F7F3;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+  animation: cg-fade-in 0.15s ease;
+}
+
+.cg-tooltip-arrow {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #1C1917 transparent transparent transparent;
+}
+
+.cg-tooltip-body {
+  white-space: normal;
+}
+
+@keyframes cg-fade-in {
+  from { opacity: 0; transform: translate(-50%, 4px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ── Feedback Input & Submit Row ── */
+.cg-feedback-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.cg-feedback-input-wrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cg-feedback-input {
+  width: 100%;
+  height: 36px;
+  border: 1px solid #D8D2C4;
+  border-radius: 6px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: #231F1C;
+  background: #FFFFFF;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cg-feedback-input:focus {
+  outline: none;
+  border-color: #A8412C;
+  box-shadow: 0 0 0 2px rgba(168, 65, 44, 0.15);
+}
+
+.cg-feedback-input::placeholder {
+  color: #9C9488;
+}
+
+.cg-feedback-char-count {
+  position: absolute;
+  right: 8px;
+  font-size: 10px;
+  color: #A8412C;
+  font-family: monospace;
+}
+
+.cg-feedback-submit-btn {
+  height: 36px;
+  padding: 0 18px;
+  border-radius: 6px;
+  background: #A8412C;
+  color: #FFFFFF;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.cg-feedback-submit-btn:hover:not(:disabled) {
+  background: #913724;
+  transform: translateY(-0.5px);
+}
+
+.cg-feedback-submit-btn:disabled {
+  background: #DDD7CB;
+  color: #8A8378;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cg-feedback-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: st-spin 0.6s linear infinite;
+}
+
+/* ── Feedback Status Badges ── */
+.cg-feedback-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  margin-top: 8px;
+  animation: cg-fade-in 0.2s ease;
+}
+
+.cg-feedback-status--success {
+  background: #E4EEE1;
+  color: #2F5932;
+  border: 1px solid #C5DEBF;
+}
+
+.cg-feedback-status--error {
+  background: #FDF1EE;
+  color: #A8412C;
+  border: 1px solid #F5C6BC;
+}
+
+.cg-feedback-status-icon {
+  font-weight: 700;
+}
+
+.cg-feedback-retry-btn {
+  background: #A8412C;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cg-feedback-retry-btn:hover {
+  background: #913724;
+}
+
+/* ── Clickable Citation Links in Sources block ── */
+.cg-citation-item {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 3px 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.cg-citation-num {
+  font-weight: 600;
+  color: #8A8378;
+  flex-shrink: 0;
+}
+
+.cg-citation-link {
+  color: #2A6496;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease, text-decoration 0.15s ease;
+  word-break: break-word;
+}
+
+.cg-citation-link:hover {
+  color: #1A446C;
+  text-decoration: underline;
+}
+
+.cg-citation-page-tag {
+  margin-left: 5px;
+  font-size: 10px;
+  background: #EFEAE0;
+  color: #5C574C;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: 'Source Code Pro', monospace;
+}
+
+.cg-citation--unavailable {
+  color: #7A7468;
+}
+
+.cg-citation-unavailable-badge {
+  font-size: 10.5px;
+  font-style: italic;
+  color: #A8412C;
+  margin-left: 4px;
+}
+

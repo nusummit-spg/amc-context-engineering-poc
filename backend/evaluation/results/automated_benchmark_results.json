@@ -1,0 +1,26 @@
+{
+  "total_queries": 15,
+  "contextgraph": {
+    "p50_latency_ms": 195.43,
+    "p95_latency_ms": 234.72,
+    "p99_latency_ms": 234.72,
+    "mean_latency_ms": 195.93,
+    "avg_tokens_in": 499,
+    "avg_tokens_out": 124,
+    "hallucination_rate": 0.02
+  },
+  "traditional_rag": {
+    "p50_latency_ms": 289.79,
+    "p95_latency_ms": 294.38,
+    "p99_latency_ms": 294.38,
+    "mean_latency_ms": 283.0,
+    "avg_tokens_in": 924,
+    "avg_tokens_out": 124,
+    "hallucination_rate": 0.12
+  },
+  "performance_gains": {
+    "latency_reduction_percent": 30.8,
+    "token_savings_percent": 45.9,
+    "hallucination_reduction_percent": 83.3
+  }
+}

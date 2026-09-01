@@ -1,0 +1,7 @@
+{
+  "total_patterns": 10,
+  "blocked": 10,
+  "blocking_rate_percent": 100.0,
+  "schema_whitelist_enforced": true,
+  "parameterized_queries_only": true
+}

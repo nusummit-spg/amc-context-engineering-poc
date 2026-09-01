@@ -1,0 +1,107 @@
+# ==========================================================
+# Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+#
+# Author: NuSummit Developers
+#
+# ==========================================================
+
+python : C:\Users\Laptopadmin\AppData\Local\Programs\Python\Python310\lib\site-
+packages\pytest_asyncio\plugin.py:247: PytestDeprecationWarning: The 
+configuration option "asyncio_default_fixture_loop_scope" is unset.
+At line:1 char:70
++ ... d backend ; python -m pytest tests/test_implementation_verification.p ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\Users\Laptop...cope" is unset. 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+The event loop scope for asynchronous fixtures will default to the fixture 
+caching scope. Future versions of pytest-asyncio will default the loop scope 
+for asynchronous fixtures to function scope. Set the default fixture loop 
+scope explicitly in order to avoid unexpected behavior in the future. Valid 
+fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+============================= test session starts =============================
+platform win32 -- Python 3.10.11, pytest-8.3.5, pluggy-1.6.0 -- C:\Users\Laptopadmin\AppData\Local\Programs\Python\Python310\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Laptopadmin\Desktop\context-engineering\backend
+configfile: pytest.ini
+plugins: anyio-4.13.0, langsmith-0.7.30, asyncio-1.3.0, cov-7.1.0, flask-1.3.0
+asyncio: mode=auto, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 30 items
+
+tests/test_implementation_verification.py::TestPhase0_FoundationsVerification::test_provenance_ledger_schema_exists PASSED [  3%]
+tests/test_implementation_verification.py::TestPhase0_FoundationsVerification::test_provenance_record_model FAILED [  6%]
+tests/test_implementation_verification.py::TestPhase0_FoundationsVerification::test_config_additions_present PASSED [ 10%]
+tests/test_implementation_verification.py::TestPhase0_FoundationsVerification::test_taxonomy_backups_exist FAILED [ 13%]
+tests/test_implementation_verification.py::TestPhase1_IngestionGatewayVerification::test_ingest_request_model PASSED [ 16%]
+tests/test_implementation_verification.py::TestPhase1_IngestionGatewayVerification::test_document_hash_computation FAILED [ 20%]
+tests/test_implementation_verification.py::TestPhase1_IngestionGatewayVerification::test_ingest_namespaces_defined PASSED [ 23%]
+tests/test_implementation_verification.py::TestPhase1_IngestionGatewayVerification::test_ingestion_channels_defined PASSED [ 26%]
+tests/test_implementation_verification.py::TestPhase6_TaxonomyExtractorVerification::test_extraction_modules_importable PASSED [ 30%]
+tests/test_implementation_verification.py::TestPhase6_TaxonomyExtractorVerification::test_extraction_result_model FAILED [ 33%]
+tests/test_implementation_verification.py::TestPhase6_TaxonomyExtractorVerification::test_normalize_text_function PASSED [ 36%]
+tests/test_implementation_verification.py::TestPhase7_LifecycleEnricherVerification::test_lifecycle_modules_importable PASSED [ 40%]
+tests/test_implementation_verification.py::TestPhase7_LifecycleEnricherVerification::test_supersession_edge_model FAILED [ 43%]
+tests/test_implementation_verification.py::TestPhase8_OrchestratorVerification::test_orchestrator_modules_importable FAILED [ 46%]
+tests/test_implementation_verification.py::TestPhase8_OrchestratorVerification::test_pipeline_report_model FAILED [ 50%]
+tests/test_implementation_verification.py::TestPhase9_StalenessMonitorVerification::test_staleness_modules_importable PASSED [ 53%]
+tests/test_implementation_verification.py::TestPhase9_StalenessMonitorVerification::test_staleness_alert_model FAILED [ 56%]
+tests/test_implementation_verification.py::TestPhase10_VersioningVerification::test_versioning_functions_exist PASSED [ 60%]
+tests/test_implementation_verification.py::TestPhase10_VersioningVerification::test_diff_taxonomy_versions FAILED [ 63%]
+tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase0_files_exist FAILED [ 66%]
+tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase1_files_exist FAILED [ 70%]
+tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase2_files_exist FAILED [ 73%]
+tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase3_files_exist FAILED [ 76%]
+tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase4_files_exist FAILED [ 80%]
+tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase5_files_exist FAILED [ 83%]
+tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase6_files_exist FAILED [ 86%]
+tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase7_files_exist FAILED [ 90%]
+tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase8_files_exist FAILED [ 93%]
+tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase9_files_exist FAILED [ 96%]
+tests/test_implementation_verification.py::TestAdminViewBugFix::test_admin_view_has_correct_imports FAILED [100%]
+
+================================== FAILURES ===================================
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\tests\test_implementation_verification.py:47: TypeError: ProvenanceRecord.__init__() got an unexpected keyword argument 'ingested_by'
+C:\Users\Laptopadmin\AppData\Local\Programs\Python\Python310\lib\unittest\mock.py:1420: AttributeError: <module 'app.engine.taxonomy' from 'C:\\Users\\Laptopadmin\\Desktop\\context-engineering\\backend\\app\\engine\\taxonomy.py'> does not have the attribute 'TAXONOMY_FILE'
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\app\engine\ingestion_gateway.py:98: PermissionError: [Errno 13] Permission denied: 'C:\\Users\\LAPTOP~1\\AppData\\Local\\Temp\\tmp326l9ebd.pdf'
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\tests\test_implementation_verification.py:178: TypeError: ExtractionResult.__init__() missing 3 required positional arguments: 'source_document', 'source_hash', and 'timestamp'
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\tests\test_implementation_verification.py:215: TypeError: SupersessionEdge.__init__() got an unexpected keyword argument 'source_hash'
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\tests\test_implementation_verification.py:239: Failed: Could not import orchestrator modules: No module named 'feedparser'
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\app\engine\sebi_feed_ingester.py:34: ModuleNotFoundError: No module named 'feedparser'
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\tests\test_implementation_verification.py:273: TypeError: StalenessAlert.__init__() missing 4 required positional arguments: 'alert_id', 'filename', 'message', and 'detected_at'
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\app\engine\taxonomy.py:219: AttributeError: 'dict' object has no attribute 'read_text'
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\tests\test_implementation_verification.py:320: AssertionError: assert False
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\tests\test_implementation_verification.py:326: AssertionError: assert False
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\tests\test_implementation_verification.py:330: AssertionError: assert False
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\tests\test_implementation_verification.py:334: AssertionError: assert False
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\tests\test_implementation_verification.py:338: AssertionError: assert False
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\tests\test_implementation_verification.py:342: AssertionError: assert False
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\tests\test_implementation_verification.py:346: AssertionError: assert False
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\tests\test_implementation_verification.py:350: AssertionError: assert False
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\tests\test_implementation_verification.py:354: AssertionError: assert False
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\tests\test_implementation_verification.py:358: AssertionError: assert False
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\tests\test_implementation_verification.py:366: FileNotFoundError: [Errno 2] No such file or directory: 'streamlit_app/admin_view.py'
+=========================== short test summary info ===========================
+FAILED tests/test_implementation_verification.py::TestPhase0_FoundationsVerification::test_provenance_record_model
+FAILED tests/test_implementation_verification.py::TestPhase0_FoundationsVerification::test_taxonomy_backups_exist
+FAILED tests/test_implementation_verification.py::TestPhase1_IngestionGatewayVerification::test_document_hash_computation
+FAILED tests/test_implementation_verification.py::TestPhase6_TaxonomyExtractorVerification::test_extraction_result_model
+FAILED tests/test_implementation_verification.py::TestPhase7_LifecycleEnricherVerification::test_supersession_edge_model
+FAILED tests/test_implementation_verification.py::TestPhase8_OrchestratorVerification::test_orchestrator_modules_importable
+FAILED tests/test_implementation_verification.py::TestPhase8_OrchestratorVerification::test_pipeline_report_model
+FAILED tests/test_implementation_verification.py::TestPhase9_StalenessMonitorVerification::test_staleness_alert_model
+FAILED tests/test_implementation_verification.py::TestPhase10_VersioningVerification::test_diff_taxonomy_versions
+FAILED tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase0_files_exist
+FAILED tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase1_files_exist
+FAILED tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase2_files_exist
+FAILED tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase3_files_exist
+FAILED tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase4_files_exist
+FAILED tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase5_files_exist
+FAILED tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase6_files_exist
+FAILED tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase7_files_exist
+FAILED tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase8_files_exist
+FAILED tests/test_implementation_verification.py::TestFileCoverageChecklist::test_phase9_files_exist
+FAILED tests/test_implementation_verification.py::TestAdminViewBugFix::test_admin_view_has_correct_imports
+======================== 20 failed, 10 passed in 1.36s ========================

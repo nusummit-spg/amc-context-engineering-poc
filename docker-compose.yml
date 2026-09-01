@@ -1,0 +1,120 @@
+# ===========================================================================
+# Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+# 
+# Author: NuSummit Developers
+#
+# ===========================================================================
+
+# WS3 — Full stack: Neo4j + Qdrant + FastAPI (+ Redis reserved for future queue backend)
+services:
+  neo4j:
+    image: neo4j:5.24
+    restart: unless-stopped
+    ports:
+      - "7474:7474"   # browser
+      - "7687:7687"   # bolt
+    environment:
+      NEO4J_AUTH: neo4j/contextgraph
+      # t3.micro (1GB) tuning — cap the JVM heap so Neo4j doesn't grab 50% of RAM.
+      NEO4J_server_memory_heap_initial__size: 128m
+      NEO4J_server_memory_heap_max__size: 256m
+      NEO4J_server_memory_pagecache_size: 64m
+    deploy:
+      resources:
+        limits:
+          memory: 450M
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p contextgraph 'RETURN 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-group: /amc-demo/app
+        awslogs-stream: neo4j
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-group: /amc-demo/app
+        awslogs-stream: redis
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Anthropic key is fetched from Secrets Manager via the instance IAM role.
+      AWS_REGION: ${AWS_REGION:-ap-south-1}
+      ANTHROPIC_SECRET_ID: ${ANTHROPIC_SECRET_ID:-}
+      ANTHROPIC_SECRET_JSON_KEY: ${ANTHROPIC_SECRET_JSON_KEY:-ANTHROPIC_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: contextgraph
+      CORPUS_BUCKET: ${CORPUS_BUCKET:-}
+    volumes:
+      - hf_cache:/root/.cache            # persist GLiNER + sentence-transformer downloads
+      # app.engine.config.DATA_DIR / FAISS_DIR are hardcoded relative to the
+      # engine package (/app/app/engine/...) — mount those exact paths so
+      # reindexing (backend/app/engine/reindex_from_s3.py) persists across
+      # rebuilds/restarts instead of vanishing with the container.
+      - engine_data:/app/app/engine/data
+      - engine_faiss:/app/app/engine/faiss_indexes
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-group: /amc-demo/app
+        awslogs-stream: api
+
+  streamlit:
+    build: ./streamlit_app
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      API_BASE: ${API_BASE:-http://api:8000}   # thin client -> FastAPI backend
+      # Direct (lightweight, no-ML) Neo4j connection — used only by
+      # analytics_view.py's graph explorer. Must match the neo4j service above.
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: contextgraph
+    volumes:
+      # chat_view.py's session JSON files — without this, every rebuild
+      # (even one unrelated to chat) silently wipes users' saved conversations.
+      - chat_sessions:/app/logs/chat_sessions
+      - faiss_data:/app/faiss_indexes
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      api:
+        condition: service_started
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-group: /amc-demo/app
+        awslogs-stream: streamlit
+
+volumes:
+  neo4j_data:
+  hf_cache:
+  engine_data:
+  engine_faiss:
+  faiss_data:
+  chat_sessions:

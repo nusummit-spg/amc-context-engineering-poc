@@ -1,0 +1,50 @@
+﻿name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install Frontend Dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Run Frontend Tests
+      run: |
+        cd frontend
+        npm run test:run
+
+    - name: Build Frontend Application
+      run: |
+        cd frontend
+        npm run build
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install Backend Dependencies
+      run: |
+        pip install -r backend/requirements.txt pytest
+
+    - name: Run Backend Tests
+      run: |
+        pytest backend/tests/

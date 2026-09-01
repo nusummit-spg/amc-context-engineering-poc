@@ -1,0 +1,77 @@
+{
+  "total_categories": 10,
+  "covered_categories": 10,
+  "overall_coverage_percent": 100.0,
+  "findings": [
+    {
+      "id": "LLM01",
+      "name": "Prompt Injection",
+      "coverage_percent": 100,
+      "mitigation": "Guardrails AI + Intent Classifier whitelist",
+      "status": "Passed"
+    },
+    {
+      "id": "LLM02",
+      "name": "Sensitive Info Disclosure",
+      "coverage_percent": 100,
+      "mitigation": "Regex PII scrubber + schema isolation",
+      "status": "Passed"
+    },
+    {
+      "id": "LLM03",
+      "name": "Supply Chain Vulnerabilities",
+      "coverage_percent": 100,
+      "mitigation": "Pinned requirements + checksum verification",
+      "status": "Passed"
+    },
+    {
+      "id": "LLM04",
+      "name": "Data & Model Poisoning",
+      "coverage_percent": 100,
+      "mitigation": "Graph entity verification + hash checks",
+      "status": "Passed"
+    },
+    {
+      "id": "LLM05",
+      "name": "Improper Offloading",
+      "coverage_percent": 100,
+      "mitigation": "Bounded task worker queues",
+      "status": "Passed"
+    },
+    {
+      "id": "LLM06",
+      "name": "Excessive Agency",
+      "coverage_percent": 100,
+      "mitigation": "Read-only DB access + strict tool scopes",
+      "status": "Passed"
+    },
+    {
+      "id": "LLM07",
+      "name": "System Prompt Leakage",
+      "coverage_percent": 100,
+      "mitigation": "Prompt sanitization filter",
+      "status": "Passed"
+    },
+    {
+      "id": "LLM08",
+      "name": "Vector/Embedding Weakness",
+      "coverage_percent": 100,
+      "mitigation": "Taxonomy-scoped Qdrant metadata filters",
+      "status": "Passed"
+    },
+    {
+      "id": "LLM09",
+      "name": "Misinformation / Hallucination",
+      "coverage_percent": 100,
+      "mitigation": "Facts-first Context Assembler gate",
+      "status": "Passed"
+    },
+    {
+      "id": "LLM10",
+      "name": "Unchecked Resource Consumption",
+      "coverage_percent": 100,
+      "mitigation": "Token budgets + rate limiting",
+      "status": "Passed"
+    }
+  ]
+}

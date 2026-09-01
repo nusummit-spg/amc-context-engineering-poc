@@ -1,0 +1,154 @@
+{
+  "query": "Within those categories, what is the minimum equity allocation for a Large Cap Fund and how is Large Cap defined?",
+  "model": "groq/llama-3.1-8b-instant",
+  "traditional": {
+    "tokens_in": 108,
+    "tokens_out": 108,
+    "total_tokens": 216,
+    "wall_latency_ms": 961.7,
+    "docs_retrieved": 5,
+    "answer": "I'm not able to find the information on the minimum equity allocation for a Large Cap Fund and the definition of Large Cap within the provided context."
+  },
+  "contextgraph": {
+    "tokens_in": 12,
+    "tokens_out": 0,
+    "total_tokens": 12,
+    "cold_equivalent_tokens": 821,
+    "tokens_saved": 809,
+    "wall_latency_ms": 3034.1,
+    "lat_ner_ms": 0.0,
+    "lat_graph_ms": 2881.4,
+    "lat_vector_ms": 0.0,
+    "lat_llm_ms": 0.0,
+    "lat_total_ms": 3034.0,
+    "graph_nodes_count": 20,
+    "graph_edges_count": 15,
+    "graph_nodes": [
+      "MR. PRANAV ADANI",
+      "ADANI ENTERPRISES LIMITED",
+      "MR. RAKESH SHAH",
+      "MR. RAJIV NAYAR",
+      "ADANI GROUP",
+      "MR. RAMESH NAIR",
+      "MUNDRA SOLAR PV LIMITED",
+      "Mundra Solar PV Ltd",
+      "MR. RAKESH TIWARY",
+      "MR. SHRIKANT KANHERE",
+      "ADANI WILMAR LIMITED",
+      "MR. NARESH PODDAR",
+      "ADANI GAS LIMITED",
+      "MR. RAM PATODIA",
+      "MINING AND ICM",
+      "MR. PRAVEEN KHANDELWAL",
+      "MINING AUSTRALIA",
+      "MR. VINAY PRAKASH",
+      "COAL AND MINING",
+      "Indian Oil"
+    ],
+    "graph_edges": [
+      {
+        "s": "MR. PRANAV ADANI",
+        "rel": "PART_OF",
+        "o": "ADANI ENTERPRISES LIMITED",
+        "conf": 1.0
+      },
+      {
+        "s": "MR. RAKESH SHAH",
+        "rel": "PART_OF",
+        "o": "ADANI ENTERPRISES LIMITED",
+        "conf": 1.0
+      },
+      {
+        "s": "MR. RAJIV NAYAR",
+        "rel": "PART_OF",
+        "o": "ADANI GROUP",
+        "conf": 1.0
+      },
+      {
+        "s": "MR. RAMESH NAIR",
+        "rel": "PART_OF",
+        "o": "MUNDRA SOLAR PV LIMITED",
+        "conf": 1.0
+      },
+      {
+        "s": "MR. RAMESH NAIR",
+        "rel": "PART_OF",
+        "o": "Mundra Solar PV Ltd",
+        "conf": 1.0
+      },
+      {
+        "s": "MR. RAKESH TIWARY",
+        "rel": "PART_OF",
+        "o": "MUNDRA SOLAR PV LIMITED",
+        "conf": 1.0
+      },
+      {
+        "s": "MR. SHRIKANT KANHERE",
+        "rel": "PART_OF",
+        "o": "ADANI WILMAR LIMITED",
+        "conf": 1.0
+      },
+      {
+        "s": "MR. NARESH PODDAR",
+        "rel": "PART_OF",
+        "o": "ADANI GAS LIMITED",
+        "conf": 1.0
+      },
+      {
+        "s": "MR. RAM PATODIA",
+        "rel": "PART_OF",
+        "o": "MINING AND ICM",
+        "conf": 1.0
+      },
+      {
+        "s": "MR. PRAVEEN KHANDELWAL",
+        "rel": "PART_OF",
+        "o": "MINING AUSTRALIA",
+        "conf": 1.0
+      },
+      {
+        "s": "MR. VINAY PRAKASH",
+        "rel": "PART_OF",
+        "o": "COAL AND MINING",
+        "conf": 1.0
+      },
+      {
+        "s": "ADANI WILMAR LIMITED",
+        "rel": "PART_OF",
+        "o": "ADANI GROUP",
+        "conf": 1.0
+      },
+      {
+        "s": "ADANI GAS LIMITED",
+        "rel": "PART_OF",
+        "o": "ADANI ENTERPRISES LIMITED",
+        "conf": 1.0
+      },
+      {
+        "s": "ADANI GAS LIMITED",
+        "rel": "PART_OF",
+        "o": "ADANI GROUP",
+        "conf": 1.0
+      },
+      {
+        "s": "ADANI GAS LIMITED",
+        "rel": "INVESTS_IN",
+        "o": "Indian Oil",
+        "conf": 1.0
+      }
+    ],
+    "matched_by": "intent_cache_smart",
+    "intent": "fund_performance",
+    "cache_hit": true,
+    "pipeline_mode": "ContextGraph v2 (Fingerprint Cache Hit)",
+    "db_candidates": 20,
+    "vector_bypassed": true,
+    "confidence": "Medium Confidence (Partial Graph/Vector Match) (Fingerprint Cache Hit)",
+    "answer": "Based on the provided Graph Knowledge and Vector Context, I can provide information on the minimum equity allocation for a Large Cap Fund and how Large Cap is defined.\n\nAccording to SEBI's mutual fund regulations, Large Cap Funds are categorized under Equity Schemes. The minimum equity allocation for a Large Cap Fund is 80% of its total assets. This means that at least 80% of the fund's assets must be invested in equity shares of large-cap companies.\n\nLarge Cap is defined as companies with a market capitalization of over ₹ 20,000 crores (approximately $2.5 billion USD). These companies are typically well-established and have a strong market presence, with a stable financial position and a proven track record of performance.\n\nIn terms of Graph Knowledge, this information can be represented as follows:\n\nEntity Relationship: (LARGE CAP FUND) -[PART_OF]-> (EQUITY SCHEMES)\nEntity Relationship: (LARGE CAP FUND) -[HAS_MINIMUM_EQUIITY]-> (80%)\nEntity Relationship: (LARGE CAP) -[DEFINED_AS]-> (MARKET CAPITALIZATION > ₹ 20,000 CRORES)\n\nVector Context:\nLarge Cap Funds are a type of Equity Scheme that invests in large-cap companies with a market capitalization of over ₹ 20,000 crores. The minimum equity allocation for a Large Cap Fund is 80% of its total assets. These funds are suitable for investors who are looking for long-term growth and stability, with a lower risk profile compared to mid-cap or small-cap funds.\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*"
+  },
+  "comparison": {
+    "token_delta_trad_minus_graph": 204,
+    "token_saving_pct": 94.4,
+    "latency_delta_ms": -2072.4
+  }
+}

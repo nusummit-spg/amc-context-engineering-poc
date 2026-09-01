@@ -1,0 +1,22 @@
+# ==========================================================
+# Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+#
+# Author: NuSummit Developers
+#
+# ==========================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: compliance-dashboard-service
+  namespace: amc-compliance
+  labels:
+    app: compliance-dashboard
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8501
+      targetPort: 8501
+      name: http
+  selector:
+    app: compliance-dashboard

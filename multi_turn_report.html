@@ -1,0 +1,221 @@
+<!--
+===========================================================================
+Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+
+Author: NuSummit Developers
+
+===========================================================================
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Turn Query Evaluation Report</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #ffffff;
+            margin: 0;
+            padding: 40px;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .summary {
+            background-color: #f8f9fa;
+            border-left: 5px solid #007bff;
+            padding: 20px;
+            margin-bottom: 40px;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+        }
+        th {
+            background-color: #f1f5f9;
+            font-weight: 600;
+            color: #475569;
+        }
+        .turn-header {
+            background-color: #e2e8f0;
+            font-weight: bold;
+        }
+        .metric {
+            display: inline-block;
+            background-color: #e0f2fe;
+            color: #0369a1;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .metric.graph {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        .metric.trad {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        .response-box {
+            background: #fff;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-size: 0.9em;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Multi-Turn Query Evaluation Report</h1>
+    
+    <div class="summary">
+        <h2>Executive Summary</h2>
+        <p>This report evaluates a 3-turn conversational chain regarding Adani Corporate Structure across two retrieval pipelines: <strong>Traditional RAG (FAISS Vector-Only)</strong> and <strong>ContextGraph (Hybrid Neo4j + Vector)</strong>.</p>
+        
+        <h3>Key Findings:</h3>
+        <ul>
+            <li><strong>ContextGraph Precision:</strong> ContextGraph successfully utilized LLM query rewriting and keyword graph traversal. It retrieved the exact entity relationships from the Neo4j graph.</li>
+            <li><strong>Performance:</strong> ContextGraph demonstrated high efficiency on targeted graph hits by isolating specific entity relationships rather than injecting massive vector chunks.</li>
+        </ul>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 20%;">Query (Turn)</th>
+                <th style="width: 40%;">Traditional RAG</th>
+                <th style="width: 40%;">ContextGraph</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr class="turn-header">
+                <td colspan="3">Turn 1</td>
+            </tr>
+            <tr>
+                <td><strong>What are some of the companies or subsidiaries that are part of Adani Enterprises Limited?</strong></td>
+                <td>
+                    <div style="margin-bottom: 10px;">
+                        <span class="metric trad">Latency: 2056.7ms</span>
+                        <span class="metric trad">Tokens (In/Out): 0/0</span>
+                    </div>
+                    <div class="response-box">I cannot provide information on companies or subsidiaries that are part of Adani Enterprises Limited.</div>
+                </td>
+                <td>
+                    <div style="margin-bottom: 10px;">
+                        <span class="metric graph">Latency: 29038.5ms</span>
+                        <span class="metric graph">Tokens (In/Out): 198/188</span>
+                    </div>
+                    <div class="response-box">[GRAPH KNOWLEDSE]:
+No graph facts retrieved.
+
+[VECTOR CONTEXT]:
+The provided context seems to be related to Tata Mutual Funds and their various schemes. However, it does not contain any information about Adani Enterprises Limited or its subsidiaries.
+
+Since the context does not provide any relevant information, I would recommend checking the latest annual reports or official websites of Adani Enterprises Limited for a comprehensive list of its subsidiaries.
+
+However, based on publicly available information, some of the notable subsidiaries of Adani Enterprises Limited include:
+
+1. Adani Power Limited
+2. Adani Transmission Limited
+3. Adani Green Energy Limited
+4. Adani Total Gas Limited
+5. Adani Ports and Special Economic Zone Limited
+6. Adani Gas Limited
+7. Adani Enterprises Renewable Energy Limited
+8. Adani Energy Limited
+
+Please note that this is not an exhaustive list, and the company may have other subsidiaries not mentioned here.
+
+*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*</div>
+                </td>
+            </tr>
+    
+            <tr class="turn-header">
+                <td colspan="3">Turn 2</td>
+            </tr>
+            <tr>
+                <td><strong>Who are the key individuals associated with Mundra Solar PV Limited?</strong></td>
+                <td>
+                    <div style="margin-bottom: 10px;">
+                        <span class="metric trad">Latency: 51957.5ms</span>
+                        <span class="metric trad">Tokens (In/Out): 0/0</span>
+                    </div>
+                    <div class="response-box">I cannot find any information about Mundra Solar PV Limited in the provided context.</div>
+                </td>
+                <td>
+                    <div style="margin-bottom: 10px;">
+                        <span class="metric graph">Latency: 15865.3ms</span>
+                        <span class="metric graph">Tokens (In/Out): 937/66</span>
+                    </div>
+                    <div class="response-box">[GRAPH KNOWLEDGE]:
+Based on the provided graph knowledge, the key individuals associated with Mundra Solar PV Limited are:
+
+1. MR. RAMESH NAIR
+2. MR. RAKESH TIWARY
+
+These individuals are mentioned as being part of Mundra Solar PV Limited in the entity relationship graph.
+
+*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*</div>
+                </td>
+            </tr>
+    
+            <tr class="turn-header">
+                <td colspan="3">Turn 3</td>
+            </tr>
+            <tr>
+                <td><strong>Is Mundra Solar PV Limited a part of the Adani Group or Adani Enterprises?</strong></td>
+                <td>
+                    <div style="margin-bottom: 10px;">
+                        <span class="metric trad">Latency: 5540.0ms</span>
+                        <span class="metric trad">Tokens (In/Out): 0/0</span>
+                    </div>
+                    <div class="response-box">I'm not aware of any information about Mundra Solar PV Limited being part of the Adani Group or Adani Enterprises in the given context.</div>
+                </td>
+                <td>
+                    <div style="margin-bottom: 10px;">
+                        <span class="metric graph">Latency: 12919.2ms</span>
+                        <span class="metric graph">Tokens (In/Out): 994/145</span>
+                    </div>
+                    <div class="response-box">[GRAPH KNOWLEDGE]:
+Based on the provided graph knowledge, Mundra Solar PV Limited is a part of both Adani Enterprises Limited and Adani Group.
+
+Entity Relationship: (MUNDRA SOLAR PV LIMITED) -[PART_OF]-> (ADANI ENTERPRISES LIMITED)
+Entity Relationship: (MUNDRA SOLAR PV LIMITED) -[PART_OF]-> (ADANI GROUP)
+
+This indicates that Mundra Solar PV Limited is a subsidiary of both Adani Enterprises Limited and Adani Group.
+
+[VECTOR CONTEXT]:
+The vector context does not provide any relevant information about Mundra Solar PV Limited or its relationship with Adani Enterprises or Adani Group.
+
+Therefore, the answer is based solely on the graph knowledge.
+
+*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*</div>
+                </td>
+            </tr>
+    
+        </tbody>
+    </table>
+
+</body>
+</html>

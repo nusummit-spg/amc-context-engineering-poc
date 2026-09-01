@@ -1,0 +1,44 @@
+# ==========================================================
+# Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+#
+# Author: NuSummit Developers
+#
+# ==========================================================
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: amc-compliance-alerts
+  namespace: amc-compliance
+  labels:
+    role: alert-rules
+spec:
+  groups:
+    - name: amc_compliance_sla_alerts
+      rules:
+        - alert: ComplianceScorecardSLADegradation
+          expr: amc_compliance_scorecard_latency_ms > 500
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "AMC Compliance Scorecard latency exceeded 500ms SLA"
+            description: "Scorecard response time is currently {{ $value }}ms, breaching the <500ms operational SLA."
+
+        - alert: CriticalComplianceViolationSpike
+          expr: amc_compliance_violations_total{severity="critical"} > 5
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Critical compliance violations spike detected"
+            description: "Region {{ $labels.region }} has {{ $value }} active critical violations requiring immediate remediation."
+
+        - alert: ComplianceServiceHealthDegraded
+          expr: amc_compliance_uptime_seconds < 60
+          for: 1m
+          labels:
+            severity: info
+          annotations:
+            summary: "AMC Compliance Engine restarted or degraded"
+            description: "Service has been active for less than 60 seconds."

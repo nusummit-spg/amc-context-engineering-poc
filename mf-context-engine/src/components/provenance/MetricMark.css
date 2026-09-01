@@ -1,0 +1,106 @@
+.mf-metric-mark {
+  display: inline;
+  font-weight: 600;
+  cursor: help;
+  padding: 0 2px;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+}
+
+.mf-metric-mark--verbatim {
+  border-bottom: 2px dashed #10B981;
+  color: #065F46;
+  background-color: rgba(16, 185, 129, 0.08);
+}
+
+.mf-metric-mark--computed {
+  border-bottom: 2px dashed #3B82F6;
+  color: #1E40AF;
+  background-color: rgba(59, 130, 246, 0.08);
+}
+
+.mf-metric-mark--assumed {
+  border-bottom: 2px dashed #F59E0B;
+  color: #92400E;
+  background-color: rgba(245, 158, 11, 0.08);
+}
+
+.mf-metric-mark:hover,
+.mf-metric-mark:focus {
+  opacity: 0.9;
+  filter: brightness(0.95);
+}
+
+.mf-metric-badge {
+  font-size: 0.72rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.mf-metric-tag-verbatim {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34D399;
+}
+
+.mf-metric-tag-computed {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60A5FA;
+}
+
+.mf-metric-tag-assumed {
+  background: rgba(245, 158, 11, 0.2);
+  color: #FBBF24;
+}
+
+.mf-metric-explanation {
+  color: #E2E8F0;
+  font-size: 0.8rem;
+  margin: 6px 0;
+  line-height: 1.4;
+}
+
+.mf-metric-subhead {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94A3B8;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.mf-metric-formula-box {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 6px 8px;
+  border-radius: 4px;
+  margin: 6px 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mf-metric-formula-box code {
+  color: #93C5FD;
+  font-family: monospace;
+  font-size: 0.78rem;
+}
+
+.mf-metric-inputs-box {
+  margin: 6px 0;
+}
+
+.mf-metric-inputs-list {
+  margin: 0;
+  padding-left: 14px;
+  font-size: 0.76rem;
+  color: #CBD5E1;
+}
+
+.mf-metric-assumption-box {
+  background: rgba(245, 158, 11, 0.1);
+  border-left: 2px solid #F59E0B;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  color: #FDE68A;
+  margin: 6px 0;
+}

@@ -1,0 +1,254 @@
+{
+  "nodes": [
+    {
+      "id": "4:fa367a57-b295-47b4-95bd-270e3b24e086:200",
+      "labels": [
+        "Entity"
+      ],
+      "properties": {
+        "text": "Chhattisgarh Generation Company",
+        "source": "AEL_Earnings_Call_Q1_FY19.pdf",
+        "dedup_key": "FUND_HOUSE::chhattisgarh generation company",
+        "first_seen_chunk": "C01733",
+        "product_name": "AEL_Earnings_Call_Q1_FY19",
+        "label": "FUND_HOUSE"
+      }
+    },
+    {
+      "name": "Adani Enterprises",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "Adani Enterprises",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "02/05/2024",
+      "label": "DATE",
+      "properties": {
+        "name": "02/05/2024",
+        "label": "DATE",
+        "source": ""
+      }
+    },
+    {
+      "name": "Mutual Funds",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "Mutual Funds",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "Mutual Fund",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "Mutual Fund",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "AMC",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "AMC",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "mutual fund",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "mutual fund",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "mutual funds",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "mutual funds",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "SEBI",
+      "label": "REGULATOR",
+      "properties": {
+        "name": "SEBI",
+        "label": "REGULATOR",
+        "source": ""
+      }
+    },
+    {
+      "name": "24/13/15",
+      "label": "DATE",
+      "properties": {
+        "name": "24/13/15",
+        "label": "DATE",
+        "source": ""
+      }
+    },
+    {
+      "name": "SEBI/HO/IMD/DF3/CIR/P/2017/114",
+      "label": "SEBI_CIRCULAR",
+      "properties": {
+        "name": "SEBI/HO/IMD/DF3/CIR/P/2017/114",
+        "label": "SEBI_CIRCULAR",
+        "source": ""
+      }
+    },
+    {
+      "name": "SEBI/HO/IMD/DF3/CIR/P/2020/228",
+      "label": "SEBI_CIRCULAR",
+      "properties": {
+        "name": "SEBI/HO/IMD/DF3/CIR/P/2020/228",
+        "label": "SEBI_CIRCULAR",
+        "source": ""
+      }
+    },
+    {
+      "name": "INF209K01165",
+      "label": "ISIN",
+      "properties": {
+        "name": "INF209K01165",
+        "label": "ISIN",
+        "source": ""
+      }
+    },
+    {
+      "name": "INF209K01157",
+      "label": "ISIN",
+      "properties": {
+        "name": "INF209K01157",
+        "label": "ISIN",
+        "source": ""
+      }
+    },
+    {
+      "name": "INF209K01CE5",
+      "label": "ISIN",
+      "properties": {
+        "name": "INF209K01CE5",
+        "label": "ISIN",
+        "source": ""
+      }
+    },
+    {
+      "name": "INF209K01587",
+      "label": "ISIN",
+      "properties": {
+        "name": "INF209K01587",
+        "label": "ISIN",
+        "source": ""
+      }
+    },
+    {
+      "name": "INF209K01CY3",
+      "label": "ISIN",
+      "properties": {
+        "name": "INF209K01CY3",
+        "label": "ISIN",
+        "source": ""
+      }
+    },
+    {
+      "name": "INF209K01579",
+      "label": "ISIN",
+      "properties": {
+        "name": "INF209K01579",
+        "label": "ISIN",
+        "source": ""
+      }
+    },
+    {
+      "name": "SEBI/HO/MIRSD/MIRSD-PoD/P/CIR/2025/0000",
+      "label": "SEBI_CIRCULAR",
+      "properties": {
+        "name": "SEBI/HO/MIRSD/MIRSD-PoD/P/CIR/2025/0000",
+        "label": "SEBI_CIRCULAR",
+        "source": ""
+      }
+    },
+    {
+      "name": "pat",
+      "label": "FINANCIAL_METRIC",
+      "properties": {
+        "name": "pat",
+        "label": "FINANCIAL_METRIC",
+        "source": ""
+      }
+    }
+  ],
+  "edges": [
+    {
+      "s": "",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.9,
+      "o": "",
+      "o_label": "Entity"
+    },
+    {
+      "s": "",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "INVESTS_IN",
+      "conf": 0.9,
+      "o": "",
+      "o_label": "Entity"
+    },
+    {
+      "s": "",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "MANAGES",
+      "conf": 0.9,
+      "o": "",
+      "o_label": "Entity"
+    },
+    {
+      "s": "",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "REPORTED_HIGHLIGHT",
+      "conf": 0.9,
+      "o": "",
+      "o_label": "Entity"
+    },
+    {
+      "s": "",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "GOVERNED_BY_SEBI_CIRCULAR",
+      "conf": 0.9,
+      "o": "",
+      "o_label": "Entity"
+    },
+    {
+      "s": "",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "TRACKS_PERIOD",
+      "conf": 0.9,
+      "o": "",
+      "o_label": "Entity"
+    },
+    {
+      "s": "",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "INCLUDES_SUB_CLASSIFICATION",
+      "conf": 0.9,
+      "o": "",
+      "o_label": "Entity"
+    }
+  ]
+}

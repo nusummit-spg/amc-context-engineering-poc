@@ -1,0 +1,14 @@
+# ==========================================================
+# Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+#
+# Author: NuSummit Developers
+#
+# ==========================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: amc-compliance
+  labels:
+    app.kubernetes.io/name: amc-compliance
+    app.kubernetes.io/part-of: amc-enterprise-suite

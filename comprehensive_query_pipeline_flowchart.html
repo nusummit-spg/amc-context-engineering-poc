@@ -1,0 +1,777 @@
+<!--
+===========================================================================
+Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+
+Author: NuSummit Developers
+
+===========================================================================
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Query Pipeline - Metrics & Flowchart</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent-blue: #2563eb;
+      --accent-green: #16a34a;
+      --accent-purple: #7c3aed;
+      --accent-amber: #d97706;
+      --accent-cyan: #0891b2;
+      --border-color: #e2e8f0;
+      --bg-subtle: #f8fafc;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #ffffff;
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 12px;
+      margin: 24px 0 32px 0;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 0;
+    }
+
+    .tab-btn {
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s ease;
+      margin-bottom: -2px;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+      color: var(--accent-blue);
+      border-bottom-color: var(--accent-blue);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .summary-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-box {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-primary);
+    }
+
+    .stat-desc {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* FLOWCHART STYLES */
+    .flowchart-container {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 40px;
+      overflow-x: auto;
+    }
+
+    .pipeline-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 0;
+      margin-bottom: 40px;
+      position: relative;
+    }
+
+    .pipeline-step {
+      position: relative;
+      z-index: 2;
+      flex-shrink: 0;
+      width: 140px;
+    }
+
+    .step-box {
+      background: white;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px 12px;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .step-box:hover {
+      border-color: var(--accent-blue);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+      margin: 0 auto 8px;
+    }
+
+    .step-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .step-metric {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--accent-blue);
+      background: rgba(37, 99, 235, 0.05);
+      padding: 4px 6px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+    }
+
+    .step-metric:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Arrow between steps */
+    .arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 3px;
+      background: linear-gradient(90deg, var(--border-color) 0%, var(--accent-blue) 50%, var(--border-color) 100%);
+      z-index: 1;
+    }
+
+    .arrow::after {
+      content: '';
+      position: absolute;
+      right: -10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0;
+      height: 0;
+      border-left: 10px solid var(--accent-blue);
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+    }
+
+    /* DETAILED PIPELINE VIEW */
+    .step-container {
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      gap: 32px;
+    }
+
+    @media (max-width: 1200px) {
+      .step-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .steps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .step-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .step-card:hover {
+      border-color: var(--accent-blue);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+    }
+
+    .step-card.active {
+      border-color: var(--accent-blue);
+      background: rgba(239, 246, 255, 0.5);
+    }
+
+    .card-step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--bg-subtle);
+      font-weight: 700;
+      margin-right: 10px;
+      color: var(--text-secondary);
+    }
+
+    .step-card.active .card-step-number {
+      background: var(--accent-blue);
+      color: white;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: inline;
+    }
+
+    .metrics-display {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .metric {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 11px;
+      text-align: center;
+    }
+
+    .metric-label {
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 10px;
+    }
+
+    .metric-value {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-primary);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .inspector {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 20px;
+      position: sticky;
+      top: 20px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .inspector-section {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .inspector-section:last-child {
+      border-bottom: none;
+    }
+
+    .inspector-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .code-block {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #334155;
+      overflow-x: auto;
+      max-height: 200px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    /* TIMELINE STYLES */
+    .timeline-container {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 30px;
+    }
+
+    .timeline-item {
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border-color);
+      position: relative;
+      padding-left: 40px;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      border: 3px solid white;
+      box-shadow: 0 0 0 3px var(--accent-blue);
+    }
+
+    .timeline-item::after {
+      content: '';
+      position: absolute;
+      left: 8px;
+      top: 20px;
+      width: 3px;
+      height: calc(100% + 3px);
+      background: var(--border-color);
+    }
+
+    .timeline-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .timeline-item:last-child::after {
+      display: none;
+    }
+
+    .timeline-header {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent-blue);
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 4px;
+    }
+
+    .timeline-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .timeline-duration {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .timeline-cumulative {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* FLOWCHART VIEW - RESPONSIVE */
+    .flowchart-scroll {
+      overflow-x: auto;
+      padding: 20px 0;
+    }
+
+    .flowchart-inner {
+      min-width: 1200px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    
+    <header>
+      <h1>Query Pipeline - Metrics & Flowchart</h1>
+      <p class="subtitle">Complete end-to-end metrics capture showing all 9 pipeline stages sequentially</p>
+    </header>
+
+    <div class="summary-stats">
+      <div class="stat-box">
+        <div class="stat-label">Total Latency</div>
+        <div class="stat-value">782.8 ms</div>
+        <div class="stat-desc">Query to response</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Quality Gates</div>
+        <div class="stat-value">10/10</div>
+        <div class="stat-desc">All passing</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Citation Accuracy</div>
+        <div class="stat-value">100%</div>
+        <div class="stat-desc">3/3 verified</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Token Efficiency</div>
+        <div class="stat-value">35.5%</div>
+        <div class="stat-desc">1,420 / 4,000</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('flowchart')">Sequential Flow</button>
+      <button class="tab-btn" onclick="switchTab('detailed')">Detailed Pipeline</button>
+      <button class="tab-btn" onclick="switchTab('timeline')">Timeline View</button>
+    </div>
+
+    <!-- SEQUENTIAL FLOWCHART VIEW -->
+    <div id="tab-flowchart" class="tab-content active">
+      <div class="flowchart-container">
+        <div class="flowchart-scroll">
+          <div class="flowchart-inner">
+            <!-- Row 1 -->
+            <div class="pipeline-row" style="width: 1400px;">
+              <div class="pipeline-step">
+                <div class="step-box" onclick="selectStep(1)">
+                  <div class="step-number">1</div>
+                  <span class="step-title">Query Ingress</span>
+                  <div class="step-metric">2.1 ms</div>
+                </div>
+              </div>
+              <div class="arrow" style="width: 80px; left: 140px;"></div>
+              
+              <div class="pipeline-step" style="margin-left: 80px;">
+                <div class="step-box" onclick="selectStep(2)">
+                  <div class="step-number">2</div>
+                  <span class="step-title">Cache Lookup</span>
+                  <div class="step-metric">14.2 ms</div>
+                  <div class="step-metric">MISS</div>
+                </div>
+              </div>
+              <div class="arrow" style="width: 80px; left: 300px;"></div>
+
+              <div class="pipeline-step" style="margin-left: 80px;">
+                <div class="step-box" onclick="selectStep(3)">
+                  <div class="step-number">3</div>
+                  <span class="step-title">Safety Gate</span>
+                  <div class="step-metric">0.8 ms</div>
+                  <div class="step-metric">0 violations</div>
+                </div>
+              </div>
+              <div class="arrow" style="width: 80px; left: 460px;"></div>
+
+              <div class="pipeline-step" style="margin-left: 80px;">
+                <div class="step-box" onclick="selectStep(4)">
+                  <div class="step-number">4</div>
+                  <span class="step-title">Intent & NER</span>
+                  <div class="step-metric">18.5 ms</div>
+                  <div class="step-metric">2 entities</div>
+                </div>
+              </div>
+              <div class="arrow" style="width: 80px; left: 620px;"></div>
+
+              <div class="pipeline-step" style="margin-left: 80px;">
+                <div class="step-box" onclick="selectStep(5)">
+                  <div class="step-number">5</div>
+                  <span class="step-title">Graph Traversal</span>
+                  <div class="step-metric">42.6 ms</div>
+                  <div class="step-metric">8 nodes, 12 edges</div>
+                </div>
+              </div>
+              <div class="arrow" style="width: 80px; left: 780px;"></div>
+
+              <div class="pipeline-step" style="margin-left: 80px;">
+                <div class="step-box" onclick="selectStep(6)">
+                  <div class="step-number">6</div>
+                  <span class="step-title">Vector Search</span>
+                  <div class="step-metric">86.8 ms</div>
+                  <div class="step-metric">40→5 reranked</div>
+                </div>
+              </div>
+              <div class="arrow" style="width: 80px; left: 940px;"></div>
+
+              <div class="pipeline-step" style="margin-left: 80px;">
+                <div class="step-box" onclick="selectStep(7)">
+                  <div class="step-number">7</div>
+                  <span class="step-title">Context Assembly</span>
+                  <div class="step-metric">4.3 ms</div>
+                  <div class="step-metric">1,420 / 4,000 tok</div>
+                </div>
+              </div>
+              <div class="arrow" style="width: 80px; left: 1100px;"></div>
+
+              <div class="pipeline-step" style="margin-left: 80px;">
+                <div class="step-box" onclick="selectStep(8)">
+                  <div class="step-number">8</div>
+                  <span class="step-title">LLM Synthesis</span>
+                  <div class="step-metric">612.0 ms</div>
+                  <div class="step-metric">1.4k → 185 tok</div>
+                </div>
+              </div>
+              <div class="arrow" style="width: 80px; left: 1260px;"></div>
+
+              <div class="pipeline-step" style="margin-left: 80px;">
+                <div class="step-box" onclick="selectStep(9)">
+                  <div class="step-number">9</div>
+                  <span class="step-title">Citations</span>
+                  <div class="step-metric">1.5 ms</div>
+                  <div class="step-metric">3/3 verified</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DETAILED PIPELINE VIEW -->
+    <div id="tab-detailed" class="tab-content">
+      <div class="step-container">
+        <div class="steps-list">
+          <div class="step-card active" onclick="selectStep(1)">
+            <div><span class="card-step-number">1</span><span class="card-title">Query Ingress</span></div>
+            <div class="metrics-display">
+              <div class="metric"><div class="metric-label">Latency</div><div class="metric-value">2.1 ms</div></div>
+              <div class="metric"><div class="metric-label">Query</div><div class="metric-value">124 chr</div></div>
+              <div class="metric"><div class="metric-label">History</div><div class="metric-value">2</div></div>
+            </div>
+          </div>
+
+          <div class="step-card" onclick="selectStep(2)">
+            <div><span class="card-step-number">2</span><span class="card-title">Cache Lookup</span></div>
+            <div class="metrics-display">
+              <div class="metric"><div class="metric-label">Latency</div><div class="metric-value">14.2 ms</div></div>
+              <div class="metric"><div class="metric-label">Similarity</div><div class="metric-value">0.42</div></div>
+              <div class="metric"><div class="metric-label">Status</div><div class="metric-value">MISS</div></div>
+            </div>
+          </div>
+
+          <div class="step-card" onclick="selectStep(3)">
+            <div><span class="card-step-number">3</span><span class="card-title">Safety Gate</span></div>
+            <div class="metrics-display">
+              <div class="metric"><div class="metric-label">Latency</div><div class="metric-value">0.8 ms</div></div>
+              <div class="metric"><div class="metric-label">Violations</div><div class="metric-value">0</div></div>
+              <div class="metric"><div class="metric-label">Tokens</div><div class="metric-value">0</div></div>
+            </div>
+          </div>
+
+          <div class="step-card" onclick="selectStep(4)">
+            <div><span class="card-step-number">4</span><span class="card-title">Intent & NER</span></div>
+            <div class="metrics-display">
+              <div class="metric"><div class="metric-label">Latency</div><div class="metric-value">18.5 ms</div></div>
+              <div class="metric"><div class="metric-label">Type</div><div class="metric-value">compliance</div></div>
+              <div class="metric"><div class="metric-label">Entities</div><div class="metric-value">2/2</div></div>
+            </div>
+          </div>
+
+          <div class="step-card" onclick="selectStep(5)">
+            <div><span class="card-step-number">5</span><span class="card-title">Graph Traversal</span></div>
+            <div class="metrics-display">
+              <div class="metric"><div class="metric-label">Latency</div><div class="metric-value">42.6 ms</div></div>
+              <div class="metric"><div class="metric-label">Nodes</div><div class="metric-value">8</div></div>
+              <div class="metric"><div class="metric-label">Edges</div><div class="metric-value">12</div></div>
+            </div>
+          </div>
+
+          <div class="step-card" onclick="selectStep(6)">
+            <div><span class="card-step-number">6</span><span class="card-title">Vector Search</span></div>
+            <div class="metrics-display">
+              <div class="metric"><div class="metric-label">Latency</div><div class="metric-value">86.8 ms</div></div>
+              <div class="metric"><div class="metric-label">Raw</div><div class="metric-value">40</div></div>
+              <div class="metric"><div class="metric-label">Kept</div><div class="metric-value">5</div></div>
+            </div>
+          </div>
+
+          <div class="step-card" onclick="selectStep(7)">
+            <div><span class="card-step-number">7</span><span class="card-title">Context Assembly</span></div>
+            <div class="metrics-display">
+              <div class="metric"><div class="metric-label">Latency</div><div class="metric-value">4.3 ms</div></div>
+              <div class="metric"><div class="metric-label">Tokens</div><div class="metric-value">1,420</div></div>
+              <div class="metric"><div class="metric-label">Util</div><div class="metric-value">35.5%</div></div>
+            </div>
+          </div>
+
+          <div class="step-card" onclick="selectStep(8)">
+            <div><span class="card-step-number">8</span><span class="card-title">LLM Synthesis</span></div>
+            <div class="metrics-display">
+              <div class="metric"><div class="metric-label">Latency</div><div class="metric-value">612.0 ms</div></div>
+              <div class="metric"><div class="metric-label">Input</div><div class="metric-value">1.4k</div></div>
+              <div class="metric"><div class="metric-label">Output</div><div class="metric-value">185</div></div>
+            </div>
+          </div>
+
+          <div class="step-card" onclick="selectStep(9)">
+            <div><span class="card-step-number">9</span><span class="card-title">Citations</span></div>
+            <div class="metrics-display">
+              <div class="metric"><div class="metric-label">Latency</div><div class="metric-value">1.5 ms</div></div>
+              <div class="metric"><div class="metric-label">Citations</div><div class="metric-value">3/3</div></div>
+              <div class="metric"><div class="metric-label">Verified</div><div class="metric-value">100%</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="inspector" id="inspector">
+          <div class="inspector-section">
+            <div class="inspector-title">Step Metrics</div>
+            <div id="metrics"></div>
+          </div>
+          <div class="inspector-section">
+            <div class="inspector-title">JSON Payload</div>
+            <div class="code-block" id="payload"></div>
+          </div>
+          <div class="inspector-section">
+            <div class="inspector-title">Status</div>
+            <div id="status" style="font-size: 12px; color: var(--text-secondary);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIMELINE VIEW -->
+    <div id="tab-timeline" class="tab-content">
+      <div class="timeline-container" id="timeline"></div>
+    </div>
+
+  </div>
+
+  <script>
+    const stepData = {
+      1: { title: "Query Ingress", latency: 2.1, metrics: { "Query Length": "124 chars", "Words": "18", "History": "2 turns", "Pronouns": "0" }, json: { stage: "query_ingress", latency_ms: 2.1, query_length: 124, status: "SUCCESS" }, status: "All metrics captured" },
+      2: { title: "Cache Lookup", latency: 14.2, metrics: { "Lookup Time": "14.2 ms", "Similarity": "0.42", "Threshold": "0.95", "Status": "MISS" }, json: { stage: "cache_lookup", cache_hit: false, similarity: 0.42, latency_ms: 14.2 }, status: "Cache miss (expected)" },
+      3: { title: "Safety Gate", latency: 0.8, metrics: { "Eval Time": "0.8 ms", "Violations": "0", "Tokens": "0", "Result": "PASSED" }, json: { stage: "safety_gate", violations: 0, tokens_cost: 0, latency_ms: 0.8 }, status: "No violations detected" },
+      4: { title: "Intent & NER", latency: 18.5, metrics: { "Classifier": "18.5 ms", "Type": "compliance_check", "Entities": "2/2", "Paths": "1" }, json: { stage: "intent_ner", query_type: "compliance_check", entities: 2, latency_ms: 18.5 }, status: "Entities identified" },
+      5: { title: "Graph Traversal", latency: 42.6, metrics: { "Traversal": "42.6 ms", "Nodes": "8", "Edges": "12", "Facts": "6" }, json: { stage: "graph_traversal", nodes: 8, edges: 12, facts: 6, latency_ms: 42.6 }, status: "Graph matched" },
+      6: { title: "Vector Search", latency: 86.8, metrics: { "Search": "86.8 ms", "Raw": "40", "Kept": "5", "Score": "0.892" }, json: { stage: "vector_search", raw: 40, kept: 5, top_score: 0.892, latency_ms: 86.8 }, status: "Reranking complete" },
+      7: { title: "Context Assembly", latency: 4.3, metrics: { "Assembly": "4.3 ms", "Budget": "4,000", "Used": "1,420", "Util": "35.5%" }, json: { stage: "context_assembly", token_budget: 4000, tokens_used: 1420, latency_ms: 4.3 }, status: "Quality gate passed" },
+      8: { title: "LLM Synthesis", latency: 612.0, metrics: { "Generation": "612.0 ms", "Model": "gpt-oss-120b", "Input": "1,420", "Output": "185" }, json: { stage: "llm_synthesis", model: "gpt-oss-120b", input_tokens: 1420, output_tokens: 185, latency_ms: 612.0 }, status: "High confidence" },
+      9: { title: "Citations", latency: 1.5, metrics: { "Attribution": "1.5 ms", "Citations": "3", "Verified": "3/3", "Rate": "100%" }, json: { stage: "citations", count: 3, verified: 3, rate: "100%", latency_ms: 1.5 }, status: "All traced" }
+    };
+
+    function selectStep(num) {
+      const data = stepData[num];
+      document.querySelectorAll('.step-card').forEach((card, i) => {
+        card.classList.toggle('active', i === num - 1);
+      });
+      
+      const metrics = Object.entries(data.metrics).map(([k, v]) => `<div style="font-size:12px; padding:4px 0;"><strong>${k}:</strong> ${v}</div>`).join('');
+      document.getElementById('metrics').innerHTML = metrics;
+      document.getElementById('payload').textContent = JSON.stringify(data.json, null, 2);
+      document.getElementById('status').textContent = data.status;
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      if (tabName === 'timeline') {
+        const timeline = document.getElementById('timeline');
+        if (!timeline.innerHTML) {
+          const items = [
+            { step: 1, label: "Query Ingress", time: 2.1, cum: 2.1, details: "Parse incoming query" },
+            { step: 2, label: "Cache Lookup", time: 14.2, cum: 16.3, details: "Check semantic cache" },
+            { step: 3, label: "Safety Gate", time: 0.8, cum: 17.1, details: "Content safety validation" },
+            { step: 4, label: "Intent & NER", time: 18.5, cum: 35.6, details: "Classify query type and extract entities" },
+            { step: 5, label: "Graph Traversal", time: 42.6, cum: 78.2, details: "Query knowledge graph (8 nodes, 12 edges)" },
+            { step: 6, label: "Vector Search", time: 86.8, cum: 165.0, details: "Search vector DB (40→5 reranked)" },
+            { step: 7, label: "Context Assembly", time: 4.3, cum: 169.3, details: "Build context (1,420 / 4,000 tokens)" },
+            { step: 8, label: "LLM Synthesis", time: 612.0, cum: 781.3, details: "Generate response (1.4k → 185 tokens)" },
+            { step: 9, label: "Citations", time: 1.5, cum: 782.8, details: "Verify and attribute sources" }
+          ];
+          timeline.innerHTML = items.map(item => `
+            <div class="timeline-item">
+              <div class="timeline-header">Step ${item.step}: +${item.time.toFixed(1)}ms</div>
+              <div class="timeline-label">${item.label}</div>
+              <div class="timeline-duration">${item.details}</div>
+              <div class="timeline-cumulative">Cumulative: ${item.cum.toFixed(1)}ms</div>
+            </div>
+          `).join('');
+        }
+      }
+    }
+
+    selectStep(1);
+  </script>
+</body>
+</html>

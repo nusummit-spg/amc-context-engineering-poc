@@ -1,0 +1,141 @@
+# ===========================================================================
+# Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+# 
+# Author: NuSummit Developers
+#
+# Rust-specific .gitignore for Cargo projects
+# ===========================================================================
+
+# ===========================================================================
+# BUILD ARTIFACTS
+# ===========================================================================
+
+# Build directory (contains all compiled output)
+/target/
+target/
+
+# Cargo.lock (this may be kept if library, or included if binary)
+# For this project, Cargo.lock is typically committed for binaries
+# Cargo.lock
+
+# Rust build artifacts
+*.rlib
+*.rmeta
+*.so
+*.so.*
+*.dylib
+*.dSYM/
+
+# Windows executables
+*.exe
+*.pdb
+*.dll
+
+# Linux/macOS binaries
+a.out
+
+# ============================================================================
+# IDE / EDITOR CONFIGURATION
+# ============================================================================
+
+# JetBrains
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Visual Studio Code
+.vscode/
+.vscode-test/
+.history/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ===========================================================================
+# PROFILING & DEBUGGING
+# ===========================================================================
+
+# Profiling data
+*.prof
+*.profraw
+*.profdata
+perf.data
+perf.data.old
+flamegraph.svg
+
+# Core dumps
+core
+core.*
+vgcore.*
+*.core
+
+# ===========================================================================
+# LOGS
+# ===========================================================================
+
+logs/
+log/
+*.log
+*.log.*
+
+# ===========================================================================
+# OS FILES
+# ===========================================================================
+
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.directory
+Thumbs.db
+ehthumbs.db
+
+# ===========================================================================
+# TESTING & COVERAGE
+# ===========================================================================
+
+# Tarpaulin coverage reports
+tarpaulin-report.html
+cobertura.xml
+
+# ============================================================================
+# CACHE & TEMPORARY FILES
+# ============================================================================
+
+.cargo/
+Cargo.lock.local
+target-cache/
+.rustup/
+.cargo-ok
+
+# ===========================================================================
+# ENVIRONMENT FILES
+# ===========================================================================
+
+.env
+.env.*
+!.env.example
+.envrc
+
+# ===========================================================================
+# ALLOW EXCEPTIONS - These SHOULD be tracked
+# ===========================================================================
+
+!.gitkeep
+!.env.example
+!Cargo.toml
+!Cargo.lock
+!src/
+!README.md

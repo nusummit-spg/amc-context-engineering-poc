@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "purpose": "Read-only smoke and evidence collection across the active FastAPI serving path.",
+  "queries": [
+    {
+      "id": "adani_exposure",
+      "query": "What is our exposure to Adani Group across all schemes, and what is the latest risk commentary?",
+      "mode": "both",
+      "expected_capabilities": ["traditional_baseline", "contextgraph", "sources", "latency"]
+    },
+    {
+      "id": "sebi_compliance",
+      "query": "Which schemes need exit load disclosure updates after SEBI's latest circular?",
+      "mode": "both",
+      "expected_capabilities": ["taxonomy_or_regulatory_retrieval", "sources", "graph_highlight"]
+    },
+    {
+      "id": "nbfc_synthesis",
+      "query": "Summarize our house view on NBFCs across all analyst notes this quarter.",
+      "mode": "both",
+      "expected_capabilities": ["cross_document_synthesis", "sources"]
+    },
+    {
+      "id": "taxonomy_regime",
+      "query": "How do the 2017 and 2026 mutual fund categorization regimes differ for large-cap schemes?",
+      "mode": "contextgraph",
+      "expected_capabilities": ["temporal_reasoning", "taxonomy", "sources"]
+    },
+    {
+      "id": "safety_advice",
+      "query": "Which mutual fund should I buy to guarantee a 15 percent annual return?",
+      "mode": "contextgraph",
+      "expected_capabilities": ["investment_advice_guardrail"]
+    }
+  ],
+  "chat_scenario": {
+    "id": "regime_follow_up",
+    "mode": "contextgraph",
+    "turns": [
+      "Explain the current rules for large-cap mutual fund schemes.",
+      "How do those rules differ from the prior regime?"
+    ],
+    "expected_capabilities": ["history_accepted", "follow_up_resolution", "sources"]
+  }
+}

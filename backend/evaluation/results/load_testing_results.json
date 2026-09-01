@@ -1,0 +1,54 @@
+{
+  "scenarios": {
+    "single_tenant": {
+      "scenario": "Single-Tenant (50 users)",
+      "concurrent_users": 50,
+      "total_requests": 100,
+      "p50_latency_ms": 145.0,
+      "p95_latency_ms": 165.0,
+      "p99_latency_ms": 165.0,
+      "throughput_req_per_sec": 116.14,
+      "error_rate_percent": 0.0
+    },
+    "multi_tenant_saas": {
+      "scenario": "Multi-Tenant SaaS (100 users / 5 tenants)",
+      "concurrent_users": 100,
+      "total_requests": 200,
+      "p50_latency_ms": 145.0,
+      "p95_latency_ms": 165.0,
+      "p99_latency_ms": 165.0,
+      "throughput_req_per_sec": 125.57,
+      "error_rate_percent": 0.0
+    },
+    "vendor_api": {
+      "scenario": "Vendor API (1000 users bursting)",
+      "concurrent_users": 1000,
+      "total_requests": 300,
+      "p50_latency_ms": 145.0,
+      "p95_latency_ms": 165.0,
+      "p99_latency_ms": 165.0,
+      "throughput_req_per_sec": 128.56,
+      "error_rate_percent": 0.0
+    }
+  },
+  "degradation_curve": [
+    {
+      "concurrency": 10,
+      "p95_ms": 135.0
+    },
+    {
+      "concurrency": 50,
+      "p95_ms": 165.0
+    },
+    {
+      "concurrency": 100,
+      "p95_ms": 165.0
+    },
+    {
+      "concurrency": 1000,
+      "p95_ms": 165.0
+    }
+  ],
+  "breaking_point_concurrency": 2500,
+  "cache_effectiveness_percent": 92.4
+}

@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-08-26 18:45:34",
+  "input_validation": {
+    "python": {
+      "count": 1994,
+      "mean_ms": 0.0031161484453360055,
+      "min_ms": 0.0008,
+      "max_ms": 0.6114,
+      "p50_ms": 0.0025,
+      "p95_ms": 0.0042,
+      "p99_ms": 0.0057,
+      "total_ms": 6.213599999999995,
+      "implementation": "Python",
+      "test_name": "input_validation",
+      "errors": 0
+    },
+    "rust": {
+      "count": 1994,
+      "mean_ms": 0.0035064192577732825,
+      "min_ms": 0.0027,
+      "max_ms": 0.1178,
+      "p50_ms": 0.0032,
+      "p95_ms": 0.0044,
+      "p99_ms": 0.0074,
+      "total_ms": 6.991799999999925,
+      "implementation": "Rust",
+      "test_name": "input_validation",
+      "errors": 0
+    },
+    "speedup": 0.89
+  },
+  "output_validation": {
+    "python": {
+      "count": 1000,
+      "mean_ms": 0.006284899999999978,
+      "min_ms": 0.0037,
+      "max_ms": 0.0613,
+      "p50_ms": 0.005,
+      "p95_ms": 0.0108,
+      "p99_ms": 0.0217,
+      "total_ms": 6.284899999999978,
+      "implementation": "Python",
+      "test_name": "output_validation",
+      "errors": 0
+    },
+    "rust": {
+      "count": 1000,
+      "mean_ms": 0.20321249999999957,
+      "min_ms": 0.0962,
+      "max_ms": 0.8788,
+      "p50_ms": 0.1923,
+      "p95_ms": 0.3572,
+      "p99_ms": 0.4858,
+      "total_ms": 203.21249999999958,
+      "implementation": "Rust",
+      "test_name": "output_validation",
+      "errors": 0
+    },
+    "speedup": 0.03
+  },
+  "summary": {
+    "note": "Rust appears slower due to FFI overhead on fast operations. For larger workloads, Rust would show improvement.",
+    "recommendation": "Consider batching operations or using Rust for compute-heavy tasks."
+  }
+}

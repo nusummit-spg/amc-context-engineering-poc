@@ -1,0 +1,275 @@
+# ===========================================================================
+# Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+# 
+# Author: NuSummit Developers
+#
+# Infrastructure deployment .gitignore for Terraform, k8s, Lambda, etc.
+# ===========================================================================
+
+# ===========================================================================
+# SENSITIVE DATA & CREDENTIALS - HIGHEST PRIORITY
+# ===========================================================================
+
+# AWS credentials and configuration
+.aws/
+~/.aws/
+aws_access_key_id
+aws_secret_access_key
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+
+# GCP credentials
+.gcp/
+gcp-key.json
+google-services.json
+service-account*.json
+
+# Azure credentials
+.azure/
+azure-credentials.json
+.azurerc
+
+# SSH keys and certificates
+*.pem
+*.key
+*.pub
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+private_key
+public_key
+*.crt
+*.cer
+*.p8
+
+# Database credentials and connection strings
+db_credentials.json
+db_connection.json
+db_transport.json
+postgres_password.txt
+
+# API tokens and keys
+api_keys.json
+credentials.json
+secrets.json
+token*
+bearer_token
+
+# ===========================================================================
+# TERRAFORM & IaC
+# ===========================================================================
+
+# Terraform state files
+*.tfstate
+*.tfstate.*
+terraform.tfstate*
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform plan files
+*.tfplan
+plan.tfplan
+
+# Terraform variables
+*.tfvars
+!*.tfvars.example
+!terraform.tfvars.example
+
+# Terraform cache and lock
+.terraform/
+.terraform.lock.hcl
+
+# Terraform logs
+terraform.log
+terraform-*.log
+
+# ===========================================================================
+# KUBERNETES SECRETS & CONFIGURATION
+# ===========================================================================
+
+# Kubernetes secrets (should never be in git)
+*-secret.yaml
+*-secret.yml
+*-secrets.yaml
+*-secrets.yml
+secrets.yaml
+secrets.yml
+
+# Kustomize builds
+kustomization.yaml.local
+kustomization.local.yaml
+
+# Helm values with secrets
+values-*.yaml
+values-*.yml
+!values-example.yaml
+!values-example.yml
+
+# ===========================================================================
+# ENVIRONMENT FILES
+# ===========================================================================
+
+.env
+.env.*
+!.env.example
+!.env.template
+.envrc
+
+# ===========================================================================
+# LOGS & TEMPORARY FILES
+# ===========================================================================
+
+# Deployment logs
+*.log
+logs/
+log/
+deployment.log
+installation.log
+
+# Temporary deployment files
+*.tmp
+*.temp
+tmp/
+temp/
+tempdir/
+
+# PID files
+*.pid
+*.pidlock
+
+# ===========================================================================
+# CLOUD-SPECIFIC ARTIFACTS
+# ===========================================================================
+
+# AWS CloudFormation
+cfn-outputs.json
+stack-outputs.json
+*.cfn.json
+*.cfn.yaml
+
+# Ansible
+*.retry
+*.vault
+vault-password.txt
+
+# ===========================================================================
+# LAMBDA SPECIFIC
+# ===========================================================================
+
+# Lambda build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Lambda deployment package
+lambda-deployment.zip
+lambda_function.zip
+
+# ===========================================================================
+# DOCKER
+# ===========================================================================
+
+# Docker compose overrides
+docker-compose.override.yml
+docker-compose.local.yml
+docker-compose.dev.yml
+docker-compose.staging.yml
+
+# Docker build cache
+.docker/
+
+# Docker volumes and data
+docker-volumes/
+postgres-data/
+mysql-data/
+mongo-data/
+
+# ===========================================================================
+# MONITORING & OBSERVABILITY
+# ===========================================================================
+
+# Prometheus
+prometheus.yml.bak
+prometheus-data/
+
+# Grafana
+grafana-storage/
+
+# Loki
+loki-data/
+
+# ===========================================================================
+# IDE / EDITOR
+# ===========================================================================
+
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+
+# ===========================================================================
+# OS FILES
+# ===========================================================================
+
+.DS_Store
+Thumbs.db
+ehthumbs.db
+.directory
+
+# ===========================================================================
+# CERTIFICATES & SSL
+# ===========================================================================
+
+# SSL/TLS certificates and keys
+*.crt
+*.cer
+*.key
+*.pem
+*.pfx
+*.p12
+*.jks
+*.keystore
+
+# ===========================================================================
+# BACKUPS & EXPORTS
+# ===========================================================================
+
+# Database exports
+*.sql
+*.sql.gz
+*.dump
+*.bak
+backup/
+backups/
+
+# Export files
+*.cypher
+*.zip
+
+# ===========================================================================
+# ALLOW EXCEPTIONS - Files that SHOULD be tracked
+# ===========================================================================
+
+!.gitkeep
+!.env.example
+!.env.template
+!*.tfvars.example
+!terraform.tfvars.example
+!values-example.yaml
+!values-example.yml
+!README.md
+!*.sh
+!*.yaml
+!*.yml

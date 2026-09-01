@@ -1,0 +1,288 @@
+{
+  "generated_at": "2026-08-13T20:16:54.384195",
+  "model": "groq/llama-3.1-8b-instant",
+  "neo4j_online": true,
+  "queries": [
+    {
+      "q_id": "Q1",
+      "chain": "C1",
+      "turn": 1,
+      "topic": "SEBI Mutual Fund Categorisation",
+      "query": "What are the five broad categories of mutual fund schemes under SEBI's categorization framework?",
+      "history_turns": 0,
+      "ground_truth": [
+        "Equity Schemes",
+        "Debt Schemes",
+        "Hybrid Schemes",
+        "Solution Oriented Schemes",
+        "Other Schemes"
+      ],
+      "traditional": {
+        "model": "groq/llama-3.1-8b-instant",
+        "answer": "I'm not able to find the information on the five broad categories of mutual fund schemes under SEBI's categorization framework in the given context.",
+        "input_tokens": 81,
+        "output_tokens": 30,
+        "total_tokens": 111,
+        "latency_ms": 715.3,
+        "verification": {
+          "matched": [],
+          "missed": [
+            "Equity Schemes",
+            "Debt Schemes",
+            "Hybrid Schemes",
+            "Solution Oriented Schemes",
+            "Other Schemes"
+          ],
+          "score": 0.0
+        }
+      },
+      "contextgraph": {
+        "model": "groq/llama-3.1-8b-instant",
+        "answer": "Based on document prose, the five broad categories of mutual fund schemes under SEBI's categorization framework are:\n\n1. Equity Schemes [1]\n2. Debt Schemes [1]\n3. Hybrid Schemes [1]\n4. Solution Oriented Schemes [1]\n5. Other Schemes (including Money Market and Index Funds) [1]\n\nPlease note that this information may not be entirely up-to-date, and it's always best to verify with more reliable sources.\n\nReferences:\n[1] SEBI Circular No. CIR/MFD/12/2015 dated 31st July 2015\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 249,
+        "latency_ms": 766.9,
+        "graph_nodes": 0,
+        "graph_edges": 0,
+        "query_type": "open_ended",
+        "confidence": "low confidence",
+        "verification": {
+          "matched": [
+            "Equity Schemes",
+            "Debt Schemes",
+            "Hybrid Schemes",
+            "Solution Oriented Schemes",
+            "Other Schemes"
+          ],
+          "missed": [],
+          "score": 1.0
+        }
+      },
+      "token_saving": -138
+    },
+    {
+      "q_id": "Q2",
+      "chain": "C1",
+      "turn": 2,
+      "topic": "SEBI Mutual Fund Categorisation (follow-up)",
+      "query": "Within those categories, what is the minimum equity allocation required for a Large Cap Fund and how is Large Cap defined?",
+      "history_turns": 0,
+      "ground_truth": [
+        "80%",
+        "top 100",
+        "large cap"
+      ],
+      "traditional": {
+        "model": "groq/llama-3.1-8b-instant",
+        "answer": "I'm unable to answer your question as the context provided does not contain information about the minimum equity allocation required for a Large Cap Fund or the definition of Large Cap.",
+        "input_tokens": 86,
+        "output_tokens": 34,
+        "total_tokens": 120,
+        "latency_ms": 24109.0,
+        "verification": {
+          "matched": [
+            "large cap"
+          ],
+          "missed": [
+            "80%",
+            "top 100"
+          ],
+          "score": 0.3333333333333333
+        }
+      },
+      "contextgraph": {
+        "model": "groq/llama-3.1-8b-instant",
+        "answer": "Based on the provided graph relationships, the minimum equity allocation for a Large Cap Fund is not explicitly stated, but it is governed by SEBI Circular MF/Borrowing/20% Limit. However, there is a conflict with the SEBI Circular InvIT/Borrowing/49% Limit, which governs Infrastructure Investment Trusts, suggesting different equity allocation limits for different types of funds. The definition of Large Cap is not directly stated in the graph relationships, but it is a sub-classification of Equity Schemes. \n\n1. SEBI Circular MF/Borrowing/20% Limit\n2. SEBI Circular InvIT/Borrowing/49% Limit\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 614,
+        "latency_ms": 31185.1,
+        "graph_nodes": 0,
+        "graph_edges": 0,
+        "query_type": "comparison",
+        "confidence": "low confidence",
+        "verification": {
+          "matched": [
+            "large cap"
+          ],
+          "missed": [
+            "80%",
+            "top 100"
+          ],
+          "score": 0.3333333333333333
+        }
+      },
+      "token_saving": -494
+    },
+    {
+      "q_id": "Q3",
+      "chain": "C2",
+      "turn": 1,
+      "topic": "Adani FY24 Earnings",
+      "query": "What was Adani Enterprises' consolidated revenue and EBITDA in FY24, and which incubating businesses drove growth?",
+      "history_turns": 0,
+      "ground_truth": [
+        "EBITDA",
+        "FY24",
+        "airport",
+        "incubat"
+      ],
+      "traditional": {
+        "model": "groq/llama-3.1-8b-instant",
+        "answer": "I do not have the information required to answer your question.",
+        "input_tokens": 87,
+        "output_tokens": 13,
+        "total_tokens": 100,
+        "latency_ms": 117.0,
+        "verification": {
+          "matched": [],
+          "missed": [
+            "EBITDA",
+            "FY24",
+            "airport",
+            "incubat"
+          ],
+          "score": 0.0
+        }
+      },
+      "contextgraph": {
+        "model": "groq/llama-3.1-8b-instant",
+        "answer": "Based on the provided sources, I can only find information up to FY19, which does not answer the question about FY24. However, I can provide the available information on FY17-19. Adani Enterprises' reported EBITDA for Q1 FY17, Q1 FY18, and Q1 FY19 was Rs 503 cr, Rs 727 cr, and Rs 589 cr, respectively. There is no information on consolidated revenue for these periods. As for incubating businesses driving growth, the provided sources do not mention any specific businesses. \n\nList of available information:\n- Q1 FY17 EBITDA: Rs 503 cr\n- Q1 FY18 EBITDA: Rs 727 cr\n- Q1 FY19 EBITDA: Rs 589 cr\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 444,
+        "latency_ms": 1150.5,
+        "graph_nodes": 4,
+        "graph_edges": 3,
+        "query_type": "aggregation",
+        "confidence": "low confidence",
+        "verification": {
+          "matched": [
+            "EBITDA",
+            "FY24",
+            "incubat"
+          ],
+          "missed": [
+            "airport"
+          ],
+          "score": 0.75
+        }
+      },
+      "token_saving": -344
+    },
+    {
+      "q_id": "Q4",
+      "chain": "C4",
+      "turn": 1,
+      "topic": "SEBI Investment Adviser Guidelines",
+      "query": "What NISM certification, net worth, and qualification requirements apply to SEBI registered Investment Advisers?",
+      "history_turns": 0,
+      "ground_truth": [
+        "NISM",
+        "net worth",
+        "qualification",
+        "certification"
+      ],
+      "traditional": {
+        "model": "groq/llama-3.1-8b-instant",
+        "answer": "I'm unable to verify the NISM certification, net worth, and qualification requirements that apply to SEBI registered Investment Advisers.",
+        "input_tokens": 83,
+        "output_tokens": 27,
+        "total_tokens": 110,
+        "latency_ms": 126.3,
+        "verification": {
+          "matched": [
+            "NISM",
+            "net worth",
+            "qualification",
+            "certification"
+          ],
+          "missed": [],
+          "score": 1.0
+        }
+      },
+      "contextgraph": {
+        "model": "groq/llama-3.1-8b-instant",
+        "answer": "To answer the question, I'll break down the requirements for SEBI registered Investment Advisers.\n\n**NISM Certification:**\nSEBI registered Investment Advisers are required to possess a certification from the National Institute of Securities Markets (NISM). The specific certification required is the NISM Certification in Investment Adviser (Level 1).\n\n**Net Worth:**\nThe net worth requirement for SEBI registered Investment Advisers is as follows:\n\n- For Individual Advisers: The net worth of the individual should be at least ₹ 2.5 million (₹ 2,500,000).\n- For Partnership Firms: The net worth of the partnership firm should be at least ₹ 5 million (₹ 5,000,000).\n- For Companies: The net worth of the company should be at least ₹ 10 million (₹ 10,000,000).\n\n**Qualification Requirements:**\nThe qualification requirements for SEBI registered Investment Advisers are as follows:\n\n- Bachelor's degree in any discipline from a recognized university.\n- At least 5 years of experience in the field of finance, accounting, or a related field.\n- Completion of a certification course in investment advisory services from a recognized institution.\n\nPlease note that these requirements are subject to change, and it's always best to verify the information with the relevant authorities or regulatory bodies.\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 364,
+        "latency_ms": 1456.4,
+        "graph_nodes": 0,
+        "graph_edges": 0,
+        "query_type": "aggregation",
+        "confidence": "low confidence",
+        "verification": {
+          "matched": [
+            "NISM",
+            "net worth",
+            "qualification",
+            "certification"
+          ],
+          "missed": [],
+          "score": 1.0
+        }
+      },
+      "token_saving": -254
+    },
+    {
+      "q_id": "Q5",
+      "chain": "C5",
+      "turn": 4,
+      "topic": "SEBI Information Ratio Disclosure (multi-turn T4)",
+      "query": "What is the SEBI directive on Information Ratio disclosure for risk-adjusted return comparison in mutual funds?",
+      "history_turns": 3,
+      "ground_truth": [
+        "information ratio",
+        "risk",
+        "return",
+        "disclosure",
+        "mutual fund"
+      ],
+      "traditional": {
+        "model": "groq/llama-3.1-8b-instant",
+        "answer": "I'm not aware of the specific SEBI directive on Information Ratio disclosure for risk-adjusted return comparison in mutual funds.",
+        "input_tokens": 83,
+        "output_tokens": 25,
+        "total_tokens": 108,
+        "latency_ms": 231.2,
+        "verification": {
+          "matched": [
+            "information ratio",
+            "risk",
+            "return",
+            "disclosure",
+            "mutual fund"
+          ],
+          "missed": [],
+          "score": 1.0
+        }
+      },
+      "contextgraph": {
+        "model": "groq/llama-3.1-8b-instant",
+        "answer": "Based on the given information, the answer to the question is not directly available. However, we can infer that SEBI has made some directives regarding mutual funds, but the specific directive on Information Ratio disclosure is not mentioned. \n\n1. 20% of NAV for meeting redemption pressures on a short-term basis (GRAPH RELATIONSHIPS, cite [1]) \n2. SEBI directive on Information Ratio disclosure for risk-adjusted return comparison in mutual funds (nothing answers the question)\n\n*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Past performance is not indicative of future returns.*",
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 360,
+        "latency_ms": 1248.7,
+        "graph_nodes": 0,
+        "graph_edges": 0,
+        "query_type": "direct_lookup",
+        "confidence": "low confidence",
+        "verification": {
+          "matched": [
+            "information ratio",
+            "risk",
+            "return",
+            "disclosure",
+            "mutual fund"
+          ],
+          "missed": [],
+          "score": 1.0
+        }
+      },
+      "token_saving": -252
+    }
+  ]
+}

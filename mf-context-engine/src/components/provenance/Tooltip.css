@@ -1,0 +1,154 @@
+/* Tooltip Trigger */
+.mf-tooltip-trigger {
+  display: inline-block;
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  vertical-align: baseline;
+}
+
+/* Floating Portal Container */
+.mf-tooltip-portal {
+  z-index: 999999;
+  box-sizing: border-box;
+  background-color: #1E293B;
+  color: #F8FAFC;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  pointer-events: auto;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  animation: mfTooltipFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mf-tooltip-portal.mf-tooltip-bottom {
+  animation: mfTooltipFadeInBottom 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes mfTooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -96%) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1);
+  }
+}
+
+@keyframes mfTooltipFadeInBottom {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 4%) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* Internal Scrollable Content Box */
+.mf-tooltip-inner {
+  max-height: 380px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
+}
+
+.mf-tooltip-inner::-webkit-scrollbar {
+  width: 5px;
+}
+
+.mf-tooltip-inner::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.mf-tooltip-inner::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+}
+
+.mf-tooltip-inner::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Header & Title */
+.mf-tooltip-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #FFFFFF;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  line-height: 1.35;
+}
+
+.mf-tooltip-title span:first-child {
+  flex: 1;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.mf-tooltip-badge {
+  font-size: 0.72rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.15);
+  color: #E2E8F0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Snippet Box */
+.mf-tooltip-snippet {
+  color: #E2E8F0;
+  font-size: 0.82rem;
+  margin-top: 8px;
+  line-height: 1.5;
+  font-style: italic;
+  border-left: 3px solid #60A5FA;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 0 4px 4px 0;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+/* Footer & Links */
+.mf-tooltip-footer {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  color: #94A3B8;
+}
+
+.mf-tooltip-link {
+  color: #60A5FA;
+  text-decoration: none;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s ease;
+}
+
+.mf-tooltip-link:hover {
+  text-decoration: underline;
+  color: #93C5FD;
+}

@@ -1,0 +1,192 @@
+# ===========================================================================
+# Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+# 
+# Author: NuSummit Developers
+#
+# Backend-specific .gitignore for Python FastAPI application
+# ===========================================================================
+
+# ===========================================================================
+# SENSITIVE DATA & CREDENTIALS
+# ===========================================================================
+
+# Environment files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# API keys and credentials
+api_keys.json
+credentials.json
+secrets.json
+vertex_key.json
+
+# ===========================================================================
+# PYTHON VIRTUAL ENVIRONMENTS & DEPENDENCIES
+# ===========================================================================
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+.python-env
+
+# Dependency caches
+.pip-cache/
+.pip/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ===========================================================================
+# PYTHON BUILD & DISTRIBUTION
+# ===========================================================================
+
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# Build directories
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ===========================================================================
+# TESTING & COVERAGE
+# ===========================================================================
+
+# Pytest
+.pytest_cache/
+.pytest/
+pytest-results/
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+coverage-reports/
+
+# ============================================================================
+# TYPE CHECKING & LINTING
+# ============================================================================
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/
+
+# Pylint
+.pylintrc.local
+
+# ===========================================================================
+# IDE / EDITOR
+# ===========================================================================
+
+# PyCharm
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+.vscode-test/
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ===========================================================================
+# LOGS & DEBUG OUTPUT
+# ===========================================================================
+
+# Application logs
+logs/
+*.log
+*.log.*
+debug.log
+error.log
+
+# Crash dumps and profiling
+*.dump
+*.prof
+*.cProfile
+
+# ===========================================================================
+# RUNTIME & CACHE DATA
+# ===========================================================================
+
+# SQLite databases
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Temporary files
+tmp/
+temp/
+tempdir/
+.tmp/
+
+# PID files
+*.pid
+*.pidlock
+
+# ===========================================================================
+# DOCKER
+# ===========================================================================
+
+# Docker compose overrides
+docker-compose.override.yml
+docker-compose.local.yml
+docker-compose.dev.yml
+
+# ===========================================================================
+# OS FILES
+# ===========================================================================
+
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# ===========================================================================
+# PROJECT-SPECIFIC ARTIFACTS
+# ===========================================================================
+
+# Neo4j dumps and exports (if they're large local exports)
+# Uncomment if these are temporary development exports
+# graph_dump.json
+# amc_master_full_dump.json
+
+# Benchmark and evaluation outputs (keep templates, exclude large data)
+# benchmark_output.log
+# profiling_output.log
+
+# Chat history and temporary data
+chat_history.json
+chat_history_v2.json
+intent_cache_audit_report.json
+
+# Transcript files (if temporary)
+aare_transcript.json
+
+# ===========================================================================
+# ALLOW EXCEPTIONS - These SHOULD be tracked
+# ===========================================================================
+
+!.gitkeep
+!.env.example
+!requirements.txt
+!pytest.ini
+!README.md
