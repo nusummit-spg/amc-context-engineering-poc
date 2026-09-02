@@ -4,7 +4,8 @@
 # Amazon Linux 2023. Runs once at first boot as root.
 set -euxo pipefail
 
-# --- Swap: safety net for the 1GB t3.micro (fastembed loads an ONNX model) ---
+# --- Swap: safety net even on t3.medium (4GB) — the engine loads torch +
+#     GLiNER + a sentence-transformer, and headroom is still tight under load. ---
 if [ ! -f /swapfile ]; then
   dd if=/dev/zero of=/swapfile bs=1M count=2048
   chmod 600 /swapfile

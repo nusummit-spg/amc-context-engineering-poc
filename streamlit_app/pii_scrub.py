@@ -22,8 +22,13 @@ _ISIN_GUARD = re.compile(r"\bIN[EF][A-Z0-9]{9}\b")
 
 
 def scrub_text(text: str) -> str:
+    scrubbed, _, _ = scrub_text_with_metrics(text)
+    return scrubbed
+
+
+def scrub_text_with_metrics(text: str) -> tuple[str, int, list[str]]:
     if not text:
-        return text
+        return text, 0, []
 
     # protect ISINs from the generic BANK_ACC digit-run pattern by temporarily
     # tokenizing them out
@@ -34,13 +39,20 @@ def scrub_text(text: str) -> str:
         placeholder_map[ph] = isin
         text = text.replace(isin, ph)
 
+    redacted_count = 0
+    types_found = []
+
     for label, pattern in _PATTERNS.items():
-        text = pattern.sub(f"[REDACTED_{label}]", text)
+        matches = pattern.findall(text)
+        if matches:
+            redacted_count += len(matches)
+            types_found.append(label)
+            text = pattern.sub(f"[REDACTED_{label}]", text)
 
     for ph, isin in placeholder_map.items():
         text = text.replace(ph, isin)
 
-    return text
+    return text, redacted_count, types_found
 
 
 def scrub_pages(pages_data: list[dict]) -> list[dict]:

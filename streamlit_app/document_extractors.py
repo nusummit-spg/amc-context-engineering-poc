@@ -17,6 +17,40 @@ from claude_vision_client import extract_from_image
 from extraction_prompts import DOCX_IMAGE_PROMPT, PPTX_SLIDE_IMAGE_PROMPT
 import config
 
+HAS_DOCLING = False
+try:
+    from docling.document_converter import DocumentConverter
+    HAS_DOCLING = True
+except ImportError:
+    HAS_DOCLING = False
+
+
+def extract_docling_layout(path: str) -> List[Dict[str, Any]]:
+    """
+    Extract PDF layout using IBM Docling if available.
+    Returns structured markdown pages with table and heading boundaries preserved.
+    """
+    if not HAS_DOCLING:
+        return []
+    try:
+        converter = DocumentConverter()
+        result = converter.convert(path)
+        markdown_text = result.document.export_to_markdown()
+        pages = []
+        for i, page_str in enumerate(markdown_text.split("<!-- page break -->"), start=1):
+            if page_str.strip():
+                pages.append({
+                    "page_num": i,
+                    "text": page_str.strip(),
+                    "source": Path(path).name,
+                    "extraction_method": "docling_layout"
+                })
+        return pages
+    except Exception as exc:
+        print(f"  [Docling Warning] Layout conversion fallback: {exc}", flush=True)
+        return []
+
+
 def _describe_docx_images(doc, use_vision: bool = True) -> str:
     if not use_vision:
         return ""

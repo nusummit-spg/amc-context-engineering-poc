@@ -1,0 +1,624 @@
+-- ============================================================================
+-- HITL Feedback Loop - Initial Schema
+-- Migration: 001_initial_feedback_schema.sql
+-- Purpose: Create all tables for feedback collection, evaluation, and correction
+-- ============================================================================
+
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ============================================================================
+-- TABLE: feedback_records
+-- PURPOSE: Store raw user feedback on query responses
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS feedback_records (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    
+    -- Response Reference
+    response_id UUID NOT NULL,
+    session_id UUID NOT NULL,
+    user_id VARCHAR(255),
+    
+    -- Feedback Content
+    query TEXT NOT NULL,
+    response_text TEXT NOT NULL,
+    rating VARCHAR(20) NOT NULL, -- positive, negative, neutral
+    feedback_type VARCHAR(50) NOT NULL, -- entity_incorrect, relationship_missing, etc.
+    
+    -- Entity/Relationship Specifics
+    entity_name VARCHAR(255),
+    entity_type VARCHAR(50),
+    relationship_description TEXT,
+    
+    -- Corrections Proposed by User
+    corrections JSONB, -- {"field": "value", ...}
+    
+    -- Device/Context
+    device_type VARCHAR(50), -- web, mobile, api
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    evaluation_status VARCHAR(20) DEFAULT 'pending', -- pending, processed, rejected, failed
+    
+    -- Indexes for query performance
+    CONSTRAINT fk_response_id UNIQUE(response_id),
+    CONSTRAINT fk_session_id CHECK(session_id IS NOT NULL)
+);
+
+CREATE INDEX idx_feedback_session_id ON feedback_records(session_id);
+CREATE INDEX idx_feedback_user_id ON feedback_records(user_id);
+CREATE INDEX idx_feedback_created_at ON feedback_records(created_at);
+CREATE INDEX idx_feedback_evaluation_status ON feedback_records(evaluation_status);
+CREATE INDEX idx_feedback_entity_name ON feedback_records(entity_name);
+CREATE INDEX idx_feedback_feedback_type ON feedback_records(feedback_type);
+
+-- ============================================================================
+-- TABLE: feedback_classifications
+-- PURPOSE: Pre-classified metadata from feedback items (NER, sentiment, etc.)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS feedback_classifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    feedback_id UUID NOT NULL REFERENCES feedback_records(id) ON DELETE CASCADE,
+    
+    -- Extracted Entities from feedback text
+    extracted_entities JSONB, -- [{name, type, confidence}, ...]
+    
+    -- Sentiment Analysis
+    sentiment VARCHAR(20), -- positive, negative, neutral
+    
+    -- Intent Classification
+    intent_classification VARCHAR(50), -- entity_issue, relationship_issue, missing_info
+    
+    -- Quality Scores
+    confidence_score FLOAT DEFAULT 0.0, -- 0.0-1.0 (overall quality)
+    intent_score FLOAT DEFAULT 0.0, -- 0.0-1.0 (how actionable)
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT confidence_range CHECK (confidence_score >= 0.0 AND confidence_score <= 1.0)
+);
+
+CREATE INDEX idx_classification_feedback_id ON feedback_classifications(feedback_id);
+CREATE INDEX idx_classification_confidence ON feedback_classifications(confidence_score);
+CREATE INDEX idx_classification_sentiment ON feedback_classifications(sentiment);
+
+-- ============================================================================
+-- TABLE: evaluation_jobs
+-- PURPOSE: Track batch evaluation job execution
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS evaluation_jobs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    batch_id UUID NOT NULL,
+    
+    -- Batch Metadata
+    batch_size INT DEFAULT 0,
+    start_feedback_id UUID,
+    end_feedback_id UUID,
+    
+    -- Job Status
+    status VARCHAR(20) DEFAULT 'pending', -- pending, running, completed, failed
+    error_message TEXT,
+    
+    -- Execution Metrics
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    duration_seconds FLOAT,
+    
+    -- Results
+    processed_records INT DEFAULT 0,
+    recommendations_generated INT DEFAULT 0,
+    tokens_used INT DEFAULT 0,
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT duration_positive CHECK (duration_seconds IS NULL OR duration_seconds >= 0)
+);
+
+CREATE INDEX idx_evaluation_batch_id ON evaluation_jobs(batch_id);
+CREATE INDEX idx_evaluation_status ON evaluation_jobs(status);
+CREATE INDEX idx_evaluation_created_at ON evaluation_jobs(created_at);
+CREATE INDEX idx_evaluation_completed_at ON evaluation_jobs(completed_at);
+
+-- ============================================================================
+-- TABLE: correction_recommendations
+-- PURPOSE: Store proposed corrections generated by LLM evaluation
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS correction_recommendations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    feedback_id UUID NOT NULL REFERENCES feedback_records(id) ON DELETE CASCADE,
+    evaluation_job_id UUID REFERENCES evaluation_jobs(id) ON DELETE SET NULL,
+    
+    -- Correction Details
+    correction_type VARCHAR(50) NOT NULL, -- add_entity, update_entity, add_relationship, etc.
+    target_entity VARCHAR(255), -- affected entity/relationship name
+    target_type VARCHAR(50), -- entity_type or relationship_type
+    
+    -- Cypher Mutation to Execute
+    cypher_mutation TEXT NOT NULL,
+    
+    -- Confidence & Reasoning
+    confidence_score FLOAT NOT NULL DEFAULT 0.0, -- 0.0-1.0
+    reasoning TEXT,
+    
+    -- Status Tracking
+    status VARCHAR(20) DEFAULT 'pending', -- pending, approved, applied, rejected, failed
+    applied_at TIMESTAMP,
+    applied_by VARCHAR(255), -- user_id or 'system'
+    
+    -- Validation Results
+    validation_passed BOOLEAN DEFAULT FALSE,
+    validation_errors JSONB, -- [{"field": "error_msg"}, ...]
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT confidence_range CHECK (confidence_score >= 0.0 AND confidence_score <= 1.0)
+);
+
+CREATE INDEX idx_correction_feedback_id ON correction_recommendations(feedback_id);
+CREATE INDEX idx_correction_status ON correction_recommendations(status);
+CREATE INDEX idx_correction_target_entity ON correction_recommendations(target_entity);
+CREATE INDEX idx_correction_created_at ON correction_recommendations(created_at);
+CREATE INDEX idx_correction_confidence ON correction_recommendations(confidence_score);
+CREATE INDEX idx_correction_evaluation_job_id ON correction_recommendations(evaluation_job_id);
+
+-- ============================================================================
+-- TABLE: correction_execution_history
+-- PURPOSE: Track all executed corrections with before/after state
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS correction_execution_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    correction_id UUID NOT NULL REFERENCES correction_recommendations(id) ON DELETE CASCADE,
+    
+    -- Execution Details
+    action VARCHAR(50) NOT NULL, -- applied, rolled_back, failed
+    cypher_executed TEXT NOT NULL,
+    
+    -- Before/After State (for rollback capability)
+    before_state JSONB, -- snapshot of affected nodes before change
+    after_state JSONB, -- snapshot of affected nodes after change
+    
+    -- Affected Entities
+    entities_affected JSONB, -- [{name, type, change_type}, ...]
+    
+    -- Operator & Metadata
+    operator VARCHAR(255) NOT NULL, -- 'system' or user_id
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    metadata JSONB, -- additional context
+    
+    -- Rollback Tracking
+    is_rollback BOOLEAN DEFAULT FALSE,
+    rollback_of_id UUID REFERENCES correction_execution_history(id) ON DELETE SET NULL
+);
+
+CREATE INDEX idx_execution_correction_id ON correction_execution_history(correction_id);
+CREATE INDEX idx_execution_timestamp ON correction_execution_history(timestamp);
+CREATE INDEX idx_execution_action ON correction_execution_history(action);
+CREATE INDEX idx_execution_operator ON correction_execution_history(operator);
+
+-- ============================================================================
+-- TABLE: audit_trail
+-- PURPOSE: Compliance and debugging - log all significant actions
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS audit_trail (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    
+    -- Record References
+    feedback_id UUID REFERENCES feedback_records(id) ON DELETE SET NULL,
+    correction_id UUID REFERENCES correction_recommendations(id) ON DELETE SET NULL,
+    execution_id UUID REFERENCES correction_execution_history(id) ON DELETE SET NULL,
+    
+    -- Action & Metadata
+    action_type VARCHAR(50) NOT NULL, -- feedback_received, correction_applied, correction_rejected, etc.
+    action_details JSONB,
+    
+    -- Actor
+    actor VARCHAR(255), -- user_id, 'system', 'scheduler'
+    actor_type VARCHAR(20), -- user, system, automated
+    
+    -- Result
+    success BOOLEAN DEFAULT TRUE,
+    error_message TEXT,
+    
+    -- Timestamp
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_audit_feedback_id ON audit_trail(feedback_id);
+CREATE INDEX idx_audit_correction_id ON audit_trail(correction_id);
+CREATE INDEX idx_audit_timestamp ON audit_trail(timestamp);
+CREATE INDEX idx_audit_action_type ON audit_trail(action_type);
+CREATE INDEX idx_audit_actor ON audit_trail(actor);
+
+-- ============================================================================
+-- TABLE: feedback_metrics
+-- PURPOSE: Pre-aggregated daily metrics for dashboard and analytics
+-- OPTIMIZATION: Pre-computed to avoid expensive aggregations
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS feedback_metrics (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    date DATE NOT NULL UNIQUE,
+    
+    -- Feedback Counts
+    total_feedback INT DEFAULT 0,
+    positive_feedback INT DEFAULT 0,
+    negative_feedback INT DEFAULT 0,
+    neutral_feedback INT DEFAULT 0,
+    
+    -- Feedback Types
+    entity_incorrect_count INT DEFAULT 0,
+    entity_missing_count INT DEFAULT 0,
+    relationship_missing_count INT DEFAULT 0,
+    relationship_incorrect_count INT DEFAULT 0,
+    context_incomplete_count INT DEFAULT 0,
+    factual_error_count INT DEFAULT 0,
+    
+    -- Correction Metrics
+    entity_corrections INT DEFAULT 0,
+    relationship_corrections INT DEFAULT 0,
+    taxonomy_corrections INT DEFAULT 0,
+    total_corrections INT DEFAULT 0,
+    
+    -- Quality Metrics
+    avg_confidence_score FLOAT DEFAULT 0.0,
+    avg_quality_score FLOAT DEFAULT 0.0,
+    
+    -- LLM Metrics
+    total_tokens_used INT DEFAULT 0,
+    tokens_saved_by_batching INT DEFAULT 0,
+    avg_batch_size FLOAT DEFAULT 0.0,
+    
+    -- Performance Metrics
+    avg_evaluation_latency_ms FLOAT DEFAULT 0.0,
+    evaluation_jobs_successful INT DEFAULT 0,
+    evaluation_jobs_failed INT DEFAULT 0,
+    
+    -- Sentiment Analysis
+    positive_sentiment_pct FLOAT DEFAULT 0.0,
+    negative_sentiment_pct FLOAT DEFAULT 0.0,
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    computed_at TIMESTAMP
+);
+
+CREATE INDEX idx_metrics_date ON feedback_metrics(date);
+CREATE INDEX idx_metrics_created_at ON feedback_metrics(created_at);
+
+-- ============================================================================
+-- TABLE: entity_correction_log
+-- PURPOSE: Track corrections applied to specific entities (for analytics)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS entity_correction_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    correction_id UUID NOT NULL REFERENCES correction_recommendations(id) ON DELETE CASCADE,
+    
+    -- Entity Reference
+    entity_name VARCHAR(255) NOT NULL,
+    entity_type VARCHAR(50) NOT NULL,
+    
+    -- Correction Applied
+    property_changed VARCHAR(100), -- e.g., "nav", "risk_level", "status"
+    old_value TEXT,
+    new_value TEXT,
+    
+    -- Relationship Changes
+    relationship_type VARCHAR(100), -- e.g., "MANAGES", "HAS_SCHEME"
+    related_entity_name VARCHAR(255),
+    
+    -- Metadata
+    correction_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_entity_log_entity_name ON entity_correction_log(entity_name);
+CREATE INDEX idx_entity_log_entity_type ON entity_correction_log(entity_type);
+CREATE INDEX idx_entity_log_correction_id ON entity_correction_log(correction_id);
+CREATE INDEX idx_entity_log_timestamp ON entity_correction_log(correction_timestamp);
+
+-- ============================================================================
+-- TABLE: feedback_deduplication_cache
+-- PURPOSE: Cache embedding-based deduplication results for 1 hour
+-- OPTIMIZATION: Avoid re-computing embeddings/clusters
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS feedback_deduplication_cache (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    batch_hash VARCHAR(64) NOT NULL UNIQUE, -- hash of feedback_ids in batch
+    
+    -- Cluster Results
+    cluster_data JSONB, -- [{cluster_id, representative_id, vote_count}, ...]
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 hour'
+);
+
+CREATE INDEX idx_dedup_batch_hash ON feedback_deduplication_cache(batch_hash);
+CREATE INDEX idx_dedup_expires_at ON feedback_deduplication_cache(expires_at);
+
+-- ============================================================================
+-- TABLE: graph_context_snapshot
+-- PURPOSE: Cache Neo4j subgraph snapshots for reuse within evaluation window
+-- OPTIMIZATION: Fetch graph once, use for multiple feedback items
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS graph_context_snapshot (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    context_hash VARCHAR(64) NOT NULL UNIQUE, -- hash of entity_names + max_depth
+    
+    -- Graph Data
+    graph_data JSONB, -- {nodes: [...], relationships: [...]}
+    
+    -- Metadata
+    entity_count INT,
+    relationship_count INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 hour'
+);
+
+CREATE INDEX idx_snapshot_context_hash ON graph_context_snapshot(context_hash);
+CREATE INDEX idx_snapshot_expires_at ON graph_context_snapshot(expires_at);
+
+-- ============================================================================
+-- TABLE: feedback_sessions
+-- PURPOSE: Track feedback collection sessions for correlation
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS feedback_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id UUID NOT NULL UNIQUE,
+    
+    -- Session Info
+    user_id VARCHAR(255),
+    device_type VARCHAR(50),
+    
+    -- Session Metrics
+    query_count INT DEFAULT 0,
+    feedback_count INT DEFAULT 0,
+    
+    -- Timing
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ended_at TIMESTAMP,
+    duration_seconds FLOAT,
+    
+    -- Status
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE INDEX idx_session_user_id ON feedback_sessions(user_id);
+CREATE INDEX idx_session_started_at ON feedback_sessions(started_at);
+CREATE INDEX idx_session_is_active ON feedback_sessions(is_active);
+
+-- ============================================================================
+-- TABLE: correction_templates
+-- PURPOSE: Store common correction patterns for reuse
+-- OPTIMIZATION: Reduce LLM prompt tokens by referencing templates
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS correction_templates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    
+    -- Template Definition
+    name VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT,
+    correction_type VARCHAR(50) NOT NULL,
+    
+    -- Template Pattern
+    template_cypher TEXT NOT NULL, -- Parameterized Cypher with placeholders
+    parameters JSONB, -- {param_name: {type, description}, ...}
+    
+    -- Usage Tracking
+    usage_count INT DEFAULT 0,
+    last_used_at TIMESTAMP,
+    
+    -- Metadata
+    created_by VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE INDEX idx_template_correction_type ON correction_templates(correction_type);
+CREATE INDEX idx_template_is_active ON correction_templates(is_active);
+
+-- ============================================================================
+-- TABLE: llm_evaluation_cache
+-- PURPOSE: Cache LLM responses to avoid re-evaluation of similar batches
+-- OPTIMIZATION: Similar batches get cached responses (with confidence adjustment)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS llm_evaluation_cache (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    batch_hash VARCHAR(64) NOT NULL UNIQUE, -- hash of feedback batch
+    
+    -- LLM Response
+    llm_response JSONB, -- {corrections: [{feedback_id, action, confidence, ...}]}
+    
+    -- Cache Metadata
+    cache_hits INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP + INTERVAL '24 hours'
+);
+
+CREATE INDEX idx_llm_cache_batch_hash ON llm_evaluation_cache(batch_hash);
+CREATE INDEX idx_llm_cache_expires_at ON llm_evaluation_cache(expires_at);
+
+-- ============================================================================
+-- VIEW: pending_feedback_summary
+-- PURPOSE: Quick view of pending feedback awaiting evaluation
+-- ============================================================================
+CREATE OR REPLACE VIEW pending_feedback_summary AS
+SELECT 
+    f.id,
+    f.response_id,
+    f.session_id,
+    f.user_id,
+    f.feedback_type,
+    f.entity_name,
+    f.rating,
+    c.confidence_score,
+    c.sentiment,
+    f.created_at,
+    EXTRACT(EPOCH FROM (NOW() - f.created_at)) as age_seconds
+FROM feedback_records f
+LEFT JOIN feedback_classifications c ON f.id = c.feedback_id
+WHERE f.evaluation_status = 'pending'
+ORDER BY c.confidence_score DESC, f.created_at DESC;
+
+-- ============================================================================
+-- VIEW: correction_status_summary
+-- PURPOSE: Overview of correction recommendations by status
+-- ============================================================================
+CREATE OR REPLACE VIEW correction_status_summary AS
+SELECT 
+    status,
+    COUNT(*) as count,
+    AVG(confidence_score) as avg_confidence,
+    MIN(created_at) as oldest_created,
+    MAX(created_at) as newest_created
+FROM correction_recommendations
+GROUP BY status;
+
+-- ============================================================================
+-- FUNCTION: cleanup_expired_cache
+-- PURPOSE: Scheduled cleanup of expired cache entries
+-- ============================================================================
+CREATE OR REPLACE FUNCTION cleanup_expired_cache()
+RETURNS TABLE(deleted_dedup INT, deleted_snapshot INT, deleted_llm_cache INT) AS $$
+DECLARE
+    v_deleted_dedup INT;
+    v_deleted_snapshot INT;
+    v_deleted_llm_cache INT;
+BEGIN
+    -- Delete expired deduplication cache
+    DELETE FROM feedback_deduplication_cache WHERE expires_at < NOW();
+    GET DIAGNOSTICS v_deleted_dedup = ROW_COUNT;
+    
+    -- Delete expired graph snapshots
+    DELETE FROM graph_context_snapshot WHERE expires_at < NOW();
+    GET DIAGNOSTICS v_deleted_snapshot = ROW_COUNT;
+    
+    -- Delete expired LLM cache
+    DELETE FROM llm_evaluation_cache WHERE expires_at < NOW();
+    GET DIAGNOSTICS v_deleted_llm_cache = ROW_COUNT;
+    
+    RETURN QUERY SELECT v_deleted_dedup, v_deleted_snapshot, v_deleted_llm_cache;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- FUNCTION: archive_old_feedback
+-- PURPOSE: Archive feedback older than specified days
+-- ============================================================================
+CREATE OR REPLACE FUNCTION archive_old_feedback(days_old INT)
+RETURNS TABLE(archived_count INT, from_date TIMESTAMP, to_date TIMESTAMP) AS $$
+DECLARE
+    v_cutoff_date TIMESTAMP;
+    v_archived_count INT;
+BEGIN
+    v_cutoff_date := NOW() - (days_old || ' days')::INTERVAL;
+    
+    -- Mark old processed feedback for archival
+    UPDATE feedback_records
+    SET evaluation_status = 'archived'
+    WHERE evaluation_status = 'processed' AND created_at < v_cutoff_date;
+    
+    GET DIAGNOSTICS v_archived_count = ROW_COUNT;
+    
+    RETURN QUERY SELECT v_archived_count, v_cutoff_date, NOW();
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- TRIGGER: Update feedback session metrics
+-- PURPOSE: Keep feedback_sessions table in sync with feedback_records
+-- ============================================================================
+CREATE OR REPLACE FUNCTION update_session_metrics()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE feedback_sessions
+    SET feedback_count = feedback_count + 1,
+        ended_at = NEW.created_at
+    WHERE session_id = NEW.session_id;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_update_session_metrics
+AFTER INSERT ON feedback_records
+FOR EACH ROW
+EXECUTE FUNCTION update_session_metrics();
+
+-- ============================================================================
+-- TRIGGER: Audit trail for corrections
+-- PURPOSE: Log all correction status changes
+-- ============================================================================
+CREATE OR REPLACE FUNCTION audit_correction_status_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.status IS DISTINCT FROM NEW.status THEN
+        INSERT INTO audit_trail (
+            correction_id, action_type, action_details, actor, actor_type, success, timestamp
+        ) VALUES (
+            NEW.id,
+            'correction_status_changed',
+            jsonb_build_object('old_status', OLD.status, 'new_status', NEW.status),
+            COALESCE(NEW.applied_by, 'system'),
+            CASE WHEN NEW.applied_by IS NULL THEN 'system' ELSE 'user' END,
+            TRUE,
+            NOW()
+        );
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_audit_correction_status
+AFTER UPDATE ON correction_recommendations
+FOR EACH ROW
+EXECUTE FUNCTION audit_correction_status_change();
+
+-- ============================================================================
+-- COMMENTS
+-- ============================================================================
+COMMENT ON TABLE feedback_records IS 'Raw user feedback on query responses';
+COMMENT ON TABLE feedback_classifications IS 'Pre-classified metadata (NER, sentiment, intent)';
+COMMENT ON TABLE correction_recommendations IS 'Proposed corrections generated by LLM evaluation';
+COMMENT ON TABLE correction_execution_history IS 'Audit trail of executed corrections with before/after state';
+COMMENT ON TABLE feedback_metrics IS 'Pre-aggregated daily metrics for performance';
+COMMENT ON TABLE feedback_deduplication_cache IS 'Cache for embedding-based feedback deduplication (1 hour TTL)';
+COMMENT ON TABLE graph_context_snapshot IS 'Cache for Neo4j subgraph fetches (1 hour TTL)';
+
+-- ============================================================================
+-- INITIAL DATA: Correction Templates
+-- ============================================================================
+INSERT INTO correction_templates (name, description, correction_type, template_cypher, parameters, created_by) 
+VALUES 
+(
+    'add_entity_with_properties',
+    'Create new entity node with properties',
+    'add_entity',
+    'CREATE (n:$entity_type {name: $entity_name, $additional_props}) RETURN n',
+    '{"entity_type": {"type": "string", "description": "Entity type (e.g., Fund, Scheme)"}, "entity_name": {"type": "string", "description": "Entity name"}, "additional_props": {"type": "object", "description": "Additional properties"}}',
+    'system'
+),
+(
+    'update_entity_property',
+    'Update a single property on existing entity',
+    'update_entity',
+    'MATCH (n:$entity_type {name: $entity_name}) SET n.$property = $value RETURN n',
+    '{"entity_type": {"type": "string"}, "entity_name": {"type": "string"}, "property": {"type": "string"}, "value": {"type": "any"}}',
+    'system'
+),
+(
+    'add_relationship',
+    'Create relationship between two entities',
+    'add_relationship',
+    'MATCH (a:$source_type {name: $source_name}) MATCH (b:$target_type {name: $target_name}) CREATE (a)-[:$rel_type]->(b) RETURN a, b',
+    '{"source_type": {"type": "string"}, "source_name": {"type": "string"}, "target_type": {"type": "string"}, "target_name": {"type": "string"}, "rel_type": {"type": "string"}}',
+    'system'
+)
+ON CONFLICT (name) DO NOTHING;
+
+-- ============================================================================
+-- END OF MIGRATION
+-- ============================================================================

@@ -1,0 +1,42 @@
+[
+  {
+    "username": "sarah_compliance",
+    "full_name": "Sarah Jenkins",
+    "role": "Compliance & Regulatory Officer",
+    "department": "Regulatory & Legal Compliance",
+    "email": "s.jenkins@amc.com",
+    "status": "Active"
+  },
+  {
+    "username": "vikram_pm",
+    "full_name": "Vikram Mehta",
+    "role": "Fund Manager / Portfolio Manager",
+    "department": "Equity Investment Management",
+    "email": "v.mehta@amc.com",
+    "status": "Active"
+  },
+  {
+    "username": "ananya_esg",
+    "full_name": "Ananya Sharma",
+    "role": "ESG & Sustainability Analyst",
+    "department": "Sustainable Investing & ESG",
+    "email": "a.sharma@amc.com",
+    "status": "Active"
+  },
+  {
+    "username": "rahul_sales",
+    "full_name": "Rahul Verma",
+    "role": "Sales & Distribution Manager",
+    "department": "Institutional & Retail Distribution",
+    "email": "r.verma@amc.com",
+    "status": "Active"
+  },
+  {
+    "username": "public_investor",
+    "full_name": "Guest Client / Retail Investor",
+    "role": "Retail Investor / Public Client",
+    "department": "External Client Portal",
+    "email": "client@public.com",
+    "status": "Active"
+  }
+]

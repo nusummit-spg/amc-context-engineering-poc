@@ -70,6 +70,7 @@ def _traditional_response(query: str, result: dict) -> QueryResponse:
             "output_tokens": result.get("output_tokens", 0),
             "total_tokens": result.get("total_tokens", 0),
             "note": "Vanilla RAG — flat vector search + LLM over retrieved passages.",
+            "telemetry_breakdown": result.get("telemetry_breakdown", {}),
         },
     )
     resp.latency_ms = int(result.get("total_time", 0) * 1000)
@@ -113,6 +114,7 @@ def _contextgraph_response(query: str, result: dict, entity_summary: list | None
         "input_tokens": result.get("input_tokens", 0),
         "output_tokens": result.get("output_tokens", 0),
         "total_tokens": result.get("total_tokens", 0),
+        "telemetry_breakdown": result.get("telemetry_breakdown", {}),
     }
     resp.latency_ms = int(result.get("total_time", 0) * 1000)
     return resp

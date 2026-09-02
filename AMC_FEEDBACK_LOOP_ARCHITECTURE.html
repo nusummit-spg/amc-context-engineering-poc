@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>HITL Feedback Loop — Full Architecture Diagram</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --purple:#667eea; --violet:#764ba2; --pink:#f093fb; --red:#f5576c;
+  --blue:#4facfe;   --cyan:#00f2fe;   --green:#43e97b; --teal:#38f9d7;
+  --orange:#fa709a; --yellow:#fee140;
+  --gray:#f4f6fb;   --border:#dde3f0; --text:#2d3748;  --muted:#718096;
+}
+body{
+  font-family:'Segoe UI',system-ui,sans-serif;
+  background:linear-gradient(135deg,var(--purple),var(--violet));
+  min-height:100vh; padding:32px 20px; color:var(--text);
+}
+
+/* ── Shell ── */
+.shell{max-width:860px;margin:0 auto;background:#fff;border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.30);overflow:hidden;}
+
+/* ── Header ── */
+.hdr{
+  background:linear-gradient(135deg,var(--purple),var(--violet));
+  padding:44px 48px 36px;text-align:center;position:relative;overflow:hidden;
+}
+.hdr::before{
+  content:'';position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23fff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+.hdr h1{font-size:clamp(20px,3.2vw,34px);font-weight:800;color:#fff;letter-spacing:-.4px;position:relative;}
+.hdr p{margin-top:8px;font-size:14px;color:rgba(255,255,255,.82);position:relative;}
+.badges{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap;position:relative;}
+.badge{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.32);color:#fff;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;}
+
+/* ── Flow container ── */
+.flow{padding:40px 48px 56px;display:flex;flex-direction:column;align-items:center;}
+
+/* ── Section label ── */
+.slabel{
+  width:100%;max-width:720px;
+  font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;
+  color:var(--muted);margin:28px 0 6px;
+  display:flex;align-items:center;gap:8px;
+}
+.slabel::after{content:'';flex:1;height:1px;background:var(--border);}
+.slabel:first-child{margin-top:0;}
+
+/* ── Phase card ── */
+.phase{
+  width:100%;max-width:720px;
+  border-radius:14px;border:2px solid var(--border);
+  background:#fff;overflow:hidden;
+  transition:box-shadow .2s;
+}
+.phase:hover{box-shadow:0 6px 28px rgba(102,126,234,.18);}
+
+/* phase header bar */
+.ph{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 22px 12px;
+}
+.ph-icon{font-size:22px;flex-shrink:0;}
+.ph-title{font-size:15px;font-weight:800;color:#fff;line-height:1.25;}
+.ph-sub{font-size:11.5px;color:rgba(255,255,255,.80);margin-top:2px;}
+.ph-badge{
+  margin-left:auto;background:rgba(255,255,255,.22);
+  border:1px solid rgba(255,255,255,.35);
+  color:#fff;padding:3px 11px;border-radius:12px;
+  font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;
+}
+
+/* phase body */
+.pb{background:#fff;padding:14px 22px 16px;}
+
+/* horizontal pipeline inside phase */
+.pipeline{
+  display:flex;align-items:center;flex-wrap:wrap;
+  gap:4px;margin-bottom:12px;
+}
+.pip{
+  background:var(--gray);border:1.5px solid var(--border);
+  border-radius:8px;padding:9px 14px;
+  font-size:12px;font-weight:600;color:var(--text);
+  text-align:center;line-height:1.3;
+  transition:all .2s;cursor:default;
+}
+.pip:hover{transform:translateY(-2px);box-shadow:0 3px 10px rgba(102,126,234,.18);}
+.pip small{display:block;font-size:10.5px;font-weight:400;color:var(--muted);margin-top:2px;}
+.pip-arrow{color:var(--purple);font-size:14px;font-weight:700;padding:0 2px;flex-shrink:0;}
+/* coloured pip variants */
+.pip.purple{border-color:var(--purple);color:var(--purple);}
+.pip.green {border-color:#22c55e;color:#15803d;}
+.pip.blue  {border-color:var(--blue);color:#0369a1;}
+.pip.red   {border-color:var(--red);color:#b91c1c;}
+.pip.teal  {border-color:var(--teal);color:#0f766e;}
+.pip.orange{border-color:var(--orange);color:#9a3412;}
+
+/* info strip inside body */
+.info-strip{
+  background:var(--gray);border-radius:8px;
+  padding:10px 14px;font-size:12.5px;color:var(--muted);
+  display:flex;gap:10px;align-items:flex-start;
+  margin-top:8px;
+}
+.info-strip span{font-size:16px;flex-shrink:0;}
+.info-strip b{color:var(--text);}
+
+/* bullet list */
+.blist{list-style:none;margin-top:10px;display:flex;flex-direction:column;gap:5px;}
+.blist li{font-size:12.5px;color:var(--text);padding:3px 10px 3px 18px;position:relative;line-height:1.45;}
+.blist li::before{content:'•';position:absolute;left:5px;color:var(--muted);font-size:10px;top:5px;}
+.blist li b{font-weight:700;}
+.blist li.muted{color:var(--muted);}
+
+/* inline tag */
+.tag{display:inline-block;padding:1px 7px;border-radius:8px;font-size:11px;font-weight:600;margin-left:4px;vertical-align:middle;}
+.tg{background:#dcfce7;color:#15803d;}
+.tb{background:#dbeafe;color:#1e40af;}
+.ty{background:#fef9c3;color:#92400e;}
+.tr{background:#fee2e2;color:#991b1b;}
+.tp{background:#ede9fe;color:#5b21b6;}
+
+/* ── Connector ── */
+.conn{
+  display:flex;flex-direction:column;align-items:center;
+  width:100%;max-width:720px;padding:2px 0;
+}
+.conn-line{width:2px;height:24px;background:linear-gradient(180deg,#c4cdd8,#a0aab5);}
+.conn-arrow{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:9px solid #a0aab5;}
+.conn-label{
+  font-size:11px;font-weight:600;color:var(--muted);
+  background:#fff;border:1px solid var(--border);
+  padding:2px 12px;border-radius:10px;margin:2px 0;
+}
+
+/* ── Phase color themes ── */
+.t-p1 .ph{background:linear-gradient(135deg,#667eea,#764ba2);} .t-p1{border-color:#a78bfa;}
+.t-p2 .ph{background:linear-gradient(135deg,#f5576c,#f093fb);} .t-p2{border-color:#fda4af;}
+.t-p3 .ph{background:linear-gradient(135deg,#4facfe,#00f2fe);} .t-p3{border-color:#7dd3fc;}
+.t-p4 .ph{background:linear-gradient(135deg,#43e97b,#38f9d7);} .t-p4{border-color:#6ee7b7;}
+.t-p5 .ph{background:linear-gradient(135deg,#fa709a,#fee140);} .t-p5{border-color:#fcd34d;}
+.t-p6 .ph{background:linear-gradient(135deg,#764ba2,#667eea);} .t-p6{border-color:#a78bfa;}
+.t-p7 .ph{background:linear-gradient(135deg,#fee140,#fa709a);} .t-p7{border-color:#fde68a;}
+.t-p8 .ph{background:linear-gradient(135deg,#38f9d7,#43e97b);} .t-p8{border-color:#6ee7b7;}
+
+/* ── Footer stats ── */
+.ftr{
+  background:var(--gray);border-top:1px solid var(--border);
+  padding:18px 48px;
+  display:flex;align-items:center;justify-content:space-around;flex-wrap:wrap;gap:12px;
+}
+.fs{text-align:center;}
+.fs .v{font-size:18px;font-weight:800;color:var(--purple);}
+.fs .l{font-size:11px;color:var(--muted);margin-top:2px;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- HEADER -->
+<header class="hdr">
+  <h1>HITL Feedback Loop — Full Architecture Diagram</h1>
+  <p>Human-in-the-Loop · Self-Correcting Knowledge Graph · Token-Optimised · End-to-End Flow</p>
+  <div class="badges">
+    <span class="badge">⚡ &lt;100ms Feedback Capture</span>
+    <span class="badge">🔁 8-Phase Cycle</span>
+    <span class="badge">💡 91% Token Savings</span>
+    <span class="badge">🔒 Full Audit Trail</span>
+    <span class="badge">♻️ Self-Improving Graph</span>
+  </div>
+</header>
+
+<div class="flow">
+
+<!-- ════════════════════════════════ PHASE 1 ════════════════════════════════ -->
+<div class="slabel">Phase 1 — Query Path (Existing System)</div>
+<div class="phase t-p1">
+  <div class="ph">
+    <span class="ph-icon">👤</span>
+    <div>
+      <div class="ph-title">User Query → LLM Response + Response ID</div>
+      <div class="ph-sub">Existing retrieval pipeline — minimal change: response_id now attached to every response</div>
+    </div>
+    <span class="ph-badge">Synchronous</span>
+  </div>
+  <div class="pb">
+    <div class="pipeline">
+      <div class="pip">👤 User Query</div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">🔍 FAISS Retrieval<small>Vector Search</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">📊 Neo4j Context<small>Graph Traversal</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">🤖 LLM Synthesis<small>Context Assembly</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip purple">📝 Response<small>+ response_id 🆕</small></div>
+    </div>
+    <ul class="blist">
+      <li>Hybrid retrieval: FAISS vector similarity + Neo4j graph traversal combined</li>
+      <li>Context assembled from retrieved entities, relationships, and documents</li>
+      <li><b>New addition:</b> unique <code>response_id</code> (UUID) generated and attached to every response payload <span class="tag tp">🆕 New</span></li>
+      <li class="muted">response_id stored in short-lived Redis cache — links any future feedback back to the exact retrieval context used</li>
+    </ul>
+  </div>
+</div>
+
+<div class="conn">
+  <div class="conn-line"></div>
+  <span class="conn-label">User receives response · Feedback UI activates</span>
+  <div class="conn-line"></div>
+  <div class="conn-arrow"></div>
+</div>
+
+<!-- ════════════════════════════════ PHASE 2 ════════════════════════════════ -->
+<div class="slabel">Phase 2 — Synchronous Feedback Capture (&lt;100ms)</div>
+<div class="phase t-p2">
+  <div class="ph">
+    <span class="ph-icon">👍</span>
+    <div>
+      <div class="ph-title">User Rates → Validated, Tagged, Stored</div>
+      <div class="ph-sub">No LLM in this path — NER + sentiment run as background task after HTTP response fires</div>
+    </div>
+    <span class="ph-badge">&lt;100ms</span>
+  </div>
+  <div class="pb">
+    <div class="pipeline">
+      <div class="pip">👍 Rating<small>+ Comment</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">🔗 Lookup<small>response_id</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">✅ Validate<small>Input</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">🏷️ NER Tag<small>spaCy</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">😊 Sentiment<small>VADER</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">🎯 Intent Score<small>correction/noise</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip red">💾 PostgreSQL<small>Async Insert</small></div>
+    </div>
+    <ul class="blist">
+      <li><b>Steps 1–3 synchronous:</b> validate response_id, rating range, comment length → HTTP 200 fires immediately</li>
+      <li><b>Steps 4–6 background task:</b> NER entity extraction, VADER sentiment polarity, intent classification run after response sent</li>
+      <li>Stores: <code>feedback_id</code>, <code>response_id</code>, rating, comment, ner_tags, sentiment, intent, quality_score, status=pending</li>
+      <li class="muted">Zero LLM tokens · User sees confirmation in under 100ms</li>
+    </ul>
+    <div class="info-strip">
+      <span>⚡</span>
+      <div><b>Non-blocking design:</b> HTTP response fires after DB write is queued — user never waits for NLP classification. Steps 4–6 are <code>FastAPI BackgroundTasks</code>.</div>
+    </div>
+  </div>
+</div>
+
+<div class="conn">
+  <div class="conn-line"></div>
+  <span class="conn-label">Feedback accumulates in buffer over time window</span>
+  <div class="conn-line"></div>
+  <div class="conn-arrow"></div>
+</div>
+
+<!-- ════════════════════════════════ PHASE 3 ════════════════════════════════ -->
+<div class="slabel">Phase 3 — Temporary Buffer (Async · PostgreSQL)</div>
+<div class="phase t-p3">
+  <div class="ph">
+    <span class="ph-icon">💾</span>
+    <div>
+      <div class="ph-title">PostgreSQL Temporary Feedback Buffer</div>
+      <div class="ph-sub">Decouples real-time response path from expensive async evaluation — 12 core tables + 6 cache tables</div>
+    </div>
+    <span class="ph-badge">90-day retention</span>
+  </div>
+  <div class="pb">
+    <div class="pipeline">
+      <div class="pip">📊 feedback_records<small>raw signal</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">🏷️ classifications<small>NER + intent</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">💬 recommendations<small>proposed changes</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">📝 audit_trail<small>before/after</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip blue">⚡ 6 Cache Tables<small>1–24h TTL</small></div>
+    </div>
+    <ul class="blist">
+      <li><code>feedback_records</code> — raw: response_id, query, response, rating, notes, timestamps</li>
+      <li><code>feedback_classifications</code> — extracted entities, sentiment score, intent label, quality_score</li>
+      <li><code>evaluation_jobs</code> — batch status: pending → running → completed / failed</li>
+      <li><code>correction_recommendations</code> — Cypher mutations + confidence scores (0.0–1.0)</li>
+      <li><code>audit_trail</code> — every change: before/after state, cypher executed, operator, rollback info</li>
+      <li><code>feedback_metrics</code> — daily aggregated stats for dashboards</li>
+      <li class="muted">6 cache tables with 1–24h TTL: graph snapshots, few-shot examples, entity embeddings</li>
+    </ul>
+  </div>
+</div>
+
+<div class="conn">
+  <div class="conn-line"></div>
+  <span class="conn-label">⏰ Cron trigger fires — every hour (APScheduler)</span>
+  <div class="conn-line"></div>
+  <div class="conn-arrow"></div>
+</div>
+
+<!-- ════════════════════════════════ PHASE 4 ════════════════════════════════ -->
+<div class="slabel">Phase 4 — Hourly Orchestration (APScheduler)</div>
+<div class="phase t-p4">
+  <div class="ph">
+    <span class="ph-icon">⏰</span>
+    <div>
+      <div class="ph-title">8-Step Evaluation Cycle — ~3 min for 500 items</div>
+      <div class="ph-sub">Orchestrator coordinates all downstream steps — retry on failure, health monitoring, Prometheus metrics</div>
+    </div>
+    <span class="ph-badge">Async · Hourly</span>
+  </div>
+  <div class="pb">
+    <div class="pipeline">
+      <div class="pip">1️⃣ Fetch Pending<small>status=pending</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">2️⃣ Aggregate<small>group by entity</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">3️⃣ Deduplicate<small>−40% items</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">4️⃣ Route<small>60% skip LLM</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">5️⃣ Batch<small>25/call</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">6️⃣ Evaluate</div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">7️⃣ Apply</div>
+      <div class="pip-arrow">→</div>
+      <div class="pip green">8️⃣ Record<small>+ Cleanup</small></div>
+    </div>
+    <ul class="blist">
+      <li><b>Step 1:</b> Fetch all <code>evaluation_status = 'pending'</code> records within time window (max 500)</li>
+      <li><b>Step 2:</b> Group by entity + correction type · sum votes · calculate inter-annotator agreement (Kappa)</li>
+      <li><b>Step 3:</b> Semantic deduplication — cluster similar items (cosine &gt;0.85), keep highest-vote representative <span class="tag tg">−40% items</span></li>
+      <li><b>Step 4:</b> Route without LLM — score &gt;0.95 → auto-apply · score &lt;0.20 → auto-reject <span class="tag tg">60% skip LLM</span></li>
+      <li><b>Step 5–6:</b> Remaining items → 25-item batches → LLM evaluation (see Phase 5)</li>
+      <li><b>Step 7–8:</b> Apply high-confidence corrections → cache invalidation → mark processed → archive old records</li>
+    </ul>
+  </div>
+</div>
+
+<div class="conn">
+  <div class="conn-line"></div>
+  <div class="conn-arrow"></div>
+</div>
+
+<!-- ════════════════════════════════ PHASE 5 ════════════════════════════════ -->
+<div class="slabel">Phase 5 — LLM Batch Evaluation (Token-Optimised)</div>
+<div class="phase t-p5">
+  <div class="ph">
+    <span class="ph-icon">🤖</span>
+    <div>
+      <div class="ph-title">One LLM Call Evaluates 25 Feedback Items Simultaneously</div>
+      <div class="ph-sub">System prompt amortised · graph context cached · few-shot examples pre-loaded · structured JSON output</div>
+    </div>
+    <span class="ph-badge">91% token savings</span>
+  </div>
+  <div class="pb">
+    <div class="pipeline">
+      <div class="pip orange">📋 System Prompt<small>amortised ×25</small></div>
+      <div class="pip-arrow">+</div>
+      <div class="pip orange">🗂️ Graph Snapshot<small>cached 1h Redis</small></div>
+      <div class="pip-arrow">+</div>
+      <div class="pip orange">📚 Few-Shot<small>cached 24h Redis</small></div>
+      <div class="pip-arrow">+</div>
+      <div class="pip orange">📝 25 Feedback Items<small>JSON array</small></div>
+      <div class="pip-arrow">=</div>
+      <div class="pip green">⚡ 1 LLM Call<small>→ JSON results</small></div>
+    </div>
+    <ul class="blist">
+      <li><b>Batch processing:</b> system prompt, schema, instructions paid once and amortised across 25 items <span class="tag tg">−70% tokens</span></li>
+      <li><b>Shared graph context:</b> Neo4j subgraph (affected nodes + 1-hop) fetched once per batch, not per item <span class="tag tg">−50% context tokens</span></li>
+      <li><b>Structured output:</b> response schema enforced — compact JSON only, no explanations or markdown filler <span class="tag tg">−30% output tokens</span></li>
+      <li><b>Cached few-shot:</b> correction examples stored in Redis per feedback type, retrieved once per cycle <span class="tag tg">−15% prompt tokens</span></li>
+      <li><b>Confidence gating:</b> only items with score ≥ 0.85 proceed to correction · 0.60–0.84 → human review · &lt;0.60 → reject</li>
+      <li class="muted">Temperature: 0.2 · Max tokens: 2,000 · Model: claude-opus-4-8 · Baseline 2,100 tokens/item → ~188 tokens/item</li>
+    </ul>
+    <div class="info-strip">
+      <span>💰</span>
+      <div><b>Token cost:</b> Naive (1 call/item) = 2,100 tokens/item. Batched (25/call) = ~630. After dedup + routing = ~188. <b>91% total reduction.</b></div>
+    </div>
+  </div>
+</div>
+
+<div class="conn">
+  <div class="conn-line"></div>
+  <span class="conn-label">High-confidence corrections (≥ 0.85) proceed to graph update</span>
+  <div class="conn-line"></div>
+  <div class="conn-arrow"></div>
+</div>
+
+<!-- ════════════════════════════════ PHASE 6 ════════════════════════════════ -->
+<div class="slabel">Phase 6 — Graph Correction &amp; Validation</div>
+<div class="phase t-p6">
+  <div class="ph">
+    <span class="ph-icon">📈</span>
+    <div>
+      <div class="ph-title">Corrections Applied to Neo4j in Atomic Transactions</div>
+      <div class="ph-sub">Schema validation → atomic transaction → provenance recording → audit log → rollback-ready</div>
+    </div>
+    <span class="ph-badge">Atomic · Reversible</span>
+  </div>
+  <div class="pb">
+    <div class="pipeline">
+      <div class="pip">📝 Correction Plan<small>Cypher mutations</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">✅ Validate Schema<small>integrity check</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">🔒 Neo4j Txn<small>atomic</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip">➕ Add Entity</div>
+      <div class="pip-arrow">|</div>
+      <div class="pip">✏️ Update Prop</div>
+      <div class="pip-arrow">|</div>
+      <div class="pip">🔗 Add Relation</div>
+      <div class="pip-arrow">|</div>
+      <div class="pip">🗑️ Remove Relation</div>
+      <div class="pip-arrow">→</div>
+      <div class="pip purple">📝 Audit Log</div>
+    </div>
+    <ul class="blist">
+      <li><b>Pre-validation:</b> no orphaned nodes · relationship cardinality preserved · fund names match taxonomy · asset class valid</li>
+      <li><b>Correction types:</b>
+        <span class="tag tg">Add Entity</span> (conf ≥ 0.85) ·
+        <span class="tag tb">Update Property</span> (conf ≥ 0.80) ·
+        <span class="tag tp">Add Relationship</span> (conf ≥ 0.75) ·
+        <span class="tag tr">Remove Relationship</span> (conf ≥ 0.85)
+      </li>
+      <li><b>Provenance:</b> every change tagged with source feedback_id, operator, timestamp</li>
+      <li><b>Audit trail:</b> before-state + after-state snapshot stored in <code>correction_execution_history</code></li>
+      <li class="muted">Partial failures roll back completely — transaction-safe · Full rollback available via audit trail at any time</li>
+    </ul>
+  </div>
+</div>
+
+<div class="conn">
+  <div class="conn-line"></div>
+  <div class="conn-arrow"></div>
+</div>
+
+<!-- ════════════════════════════════ PHASE 7 ════════════════════════════════ -->
+<div class="slabel">Phase 7 — Cache Invalidation</div>
+<div class="phase t-p7">
+  <div class="ph">
+    <span class="ph-icon">🧹</span>
+    <div>
+      <div class="ph-title">Stale Caches Cleared — Next Query Uses Updated Graph</div>
+      <div class="ph-sub">Surgical invalidation — only caches for affected entities are cleared, unrelated queries unaffected</div>
+    </div>
+    <span class="ph-badge">Surgical · Targeted</span>
+  </div>
+  <div class="pb">
+    <div class="pipeline">
+      <div class="pip">🗂️ Clear FAISS<small>affected entities</small></div>
+      <div class="pip-arrow">+</div>
+      <div class="pip">⚡ Clear Redis Keys<small>query + context cache</small></div>
+      <div class="pip-arrow">+</div>
+      <div class="pip">🔍 Entity Resolver<small>NER name cache</small></div>
+      <div class="pip-arrow">+</div>
+      <div class="pip">📊 Neo4j Traversal<small>path cache</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip green">✅ System Updated<small>fresh state</small></div>
+    </div>
+    <ul class="blist">
+      <li><b>FAISS:</b> invalidate embeddings for all entities that changed — forces re-embedding on next retrieval access</li>
+      <li><b>Redis query cache:</b> <code>DEL graph_context:{entity_hash}</code> for all affected entity hashes</li>
+      <li><b>Entity resolver:</b> clear canonical name → node ID mappings for renamed or merged entities</li>
+      <li><b>Neo4j traversal:</b> clear cached graph paths passing through any modified node or relationship</li>
+      <li class="muted">Cache key pattern: <code>hash(affected_entities, max_depth)</code> · TTL: 1 hour for graph snapshots · Surgical — only affected entities, not full flush</li>
+    </ul>
+    <div class="info-strip">
+      <span>🎯</span>
+      <div><b>Why surgical invalidation matters:</b> A full cache flush would slow down all unrelated queries. Targeting only the changed entities keeps p95 latency stable for the rest of the system.</div>
+    </div>
+  </div>
+</div>
+
+<div class="conn">
+  <div class="conn-line"></div>
+  <span class="conn-label">Loop completes · Graph updated · Caches refreshed</span>
+  <div class="conn-line"></div>
+  <div class="conn-arrow"></div>
+</div>
+
+<!-- ════════════════════════════════ PHASE 8 ════════════════════════════════ -->
+<div class="slabel">Phase 8 — The Loop Closes</div>
+<div class="phase t-p8">
+  <div class="ph">
+    <span class="ph-icon">♻️</span>
+    <div>
+      <div class="ph-title">Better Graph → Better Retrieval → Better Answers → Better Feedback</div>
+      <div class="ph-sub">Each correction cycle permanently raises the quality floor — the system compounds its own improvement</div>
+    </div>
+    <span class="ph-badge">Self-Improving</span>
+  </div>
+  <div class="pb">
+    <div class="pipeline">
+      <div class="pip teal">🆕 Next Query</div>
+      <div class="pip-arrow">→</div>
+      <div class="pip teal">🔍 Improved Retrieval<small>updated graph</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip teal">🧠 Richer LLM Context<small>accurate entities</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip teal">📝 Better Response<small>fewer errors</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip teal">👍 Better Feedback<small>higher quality</small></div>
+      <div class="pip-arrow">→</div>
+      <div class="pip green">♻️ Repeat<small>floor rises</small></div>
+    </div>
+    <ul class="blist">
+      <li><b>Mark processed:</b> all evaluated feedback records updated → <code>evaluation_status = 'processed'</code></li>
+      <li><b>Cycle report:</b> corrections applied, token cost, confidence distribution, entities updated — logged to metrics</li>
+      <li><b>Archive:</b> feedback older than 90 days cleaned up · audit trail retained for 365 days</li>
+      <li><b>Compound improvement:</b> each corrected entity improves FAISS retrieval, Neo4j traversals, and LLM context for all future related queries</li>
+      <li><b>Next cycle:</b> APScheduler re-triggers in 1 hour (cron: <code>0 * * * *</code>) — no manual intervention required</li>
+      <li class="muted">No manual graph editing needed · User feedback is the only input · Confidence gating ensures safety</li>
+    </ul>
+    <div class="info-strip">
+      <span>🏁</span>
+      <div><b>Definition of success:</b> correction success rate &gt;90% over 30 days · per-item token cost &lt;300 · feedback-to-correction latency &lt;70 minutes end-to-end.</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /flow -->
+
+<!-- FOOTER -->
+<footer class="ftr">
+  <div class="fs"><div class="v">&lt;100ms</div><div class="l">Feedback capture p99</div></div>
+  <div class="fs"><div class="v">25</div><div class="l">Items per LLM batch</div></div>
+  <div class="fs"><div class="v">91%</div><div class="l">Peak token reduction</div></div>
+  <div class="fs"><div class="v">0.85</div><div class="l">Auto-apply threshold</div></div>
+  <div class="fs"><div class="v">~3 min</div><div class="l">Cycle · 500 items</div></div>
+  <div class="fs"><div class="v">8</div><div class="l">Phases end-to-end</div></div>
+  <div class="fs"><div class="v">365d</div><div class="l">Audit trail retention</div></div>
+</footer>
+
+</div><!-- /shell -->
+</body>
+</html>

@@ -2,6 +2,7 @@
 services:
   neo4j:
     image: neo4j:5.24
+    restart: unless-stopped
     ports:
       - "7474:7474"   # browser
       - "7687:7687"   # bolt
@@ -22,14 +23,28 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-group: /amc-demo/app
+        awslogs-stream: neo4j
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
       - "6379:6379"
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-group: /amc-demo/app
+        awslogs-stream: redis
 
   api:
     build: ./backend
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
@@ -53,26 +68,52 @@ services:
     depends_on:
       neo4j:
         condition: service_healthy
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-group: /amc-demo/app
+        awslogs-stream: api
 
   streamlit:
     build: ./streamlit_app
+    restart: unless-stopped
     ports:
-      - "8501:8501"
+      - "8080:8501"
     environment:
-      API_BASE: ${API_BASE:-http://api:8000}   # thin client -> FastAPI backend
-      # Direct (lightweight, no-ML) Neo4j connection — used only by
-      # analytics_view.py's graph explorer. Must match the neo4j service above.
+      API_BASE: ${API_BASE:-local}   # self-sufficient: runs the local engine in-process
+      # Anthropic key: config.py reads CLAUDE_API_KEY directly, falling back
+      # to Secrets Manager (via the instance IAM role, same mechanism as the
+      # api service) when it's empty — needed now that retrieval runs
+      # directly inside this container instead of proxying to api.
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY:-}
+      AWS_REGION: ${AWS_REGION:-ap-south-1}
+      ANTHROPIC_SECRET_ID: ${ANTHROPIC_SECRET_ID:-}
+      ANTHROPIC_SECRET_JSON_KEY: ${ANTHROPIC_SECRET_JSON_KEY:-ANTHROPIC_API_KEY}
+      # Direct Neo4j connection — used by the local retrieval engine
+      # (taxonomy graph facts) and analytics_view.py's graph explorer.
+      # Must match the neo4j service above.
       NEO4J_URI: bolt://neo4j:7687
       NEO4J_USER: neo4j
       NEO4J_PASSWORD: contextgraph
+    volumes:
+      # chat_view.py's session JSON files — without this, every rebuild
+      # (even one unrelated to chat) silently wipes users' saved conversations.
+      - chat_sessions:/app/logs/chat_sessions
+      - hf_cache:/root/.cache   # persist GLiNER + sentence-transformer downloads
     depends_on:
       neo4j:
         condition: service_healthy
-      api:
-        condition: service_started
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-south-1
+        awslogs-group: /amc-demo/app
+        awslogs-stream: streamlit
 
 volumes:
   neo4j_data:
   hf_cache:
   engine_data:
   engine_faiss:
+  chat_sessions:

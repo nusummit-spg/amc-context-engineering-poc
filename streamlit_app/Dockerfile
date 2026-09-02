@@ -8,7 +8,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app.py compare_view.py analytics_view.py config.py graph_store.py ./
+COPY app.py compare_view.py chat_view.py analytics_view.py config.py graph_store.py ./
 COPY .streamlit ./.streamlit
 
 EXPOSE 8501

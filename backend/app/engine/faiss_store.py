@@ -47,6 +47,8 @@ import json
 import os
 import pickle
 import re
+import threading
+import time
 import unicodedata
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -63,6 +65,16 @@ from app.engine.extraction_prompts import PDF_PAGE_PROMPT
 
 _easyocr_reader = None
 _embedder       = None
+_reranker       = None
+_rerank_timing  = threading.local()  # per-thread: retrieve() stashes latency_rerank_ms here
+
+
+def get_last_rerank_ms() -> float:
+    """Reads back the rerank sub-latency from the most recent retrieve(rerank=True)
+    call on this thread. asyncio.to_thread runs each request in its own worker
+    thread, so this is safe under concurrent requests without needing retrieve()
+    to change its return type."""
+    return getattr(_rerank_timing, "ms", 0.0)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PATHS
@@ -118,6 +130,20 @@ def _get_embedder():
         )
         print("  [embed] Model ready.", flush=True)
     return _embedder
+
+
+def _get_reranker():
+    global _reranker
+    if _reranker is None:
+        print("  [rerank] Loading cross-encoder model…", flush=True)
+        from sentence_transformers import CrossEncoder
+        try:
+            _reranker = CrossEncoder(
+                "cross-encoder/ms-marco-MiniLM-L-6-v2", device="cpu", local_files_only=True)
+        except Exception:
+            _reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2", device="cpu")
+        print("  [rerank] Cross-encoder ready.", flush=True)
+    return _reranker
 
 
 def _get_ocr_reader():
@@ -714,10 +740,17 @@ class BrochureFAISSStore:
         query: str,
         top_k_children: int = 6,
         dedupe_parents: bool = True,
+        rerank: bool = False,
     ) -> List[Dict]:
+        """rerank=True over-fetches a wider bi-encoder candidate pool, then
+        rescores with a cross-encoder for deeper semantic precision — the
+        bi-encoder is fast but coarse (independent embeddings), the
+        cross-encoder is slower but scores the query and passage jointly.
+        """
         model  = _get_embedder()
         q_vec  = model.encode([query], normalize_embeddings=True).astype("float32")
-        scores, indices = self.index.search(q_vec, top_k_children)
+        fetch_k = top_k_children * 4 if rerank else top_k_children
+        scores, indices = self.index.search(q_vec, fetch_k)
 
         seen:    set        = set()
         results: List[Dict] = []
@@ -740,7 +773,20 @@ class BrochureFAISSStore:
                 "product_name": child["product_name"],
                 "source":       child["source"],
             })
-        return results
+
+        _rerank_timing.ms = 0.0
+        if rerank and results:
+            t_rerank = time.perf_counter()
+            reranker = _get_reranker()
+            pairs = [[query, r["parent_text"]] for r in results]
+            ce_scores = reranker.predict(pairs)
+            for r, ce_score in zip(results, ce_scores):
+                r["score"] = float(ce_score)
+                r["reranked"] = True
+            results.sort(key=lambda r: r["score"], reverse=True)
+            _rerank_timing.ms = (time.perf_counter() - t_rerank) * 1000.0
+
+        return results[:top_k_children]
 
     def get_context_string(self, query: str, top_k: int = 5) -> str:
         hits  = self.retrieve(query, top_k_children=top_k)

@@ -17,6 +17,8 @@ COMPARISON_PATTERNS = re.compile(
     r"\b(compare|versus|vs\.?|difference between|which.*more|relative to)\b", re.I)
 LOOKUP_PATTERNS = re.compile(
     r"\b(who (manages|holds|is)|what is the (benchmark|exit load|isin))\b", re.I)
+TEMPORAL_COMPARISON_PATTERNS = re.compile(
+    r"\b(chang(e|ed|es)|evolv(e|ed)|difference)\b.{0,40}\b(between|from)\b", re.I)
 
 _CLASSIFY_PROMPT = """Classify this question into exactly one category:
 - aggregation: needs a total/sum/count across multiple documents or records
@@ -33,7 +35,7 @@ def classify_query(query: str) -> str:
     """Fast path: regex. Only calls the LLM if regex is inconclusive."""
     if AGGREGATION_PATTERNS.search(query):
         return "aggregation"
-    if COMPARISON_PATTERNS.search(query):
+    if COMPARISON_PATTERNS.search(query) or TEMPORAL_COMPARISON_PATTERNS.search(query):
         return "comparison"
     if LOOKUP_PATTERNS.search(query):
         return "direct_lookup"

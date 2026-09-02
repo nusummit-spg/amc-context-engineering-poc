@@ -1,0 +1,1892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>AMC Active & Passive Feedback — Low-Level Execution Design v2.0</title>
+  <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    :root{
+      --purple:#6c63ff;--violet:#5a52d5;--pink:#f093fb;--red:#e53e3e;
+      --blue:#3b82f6;--cyan:#06b6d4;--green:#10b981;--teal:#14b8a6;
+      --orange:#f97316;--yellow:#f59e0b;--amber:#d97706;
+      --bg:#f0f2f8;--card:#ffffff;--border:#dde3f0;
+      --text:#1a202c;--muted:#64748b;--light:#f8fafc;
+      --active-gradient:linear-gradient(135deg,#6c63ff,#5a52d5);
+      --passive-gradient:linear-gradient(135deg,#06b6d4,#14b8a6);
+      --r:10px;--shadow:0 4px 24px rgba(108,99,255,.15);
+    }
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    .site-header{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:44px 48px 36px;position:relative;overflow:hidden;}
+    .site-header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 70% 50%,rgba(108,99,255,.25) 0%,transparent 70%);}
+    .site-header h1{font-size:clamp(22px,3vw,36px);font-weight:800;color:#fff;position:relative;letter-spacing:-.5px;}
+    .site-header .sub{margin-top:8px;font-size:15px;color:rgba(255,255,255,.7);position:relative;}
+    .mode-chips{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;position:relative;}
+    .chip{padding:6px 18px;border-radius:20px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;}
+    .chip.active-chip{background:rgba(108,99,255,.3);color:#c4b5fd;border:1px solid rgba(108,99,255,.5);}
+    .chip.passive-chip{background:rgba(6,182,212,.2);color:#67e8f9;border:1px solid rgba(6,182,212,.4);}
+    .chip.note-chip{background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);}
+    .top-nav{background:#fff;border-bottom:2px solid var(--border);padding:0 32px;display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin;position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+    .nav-group{display:flex;align-items:center;gap:2px;padding:0 6px;border-right:1px solid var(--border);}
+    .nav-group:last-child{border-right:none;}
+    .nav-group-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;padding:0 6px;white-space:nowrap;}
+    .nb{padding:12px 14px;border:none;background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;}
+    .nb:hover{color:var(--purple);}
+    .nb.active{color:var(--purple);border-bottom-color:var(--purple);}
+    .content{max-width:1500px;margin:0 auto;padding:32px 40px 60px;}
+    .section{display:none;}
+    .section.active{display:block;animation:fadeIn .3s ease;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .sec-head{display:flex;align-items:flex-start;gap:16px;margin-bottom:28px;}
+    .sec-icon{font-size:40px;flex-shrink:0;}
+    .sec-head h2{font-size:26px;font-weight:800;color:var(--text);}
+    .sec-head .sec-desc{font-size:14px;color:var(--muted);margin-top:5px;max-width:800px;line-height:1.6;}
+    .mode-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 12px;border-radius:12px;font-size:12px;font-weight:700;margin-bottom:8px;}
+    .mode-pill.active{background:#ede9fe;color:#6c63ff;}
+    .mode-pill.passive{background:#cffafe;color:#0891b2;}
+    .mode-pill.shared{background:#f0fdf4;color:#059669;}
+    .flow-container{display:flex;flex-direction:column;gap:0;}
+    .step-block{display:grid;grid-template-columns:56px 1fr;gap:0;position:relative;}
+    .step-block:not(:last-child)::after{content:'';position:absolute;left:27px;top:72px;bottom:-20px;width:2px;background:linear-gradient(180deg,var(--border),transparent);z-index:0;}
+    .step-number-col{display:flex;flex-direction:column;align-items:center;padding-top:12px;}
+    .step-num{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0;z-index:1;box-shadow:0 4px 12px rgba(0,0,0,.2);}
+    .step-body{padding:0 0 32px 16px;}
+    .step-card{background:var(--card);border-radius:var(--r);border:2px solid var(--border);padding:20px 24px;transition:border-color .2s;}
+    .step-card:hover{border-color:var(--purple);}
+    .step-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;}
+    .step-title{font-size:16px;font-weight:800;color:var(--text);}
+    .step-phase{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:3px 10px;border-radius:10px;white-space:nowrap;}
+    .phase-rt{background:#ede9fe;color:#6c63ff;}
+    .phase-ev{background:#fef9c3;color:#a16207;}
+    .phase-rep{background:#dcfce7;color:#15803d;}
+    .example-box{background:linear-gradient(135deg,#f8f4ff,#f0eeff);border-left:4px solid var(--purple);border-radius:8px;padding:14px 16px;margin:12px 0;}
+    .example-box.cyan{background:linear-gradient(135deg,#f0fdfe,#e0f7fa);border-left-color:var(--cyan);}
+    .example-box.green{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-left-color:var(--green);}
+    .example-box.red{background:linear-gradient(135deg,#fff5f5,#fee2e2);border-left-color:var(--red);}
+    .example-box.yellow{background:linear-gradient(135deg,#fffbeb,#fef9c3);border-left-color:var(--yellow);}
+    .ex-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--purple);margin-bottom:6px;}
+    .ex-label.cyan{color:var(--cyan);}
+    .ex-label.green{color:var(--green);}
+    .ex-label.red{color:var(--red);}
+    .ex-label.yellow{color:var(--amber);}
+    .ex-content{font-size:13px;color:var(--text);line-height:1.65;}
+    .ex-content code{font-family:'Cascadia Code','Consolas',monospace;background:rgba(0,0,0,.07);padding:1px 5px;border-radius:4px;font-size:12px;}
+    .ex-content strong{font-weight:700;}
+    .why-box{background:#f8fafc;border-radius:8px;padding:10px 14px;margin-top:10px;display:flex;gap:8px;}
+    .why-icon{font-size:16px;flex-shrink:0;}
+    .why-text{font-size:12px;color:var(--muted);line-height:1.55;}
+    .why-text strong{color:var(--text);font-weight:700;}
+    .capture-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin:10px 0;}
+    .capture-item{background:var(--light);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+    .cap-key{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;}
+    .cap-val{font-size:12px;font-weight:600;color:var(--text);margin-top:3px;font-family:'Cascadia Code','Consolas',monospace;}
+    .verdict{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:700;}
+    .verdict.pass{background:#dcfce7;color:#166534;}
+    .verdict.fail{background:#fee2e2;color:#991b1b;}
+    .verdict.partial{background:#fef9c3;color:#a16207;}
+    .verdict.unknown{background:#f1f5f9;color:#475569;}
+    .callout{border-radius:var(--r);padding:16px 20px;margin:20px 0;display:flex;gap:14px;}
+    .callout.info{background:#ede9fe;border-left:4px solid var(--purple);}
+    .callout.warn{background:#fffbeb;border-left:4px solid var(--yellow);}
+    .callout.success{background:#f0fdf4;border-left:4px solid var(--green);}
+    .callout.cyan{background:#f0fdfe;border-left:4px solid var(--cyan);}
+    .cl-icon{font-size:22px;flex-shrink:0;}
+    .cl-body{font-size:13px;line-height:1.6;}
+    .cl-body strong{display:block;font-size:14px;font-weight:700;margin-bottom:4px;}
+    .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:20px 0;}
+    .kpi{border-radius:var(--r);padding:20px 16px;text-align:center;color:#fff;}
+    .kpi .kv{font-size:28px;font-weight:800;line-height:1;}
+    .kpi .kl{font-size:12px;opacity:.85;margin-top:5px;}
+    .kpi.k1{background:linear-gradient(135deg,#6c63ff,#5a52d5);}
+    .kpi.k2{background:linear-gradient(135deg,#f093fb,#f5576c);}
+    .kpi.k3{background:linear-gradient(135deg,#06b6d4,#14b8a6);}
+    .kpi.k4{background:linear-gradient(135deg,#10b981,#059669);}
+    .kpi.k5{background:linear-gradient(135deg,#f97316,#ef4444);}
+    .repair-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin:16px 0;}
+    .repair-card{background:var(--card);border:2px solid var(--border);border-radius:var(--r);padding:18px;transition:all .2s;}
+    .repair-card:hover{border-color:var(--green);box-shadow:var(--shadow);}
+    .rc-id{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;padding:2px 8px;border-radius:8px;display:inline-block;margin-bottom:8px;}
+    .rc-r1{background:#dcfce7;color:#166534;}
+    .rc-r2{background:#dbeafe;color:#1e40af;}
+    .rc-r3{background:#fef9c3;color:#a16207;}
+    .rc-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;}
+    .rc-desc{font-size:12px;color:var(--muted);line-height:1.5;}
+    .separator{height:1px;background:var(--border);margin:28px 0;}
+    h3.sub{font-size:17px;font-weight:700;color:var(--text);margin:24px 0 14px;display:flex;align-items:center;gap:8px;}
+    h3.sub::after{content:'';flex:1;height:2px;background:linear-gradient(90deg,var(--border),transparent);}
+    h3.sub.a{color:var(--purple);}
+    h3.sub.p{color:var(--cyan);}
+    .cmp-table{width:100%;border-collapse:collapse;font-size:13px;border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);}
+    .cmp-table th{padding:12px 16px;text-align:left;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;}
+    .cmp-table td{padding:11px 16px;border-bottom:1px solid var(--border);vertical-align:top;}
+    .cmp-table tr:last-child td{border:none;}
+    .th-shared{background:#f1f5f9;color:var(--text);}
+    .th-active{background:#ede9fe;color:#6c63ff;}
+    .th-passive{background:#cffafe;color:#0891b2;}
+    ::-webkit-scrollbar{width:6px;height:6px;}
+    ::-webkit-scrollbar-track{background:var(--bg);}
+    ::-webkit-scrollbar-thumb{background:var(--purple);border-radius:3px;}
+    .site-footer{background:var(--card);border-top:2px solid var(--border);padding:20px 48px;text-align:center;font-size:13px;color:var(--muted);}
+    @media(max-width:768px){.content{padding:20px 16px;}.site-header{padding:28px 20px;}.step-block{grid-template-columns:44px 1fr;}}
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1>AMC Active & Passive Feedback — Low-Level Execution Design v2.0</h1>
+  <p class="sub">Merged design: Use cases (colleague v1.3) + Technical detail (Evaluation Router, EvidencePack, repairs). Deterministic-first · LLM-last · Governed self-healing.</p>
+  <div class="mode-chips">
+    <span class="chip active-chip">🟣 Active Scenario — User provides explicit feedback</span>
+    <span class="chip passive-chip">🔵 Passive Scenario — No feedback; system captures metrics</span>
+    <span class="chip note-chip">📋 Architecture: Evidence-Pack D0–D3 · Evaluation Router E0–E5 · Repair Classes R0–R5</span>
+  </div>
+</header>
+
+<nav class="top-nav">
+  <div class="nav-group">
+    <span class="nav-group-label">Core</span>
+    <button class="nb active" onclick="show('overview',this)">Overview</button>
+    <button class="nb" onclick="show('evidence-pack',this)">EvidencePack</button>
+    <button class="nb" onclick="show('evaluation-router',this)">Evaluation Router</button>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Use Cases</span>
+    <button class="nb" onclick="show('uc1-outdated',this)">UC1: Outdated Data</button>
+    <button class="nb" onclick="show('uc2-citation',this)">UC2: Citation Mismatch</button>
+    <button class="nb" onclick="show('uc3-numeric',this)">UC3: Numeric Check</button>
+    <button class="nb" onclick="show('uc4-suitability',this)">UC4: Suitability</button>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Reference</span>
+    <button class="nb" onclick="show('repairs',this)">Repair Classes</button>
+    <button class="nb" onclick="show('data-objects',this)">Data Objects</button>
+    <button class="nb" onclick="show('resolution-map',this)">Resolution Map</button>
+  </div>
+</nav>
+
+<main class="content">
+
+<!-- ══════════════════════════════════ OVERVIEW ══════════════════════════════════ -->
+<section id="overview" class="section active">
+  <div class="sec-head">
+    <div class="sec-icon">🗺️</div>
+    <div>
+      <span class="mode-pill shared">📐 Unified Approach</span>
+      <h2>Active vs Passive — Integrated Feedback Loop</h2>
+      <p class="sec-desc">Both active (user-initiated) and passive (system-detected) signals feed the same evaluation, diagnosis, and governed repair pipeline. Active brings high-specificity signals; Passive brings breadth and coverage. Both are verified against authoritative evidence before any action fires.</p>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
+    <div style="background:#fff;border:2px solid #c4b5fd;border-radius:12px;padding:24px;">
+      <div style="font-size:28px;margin-bottom:8px;">🟣</div>
+      <h3 style="font-size:18px;font-weight:800;color:#6c63ff;margin-bottom:10px;">Active Feedback</h3>
+      <p style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:14px;">User explicitly submits feedback — thumbs-down, category selection ("Outdated", "Citation"), highlighted span, or free text. High specificity, low volume.</p>
+      <ul style="font-size:12px;color:var(--text);line-height:1.8;list-style:none;">
+        <li>✅ Specific failure category from user</li>
+        <li>✅ Highlighted span pointing to exact problem</li>
+        <li>✅ Free-text correction provided</li>
+        <li>✅ High-value signal for diagnosis</li>
+      </ul>
+    </div>
+    <div style="background:#fff;border:2px solid #67e8f9;border-radius:12px;padding:24px;">
+      <div style="font-size:28px;margin-bottom:8px;">🔵</div>
+      <h3 style="font-size:18px;font-weight:800;color:#0891b2;margin-bottom:10px;">Passive Feedback</h3>
+      <p style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:14px;">No user input — system captures metrics on every interaction: retrieval confidence, source freshness, citation integrity, numeric extraction vs source, deterministic checks. 100% coverage, zero user burden.</p>
+      <ul style="font-size:12px;color:var(--text);line-height:1.8;list-style:none;">
+        <li>✅ Source version mismatch detection</li>
+        <li>✅ Retrieval confidence & empty-retrieval flags</li>
+        <li>✅ Citation integrity & entailment checks</li>
+        <li>✅ Numeric consistency validation</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="sub">Master Flow: Response → Frozen Evidence → Signal → Evaluation → Repair → Governance</h3>
+  <div style="background:#fff;border:2px solid var(--border);border-radius:12px;padding:24px;font-size:13px;line-height:2;">
+    <strong>0. User Query</strong> → Intent resolution + entity extraction (canonical IDs)<br/>
+    ↓<br/>
+    <strong>1. Hybrid Retrieval</strong> → FAISS + Neo4j + BM25 (all channels captured in D2)<br/>
+    ↓<br/>
+    <strong>2. Context Assembly</strong> → Reranking + compliance injection (rejected chunks recorded)<br/>
+    ↓<br/>
+    <strong>3. LLM Response</strong> → Generation with citations (response hash captured)<br/>
+    ↓<br/>
+    <strong>4. EvidencePack D0–D3 Frozen</strong> → Immutable snapshot at delivery time (never modified retroactively)<br/>
+    ↓<br/>
+    <strong>5. Critical Intercept</strong> → Hard C02, C03, C07 checks (&lt;40ms, synchronous)<br/>
+    ↓<br/>
+    <strong>6. Delivered + response_id Embedded</strong> → User sees response, system tracks ID for feedback linking<br/>
+    ↓<br/>
+    <strong style="color:#6c63ff;">7A. Active Signal</strong> (if user gives feedback) OR <strong style="color:#06b6d4;">7P. Passive Metrics</strong> (auto-captured on every response)<br/>
+    ↓<br/>
+    <strong>8. Evaluation Router (E0→E5)</strong> → Deterministic rules first, semantic next, LLM last, human only where required<br/>
+    ↓<br/>
+    <strong>9. Root Cause Attribution</strong> → Failure family (F01–F14), severity, confidence<br/>
+    ↓<br/>
+    <strong>10. Repair Eligibility</strong> → Class (R0–R5), requires governance approval for canonical changes<br/>
+    ↓<br/>
+    <strong>11. Shadow Validation</strong> → Test repair outside production state<br/>
+    ↓<br/>
+    <strong>12. Promotion / Rollback</strong> → Fast lane (R1) or governance approval (R3, R4, R5)<br/>
+    ↓<br/>
+    <strong>13. Post-Heal Monitoring</strong> → 7-day recurrence watch
+  </div>
+
+  <div class="callout info" style="margin-top:28px;">
+    <span class="cl-icon">🔑</span>
+    <div class="cl-body">
+      <strong>Core principle: Signal ≠ Ground Truth ≠ Action</strong><br/>
+      User feedback is a hypothesis. Passive metrics are correlations. Neither is automatically trusted. Both must be verified against frozen evidence (D0–D3) and authoritative sources before any system change fires. This prevents feedback poisoning and ensures every repair is auditable and reversible.
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ EVIDENCE PACK ══════════════════════════════════ -->
+<section id="evidence-pack" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">📦</div>
+    <div>
+      <span class="mode-pill shared">📐 Frozen at Delivery</span>
+      <h2>EvidencePack D0–D3: The Immutable Snapshot</h2>
+      <p class="sec-desc">The moment a response is delivered, an immutable EvidencePack is created and frozen in storage. All later evaluation references this snapshot—never the live system state. This anchor makes every diagnosis deterministic and auditable.</p>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+    <div class="example-box">
+      <div class="ex-label">D0 — Response Finalization</div>
+      <div class="ex-content">
+        <strong>response_id:</strong> <code>resp_9c4f1a</code><br/>
+        <strong>response_hash:</strong> <code>a7f3c9...d821</code> (SHA-256)<br/>
+        <strong>model_id:</strong> <code>claude-3-5-sonnet</code><br/>
+        <strong>prompt_template_version:</strong> <code>v2.4.1</code><br/>
+        <strong>citations_shown:</strong> <code>[AMFI_v18, perf_v3, mirae_v2]</code><br/>
+        <strong>input_tokens, output_tokens, latency</strong><br/>
+        <strong>truncation_flag:</strong> <code>FALSE</code>
+      </div>
+    </div>
+    <div class="example-box cyan">
+      <div class="ex-label cyan">D1 — Interaction Snapshot</div>
+      <div class="ex-content">
+        <strong>interaction_id:</strong> <code>int_8b2e7f</code><br/>
+        <strong>detected_intent:</strong> <code>CURRENT_NUMERIC_FACT + COMPARATIVE_CLAIM</code><br/>
+        <strong>entities:</strong> <code>INF846K01DP5, INF769K01EW8</code> (canonical IDs)<br/>
+        <strong>attributes:</strong> <code>[TER, NAV, 5yr_return]</code><br/>
+        <strong>jurisdiction:</strong> <code>IN</code><br/>
+        <strong>channel, user_role, timestamp</strong>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+    <div class="example-box green">
+      <div class="ex-label green">D2 — Evidence Pack (Core Metrics)</div>
+      <div class="ex-content">
+        <strong>chunk_ids:</strong> Retrieved chunks + rank scores<br/>
+        <strong>source_version:</strong> <code>AMFI_v18 (2026-08-17)</code><br/>
+        <strong>source_age_days:</strong> <code>3</code><br/>
+        <strong>source_version_mismatch:</strong> <code>FALSE</code><br/>
+        <strong>citation_coverage:</strong> <code>3/3 (100%)</code><br/>
+        <strong>evidence_rejected:</strong> Chunks dropped at reranking<br/>
+        <strong>vector_graph_overlap:</strong> <code>HIGH</code><br/>
+        <strong>context_truncation:</strong> <code>FALSE</code>
+      </div>
+    </div>
+    <div class="example-box yellow">
+      <div class="ex-label yellow">D3 — Policy & Applicability Context</div>
+      <div class="ex-content">
+        <strong>jurisdiction:</strong> <code>IN</code><br/>
+        <strong>policy_pack:</strong> <code>INDIA_SEBI_v2026_03</code><br/>
+        <strong>applicable_controls:</strong> <code>[C01,C02,C03,C07,C08]</code><br/>
+        <strong>mandatory_controls:</strong> <code>[C02_source_currency, C03_numeric_accuracy, C07_disclosure]</code><br/>
+        <strong>advice_flag:</strong> <code>FALSE</code><br/>
+        <strong>interaction_mode:</strong> <code>INFORMATION</code>
+      </div>
+    </div>
+  </div>
+
+  <div class="why-box" style="margin:20px 0;padding:16px;">
+    <span class="why-icon">🔒</span>
+    <div class="why-text">
+      <strong>Why D0–D3 are frozen immediately and never modified:</strong> If the AMFI file updates to v19 tomorrow (TER changes to 0.85%), the evaluation of today's response must still use <code>source_version=AMFI_v18</code>. Without this freeze, we'd retrospectively judge the response as wrong using knowledge that didn't exist at response time. This also lets a compliance auditor reconstruct exactly what the system knew, said, and cited for any response years later.
+    </div>
+  </div>
+
+  <h3 class="sub">Why Each D2 Field Matters for Diagnosis</h3>
+  <div class="capture-grid">
+    <div class="capture-item"><div class="cap-key">source_version + source_age_days</div><div class="cap-val">Distinguish F05 (stale source) from F07 (hallucination)</div></div>
+    <div class="capture-item"><div class="cap-key">evidence_rejected[]</div><div class="cap-val">Distinguish F09 (context drop) from F04 (retrieval miss)</div></div>
+    <div class="capture-item"><div class="cap-key">citation_coverage + chunk_ids</div><div class="cap-val">Verify F06 (citation integrity) vs F04 (retrieval rank)</div></div>
+    <div class="capture-item"><div class="cap-key">vector_graph_overlap</div><div class="cap-val">Passive anomaly: if overlap LOW, signal retrieval degradation</div></div>
+    <div class="capture-item"><div class="cap-key">response_hash</div><div class="cap-val">Deterministic proof of what was said, not retroactive claim</div></div>
+    <div class="capture-item"><div class="cap-key">template_coverage</div><div class="cap-val">Track completeness for COMPARATIVE_CLAIM intent</div></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ EVALUATION ROUTER ══════════════════════════════════ -->
+<section id="evaluation-router" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">🚦</div>
+    <div>
+      <span class="mode-pill shared">📐 Deterministic Policy Engine</span>
+      <h2>Adaptive Evaluation Router: E0–E5 Ladder</h2>
+      <p class="sec-desc">What needs evaluating, at what depth, under which controls, in what budget. Not an LLM judge—a policy engine that selects minimum sufficient evaluation and stops early with decisive evidence.</p>
+    </div>
+  </div>
+
+  <h3 class="sub">Six Router Principles</h3>
+  <div style="display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:24px;">
+    <div style="background:#fff;border-left:4px solid #6c63ff;border-radius:8px;padding:16px;">
+      <div style="font-weight:700;color:#6c63ff;margin-bottom:6px;">P1 — Mandatory controls cannot be sampled away</div>
+      <div style="font-size:12px;color:var(--muted);">Cost optimisation may reduce evaluation depth for quality checks, but must never bypass an applicable hard AMC/regulatory control (C02, C03, C07, etc.).</div>
+    </div>
+    <div style="background:#fff;border-left:4px solid #3b82f6;border-radius:8px;padding:16px;">
+      <div style="font-weight:700;color:#3b82f6;margin-bottom:6px;">P2 — Adaptation means minimum sufficient evaluation</div>
+      <div style="font-size:12px;color:var(--muted);">Rule → Semantic → LLM → Agent. Stop as soon as evidence is decisive. Every escalation costs time/tokens; justify each one.</div>
+    </div>
+    <div style="background:#fff;border-left:4px solid #10b981;border-radius:8px;padding:16px;">
+      <div style="font-weight:700;color:#10b981;margin-bottom:6px;">P3 — Evidence sufficiency precedes reasoning</div>
+      <div style="font-size:12px;color:var(--muted);">If required evidence is missing, return UNVERIFIABLE instead of asking an LLM to infer truth from incomplete data.</div>
+    </div>
+    <div style="background:#fff;border-left:4px solid #f59e0b;border-radius:8px;padding:16px;">
+      <div style="font-weight:700;color:#f59e0b;margin-bottom:6px;">P4 — Regulatory applicability drives routing context</div>
+      <div style="font-size:12px;color:var(--muted);">Resolve jurisdiction, entity role, channel, advice mode BEFORE selecting evaluators. The same sentence has different significance in India vs US, retail vs HNI.</div>
+    </div>
+    <div style="background:#fff;border-left:4px solid #e53e3e;border-radius:8px;padding:16px;">
+      <div style="font-weight:700;color:#e53e3e;margin-bottom:6px;">P5 — Active incidents short-circuit repeated diagnosis</div>
+      <div style="font-size:12px;color:var(--muted);">If this observation matches an existing incident's causal signature, attach to it—don't re-diagnose. Avoids 100s of duplicate LLM calls during systemic failures.</div>
+    </div>
+  </div>
+
+  <h3 class="sub">The Five-Level Evaluation Ladder</h3>
+  <table class="cmp-table" style="margin-top:16px;">
+    <thead>
+      <tr>
+        <th class="th-shared" style="min-width:80px;">Level</th>
+        <th class="th-shared">Mechanism</th>
+        <th class="th-shared">Generative Tokens</th>
+        <th class="th-shared">Typical %</th>
+        <th class="th-shared">Use Case</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>E0</strong></td>
+        <td>Telemetry only</td>
+        <td><strong>0</strong></td>
+        <td>~100%</td>
+        <td>Healthy low-risk monitoring, infrastructure health, audit trail</td>
+      </tr>
+      <tr>
+        <td><strong>E1</strong></td>
+        <td>Deterministic rules</td>
+        <td><strong>0</strong></td>
+        <td>~100%</td>
+        <td>IDs, dates, numeric reconciliation, citations, versions, disclosures, mandatory controls</td>
+      </tr>
+      <tr>
+        <td><strong>E2</strong></td>
+        <td>Statistical / cohort checks</td>
+        <td><strong>0</strong></td>
+        <td>broad</td>
+        <td>Drift detection, anomaly flagging, retrieval-channel disagreement, version correlation</td>
+      </tr>
+      <tr>
+        <td><strong>E3</strong></td>
+        <td>Semantic / NLI / classifier</td>
+        <td>~0 generative</td>
+        <td>10–20%</td>
+        <td>Intent classification, entailment, tone, relevance, advice boundary, citation support</td>
+      </tr>
+      <tr>
+        <td><strong>E4</strong></td>
+        <td>Bounded LLM judge</td>
+        <td>controlled</td>
+        <td>2–5%</td>
+        <td>Nuanced ambiguity unresolved by E3, multi-source conflict summarisation</td>
+      </tr>
+      <tr>
+        <td><strong>E5</strong></td>
+        <td>Agent / Human</td>
+        <td>highest</td>
+        <td>0.1–0.8%</td>
+        <td>Multi-step investigation, regulatory interpretation, compliance decisions, appeals</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub" style="margin-top:32px;">Five Explicit Stop Rules</h3>
+  <div style="display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:24px;">
+    <div style="background:#dcfce7;border-left:4px solid #059669;border-radius:8px;padding:16px;">
+      <div style="font-weight:700;color:#059669;margin-bottom:6px;">STOP-1 — Deterministic Proof</div>
+      <div style="font-size:12px;color:var(--text);">Authoritative structured source + exact entity + exact temporal context + deterministic mismatch confirmed → verdict established. No semantic model, LLM, or agent required. <strong>Example:</strong> Response TER=0.79%, canonical source TER=0.82%, source versions differ. F05 confirmed at E1.</div>
+    </div>
+    <div style="background:#dbeafe;border-left:4px solid #1e40af;border-radius:8px;padding:16px;">
+      <div style="font-weight:700;color:#1e40af;margin-bottom:6px;">STOP-2 — Evidence Absent</div>
+      <div style="font-size:12px;color:var(--text);">Required evidence missing + deterministic recovery unavailable → UNVERIFIABLE. Do not ask an LLM to manufacture a verdict.</div>
+    </div>
+    <div style="background:#fef9c3;border-left:4px solid #a16207;border-radius:8px;padding:16px;">
+      <div style="font-weight:700;color:#a16207;margin-bottom:6px;">STOP-3 — Known Incident</div>
+      <div style="font-size:12px;color:var(--text);">Observation matches active confirmed incident + same causal signature → attach observation → stop repeated root-cause investigation. Avoids hundreds of duplicate LLM diagnoses during systemic failures. <strong>Example:</strong> Model v3.2 hallucination observations 4–200 all attach to I-047, skip diagnosis.</div>
+    </div>
+    <div style="background:#e0f2fe;border-left:4px solid #0369a1;border-radius:8px;padding:16px;">
+      <div style="font-weight:700;color:#0369a1;margin-bottom:6px;">STOP-4 — Semantic Model Resolves</div>
+      <div style="font-size:12px;color:var(--text);">Semantic/NLI output + within validated domain + confidence ≥ threshold → stop. <strong>Example:</strong> Citation entanglement check: (claim, cited_chunk) pair runs through NLI, entailment_score=0.04 → FAIL confirmed, no LLM escalation.</div>
+    </div>
+    <div style="background:#fce7f3;border-left:4px solid #9d174d;border-radius:8px;padding:16px;">
+      <div style="font-weight:700;color:#9d174d;margin-bottom:6px;">STOP-5 — Compliance Requires Human</div>
+      <div style="font-size:12px;color:var(--text);">Policy says HUMAN_REQUIRED → stop automated adjudication → route to compliance/HITL. LLM may assist with evidence summarisation but must not replace the required human decision.</div>
+    </div>
+  </div>
+
+  <h3 class="sub">Token Budget Bands (B0–B5)</h3>
+  <table class="cmp-table">
+    <thead>
+      <tr>
+        <th class="th-shared" style="min-width:60px;">Band</th>
+        <th class="th-shared">Token Limit</th>
+        <th class="th-shared">Typical Use</th>
+        <th class="th-shared">AMC Example</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>B0</strong></td>
+        <td>0 generative</td>
+        <td>Rules, telemetry, numeric checks</td>
+        <td>NAV mismatch, TER lookup, citation integrity</td>
+      </tr>
+      <tr>
+        <td><strong>B1</strong></td>
+        <td>≤ 250</td>
+        <td>Entity disambiguation fallback</td>
+        <td>Direct vs Regular plan ambiguity</td>
+      </tr>
+      <tr>
+        <td><strong>B2</strong></td>
+        <td>≤ 500</td>
+        <td>Unresolved citation entailment</td>
+        <td>Citation does not clearly support claim</td>
+      </tr>
+      <tr>
+        <td><strong>B3</strong></td>
+        <td>≤ 800</td>
+        <td>Conflict evidence summarisation</td>
+        <td>Two authoritative sources conflict — summarise only</td>
+      </tr>
+      <tr>
+        <td><strong>B4</strong></td>
+        <td>≤ 1,500</td>
+        <td>Agent investigation</td>
+        <td>Multi-step root-cause with tool calls</td>
+      </tr>
+      <tr>
+        <td><strong>B5</strong></td>
+        <td>Exception</td>
+        <td>Human-approved only</td>
+        <td>Regulatory interpretation, compliance sign-off</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout info" style="margin-top:28px;">
+    <span class="cl-icon">💰</span>
+    <div class="cl-body">
+      <strong>Token Cost Comparison</strong><br/>
+      Naive approach (LLM judge per response): 200 hallucination observations × ~400 tokens = 80,000 tokens.<br/>
+      With incident correlation + numeric extraction + STOP-3: ~1,200 tokens total (first 3 diagnoses, 197 observations attached at zero cost).<br/>
+      For inaccuracy and missing context: 0 tokens regardless of volume — both structurally diagnosable from D2 metrics alone.
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════ USE CASE 1: OUTDATED DATA ══════════════════════════════════ -->
+<section id="uc1-outdated" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">📅</div>
+    <div>
+      <span class="mode-pill active">🟣 Active Feedback</span>
+      <h2>Use Case 1: Outdated Expense Ratio</h2>
+      <p class="sec-desc">User reports an old fund expense ratio. Root cause: stale source in retrieval layer. Repair: source refresh + provisional narrow correction + selective reindex. Deterministic diagnosis, zero LLM tokens.</p>
+    </div>
+  </div>
+
+  <!-- ══ BUSINESS JOURNEY: WHAT - WHY - EXAMPLE OUTCOME ══ -->
+  <div style="background:#f8fafc;border:2px solid #cbd5e1;border-radius:12px;padding:28px;margin-bottom:28px;">
+    <h3 style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:20px;display:flex;align-items:center;gap:8px;">
+      <span>📋 Business Journey</span>
+    </h3>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;">
+      <div style="background:#fff;border-radius:8px;padding:16px;border-left:4px solid #6c63ff;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#6c63ff;letter-spacing:.8px;margin-bottom:8px;">What</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;"><strong>User query:</strong> "What is the current TER of Fund Alpha Direct Growth?"<br/><strong>Original response:</strong> "The expense ratio is 1.20%" (cites June 2026 factsheet)</div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:16px;border-left:4px solid #f59e0b;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#f59e0b;letter-spacing:.8px;margin-bottom:8px;">Why</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;">June 2026 factsheet (v17) was ingested 61 days ago. August 2026 factsheet (v18) with TER 1.05% became available 2 days ago but was never reingested. Retrieval layer still serves stale v17.</div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:16px;border-left:4px solid #059669;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#059669;letter-spacing:.8px;margin-bottom:8px;">Corrected Response</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;">"The current TER is 1.05% per August 2026 approved factsheet." (now uses v18)</div>
+      </div>
+    </div>
+
+    <h4 style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;">Expected Correct Behavior</h4>
+    <div style="font-size:13px;color:var(--muted);line-height:1.65;">
+      Retrieve the latest approved product document from the canonical source registry, use the current attribute value, cite the current source version, and never silently overwrite canonical knowledge from one user complaint. All subsequent responses must cite v18 and serve 1.05%.
+    </div>
+  </div>
+
+  <!-- ══ EXECUTIVE OUTCOME STRIP ══ -->
+  <div style="display:grid;grid-template-columns:repeat(6, 1fr);gap:12px;margin-bottom:28px;font-size:12px;">
+    <div style="background:#fee2e2;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#991b1b;letter-spacing:.6px;margin-bottom:6px;">Before</div>
+      <div style="font-weight:700;color:#991b1b;font-size:14px;">1.20%</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">served from v17</div>
+    </div>
+    <div style="background:#fff7ed;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#c2410c;letter-spacing:.6px;margin-bottom:6px;">Detection</div>
+      <div style="font-weight:700;color:#c2410c;">Active</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">"Outdated" feedback</div>
+    </div>
+    <div style="background:#fef3c7;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#a16207;letter-spacing:.6px;margin-bottom:6px;">Diagnosis</div>
+      <div style="font-weight:700;color:#a16207;">F05</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">stale ingestion</div>
+    </div>
+    <div style="background:#dcfce7;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#15803d;letter-spacing:.6px;margin-bottom:6px;">Fix</div>
+      <div style="font-weight:700;color:#15803d;">Source refresh</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">R1 — auto-safe</div>
+    </div>
+    <div style="background:#d1fae5;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#059669;letter-spacing:.6px;margin-bottom:6px;">Validation</div>
+      <div style="font-weight:700;color:#059669;">Pass</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">blast radius clear</div>
+    </div>
+    <div style="background:#d1fae5;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#059669;letter-spacing:.6px;margin-bottom:6px;">After</div>
+      <div style="font-weight:700;color:#059669;font-size:14px;">1.05%</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">from v18 current</div>
+    </div>
+  </div>
+
+  <!-- ══ KEY METRICS ══ -->
+  <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:12px;margin-bottom:28px;">
+    <div style="background:#fff;border:2px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;">Severity · Confidence</div>
+      <div style="font-size:14px;font-weight:700;color:#e53e3e;">HIGH · 99%</div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;">Impact</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text);">Cost disclosure</div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;">LLM Tokens</div>
+      <div style="font-size:14px;font-weight:700;color:#059669;">0</div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;">Repair Class</div>
+      <div style="font-size:14px;font-weight:700;color:#6c63ff;">R1 Auto-Safe</div>
+    </div>
+  </div>
+
+  <div class="callout warn" style="margin-bottom:24px;">
+    <span class="cl-icon">⚠️</span>
+    <div class="cl-body">
+      <strong>Setup — What Went Wrong</strong><br/>
+      Query: "What is the current TER of Fund Alpha Direct Growth?"<br/>
+      Response: "The expense ratio is 1.20%" (cites June 2026 factsheet).<br/>
+      Actual Current: August 2026 factsheet says 1.05%.<br/>
+      User recognizes the error and submits: 👎 "Outdated" + "Latest factsheet says 1.05%"
+    </div>
+  </div>
+
+  <div class="flow-container">
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#6c63ff,#5a52d5);">1</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">👎 User Submits Active Feedback</span><span class="step-phase phase-rt">HTTP POST 202</span></div>
+        <div class="example-box">
+          <div class="ex-label">Feedback Payload</div>
+          <div class="ex-content">
+            <code>response_id: "resp_alpha_001"</code><br/>
+            <code>rating: 1</code> (thumbs-down)<br/>
+            <code>feedback_type: "outdated"</code><br/>
+            <code>correction: "Current TER is 1.05% per August 2026 factsheet"</code><br/>
+            <code>comment: "The response cited an old factsheet"</code>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why:</strong> System accepts feedback with 202 Accepted and returns immediately. NLP classification runs as BackgroundTask. Response_id links feedback to frozen D0–D3 pack. User never waits for evaluation.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">2</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🏷️ NLP Enrichment: Entity + Correction Extraction</span><span class="step-phase phase-async">BackgroundTask ~30ms</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">What NLP Derives</div>
+          <div class="ex-content">
+            <strong>NER:</strong> entity="Fund Alpha Direct Growth" → canonical_id=INF123FUND<br/>
+            <strong>Attribute:</strong> "TER" (expense ratio)<br/>
+            <strong>Value Mentioned:</strong> 1.05%<br/>
+            <strong>Feedback Intent:</strong> correction (type=outdated + entity + value present)<br/>
+            <strong>Quality Score:</strong> 1.00 (complete: type + entity + correction + comment)
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why:</strong> The extracted value (1.05%) does not become ground truth—it becomes a hypothesis. The system will verify this against the authoritative canonical source independently. Quality=1.00 routes directly to evaluation queue with highest priority.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#f59e0b,#d97706);">3</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">📥 Hourly Orchestration + Evidence Enrichment</span><span class="step-phase phase-async">Hourly Batch</span></div>
+        <div class="example-box yellow">
+          <div class="ex-label yellow">Orchestrator Actions</div>
+          <div class="ex-content">
+            1. Fetch feedback_id from pending queue<br/>
+            2. Join with <code>evidence_packs</code> using <code>response_id</code><br/>
+            3. Retrieve D2: <code>source_version=AMFI_June2026 (v17), source_age=61 days</code><br/>
+            4. Deduplication: semantic embedding of comment → no near-duplicates found<br/>
+            5. Routing: quality_score=1.00, cluster=1 → routes to evaluation lane
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why:</strong> Enrichment with D2 is critical. The orchestrator now sees that D2 captured <code>source_version=v17</code> at delivery time. Canonical registry shows v18 (August 2026) now available. This is already a deterministic F05 (stale source) signal—no LLM needed.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#10b981,#059669);">4</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🚦 Adaptive Router: Stage-by-Stage</span><span class="step-phase phase-async">E1 → STOP-1</span></div>
+        <div class="example-box green">
+          <div class="ex-label green">Router Execution</div>
+          <div class="ex-content">
+            <strong>R0 Applicability:</strong> IN + retail + fund + web → ApplicableControlSet. Mandatory: C02 (source freshness).<br/>
+            <strong>R1 Mandatory Control C02:</strong> source_version_used=v17 (June), canonical_current=v18 (August, 2d old). source_age_days=61 > threshold 30. <span class="verdict fail">C02 FAIL — severity HIGH</span><br/>
+            <strong>R3 Evidence Sufficiency:</strong> D2 has source version tags. Canonical registry has v18 TER=1.05%. ✅<br/>
+            <strong>R4 Active Incident:</strong> No matching incident. Isolated.<br/>
+            <strong>R5 Evaluator Selection:</strong> EV_SRC_001 (source freshness rule). Three-way comparison: response 1.20% ↔ v17 TER 1.20% ↔ v18 TER 1.05% = mismatch proven. <strong>STOP-1 fires.</strong><br/>
+            <strong>Token Budget Used: B0 (zero generative)</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🛑</span><div class="why-text"><strong>Why STOP-1:</strong> Source versions definitively show the response copied a stale value correctly. This is F05 (stale source), not hallucination (F07) or accuracy error. Repair target is ingestion/source layer, not model. No LLM can add value here.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#e53e3e,#c53030);">5</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">⚖️ Adjudication: Multi-Dimension Verdict</span><span class="step-phase phase-async">Zero LLM</span></div>
+        <div class="example-box red">
+          <div class="ex-label red">Verdict Per Dimension</div>
+          <div class="ex-content">
+            <strong>Factuality:</strong> <span class="verdict fail">FAIL</span> — response 1.20% vs canonical 1.05%<br/>
+            <strong>Grounding:</strong> <span class="verdict pass">PASS</span> — response copied v17 correctly; v17 was available at response time<br/>
+            <strong>Source Freshness (C02):</strong> <span class="verdict fail">FAIL</span> — source is 61 days old, threshold 30d<br/>
+            <strong>Compliance:</strong> <span class="verdict fail">FAIL</span> — disclosure requirement mandates current source<br/>
+            <strong>Human Feedback:</strong> <span class="verdict pass">SUPPORTED</span> — user assertion verified<br/><br/>
+            <strong>Overall: SUPPORTED FAILURE · Severity: HIGH · Confidence: 1.0 (deterministic)</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Multi-dimension breakdown matters:</strong> Grounding=PASS shows the model didn't hallucinate. Freshness=FAIL shows the ingestion pipeline failed to update. If we collapsed to one score, we'd misidentify the failure and blame the model instead of the source.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#6c63ff,#5a52d5);">6</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔬 Root Cause Attribution</span><span class="step-phase phase-async">Deterministic</span></div>
+        <div class="example-box">
+          <div class="ex-label">Causal Chain</div>
+          <div class="ex-content">
+            ✅ Was correct knowledge available at response time? YES (v17 had 1.20%)<br/>
+            ✅ Was it retrieved? YES (D2 source=v17)<br/>
+            ✅ Was it selected into context? YES<br/>
+            ✅ Did the model use it correctly? YES (output matched v17)<br/>
+            ❌ BUT: v18 was available 2 days before response. D2 timestamp + ingestion log shows v18 not reingested.<br/><br/>
+            <strong>Root Cause: F05 — Source Freshness · Origin: Data/Ingestion Layer · Severity: HIGH</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why this matters:</strong> The failure is not in generation—the model did its job. The failure is in data freshness. The repair is: re-ingest v18, update vector index, update graph edge, invalidate cache. Engineering should investigate why v18 was not reingested within 2 days.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#10b981,#059669);">7</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🏥 Repair Eligibility & Class Selection</span><span class="step-phase phase-async">R1 — Auto-Safe</span></div>
+        <div class="example-box green">
+          <div class="ex-label green">Repair Decision</div>
+          <div class="ex-content">
+            <strong>Evidence-backed?</strong> YES — v18 exists in canonical registry<br/>
+            <strong>Bounded?</strong> YES — single entity, single attribute (TER)<br/>
+            <strong>Reversible?</strong> YES — can rollback to v17 if needed<br/>
+            <strong>Authorized?</strong> YES — source refresh is auto-authorized<br/>
+            <strong>Compliant?</strong> YES — compliance favors current source<br/><br/>
+            <strong>→ Class R1 (Auto-Safe Mechanical) fires</strong><br/>
+            No human approval needed. Recipe: ReIngest_Source + UpdateVectorIndex + UpdateGraphEdge + InvalidateCache
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why R1:</strong> Source refresh with current authoritative value is low-risk, deterministic, and bounded to one entity. Shadow validation still runs, but no compliance approval gate required.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#f97316,#ef4444);">8</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔧 Shadow Repair Validation</span><span class="step-phase phase-async">~1 hour</span></div>
+        <div class="example-box orange">
+          <div class="ex-label orange">Shadow Execution</div>
+          <div class="ex-content">
+            1. Re-ingest AMFI v18 (TER 1.05%)<br/>
+            2. Re-embed TER chunk into FAISS vector index<br/>
+            3. Update Neo4j edge: INF123FUND → HAS_TER → 1.05% (expire old 1.20%)<br/>
+            4. Invalidate Redis cache entry for INF123FUND<br/>
+            5. Replay 100 recent queries for Fund Alpha Direct Growth<br/>
+            6. Golden regression test: 100 known-good responses remain unchanged ✅<br/>
+            7. Compliance routing check: disclosure still present ✅<br/>
+            <strong>All checks pass → Promotion approved</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why shadow first:</strong> We're changing canonical KG data. Shadow replay verifies no collateral damage before production promotion.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#059669,#047857);">9</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">✅ Controlled Promotion</span><span class="step-phase phase-async">Fast Lane</span></div>
+        <div class="example-box green">
+          <div class="ex-label green">Promotion Output</div>
+          <div class="ex-content">
+            <strong>Change deployed:</strong> AMFI_v18 TER fact promoted to canonical state<br/>
+            <strong>Version bump:</strong> KG_v1402 → KG_v1403<br/>
+            <strong>Audit trail:</strong> INT_alpha_001 → SIG_outdated_001 → EVAL_123 → REP_456 → APR_NONE (auto-approved) → DEP_v1403<br/>
+            <strong>Future responses:</strong> Fund Alpha Direct Growth TER now returns 1.05% from v18<br/>
+            <strong>User remediation:</strong> If same session active, return corrected 1.05% with source/date. Otherwise guarantee all future responses use v18.
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">✅</span><div class="why-text"><strong>Outcome:</strong> User's concern is resolved. System now current. No hallucination diagnosis, no model blame. Ingestion team is alerted to improve source update velocity.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#6c63ff,#5a52d5);">10</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">📊 Post-Heal Monitoring (7-day window)</span><span class="step-phase phase-async">Monitoring</span></div>
+        <div class="example-box">
+          <div class="ex-label">Success Criteria</div>
+          <div class="ex-content">
+            <strong>Recurrence:</strong> 0 outdated 1.20% TER responses in next 10,000 Fund Alpha queries<br/>
+            <strong>Freshness:</strong> 100% of Fund Alpha responses cite v18 or later<br/>
+            <strong>Regression:</strong> No other fund attributes changed; known-good responses unaffected<br/>
+            <strong>Audit Trail:</strong> Patch, approval, and canonical version remain traceable end-to-end
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">✅</span><div class="why-text"><strong>Why monitoring:</strong> The fix is complete only when the failure stops recurring without creating new failures.</div></div>
+      </div></div>
+    </div>
+  </div>
+
+  <h3 class="sub">Use Case 1 — Summary Metrics</h3>
+  <div class="kpi-row">
+    <div class="kpi k1"><div class="kv">0</div><div class="kl">Generative LLM tokens</div></div>
+    <div class="kpi k2"><div class="kv">E1 + STOP-1</div><div class="kl">Evaluation depth + stop rule</div></div>
+    <div class="kpi k3"><div class="kv">F05</div><div class="kl">Failure family diagnosed</div></div>
+    <div class="kpi k4"><div class="kv">R1</div><div class="kl">Repair class (auto-safe)</div></div>
+    <div class="kpi k5"><div class="kv">~1 hour</div><div class="kl">Time to production fix</div></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ USE CASE 2: CITATION MISMATCH ══════════════════════════════════ -->
+<section id="uc2-citation" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">📎</div>
+    <div>
+      <span class="mode-pill active">🟣 Active Feedback</span>
+      <h2>Use Case 2: Citation Does Not Support Statement</h2>
+      <p class="sec-desc">User says the cited document does not support the statement. Root cause: context/citation alignment (F06 + F04). Repair: citation selection/context-engineering logic, no KG write. Deterministic + semantic NLI check.</p>
+    </div>
+  </div>
+
+  <!-- ══ BUSINESS JOURNEY: WHAT - WHY - EXAMPLE OUTCOME ══ -->
+  <div style="background:#f8fafc;border:2px solid #cbd5e1;border-radius:12px;padding:28px;margin-bottom:28px;">
+    <h3 style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:20px;display:flex;align-items:center;gap:8px;">
+      <span>📋 Business Journey</span>
+    </h3>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;">
+      <div style="background:#fff;border-radius:8px;padding:16px;border-left:4px solid #6c63ff;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#6c63ff;letter-spacing:.8px;margin-bottom:8px;">What</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;"><strong>User query:</strong> "Does Scheme X permit feature Y?"<br/><strong>Original response:</strong> "Yes, Scheme X permits feature Y." [cites Document A §4]</div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:16px;border-left:4px solid #f59e0b;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#f59e0b;letter-spacing:.8px;margin-bottom:8px;">Why</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;">Vector retrieval ranked Document A §4 higher due to keyword overlap ("feature", "NFO"). But Document A is about NFO guidelines, not the feature. Document B §9 (rank #9) contains correct support but was not selected into context window.</div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:16px;border-left:4px solid #059669;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#059669;letter-spacing:.8px;margin-bottom:8px;">Corrected Response</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;">Same factual answer, but with correct supporting citation: Document B §9.</div>
+      </div>
+    </div>
+
+    <h4 style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;">Expected Correct Behavior</h4>
+    <div style="font-size:13px;color:var(--muted);line-height:1.65;">
+      Evaluate the claim and citation independently. If the fact is correct but the evidence link is wrong, repair citation/context selection only—do not modify the KG. The claim is true; only the citation anchor is wrong.
+    </div>
+  </div>
+
+  <!-- ══ EXECUTIVE OUTCOME STRIP ══ -->
+  <div style="display:grid;grid-template-columns:repeat(6, 1fr);gap:12px;margin-bottom:28px;font-size:12px;">
+    <div style="background:#fee2e2;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#991b1b;letter-spacing:.6px;margin-bottom:6px;">Before</div>
+      <div style="font-weight:700;color:#991b1b;">Correct fact</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">unsupported citation A §4</div>
+    </div>
+    <div style="background:#fff7ed;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#c2410c;letter-spacing:.6px;margin-bottom:6px;">Detection</div>
+      <div style="font-weight:700;color:#c2410c;">Active</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">citation complaint</div>
+    </div>
+    <div style="background:#fef3c7;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#a16207;letter-spacing:.6px;margin-bottom:6px;">Diagnosis</div>
+      <div style="font-weight:700;color:#a16207;">F06+F04</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">citation + retrieval rank</div>
+    </div>
+    <div style="background:#dcfce7;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#15803d;letter-spacing:.6px;margin-bottom:6px;">Fix</div>
+      <div style="font-weight:700;color:#15803d;">Context rule</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">R2 — shadow tested</div>
+    </div>
+    <div style="background:#d1fae5;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#059669;letter-spacing:.6px;margin-bottom:6px;">Validation</div>
+      <div style="font-weight:700;color:#059669;">Pass</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">entailment ≥0.5</div>
+    </div>
+    <div style="background:#d1fae5;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#059669;letter-spacing:.6px;margin-bottom:6px;">After</div>
+      <div style="font-weight:700;color:#059669;">Correct fact</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">correct citation B §9</div>
+    </div>
+  </div>
+
+  <!-- ══ KEY METRICS ══ -->
+  <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:12px;margin-bottom:28px;">
+    <div style="background:#fff;border:2px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;">Severity · Confidence</div>
+      <div style="font-size:14px;font-weight:700;color:#f59e0b;">MEDIUM/HIGH · 97%</div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;">Impact</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text);">Auditability</div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;">LLM Tokens</div>
+      <div style="font-size:14px;font-weight:700;color:#059669;">0 gen</div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;">Repair Class</div>
+      <div style="font-size:14px;font-weight:700;color:#3b82f6;">R2 + Shadow</div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="cl-icon">⚠️</span>
+    <div class="cl-body">
+      <strong>Setup — What Went Wrong</strong><br/>
+      Query: "Does Scheme X permit feature Y?"<br/>
+      Response: "Yes, Scheme X permits feature Y." [cites Document A §4]<br/>
+      Actual: Document A §4 is about NFO guidelines, not feature Y. Document B §9 contains the correct support.<br/>
+      User submits: 👎 "Citation Problem" + highlights citation + "This document is about NFOs, not that feature"
+    </div>
+  </div>
+
+  <div class="flow-container">
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#6c63ff,#5a52d5);">1</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">👎 User Submits Citation Complaint</span><span class="step-phase phase-rt">HTTP POST 202</span></div>
+        <div class="example-box">
+          <div class="ex-label">Feedback</div>
+          <div class="ex-content">
+            <code>response_id: "resp_scheme_001"</code><br/>
+            <code>feedback_type: "citation"</code><br/>
+            <code>highlighted_citation: "[Document A §4]"</code><br/>
+            <code>comment: "This citation is about NFOs, not the feature you mentioned"</code>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">2</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🚦 Router: E1 Citation Integrity + E3 NLI Entailment</span><span class="step-phase phase-async">E1 + E3 → STOP-4</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Evaluation Steps</div>
+          <div class="ex-content">
+            <strong>E1 — Citation Integrity Check:</strong> Citation ID resolves? YES. Link exists? YES. <span class="verdict pass">PASS</span><br/>
+            <strong>E3 — Entailment Check (NLI):</strong> Does cited chunk support claim "Scheme X permits feature Y"?<br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;Input: (claim, cited_chunk) → NLI model<br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;Output: entailment_score=0.04 (contradiction/neutral)<br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span class="verdict fail">ENTAILMENT FAIL</span><br/>
+            <strong>Evidence Sufficiency:</strong> D2 shows correct chunk C_B_9 was retrieved (rank 9) but not selected.<br/>
+            <strong>→ STOP-4 fires (semantic NLI resolves). Zero generative tokens.</strong>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#10b981,#059669);">3</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">⚖️ Adjudication: Fact vs Citation Separated</span><span class="step-phase phase-async">Zero LLM</span></div>
+        <div class="example-box green">
+          <div class="ex-label green">Per-Dimension Verdict</div>
+          <div class="ex-content">
+            <strong>Factuality:</strong> <span class="verdict pass">PASS</span> — Scheme X does permit feature Y (verified against Document B §9)<br/>
+            <strong>Citation Integrity:</strong> <span class="verdict pass">PASS</span> — citation ID resolves correctly<br/>
+            <strong>Citation Entailment:</strong> <span class="verdict fail">FAIL</span> — cited chunk does not support the claim<br/>
+            <strong>Retrieval Rank:</strong> <span class="verdict fail">FAIL</span> — correct chunk (C_B_9) ranked #9, wrong chunk ranked #3<br/><br/>
+            <strong>Overall: PARTIALLY VALID · Fact correct · Citation wrong · Severity: MEDIUM</strong>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#f59e0b,#d97706);">4</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔬 Root Cause: Retrieval Rank Failure</span><span class="step-phase phase-async">F06 + F04</span></div>
+        <div class="example-box yellow">
+          <div class="ex-label yellow">Attribution</div>
+          <div class="ex-content">
+            <strong>F06 — Citation Entanglement:</strong> Retrieved chunk at rank #3 does not entail the claim<br/>
+            <strong>F04 — Retrieval Rank:</strong> Correct chunk (C_B_9) at rank #9 due to keyword overlap scoring — NFO and feature keywords both present in the retrieved chunk, boosting its rank incorrectly<br/><br/>
+            <strong>Repair target:</strong> Citation selection / context engineering logic, not knowledge graph.<br/>
+            <strong>No canonical KG change needed</strong> — the fact is correct. Only the citation link changed.
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#10b981,#059669);">5</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🏥 Repair Class R2: Auto + Shadow</span><span class="step-phase phase-async">Context Rule Change</span></div>
+        <div class="example-box green">
+          <div class="ex-label green">Repair Decision</div>
+          <div class="ex-content">
+            <strong>Class:</strong> R2 (affects broader scope — multiple regulatory queries)<br/>
+            <strong>Recipe:</strong> Add claim→citation entailment gate (E3 NLI pre-delivery) for REGULATORY_CLAIM intent<br/>
+            <strong>Scope:</strong> Only regulatory/advisory queries; standard fact queries unaffected<br/>
+            <strong>Action:</strong> Deploy context rule v2.5: entailment_score must be ≥0.5; else replace with higher-ranked supporting chunk
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#e53e3e,#c53030);">6</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔧 Shadow Replay & Canary Deploy</span><span class="step-phase phase-async">~2 hours</span></div>
+        <div class="example-box red">
+          <div class="ex-label red">Validation</div>
+          <div class="ex-content">
+            1. Shadow: Replay 50 regulatory queries with entailment gate<br/>
+            2. Result: Citation entailment score avg 0.89 (vs 0.52 before)<br/>
+            3. Latency impact: +12ms (within budget)<br/>
+            4. Compliance routing: unchanged<br/>
+            5. Canary deploy: 5% traffic → monitor for false positives<br/>
+            <strong>All checks pass → Full promotion approved</strong>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#059669,#047857);">7</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">✅ User Remediation & Outcome</span><span class="step-phase phase-async">Same Session</span></div>
+        <div class="example-box green">
+          <div class="ex-label green">Resolution</div>
+          <div class="ex-content">
+            <strong>Message to user:</strong> "The statement remains correct. The previous citation was Document A §4 which is about NFOs. The correct supporting source is Document B §9. Thank you for pointing this out."<br/><br/>
+            <strong>Future responses:</strong> Scheme X + feature Y queries now cite Document B §9 with confidence.
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <h3 class="sub">Use Case 2 — Summary</h3>
+  <div class="kpi-row">
+    <div class="kpi k1"><div class="kv">0</div><div class="kl">Generative LLM tokens</div></div>
+    <div class="kpi k2"><div class="kv">E1 + E3</div><div class="kl">Deterministic + NLI</div></div>
+    <div class="kpi k3"><div class="kv">F06, F04</div><div class="kl">Citation + Retrieval</div></div>
+    <div class="kpi k4"><div class="kv">R2</div><div class="kl">Shadow + Canary</div></div>
+    <div class="kpi k5"><div class="kv">~2 hours</div><div class="kl">To full deployment</div></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ USE CASE 3: NUMERIC MISMATCH (PASSIVE) ══════════════════════════════════ -->
+<section id="uc3-numeric" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">🔵</div>
+    <div>
+      <span class="mode-pill passive">🔵 Passive Feedback</span>
+      <h2>Use Case 3: Numeric Mismatch Detection</h2>
+      <p class="sec-desc">No user complaint. A deterministic numeric consistency check compares the generated value with authoritative evidence at delivery time. Catches silent errors before users notice. Zero LLM tokens, immediate containment.</p>
+    </div>
+  </div>
+
+  <!-- ══ BUSINESS JOURNEY: WHAT - WHY - EXAMPLE OUTCOME ══ -->
+  <div style="background:#f8fafc;border:2px solid #cbd5e1;border-radius:12px;padding:28px;margin-bottom:28px;">
+    <h3 style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:20px;display:flex;align-items:center;gap:8px;">
+      <span>📋 Business Journey</span>
+    </h3>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;">
+      <div style="background:#fff;border-radius:8px;padding:16px;border-left:4px solid #06b6d4;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#06b6d4;letter-spacing:.8px;margin-bottom:8px;">What</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;"><strong>User query:</strong> "What is the 1-year return of Fund Beta?"<br/><strong>Response generated:</strong> "The 1-year return is 12.8%"<br/><strong>User action:</strong> None. Leaves without rating.</div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:16px;border-left:4px solid #f59e0b;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#f59e0b;letter-spacing:.8px;margin-bottom:8px;">Why</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;">Model v3.2 numeric synthesis error. Retrieved chunk clearly states 10.8%, but model generated 12.8% (hallucinated). Silent error—user doesn't know and doesn't complain.</div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:16px;border-left:4px solid #0891b2;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#0891b2;letter-spacing:.8px;margin-bottom:8px;">Corrected Response</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;">"The 1-year return of Fund Beta is 10.8%" (safe fallback shown to user automatically)</div>
+      </div>
+    </div>
+
+    <h4 style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;">Expected Correct Behavior</h4>
+    <div style="font-size:13px;color:var(--muted);line-height:1.65;">
+      Cheap deterministic validation should compare material numbers against cited evidence before and after generation. Prevent unsupported numerical output even when users remain silent. Numeric errors in performance data are regulatory violations under SEBI in India.
+    </div>
+  </div>
+
+  <!-- ══ EXECUTIVE OUTCOME STRIP ══ -->
+  <div style="display:grid;grid-template-columns:repeat(6, 1fr);gap:12px;margin-bottom:28px;font-size:12px;">
+    <div style="background:#fee2e2;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#991b1b;letter-spacing:.6px;margin-bottom:6px;">Before</div>
+      <div style="font-weight:700;color:#991b1b;font-size:14px;">12.8%</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">generated, silently wrong</div>
+    </div>
+    <div style="background:#fff7ed;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#c2410c;letter-spacing:.6px;margin-bottom:6px;">Detection</div>
+      <div style="font-weight:700;color:#c2410c;">Passive</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">numeric intercept</div>
+    </div>
+    <div style="background:#fef3c7;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#a16207;letter-spacing:.6px;margin-bottom:6px;">Diagnosis</div>
+      <div style="font-weight:700;color:#a16207;">F07+F08</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">model synthesis error</div>
+    </div>
+    <div style="background:#dcfce7;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#15803d;letter-spacing:.6px;margin-bottom:6px;">Fix</div>
+      <div style="font-weight:700;color:#15803d;">Safe fallback</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">R1 + model rollback</div>
+    </div>
+    <div style="background:#d1fae5;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#059669;letter-spacing:.6px;margin-bottom:6px;">Validation</div>
+      <div style="font-weight:700;color:#059669;">Pass</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">16 errors caught</div>
+    </div>
+    <div style="background:#d1fae5;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#059669;letter-spacing:.6px;margin-bottom:6px;">After</div>
+      <div style="font-weight:700;color:#059669;font-size:14px;">10.8%</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">served consistently</div>
+    </div>
+  </div>
+
+  <!-- ══ KEY METRICS ══ -->
+  <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:12px;margin-bottom:28px;">
+    <div style="background:#fff;border:2px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;">Severity · Confidence</div>
+      <div style="font-size:14px;font-weight:700;color:#e53e3e;">HIGH · 99.9%</div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;">Impact</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text);">Performance disclosure</div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;">LLM Tokens</div>
+      <div style="font-size:14px;font-weight:700;color:#059669;">0</div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;">Repair Class</div>
+      <div style="font-size:14px;font-weight:700;color:#3b82f6;">R1 + R3</div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="cl-icon">⚠️</span>
+    <div class="cl-body">
+      <strong>Setup — What Went Wrong</strong><br/>
+      Query: "What is the 1-year return of Fund Beta?"<br/>
+      Response Generated: "The 1-year return is 12.8%"<br/>
+      Cited Evidence (D2): Shows 10.8% in the retrieved chunk<br/>
+      User Action: None. User leaves without rating or complaint.<br/>
+      System Action: Passive numeric intercept catches the 12.8% ≠ 10.8% mismatch automatically.
+    </div>
+  </div>
+
+  <div class="flow-container">
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#14b8a6);">1</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">⚡ Pre-Delivery Numeric Intercept (Synchronous)</span><span class="step-phase phase-rt">&lt;40ms</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Automatic Check</div>
+          <div class="ex-content">
+            1. Extract numbers from response: <code>[12.8]</code><br/>
+            2. Extract numbers from D2 chunks: <code>[10.8]</code><br/>
+            3. Compare: 12.8 ∈ chunks? NO<br/>
+            4. Severity: HIGH (performance number, cost-disclosure related)<br/>
+            5. Action: <span class="verdict fail">FAIL C03</span> — response intercepted before delivery
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why pre-delivery:</strong> A wrong performance number delivered to a retail investor is a C03 (Factual Accuracy) violation under SEBI regulations. Catching it deterministically in &lt;40ms—before the user ever sees it—is safer than any post-delivery feedback loop.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">2</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🛡️ Safe Fallback Response</span><span class="step-phase phase-rt">Synchronous</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">What User Sees</div>
+          <div class="ex-content">
+            Original (rejected): "The 1-year return is 12.8%"<br/><br/>
+            Safe Fallback: "The 1-year return of Fund Beta is 10.8% as per the performance report dated [date]. Please refer to the official factsheet for complete performance data."<br/><br/>
+            <strong>User sees correct value. LLM response suppressed. Zero tokens.</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">✅</span><div class="why-text"><strong>Why safe fallback:</strong> The correct value is in the evidence. We don't need the LLM to regenerate—just return the authoritative value with minimal context. Fast, deterministic, safe.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0570bd);">3</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">📊 Passive Signal Created Automatically</span><span class="step-phase phase-async">Auto-emit on delivery</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">SystemObservation</div>
+          <div class="ex-content">
+            <code>signal_id: sig_numeric_001</code><br/>
+            <code>origin: "PASSIVE"</code><br/>
+            <code>interaction_id: int_beta_001</code><br/>
+            <code>signal_type: "numeric_mismatch"</code><br/>
+            <code>disputed_claim: "12.8%"</code><br/>
+            <code>canonical_value: "10.8%"</code><br/>
+            <code>severity: HIGH</code><br/>
+            <code>confidence: 1.0</code> (deterministic)<br/>
+            <code>action_taken: "safe_fallback_delivered"</code>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why automatic:</strong> No user complaint needed. The system detected and corrected the error in real time. The signal is still recorded for post-analysis and pattern detection.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#118ab2);">4</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🚦 Router: E0/E1 Deterministic Path</span><span class="step-phase phase-async">E1 → STOP-1</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Evaluation</div>
+          <div class="ex-content">
+            <strong>E0 Telemetry:</strong> Numeric mismatch flag raised<br/>
+            <strong>E1 Deterministic Rule:</strong> response_number ∉ chunk_numbers → confirmed<br/>
+            <strong>Evidence Check:</strong> canonical value 10.8% present in D2 chunks<br/>
+            <strong>Severity:** HIGH (performance disclosure)<br/>
+            <strong>→ STOP-1</strong> — deterministic proof. No LLM, no semantic escalation needed.<br/>
+            <strong>Token Budget: B0 (zero)</strong>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0d9488);">5</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔬 Root Cause: Generation Layer</span><span class="step-phase phase-async">F07 + F08</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Attribution Chain</div>
+          <div class="ex-content">
+            ✅ Was correct knowledge available? YES (10.8% in chunk)<br/>
+            ✅ Was it retrieved? YES<br/>
+            ✅ Was it in context window? YES<br/>
+            ❌ Did the model use it? NO (output 12.8% instead)<br/><br/>
+            <strong>Root Cause: F07 Hallucination + F08 Numeric Synthesis Error</strong><br/>
+            <strong>Origin: LLM Generation Layer</strong><br/>
+            <strong>Severity: HIGH · Confidence: 1.0 (deterministic)</strong>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#06a394);">6</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">📊 Incident Correlation</span><span class="step-phase phase-async">Async hourly check</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Pattern Detection</div>
+          <div class="ex-content">
+            Hourly check: how many numeric mismatches occurred for performance queries in the last 24h?<br/><br/>
+            Finding: 16 similar numeric mismatches detected. All involved model_version=v3.2. All since deployment 3 days ago.<br/><br/>
+            Correlation keys matched:<br/>
+            • model_version: v3.2 (common)<br/>
+            • failure_type: performance_numeric_synthesis (common)<br/>
+            • temporal: all within 72h window<br/><br/>
+            <strong>→ Incident I-047 created: "Model v3.2 numeric synthesis regression"</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why incident aggregation:</strong> Instead of 16 separate investigations, we create one incident. Subsequent observations attach to I-047 at STOP-3. This converts 16 × 400 tokens into 1 × 400 tokens + 15 × 0 tokens.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0e7490);">7</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🏥 Repair Class R3: Engineering Approval</span><span class="step-phase phase-async">Model Rollback Required</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Decision</div>
+          <div class="ex-content">
+            <strong>Immediate (R1 mitigation):</strong> Numeric binding validator v2 deployed (pre-delivery intercept enabled for all numeric claims). No approval needed—safe fallback protection.<br/><br/>
+            <strong>Structural (R3):</strong> Model v3.2 rollback queued for engineering approval. Root cause investigation required: why does v3.2 synthesize incorrect numeric values? Revert to v3.1 or fix prompt engineering.<br/><br/>
+            <strong>Timeline:</strong> R1 active immediately. R3 rollback in next release cycle (~24h).
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#086d8c);">8</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">✅ Post-Heal Monitoring</span><span class="step-phase phase-async">7-day window</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Verification</div>
+          <div class="ex-content">
+            <strong>Success Criteria:</strong><br/>
+            • Numeric mismatch rate: 0% across next 10,000 performance queries<br/>
+            • Safe fallback activations: &lt;5 per 10,000 (background noise only)<br/>
+            • Model v3.1 post-rollback: numeric synthesis accuracy ≥99%<br/><br/>
+            <strong>Result:</strong> Numeric integrity verified. Incident I-047 closed after 7d clean window.
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <h3 class="sub">Use Case 3 — Summary</h3>
+  <div class="kpi-row">
+    <div class="kpi k1"><div class="kv">0</div><div class="kl">User complaints needed</div></div>
+    <div class="kpi k2"><div class="kv">E1 + STOP-1</div><div class="kl">Deterministic detection</div></div>
+    <div class="kpi k3"><div class="kv">16 silent errors</div><div class="kl">Caught before users noticed</div></div>
+    <div class="kpi k4"><div class="kv">R1 + R3</div><div class="kl">Immediate + structural</div></div>
+    <div class="kpi k5"><div class="kv">~1 hour</div><div class="kl">To incident correlation</div></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ USE CASE 4: SUITABILITY (CONVERGED) ══════════════════════════════════ -->
+<section id="uc4-suitability" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">🔄</div>
+    <div>
+      <span class="mode-pill shared">🔵 🟣 Passive + Active Convergence</span>
+      <h2>Use Case 4: Suitability Compliance Incident</h2>
+      <p class="sec-desc">Passive compliance control flags an unqualified recommendation without suitability evidence. Later, user feedback corroborates concern. Both signals correlate into one compliance incident. Repair: rule-pack/guardrail/router change under governance.</p>
+    </div>
+  </div>
+
+  <!-- ══ BUSINESS JOURNEY: WHAT - WHY - EXAMPLE OUTCOME ══ -->
+  <div style="background:#f8fafc;border:2px solid #cbd5e1;border-radius:12px;padding:28px;margin-bottom:28px;">
+    <h3 style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:20px;display:flex;align-items:center;gap:8px;">
+      <span>📋 Business Journey</span>
+    </h3>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;">
+      <div style="background:#fff;border-radius:8px;padding:16px;border-left:4px solid #06b6d4;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#06b6d4;letter-spacing:.8px;margin-bottom:8px;">What</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;"><strong>User query:</strong> "Which should I buy—Fund X or Fund Y?"<br/><strong>Response:</strong> "You should buy Fund X; it is the best option for you."<br/><strong>Passive alert:</strong> Triggers immediately; later user feedback.</div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:16px;border-left:4px solid #f59e0b;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#f59e0b;letter-spacing:.8px;margin-bottom:8px;">Why</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;">Personalized "you should buy" language requires suitability evidence. System has no user risk profile, investment goals, or regulatory approval for personalized advice. Taxonomy/router gap prevented suitability guardrail from triggering.</div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:16px;border-left:4px solid #0891b2;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#0891b2;letter-spacing:.8px;margin-bottom:8px;">Corrected Response</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;">Neutral comparison shown; suitability process referenced. "To receive a personalized recommendation, please contact a licensed advisor."</div>
+      </div>
+    </div>
+
+    <h4 style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;">Expected Correct Behavior</h4>
+    <div style="font-size:13px;color:var(--muted);line-height:1.65;">
+      Resolve product/user/channel/jurisdiction applicability, enforce approved advice-boundary controls, and avoid personalized recommendation language when suitability evidence is absent. Immediate safe-response override + governance approval for permanent control changes.
+    </div>
+  </div>
+
+  <!-- ══ EXECUTIVE OUTCOME STRIP ══ -->
+  <div style="display:grid;grid-template-columns:repeat(6, 1fr);gap:12px;margin-bottom:28px;font-size:12px;">
+    <div style="background:#fee2e2;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#991b1b;letter-spacing:.6px;margin-bottom:6px;">Before</div>
+      <div style="font-weight:700;color:#991b1b;">Personalized</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">"you should buy" without evidence</div>
+    </div>
+    <div style="background:#fff7ed;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#c2410c;letter-spacing:.6px;margin-bottom:6px;">Detection</div>
+      <div style="font-weight:700;color:#c2410c;">Passive+Active</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">8 passive + 1 active</div>
+    </div>
+    <div style="background:#fef3c7;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#a16207;letter-spacing:.6px;margin-bottom:6px;">Diagnosis</div>
+      <div style="font-weight:700;color:#a16207;">F12</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">compliance gap</div>
+    </div>
+    <div style="background:#dcfce7;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#15803d;letter-spacing:.6px;margin-bottom:6px;">Fix</div>
+      <div style="font-weight:700;color:#15803d;">Taxonomy +router</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">R3+R5 governance</div>
+    </div>
+    <div style="background:#d1fae5;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#059669;letter-spacing:.6px;margin-bottom:6px;">Validation</div>
+      <div style="font-weight:700;color:#059669;">Pass</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">compliance approved</div>
+    </div>
+    <div style="background:#d1fae5;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#059669;letter-spacing:.6px;margin-bottom:6px;">After</div>
+      <div style="font-weight:700;color:#059669;">Neutral</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">+ suitability referral</div>
+    </div>
+  </div>
+
+  <!-- ══ KEY METRICS ══ -->
+  <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:12px;margin-bottom:28px;">
+    <div style="background:#fff;border:2px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;">Severity · Confidence</div>
+      <div style="font-size:14px;font-weight:700;color:#e53e3e;">CRITICAL · 99%</div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;">Impact</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text);">Compliance</div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;">LLM Tokens</div>
+      <div style="font-size:14px;font-weight:700;color:#059669;">0</div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--border);border-radius:8px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;">Repair Class</div>
+      <div style="font-size:14px;font-weight:700;color:#6c63ff;">R3 + R5</div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="cl-icon">⚠️</span>
+    <div class="cl-body">
+      <strong>Setup — What Went Wrong</strong><br/>
+      Query: "Which one should I buy—Fund X or Fund Y?"<br/>
+      Response: "You should buy Fund X; it is the best option for you."<br/>
+      Passive Signal: Advice boundary control flags personalized recommendation language without suitability evidence.<br/>
+      Later Active Signal: User complains "Why are you recommending this? You don't know my risk profile."<br/>
+      Issue: Personalized advice requires compliance approval in India under SEBI regulations when addressing a specific investor.
+    </div>
+  </div>
+
+  <div class="flow-container">
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#14b8a6);">P1</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔵 Passive: Advice Boundary Control Triggers</span><span class="step-phase phase-rt">C08 Mandatory Control</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Automatic Detection</div>
+          <div class="ex-content">
+            At delivery time, deterministic pattern check:<br/>
+            • Pattern: "You should buy [fund]" + "best option for you"<br/>
+            • Evidence check: suitability_evidence_present? NO<br/>
+            • Applicability: interaction_mode=COMPARATIVE, jurisdiction=IN, regulated_entity_role=MF_DISTRIBUTOR<br/>
+            • Mandatory control C08 (Advice Boundary) applies<br/><br/>
+            <strong>Alert: PersonalizedRecommendationWithoutSuitability</strong><br/>
+            <strong>Severity: CRITICAL · Confidence: HIGH</strong>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#14b8a6);">P2</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🛡️ Immediate Containment: Safe Response Override</span><span class="step-phase phase-rt">Pre-Delivery</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">What Happens</div>
+          <div class="ex-content">
+            Original response suppressed. Replaced with approved safe response:<br/><br/>
+            "Here is a neutral comparison of Fund X and Fund Y: [factual attributes]. To receive a personalized recommendation suited to your specific risk profile and investment goals, please contact our licensed financial advisor."<br/><br/>
+            <strong>User sees safe response. No personalized advice given.</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">✅</span><div class="why-text"><strong>Why immediate override:</strong> C08 is a mandatory compliance control. Compliance risk > user frustration. The system blocks the risky response and guides toward compliant alternatives.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#14b8a6);">P3</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">📥 Incident I-COMP-015 Created</span><span class="step-phase phase-async">Async hourly</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Correlation</div>
+          <div class="ex-content">
+            Hourly check: any C08 advice-boundary alerts in the last 24h?<br/>
+            Finding: 8 separate interactions flagged with personalized recommendation language without suitability evidence.<br/><br/>
+            <strong>Incident I-COMP-015 created:</strong><br/>
+            • Root cause: taxonomy/router gap prevents suitability guardrail activation<br/>
+            • Observations: 8 passive signals<br/>
+            • Severity: CRITICAL<br/>
+            • Assigned to: Compliance team + taxonomy engineering
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#6c63ff,#5a52d5);">A1</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🟣 Active: User Feedback Later Corroborates</span><span class="step-phase phase-rt">Same or later session</span></div>
+        <div class="example-box">
+          <div class="ex-label">Active Feedback</div>
+          <div class="ex-content">
+            User clicks 👎<br/>
+            feedback_type: "inappropriate_advice"<br/>
+            comment: "Why are you recommending this? You don't know my risk profile!"<br/><br/>
+            NLP extraction:<br/>
+            • Sentiment: strongly negative<br/>
+            • Quality score: 0.95 (clear complaint, entity present)<br/>
+            • Signal: suitability_evidence_missing confirmed by user
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#6c63ff,#5a52d5);">A2</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔗 Correlation: Active + Passive → Single Incident</span><span class="step-phase phase-async">Signal attachment</span></div>
+        <div class="example-box">
+          <div class="ex-label">Incident Enrichment</div>
+          <div class="ex-content">
+            Feedback ingestion finds: incident I-COMP-015 exists with same causal signature (C08 + suitability gap).<br/><br/>
+            Active signal attached to I-COMP-015:<br/>
+            • Total observations: 8 passive + 1 active = 9 correlated signals<br/>
+            • Confidence boost: HIGH (passive + active alignment)<br/>
+            • Impact: 1 confirmed compliance incident, not 9 separate issues
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why correlation matters:</strong> One passive + one active = one confirmed incident with boosted confidence. 9 separate signals cost 9 × evaluation effort. Correlated into 1 incident, it's investigated once and fixed once.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#10b981,#059669);">6</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">👤 Compliance Team Review & Decision</span><span class="step-phase phase-async">Manual HITL</span></div>
+        <div class="example-box green">
+          <div class="ex-label green">Compliance Workflow</div>
+          <div class="ex-content">
+            Incident routed to: Compliance Ownership (STOP-5 — human required)<br/><br/>
+            Findings:<br/>
+            • 9 interactions with personalized "you should buy" language<br/>
+            • None included risk profile / suitability assessment<br/>
+            • All triggered C08 control but router didn't route to guardrail<br/><br/>
+            Determination:<br/>
+            • Taxonomy/router gap: comparative queries routed as informational, not advisory<br/>
+            • Fix: Update AMC_TAXONOMY to flag "should buy" + personalization markers as advice-mode<br/>
+            • Add forced guardrail trigger for advice-mode before generation
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#f59e0b,#d97706);">7</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🏥 Repair Class R3+R5: Governance Change</span><span class="step-phase phase-async">Governance approval</span></div>
+        <div class="example-box yellow">
+          <div class="ex-label yellow">Repair Bundle</div>
+          <div class="ex-content">
+            <strong>R3 — Taxonomy/Router Fix:</strong><br/>
+            • Update taxonomy node for "comparative_recommendation" → flag as advice-mode if personalization markers present<br/>
+            • Update router: if advice-mode=TRUE and suitability_evidence=FALSE → force C08 guardrail gate before delivery<br/><br/>
+            <strong>R5 — Governance:</strong> Compliance team approval required for each change.<br/>
+            • Approval rationale: SEBI MF Regulations require suitability assessment before personalized advice<br/>
+            • Rollback plan: Revert taxonomy to v1400, router to v2.3<br/>
+            • Compliance owner: SignOff required
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#e53e3e,#c53030);">8</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔧 Shadow Validation + Compliance Regression</span><span class="step-phase phase-async">~2–3 hours</span></div>
+        <div class="example-box red">
+          <div class="ex-label red">Test Results</div>
+          <div class="ex-content">
+            Shadow replay: 1,000 fund-comparison queries<br/>
+            • With guardrail: 98% safe responses, 2% correctly escalated<br/>
+            • Compliance routing: 100% present where required<br/>
+            • False positives: &lt;1% (ordinary fact-only comparisons remain available)<br/><br/>
+            Regression suite: known-good comparative queries unaffected<br/>
+            <strong>All checks pass → Promotion approved</strong>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-num" style="background:linear-gradient(135deg,#059669,#047857);">9</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">✅ Promotion & User Impact</span><span class="step-phase phase-async">Full rollout</span></div>
+        <div class="example-box green">
+          <div class="ex-label green">Resolution</div>
+          <div class="ex-content">
+            Taxonomy v1401 + Router v2.4 deployed<br/><br/>
+            Affected interactions (9 identified):<br/>
+            • All now show safe neutral comparison + suitability process reference<br/>
+            • Compliance controls engaged automatically<br/><br/>
+            Future interactions:<br/>
+            • Fund comparison queries: factual, compliant<br/>
+            • Personalized advice attempts: routed to suitability flow or declined<br/><br/>
+            <strong>Incident I-COMP-015 closed after 7-day clean monitoring.</strong>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <h3 class="sub">Use Case 4 — Summary</h3>
+  <div class="kpi-row">
+    <div class="kpi k1"><div class="kv">8 passive</div><div class="kl">+ 1 active signals</div></div>
+    <div class="kpi k2"><div class="kv">1 incident</div><div class="kl">Consolidated investigation</div></div>
+    <div class="kpi k3"><div class="kv">CRITICAL</div><div class="kl">Compliance severity</div></div>
+    <div class="kpi k4"><div class="kv">R3 + R5</div><div class="kl">Governance approval</div></div>
+    <div class="kpi k5"><div class="kv">~3 hours</div><div class="kl">To shadow + promotion</div></div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════ REPAIR CLASSES ══════════════════════════════════ -->
+<section id="repairs" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">🏥</div>
+    <div>
+      <span class="mode-pill shared">📐 Governance Ladder</span>
+      <h2>Repair Decision Tree: R0–R5 Classes</h2>
+      <p class="sec-desc">Which repair fires depends on scope, risk, authority, and governance requirements. Auto-safe repairs (R1) need no approval. Structural changes (R3+) require engineering or compliance oversight.</p>
+    </div>
+  </div>
+
+  <div class="repair-grid">
+    <div class="repair-card">
+      <span class="rc-id rc-r1">R1 — Auto-Safe Mechanical</span>
+      <div class="rc-name">Low-Risk, Bounded, Reversible</div>
+      <div class="rc-desc">
+        Source exists in registry. Repair replaces stale value with current authoritative value. Bounded to one entity/attribute. Deterministic validation available. No compliance impact.<br/><br/>
+        <strong>Fires for:</strong> Inaccuracy (stale TER), simple source refresh<br/>
+        <strong>Example:</strong> Re-ingest AMFI_v18, update graph edge, invalidate cache. No approval needed.
+      </div>
+    </div>
+    <div class="repair-card">
+      <span class="rc-id rc-r2">R2 — Auto + Shadow Validation</span>
+      <div class="rc-name">Broader Scope, Shadow Verified</div>
+      <div class="rc-desc">
+        Repair is deterministic but affects multiple queries or a pipeline rule change. Shadow validation verifies no collateral damage before promotion.<br/><br/>
+        <strong>Fires for:</strong> Missing Context (reranker rule), Citation (pre-delivery NLI gate)<br/>
+        <strong>Example:</strong> Context rule deployed to shadow, 10 queries replayed, coverage improves 2/7→6/7, promoted.
+      </div>
+    </div>
+    <div class="repair-card">
+      <span class="rc-id rc-r3">R3 — Engineering Approval Required</span>
+      <div class="rc-name">Model/Prompt Change, Wide Blast Radius</div>
+      <div class="rc-desc">
+        Repair changes model behaviour, prompt templates, or system components with broad impact. Shadow validation alone insufficient—human engineering decision required.<br/><br/>
+        <strong>Fires for:</strong> Hallucination (model rollback), prompt engineering changes<br/>
+        <strong>Meanwhile:</strong> R1 or R2 mitigations applied immediately. R3 queued for engineering sprint.
+      </div>
+    </div>
+    <div class="repair-card">
+      <span class="rc-id rc-r3">R4 — Investigative</span>
+      <div class="rc-name">Conflicting Authority, Ambiguous Causation</div>
+      <div class="rc-desc">
+        Conflicting authoritative sources or causal ambiguity. Agent or SME investigation required before repair attempted.<br/><br/>
+        <strong>Example:</strong> AMFI says TER=0.82%, old SID still says 0.79% due to update lag. System cannot auto-resolve which is authoritative for which effective date.
+      </div>
+    </div>
+    <div class="repair-card">
+      <span class="rc-id" style="background:#fce7f3;color:#9d174d;">R5 — Prohibited Auto-Repair</span>
+      <div class="rc-name">Regulatory, Legal, Compliance Decisions</div>
+      <div class="rc-desc">
+        Repair requires interpreting a regulatory rule, suitability standard, or jurisdiction applicability. These are legal/compliance determinations—never autonomous.<br/><br/>
+        <strong>Example:</strong> New SEBI circular ambiguity on disclosure sufficiency. Compliance team interprets and updates rule pack.
+      </div>
+    </div>
+    <div class="repair-card">
+      <span class="rc-id" style="background:#f1f5f9;color:#475569;">R0 — No Repair / Monitor</span>
+      <div class="rc-name">Feedback Invalid, System Correct</div>
+      <div class="rc-desc">
+        Feedback is invalid, duplicated, or system behaved correctly. Complaint is user preference, not a defect.<br/><br/>
+        <strong>Example:</strong> User says "I don't like mutual funds" 10 times. No system fault. Marked R0, preserved for audit trail.
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sub" style="margin-top:36px;">The 5 Distinctions That Prevent Wrong Repairs</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px;">
+    <div style="background:#fff;border:2px solid #c4b5fd;border-radius:10px;padding:20px;">
+      <div style="font-size:18px;margin-bottom:8px;">1️⃣</div>
+      <div style="font-weight:700;color:#6c63ff;margin-bottom:8px;">F07 Hallucination vs F05 Stale Source</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;"><strong>F07:</strong> Model generated 38%, no chunk has it. <strong>F05:</strong> Model correctly copied stale 0.79%, canonical now 0.82%. Confusing these → wrong component blamed.</div>
+    </div>
+    <div style="background:#fff;border:2px solid #67e8f9;border-radius:10px;padding:20px;">
+      <div style="font-size:18px;margin-bottom:8px;">2️⃣</div>
+      <div style="font-weight:700;color:#0891b2;margin-bottom:8px;">F09 Context Drop vs F04 Retrieval Miss</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;"><strong>Drop:</strong> Chunk retrieved (top-K) but dropped at reranking (0.58). <strong>Miss:</strong> Chunk never retrieved. Confusing these → months of re-indexing when fix is one reranker threshold line.</div>
+    </div>
+    <div style="background:#fff;border:2px solid #bbf7d0;border-radius:10px;padding:20px;">
+      <div style="font-size:18px;margin-bottom:8px;">3️⃣</div>
+      <div style="font-weight:700;color:#059669;margin-bottom:8px;">F06 Citation Integrity vs Entailment</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;"><strong>Integrity:</strong> Citation link exists and resolves (E1). <strong>Entailment:</strong> Cited content supports claim (E3 NLI). Treating both as "citation problem" misses entailment failures.</div>
+    </div>
+    <div style="background:#fff;border:2px solid #fde68a;border-radius:10px;padding:20px;">
+      <div style="font-size:18px;margin-bottom:8px;">4️⃣</div>
+      <div style="font-weight:700;color:#d97706;margin-bottom:8px;">Feedback as Claim vs Ground Truth</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;"><strong>Claim:</strong> User asserts "TER should be 0.82%". Verify against canonical. <strong>Truth (wrong):</strong> Directly update with user value—causes feedback poisoning. Verification step is non-negotiable.</div>
+    </div>
+    <div style="background:#fff;border:2px solid #fecdd3;border-radius:10px;padding:20px;">
+      <div style="font-size:18px;margin-bottom:8px;">5️⃣</div>
+      <div style="font-weight:700;color:#e53e3e;margin-bottom:8px;">Isolated Failure vs Incident (Root Shared)</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;"><strong>Isolated:</strong> One response, one user. <strong>Incident:</strong> 200 responses, same signature (model version, source version). Without correlation: 200 LLM evaluations. With STOP-3: 1 evaluation + 199 zero-cost attachments.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ DATA OBJECTS ══════════════════════════════════ -->
+<section id="data-objects" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">📊</div>
+    <div>
+      <span class="mode-pill shared">📐 Core Data Structures</span>
+      <h2>Key Data Objects Carried Through the Flow</h2>
+      <p class="sec-desc">These shapes make the process implementable and auditable. Every data object serves downstream consumers.</p>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr;gap:20px;">
+    <div style="background:#fff;border:2px solid var(--border);border-radius:12px;padding:20px;">
+      <div style="font-weight:700;font-size:16px;color:var(--text);margin-bottom:12px;">InteractionSnapshot / EvidencePack (D0–D3)</div>
+      <div style="background:#f8fafc;border-radius:8px;padding:12px;font-family:'Cascadia Code','Consolas',monospace;font-size:11px;line-height:1.8;">
+interaction_id, query, response, response_hash<br/>
+retrieved_sources[], source_versions[], vector_hits[], graph_paths[], taxonomy_nodes[]<br/>
+selected_context[], citations[], guardrail_decisions[]<br/>
+model_version, prompt_version, config_version<br/>
+latency_ms, token_usage<br/>
+jurisdiction_context, product_context, user_context<br/>
+evidence_rejected[], source_age_days, vector_graph_overlap
+      </div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--border);border-radius:12px;padding:20px;">
+      <div style="font-weight:700;font-size:16px;color:var(--text);margin-bottom:12px;">SignalRecord (Active or Passive)</div>
+      <div style="background:#f8fafc;border-radius:8px;padding:12px;font-family:'Cascadia Code','Consolas',monospace;font-size:11px;line-height:1.8;">
+signal_id, interaction_id<br/>
+origin: "ACTIVE" | "PASSIVE"<br/>
+raw_feedback?, ui_category?, system_observation?, evaluator_version?<br/>
+disputed_claim?, referent_id?<br/>
+category, confidence, evidence_refs[], timestamp
+      </div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--border);border-radius:12px;padding:20px;">
+      <div style="font-weight:700;font-size:16px;color:var(--text);margin-bottom:12px;">EvaluationRecord</div>
+      <div style="background:#f8fafc;border-radius:8px;padding:12px;font-family:'Cascadia Code','Consolas',monospace;font-size:11px;line-height:1.8;">
+interaction_id, signal_ids[]<br/>
+applicability_context, deterministic_results[], gnn_plausibility_score?<br/>
+semantic_results?, llm_evaluation?<br/>
+adjudication: { verdict, confidence, evidence_refs }<br/>
+root_cause, severity, impact, incident_id?, repair_candidate?, lifecycle_status
+      </div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--border);border-radius:12px;padding:20px;">
+      <div style="font-weight:700;font-size:16px;color:var(--text);margin-bottom:12px;">RepairCandidate / CorrectionPatch</div>
+      <div style="background:#f8fafc;border-radius:8px;padding:12px;font-family:'Cascadia Code','Consolas',monospace;font-size:11px;line-height:1.8;">
+repair_id, repair_class, target_scope<br/>
+original_state, proposed_state<br/>
+provenance, confidence, evidence_refs[]<br/>
+ttl?, rollback_plan, required_approvals[]<br/>
+shadow_test_results[], blast_radius, status
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ RESOLUTION MAP ══════════════════════════════════ -->
+<section id="resolution-map" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">🗂️</div>
+    <div>
+      <span class="mode-pill shared">📐 Reference Matrix</span>
+      <h2>Resolution Map — All 4 Use Cases End-to-End</h2>
+      <p class="sec-desc">How every failure type resolves from signal to production change. Single-page reference for the full loop.</p>
+    </div>
+  </div>
+
+  <div style="overflow-x:auto;margin:20px 0;">
+  <table class="cmp-table" style="min-width:1400px;">
+    <thead>
+      <tr>
+        <th class="th-shared" style="min-width:140px;">Use Case</th>
+        <th class="th-shared" style="min-width:90px;">Path</th>
+        <th class="th-shared">Signal Origin</th>
+        <th class="th-shared">Root Cause Family</th>
+        <th class="th-shared">Evaluator(s)</th>
+        <th class="th-shared">Stop Rule</th>
+        <th class="th-shared">LLM Tokens</th>
+        <th class="th-shared">Repair Class</th>
+        <th class="th-shared">Action</th>
+        <th class="th-shared">Time to Fix</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="background:#faf5ff;">
+        <td><strong>UC1: Outdated TER</strong></td>
+        <td><span class="mode-pill active" style="font-size:11px;margin:0;">🟣 Active</span></td>
+        <td style="font-size:12px;">User: 👎 "Outdated" + correction "1.05%"</td>
+        <td style="font-size:12px;"><strong>F05</strong> Source Freshness</td>
+        <td style="font-size:12px;">EV_SRC_001 (source version diff)</td>
+        <td><span class="verdict pass">STOP-1</span></td>
+        <td><strong>0</strong></td>
+        <td><span class="verdict pass" style="background:#dcfce7;color:#166534;">R1</span></td>
+        <td style="font-size:12px;">Re-ingest source, update index, cache invalidate</td>
+        <td style="font-size:12px;">~1 hour</td>
+      </tr>
+      <tr style="background:#f0fdfe;">
+        <td><strong>UC2: Citation Mismatch</strong></td>
+        <td><span class="mode-pill active" style="font-size:11px;margin:0;">🟣 Active</span></td>
+        <td style="font-size:12px;">User: "This citation is about NFOs"</td>
+        <td style="font-size:12px;"><strong>F06, F04</strong> Citation + Retrieval Rank</td>
+        <td style="font-size:12px;">EV_CITE (E1) + NLI (E3)</td>
+        <td><span class="verdict pass">STOP-4</span></td>
+        <td><strong>0</strong></td>
+        <td><span class="verdict partial" style="background:#dbeafe;color:#1e40af;">R2</span></td>
+        <td style="font-size:12px;">Context rule + pre-delivery NLI gate</td>
+        <td style="font-size:12px;">~2 hours</td>
+      </tr>
+      <tr style="background:#faf5ff;">
+        <td><strong>UC3: Numeric Mismatch</strong></td>
+        <td><span class="mode-pill passive" style="font-size:11px;margin:0;">🔵 Passive</span></td>
+        <td style="font-size:12px;">Auto: response 12.8% vs evidence 10.8%</td>
+        <td style="font-size:12px;"><strong>F07, F08</strong> Hallucination + Numeric</td>
+        <td style="font-size:12px;">EV_NUM (deterministic)</td>
+        <td><span class="verdict pass">STOP-1</span></td>
+        <td><strong>0</strong></td>
+        <td><span class="verdict" style="background:#fef9c3;color:#a16207;">R1 + R3</span></td>
+        <td style="font-size:12px;">Immediate: safe fallback. Structural: model rollback</td>
+        <td style="font-size:12px;">R1: &lt;1hr, R3: next cycle</td>
+      </tr>
+      <tr style="background:#f0fdfe;">
+        <td><strong>UC4: Suitability</strong></td>
+        <td><span class="mode-pill shared" style="font-size:11px;margin:0;">🟣+🔵 Converged</span></td>
+        <td style="font-size:12px;">8 passive + 1 active → 1 incident</td>
+        <td style="font-size:12px;"><strong>F12</strong> Compliance Gap (taxonomy/router)</td>
+        <td style="font-size:12px;">E1 pattern + manual HITL</td>
+        <td><span class="verdict" style="background:#fce7f3;color:#9d174d;">STOP-5</span></td>
+        <td><strong>0</strong></td>
+        <td><span class="verdict" style="background:#fce7f3;color:#9d174d;">R3 + R5</span></td>
+        <td style="font-size:12px;">Taxonomy + router change, compliance approval</td>
+        <td style="font-size:12px;">~3 hours</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="sub">Token Economics Summary</h3>
+  <div class="kpi-row">
+    <div class="kpi k1"><div class="kv">0</div><div class="kl">Tokens: UC1 (deterministic)</div></div>
+    <div class="kpi k2"><div class="kv">0</div><div class="kl">Tokens: UC2 (E3 semantic)</div></div>
+    <div class="kpi k3"><div class="kv">0</div><div class="kl">Tokens: UC3 (passive intercept)</div></div>
+    <div class="kpi k4"><div class="kv">0</div><div class="kl">Tokens: UC4 (passive + manual)</div></div>
+    <div class="kpi k5"><div class="kv">~65%</div><div class="kl">Cost reduction vs naive LLM-per-case</div></div>
+  </div>
+
+  <div class="callout success" style="margin-top:28px;">
+    <span class="cl-icon">✅</span>
+    <div class="cl-body">
+      <strong>Architecture Outcome</strong><br/>
+      All four use cases resolve with zero or minimal generative tokens. Deterministic checks catch 3/4. Semantic NLI handles 1/4. No LLM judgment needed. Passive detection covers silent errors before users complain. Incident correlation prevents 100s of duplicate investigations. Repairs are verified in shadow before production. Governance approvals anchor compliance changes. The system becomes cheaper and more reliable as it matures—not more expensive.
+    </div>
+  </div>
+</section>
+
+</main><!-- end .content -->
+
+<footer class="site-footer">
+  <strong>AMC Active & Passive Feedback — Low-Level Execution Design v2.0</strong><br/>
+  Merged: Colleague use-case document v1.3 + Technical detail from AMC_REALTIME_SCENARIOS_LLD.html<br/>
+  4 use cases · EvidencePack D0–D3 · Evaluation Router E0–E5 · Repair Classes R0–R5<br/>
+  <span style="font-size:11px;margin-top:6px;display:block;">Deterministic-first · Evidence-first · LLM-last · Compliance-governed · Self-healing</span>
+</footer>
+
+<script>
+  window.show = function(id, btn) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nb').forEach(b => b.classList.remove('active'));
+    const sec = document.getElementById(id);
+    if (sec) {
+      sec.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    if (btn) btn.classList.add('active');
+  };
+
+  const TAB_ORDER = [
+    'overview','evidence-pack','evaluation-router',
+    'uc1-outdated','uc2-citation','uc3-numeric','uc4-suitability',
+    'repairs','data-objects','resolution-map'
+  ];
+  
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    const active = document.querySelector('.section.active');
+    if (!active) return;
+    const idx = TAB_ORDER.indexOf(active.id);
+    let next = -1;
+    if (e.key === 'ArrowRight' && idx < TAB_ORDER.length - 1) next = idx + 1;
+    if (e.key === 'ArrowLeft' && idx > 0) next = idx - 1;
+    if (next === -1) return;
+    const targetId = TAB_ORDER[next];
+    document.getElementById(targetId) && window.show(targetId, document.querySelector(`.nb[onclick*="${targetId}"]`));
+  });
+
+  document.querySelectorAll('.step-card').forEach(card => {
+    card.addEventListener('mouseenter', () => {
+      const num = card.closest('.step-block')?.querySelector('.step-num');
+      if (num) num.style.transform = 'scale(1.15)';
+    });
+    card.addEventListener('mouseleave', () => {
+      const num = card.closest('.step-block')?.querySelector('.step-num');
+      if (num) num.style.transform = 'scale(1)';
+    });
+  });
+
+  window.addEventListener('load', () => {
+    window.show('overview', document.querySelector('.nb[onclick*="overview"]'));
+  });
+</script>
+
+</body>
+</html>

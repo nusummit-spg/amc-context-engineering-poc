@@ -14,6 +14,13 @@ _driver = None
 
 _WRITE_KEYWORDS = re.compile(
     r"\b(CREATE|MERGE|DELETE|SET|REMOVE|DROP|DETACH|LOAD\s+CSV)\b", re.I)
+# CALL isn't a write keyword by itself, but Community Edition has no RBAC —
+# any authenticated session can invoke admin/procedure calls (e.g.
+# dbms.shutdown(), dbms.killQuery()). Since this validator gates
+# LLM-generated Cypher on an internet-facing app, block CALL outright rather
+# than trying to allow-list safe procedures — the intended feature (simple
+# MATCH...RETURN aggregation) never needs it.
+_CALL_KEYWORD = re.compile(r"\bCALL\b", re.I)
 
 def get_driver():
     global _driver
@@ -166,8 +173,8 @@ def get_subgraph_for_query(query: str, product_names: set | None = None,
                 MATCH path = (n)-[r*1..{hops}]-(m)
                 UNWIND relationships(path) AS rel
                 WITH startNode(rel) AS s, rel, endNode(rel) AS o
-                RETURN DISTINCT s.text AS s, s.label AS s_label, type(rel) AS rel,
-                       rel.confidence AS conf, o.text AS o, o.label AS o_label
+                RETURN DISTINCT s.text AS s, s.label AS s_label, s.product_name AS s_product,
+                       type(rel) AS rel, rel.confidence AS conf, o.text AS o, o.label AS o_label
                 ORDER BY rel.confidence DESC
                 LIMIT $limit
                 """, texts=entity_texts, limit=limit)
@@ -182,8 +189,8 @@ def get_subgraph_for_query(query: str, product_names: set | None = None,
                 """
                 MATCH (n:Entity) WHERE n.product_name IN $products
                 MATCH (n)-[r]-(m)
-                RETURN DISTINCT n.text AS s, n.label AS s_label, type(r) AS rel,
-                       r.confidence AS conf, m.text AS o, m.label AS o_label
+                RETURN DISTINCT n.text AS s, n.label AS s_label, n.product_name AS s_product,
+                       type(r) AS rel, r.confidence AS conf, m.text AS o, m.label AS o_label
                 ORDER BY r.confidence DESC
                 LIMIT $limit
                 """, products=list(product_names), limit=limit)
@@ -200,8 +207,8 @@ def get_subgraph_for_query(query: str, product_names: set | None = None,
                 MATCH (n:Entity)-[r]-(m)
                 WITH n, r, m, COUNT { (n)--() } AS degree
                 ORDER BY degree DESC LIMIT $limit
-                RETURN n.text AS s, n.label AS s_label, type(r) AS rel,
-                       r.confidence AS conf, m.text AS o, m.label AS o_label
+                RETURN n.text AS s, n.label AS s_label, n.product_name AS s_product,
+                       type(r) AS rel, r.confidence AS conf, m.text AS o, m.label AS o_label
                 """, limit=min(limit, 8))
             edges += [dict(r) for r in result]
 
@@ -283,6 +290,9 @@ def run_safe_cypher(cypher: str, params: dict | None = None,
         return None
     if _WRITE_KEYWORDS.search(cypher_stripped):
         print("  [cypher-guard] rejected: write keyword detected", flush=True)
+        return None
+    if _CALL_KEYWORD.search(cypher_stripped):
+        print("  [cypher-guard] rejected: CALL not allowed", flush=True)
         return None
     if not re.search(r"\bLIMIT\s+\d+\b", cypher_stripped, re.I):
         cypher_stripped += f" LIMIT {max_rows}"

@@ -1,0 +1,1672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HITL Feedback Loop Architecture - Presentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Flowchart styles */
+        .flowchart {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 40px 20px;
+            background: white;
+            border-radius: 10px;
+            margin: 30px 0;
+        }
+
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            gap: 15px;
+        }
+
+        .flow-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .flow-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-align: center;
+            min-width: 150px;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .flow-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .flow-box.secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .flow-box.tertiary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .flow-box.quaternary {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .flow-arrow {
+            font-size: 24px;
+            color: #667eea;
+        }
+
+        .flow-arrow-down {
+            font-size: 24px;
+            color: #667eea;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(10px); }
+        }
+
+        /* Cycle diagram */
+        .cycle-diagram {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: 40px auto;
+            aspect-ratio: 1;
+        }
+
+        .cycle-item {
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .cycle-item:nth-child(1) { top: 0%; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .cycle-item:nth-child(2) { top: 15%; right: 15%; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .cycle-item:nth-child(3) { bottom: 15%; right: 15%; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .cycle-item:nth-child(4) { bottom: 15%; left: 15%; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .cycle-item:nth-child(5) { top: 15%; left: 15%; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+
+        .cycle-center {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background: white;
+            border: 3px solid #667eea;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-weight: 700;
+            font-size: 13px;
+            color: #667eea;
+        }
+
+        .cycle-arrow {
+            position: absolute;
+            font-size: 20px;
+            color: #667eea;
+        }
+
+        /* Architecture blocks */
+        .arch-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .arch-block {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .arch-block:hover {
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+            transform: translateY(-5px);
+            border-color: #764ba2;
+        }
+
+        .arch-block h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .arch-block p {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .arch-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        /* Pipeline diagram */
+        .pipeline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 30px 0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .pipeline-step {
+            flex: 1;
+            min-width: 140px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 13px;
+            color: #667eea;
+            transition: all 0.3s;
+        }
+
+        .pipeline-step:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .pipeline-arrow {
+            color: #667eea;
+            font-size: 20px;
+            margin: 0 5px;
+        }
+
+        /* Vertical timeline */
+        .timeline {
+            position: relative;
+            padding: 40px 0;
+            margin: 30px 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 3px;
+            height: 100%;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .timeline-item {
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .timeline-item:nth-child(odd) .timeline-content {
+            margin-left: 0;
+            margin-right: auto;
+            padding-right: 50%;
+        }
+
+        .timeline-item:nth-child(even) .timeline-content {
+            margin-left: auto;
+            margin-right: 0;
+            padding-left: 50%;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            width: 16px;
+            height: 16px;
+            background: #667eea;
+            border: 3px solid white;
+            border-radius: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+        }
+
+        .timeline-content {
+            background: white;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .timeline-item:nth-child(even) .timeline-content {
+            border-left: none;
+            border-right: 4px solid #764ba2;
+        }
+
+        .timeline-content h4 {
+            color: #667eea;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .timeline-content p {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        header p {
+            font-size: 18px;
+            opacity: 0.95;
+            margin-bottom: 5px;
+        }
+
+        header .subtitle {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        /* Navigation */
+        nav {
+            background: #f8f9fa;
+            padding: 20px 40px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        nav button {
+            padding: 10px 20px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        nav button:hover,
+        nav button.active {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Main Content */
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Cards and Boxes */
+        .card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .metric-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .metric-box .number {
+            font-size: 40px;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+
+        .metric-box .label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Diagrams */
+        .diagram-container {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 30px;
+            margin: 30px 0;
+            overflow-x: auto;
+        }
+
+        .diagram {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.8;
+            color: #333;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Lists */
+        .feature-list {
+            list-style: none;
+            padding: 20px 0;
+        }
+
+        .feature-list li {
+            padding: 12px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .feature-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        /* Two Column Layout */
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .two-column-full {
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Tabs within sections */
+        .tabs {
+            margin: 30px 0;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-button {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            background: white;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .tab-button.active {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Code blocks */
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .code-block code {
+            color: #d4d4d4;
+        }
+
+        /* Highlights */
+        .highlight {
+            background: #fff3cd;
+            padding: 20px;
+            border-left: 4px solid #ffc107;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .highlight strong {
+            color: #856404;
+        }
+
+        /* Progress bars */
+        .progress {
+            margin: 20px 0;
+        }
+
+        .progress-label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            height: 30px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        /* Footer */
+        footer {
+            background: #f8f9fa;
+            padding: 30px 40px;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        footer p {
+            margin: 5px 0;
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white;
+            }
+            nav {
+                display: none;
+            }
+            .section {
+                display: block !important;
+                page-break-after: always;
+            }
+        }
+
+        h2 {
+            color: #667eea;
+            font-size: 32px;
+            margin: 30px 0 20px 0;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            color: #764ba2;
+            font-size: 22px;
+            margin: 20px 0 15px 0;
+        }
+
+        h4 {
+            color: #667eea;
+            margin: 15px 0 10px 0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 5px;
+        }
+
+        .badge.success {
+            background: #28a745;
+        }
+
+        .badge.warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .badge.info {
+            background: #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🚀 HITL Feedback Loop Architecture</h1>
+            <p>Human-in-the-Loop with Self-Correcting Knowledge Graphs</p>
+            <p class="subtitle">AMC Context Engineering POC</p>
+        </header>
+
+        <!-- Navigation -->
+        <nav>
+            <button class="nav-btn active" onclick="showSection('overview')">Overview</button>
+            <button class="nav-btn" onclick="showSection('architecture')">Architecture</button>
+            <button class="nav-btn" onclick="showSection('components')">Components</button>
+            <button class="nav-btn" onclick="showSection('flows')">Data Flows</button>
+            <button class="nav-btn" onclick="showSection('optimization')">Optimization</button>
+            <button class="nav-btn" onclick="showSection('database')">Database</button>
+            <button class="nav-btn" onclick="showSection('implementation')">Implementation</button>
+            <button class="nav-btn" onclick="showSection('metrics')">Success Metrics</button>
+        </nav>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Section 1: Overview -->
+            <div id="overview" class="section active">
+                <h2>📋 Project Overview</h2>
+                
+                <div class="two-column">
+                    <div>
+                        <h3>What is HITL?</h3>
+                        <p>A Human-in-the-Loop (HITL) feedback system that captures user feedback on query responses, evaluates it using LLM in batches, and automatically applies high-confidence corrections to the Neo4j knowledge graph.</p>
+                        <ul class="feature-list">
+                            <li>Non-blocking feedback capture (&lt; 100ms)</li>
+                            <li>Scheduled batch evaluation (hourly)</li>
+                            <li>Self-correcting knowledge graph</li>
+                            <li>Complete audit trail</li>
+                            <li>Token-optimized processing</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3>Key Benefits</h3>
+                        <ul class="feature-list">
+                            <li><strong>70-80% token savings</strong> via batch processing</li>
+                            <li>Immediate user feedback confirmation</li>
+                            <li>Graph learns and improves over time</li>
+                            <li>Safe, validated corrections (rollback capable)</li>
+                            <li>Production-ready implementation</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <div class="label">Response Time</div>
+                        <div class="number">&lt;100ms</div>
+                        <div class="label">Feedback recording</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="label">Token Savings</div>
+                        <div class="number">70-80%</div>
+                        <div class="label">vs naive evaluation</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="label">Batch Size</div>
+                        <div class="number">25 items</div>
+                        <div class="label">per LLM call</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="label">Evaluation</div>
+                        <div class="number">Hourly</div>
+                        <div class="label">configurable schedule</div>
+                    </div>
+                </div>
+
+                <div class="highlight">
+                    <strong>🎯 Mission:</strong> Enable users to provide feedback on query results, automatically apply high-confidence corrections to the knowledge graph, and create a self-improving system that learns from user interactions.
+                </div>
+            </div>
+
+            <!-- Section 2: Architecture -->
+            <div id="architecture" class="section">
+                <h2>🏗️ System Architecture</h2>
+
+                <h3>Complete System Flow</h3>
+                <div class="diagram-container">
+                    <div class="diagram">┌─────────────────────────────────────────────────────────────────┐
+│           USER QUERY RESPONSE (Existing System)               │
+│  Query → Retrieval Engine → LLM Synthesis → Response          │
+│                                               ↓                │
+│                              [NEW: Response ID + Cache]        │
+└─────────────────────────────────────────┬───────────────────────┘
+                                          ↓
+┌─────────────────────────────────────────────────────────────────┐
+│            FEEDBACK CAPTURE (NEW - Non-Blocking)               │
+│  User Rating → FastAPI → Validate → Pre-classify → PostgreSQL  │
+│  Response Time: &lt;100ms (NO WAITING for LLM)                  │
+└─────────────────────────┬───────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────────┐
+│     TEMPORARY BUFFER (PostgreSQL - 90 day retention)            │
+│  • feedback_records (raw user input)                            │
+│  • feedback_classifications (pre-classified metadata)           │
+│  • correction_recommendations (LLM output)                      │
+│  • correction_execution_history (audit trail)                   │
+│  • 6 cache tables (1-24h TTL)                                   │
+└─────────────────────────┬───────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  SCHEDULED EVALUATION (Hourly - Async - 6 Steps)               │
+│  1. Prepare batches (25 items/batch)                            │
+│  2. Batch LLM evaluation (1 call per 25 items)                  │
+│  3. Apply high-confidence corrections (&gt;0.85)               │
+│  4. Invalidate affected caches                                  │
+│  5. Record metrics                                              │
+│  6. Cleanup                                                     │
+└─────────────────────────┬───────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────────┐
+│    SELF-CORRECTING GRAPH (Neo4j)                                │
+│  Validates → Executes Transaction → Records Audit Trail        │
+│  Graph learns from feedback, improves over time                 │
+└─────────────────────────────────────────────────────────────────┘</div>
+                </div>
+
+                <h3>Component Interactions</h3>
+                <table>
+                    <tr>
+                        <th>Component</th>
+                        <th>Purpose</th>
+                        <th>Technology</th>
+                    </tr>
+                    <tr>
+                        <td><strong>FastAPI Routes</strong></td>
+                        <td>HTTP endpoints for feedback collection & status</td>
+                        <td>FastAPI, Pydantic</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Feedback Collector</strong></td>
+                        <td>Validate & pre-classify feedback (NER, sentiment)</td>
+                        <td>Python, spaCy</td>
+                    </tr>
+                    <tr>
+                        <td><strong>PostgreSQL Buffer</strong></td>
+                        <td>Temporary feedback storage (90 days)</td>
+                        <td>PostgreSQL, asyncpg</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Feedback Processor</strong></td>
+                        <td>Aggregate, deduplicate, batch feedback</td>
+                        <td>Python, Scikit-learn</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Batch Evaluator</strong></td>
+                        <td>LLM evaluation of batches (25 items/call)</td>
+                        <td>Claude API, asyncio</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Graph Corrector</strong></td>
+                        <td>Apply & validate corrections to Neo4j</td>
+                        <td>Neo4j, Cypher</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Orchestrator</strong></td>
+                        <td>Schedule & coordinate evaluation cycles</td>
+                        <td>APScheduler, asyncio</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cache Manager</strong></td>
+                        <td>Invalidate affected caches after updates</td>
+                        <td>Redis, FAISS</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Section 3: Components -->
+            <div id="components" class="section">
+                <h2>🔧 Core Components</h2>
+
+                <div class="tabs">
+                    <div class="tab-buttons">
+                        <button class="tab-button active" onclick="switchTab(event, 'feedback-collector')">Feedback Collector</button>
+                        <button class="tab-button" onclick="switchTab(event, 'processor')">Processor</button>
+                        <button class="tab-button" onclick="switchTab(event, 'evaluator')">Batch Evaluator</button>
+                        <button class="tab-button" onclick="switchTab(event, 'orchestrator')">Orchestrator</button>
+                        <button class="tab-button" onclick="switchTab(event, 'corrector')">Graph Corrector</button>
+                    </div>
+
+                    <div id="feedback-collector" class="tab-content active">
+                        <h3>Feedback Collector</h3>
+                        <p><strong>Purpose:</strong> Capture and pre-classify user feedback</p>
+                        <h4>Responsibilities:</h4>
+                        <ul class="feature-list">
+                            <li>Validate response_id exists and is not stale (&lt;24h)</li>
+                            <li>Extract entities from feedback text (NER)</li>
+                            <li>Classify sentiment (positive/negative/neutral)</li>
+                            <li>Score intent/relevance (0.0-1.0)</li>
+                            <li>Calculate overall quality score</li>
+                            <li>Store in PostgreSQL immediately (non-blocking)</li>
+                            <li>Return feedback_id to user (&lt;100ms)</li>
+                        </ul>
+                        <h4>Input:</h4>
+                        <div class="code-block"><code>{
+  "response_id": "uuid",
+  "session_id": "uuid",
+  "rating": "positive|negative|neutral",
+  "feedback_type": "entity_incorrect|missing|...",
+  "entity_name": "optional",
+  "notes": "optional text"
+}</code></div>
+                    </div>
+
+                    <div id="processor" class="tab-content">
+                        <h3>Feedback Processor</h3>
+                        <p><strong>Purpose:</strong> Prepare feedback batches for LLM evaluation</p>
+                        <h4>Processing Steps:</h4>
+                        <ol style="margin-left: 20px; margin-top: 10px;">
+                            <li><strong>Fetch:</strong> Get pending feedback from PostgreSQL</li>
+                            <li><strong>Aggregate:</strong> Group by entity/type</li>
+                            <li><strong>Consensus:</strong> Calculate inter-annotator agreement</li>
+                            <li><strong>Deduplicate:</strong> Cluster similar items (40% reduction)</li>
+                            <li><strong>Batch:</strong> Create fixed-size batches (25 items)</li>
+                        </ol>
+                        <h4>Output:</h4>
+                        <p>List of batches, each containing ~25 feedback items with consensus scores and vote counts.</p>
+                    </div>
+
+                    <div id="evaluator" class="tab-content">
+                        <h3>Batch Evaluator</h3>
+                        <p><strong>Purpose:</strong> Evaluate batches using LLM with token optimization</p>
+                        <h4>Key Optimizations:</h4>
+                        <ul class="feature-list">
+                            <li><strong>Shared Context:</strong> Fetch Neo4j graph once per batch (not per item)</li>
+                            <li><strong>Cached Examples:</strong> Few-shot examples cached in Redis</li>
+                            <li><strong>Structured Output:</strong> JSON schema (no explanation text)</li>
+                            <li><strong>Batch Call:</strong> 1 LLM call for 25 items (not 25 calls)</li>
+                            <li><strong>Vote Counts:</strong> Deduplicated items include vote counts</li>
+                        </ul>
+                        <h4>Token Breakdown (25 items):</h4>
+                        <ul style="margin-left: 20px;">
+                            <li>System prompt: 500 tokens</li>
+                            <li>Shared context: 800 tokens (1 fetch, 25 items benefit)</li>
+                            <li>Few-shot examples: 400 tokens (cached)</li>
+                            <li>Item data: 2500 tokens (100 each)</li>
+                            <li>Output: 500 tokens</li>
+                            <li><strong>Total: 4700 tokens = 188 tokens/item</strong></li>
+                            <li><strong>vs Naive: 2100 tokens/item (91% savings!)</strong></li>
+                        </ul>
+                    </div>
+
+                    <div id="orchestrator" class="tab-content">
+                        <h3>Evaluation Orchestrator</h3>
+                        <p><strong>Purpose:</strong> Schedule and coordinate the 6-step evaluation cycle</p>
+                        <h4>6-Step Cycle (Runs Hourly):</h4>
+                        <ol style="margin-left: 20px; margin-top: 10px;">
+                            <li><strong>Prepare Batches:</strong> Aggregate & deduplicate feedback</li>
+                            <li><strong>Evaluate:</strong> LLM batch evaluation</li>
+                            <li><strong>Apply:</strong> Auto-apply high-confidence corrections (&gt;0.85)</li>
+                            <li><strong>Invalidate:</strong> Clear affected caches</li>
+                            <li><strong>Record:</strong> Store metrics and audit trail</li>
+                            <li><strong>Cleanup:</strong> Archive old feedback, delete rejected</li>
+                        </ol>
+                        <h4>Cycle Duration:</h4>
+                        <p>~3 minutes for 500 feedback items (scales linearly)</p>
+                    </div>
+
+                    <div id="corrector" class="tab-content">
+                        <h3>Graph Corrector</h3>
+                        <p><strong>Purpose:</strong> Validate and execute corrections to Neo4j graph</p>
+                        <h4>Validation Checks:</h4>
+                        <ul class="feature-list">
+                            <li>Cypher syntax validation</li>
+                            <li>Dangerous operations detection (DROP, DELETE)</li>
+                            <li>Business logic validation</li>
+                            <li>Entity existence checks</li>
+                            <li>Constraint validation</li>
+                        </ul>
+                        <h4>Execution Process:</h4>
+                        <ol style="margin-left: 20px; margin-top: 10px;">
+                            <li>Capture before state (entity snapshot)</li>
+                            <li>Execute Cypher in transaction (ACID)</li>
+                            <li>Capture after state</li>
+                            <li>Record audit trail</li>
+                            <li>Support rollback via snapshots</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 4: Data Flows -->
+            <div id="flows" class="section">
+                <h2>📊 Data Flows</h2>
+
+                <h3>1. Feedback Collection Flow (Synchronous)</h3>
+                <div class="diagram-container">
+                    <div class="diagram">User Action
+    ↓
+POST /api/feedback
+    ↓
+FeedbackCollector.collect_feedback()
+    ├─ STEP 1: Validate response_id
+    │   └─ Check ResponseMetadataCache
+    │
+    ├─ STEP 2: Pre-classify
+    │   ├─ NER extraction (spaCy)
+    │   ├─ Sentiment classification
+    │   ├─ Intent scoring (0.0-1.0)
+    │   └─ Quality score calculation
+    │
+    ├─ STEP 3: Store in PostgreSQL
+    │   ├─ INSERT feedback_records
+    │   └─ INSERT feedback_classifications
+    │
+    └─ STEP 4: Return response
+        └─ feedback_id, evaluation_status: "pending"
+
+Response: 201 Created (< 100ms total)
+✓ User sees: "Feedback recorded"</div>
+                </div>
+
+                <h3>2. Evaluation Cycle Flow (Asynchronous)</h3>
+                <div class="diagram-container">
+                    <div class="diagram">APScheduler Trigger (hourly)
+    ↓
+EvaluationOrchestrator.run_evaluation_cycle()
+    ├─ STEP 1: Prepare Batches
+    │   ├─ Fetch pending feedback
+    │   ├─ Aggregate by entity/type
+    │   ├─ Calculate consensus scores
+    │   ├─ Deduplicate (40% reduction)
+    │   └─ Create batches (25 items each)
+    │
+    ├─ STEP 2: Batch LLM Evaluation
+    │   FOR each batch:
+    │   ├─ Fetch Neo4j context (ONCE, shared)
+    │   ├─ Build evaluation prompt
+    │   ├─ Call LLM ONCE (25 items)
+    │   └─ Parse recommendations
+    │
+    ├─ STEP 3: Apply Corrections
+    │   FOR each recommendation (confidence ≥ 0.85):
+    │   ├─ Validate correction
+    │   ├─ Execute in Neo4j transaction
+    │   ├─ Capture before/after state
+    │   ├─ Record audit trail
+    │   └─ Update recommendation status
+    │
+    ├─ STEP 4: Invalidate Caches
+    │   ├─ FAISS embeddings
+    │   ├─ Entity resolver
+    │   ├─ Redis (if configured)
+    │   └─ Neo4j traversal
+    │
+    ├─ STEP 5: Record Metrics
+    │   └─ INSERT into feedback_metrics
+    │
+    └─ STEP 6: Cleanup
+        ├─ Archive old feedback (> 90 days)
+        ├─ Delete rejected recommendations
+        └─ Run VACUUM
+
+Duration: ~3 minutes for 500 items
+✓ Graph updated, caches refreshed, metrics recorded</div>
+                </div>
+
+                <h3>3. Self-Correcting Loop</h3>
+                <div class="two-column">
+                    <div class="card">
+                        <h4>Feedback Collected</h4>
+                        <p>User provides rating, entity name, notes on response quality</p>
+                    </div>
+                    <div class="card">
+                        <h4>Pre-classified</h4>
+                        <p>NER extracts entities, sentiment analyzed, quality scored</p>
+                    </div>
+                    <div class="card">
+                        <h4>Buffered</h4>
+                        <p>Stored in PostgreSQL with classification metadata</p>
+                    </div>
+                    <div class="card">
+                        <h4>Aggregated</h4>
+                        <p>Similar feedback grouped, consensus calculated</p>
+                    </div>
+                    <div class="card">
+                        <h4>Evaluated</h4>
+                        <p>LLM generates corrections with confidence scores</p>
+                    </div>
+                    <div class="card">
+                        <h4>Applied</h4>
+                        <p>High-confidence corrections automatically applied to graph</p>
+                    </div>
+                    <div class="card">
+                        <h4>Improved Query</h4>
+                        <p>Next query benefits from corrected graph</p>
+                    </div>
+                    <div class="card">
+                        <h4>Better Results</h4>
+                        <p>Users see higher quality responses, provide better feedback</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 5: Token Optimization -->
+            <div id="optimization" class="section">
+                <h2>💡 Token Optimization Strategies</h2>
+
+                <div class="highlight">
+                    <strong>🎯 Achievement:</strong> 70-80% token savings vs naive per-item LLM evaluation
+                </div>
+
+                <h3>1. Batch Processing</h3>
+                <div class="card">
+                    <h4>Strategy:</h4>
+                    <p>Evaluate 25 items in 1 LLM call instead of 25 separate calls</p>
+                    <h4>Savings:</h4>
+                    <p><strong>~70% reduction</strong> - System prompt amortized across 25 items</p>
+                    <div class="progress">
+                        <div class="progress-label">
+                            <span>Token Reduction: Batch vs Per-Item</span>
+                            <span>70%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 70%;">70%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>2. Semantic Deduplication</h3>
+                <div class="card">
+                    <h4>Strategy:</h4>
+                    <p>Cluster similar feedback items, evaluate representative + vote counts</p>
+                    <h4>Savings:</h4>
+                    <p><strong>~40% reduction</strong> - Avoid evaluating duplicates</p>
+                    <div class="progress">
+                        <div class="progress-label">
+                            <span>Feedback Item Reduction: Deduplication</span>
+                            <span>40%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 40%;">40%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>3. Shared Graph Context</h3>
+                <div class="card">
+                    <h4>Strategy:</h4>
+                    <p>Fetch Neo4j subgraph once per batch, use for all 25 items</p>
+                    <h4>Savings:</h4>
+                    <p><strong>~50% reduction</strong> - Context fetched once, shared 25 ways</p>
+                    <div class="progress">
+                        <div class="progress-label">
+                            <span>Context Token Reduction: Shared vs Per-Item</span>
+                            <span>50%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 50%;">50%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>4. Conditional Routing</h3>
+                <div class="card">
+                    <h4>Strategy:</h4>
+                    <p>Skip LLM evaluation for obvious cases (high/low confidence)</p>
+                    <h4>Routing Logic:</h4>
+                    <ul style="margin-left: 20px;">
+                        <li><strong>High Confidence (&gt;0.9):</strong> Auto-apply immediately</li>
+                        <li><strong>Medium Confidence (0.3-0.9):</strong> Send to LLM</li>
+                        <li><strong>Low Confidence (&lt;0.3):</strong> Reject immediately</li>
+                    </ul>
+                    <h4>Savings:</h4>
+                    <p><strong>~60% of feedback</strong> never reaches LLM</p>
+                    <div class="progress">
+                        <div class="progress-label">
+                            <span>Feedback Reaching LLM: After Conditional Routing</span>
+                            <span>40%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 40%;">40%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>5. Cached Few-Shot Examples</h3>
+                <div class="card">
+                    <h4>Strategy:</h4>
+                    <p>Pre-compute and cache few-shot examples in Redis (not embedded in prompt)</p>
+                    <h4>Savings:</h4>
+                    <p><strong>~15% reduction</strong> - Few-shot examples retrieved once, reused</p>
+                </div>
+
+                <h3>6. Structured Output</h3>
+                <div class="card">
+                    <h4>Strategy:</h4>
+                    <p>Use Claude's structured output feature (JSON schema)</p>
+                    <h4>Benefits:</h4>
+                    <ul style="margin-left: 20px;">
+                        <li>LLM constrained to JSON (no explanation text)</li>
+                        <li>Guaranteed valid output (no parsing errors)</li>
+                        <li>No wasted tokens on verbose explanations</li>
+                    </ul>
+                    <h4>Savings:</h4>
+                    <p><strong>~30% reduction</strong> - Structured output is concise</p>
+                </div>
+
+                <h3>7. Graph Context Caching</h3>
+                <div class="card">
+                    <h4>Strategy:</h4>
+                    <p>Cache Neo4j subgraph snapshots for 1 hour (Redis)</p>
+                    <h4>Savings:</h4>
+                    <p><strong>~20% improvement</strong> - Faster context fetch, enables batching</p>
+                </div>
+
+                <h3>Combined Impact</h3>
+                <table>
+                    <tr>
+                        <th>Scenario</th>
+                        <th>Tokens per Item</th>
+                        <th>Savings</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Naive (per-item evaluation)</strong></td>
+                        <td><strong>2,100 tokens</strong></td>
+                        <td>—</td>
+                    </tr>
+                    <tr>
+                        <td>After batching</td>
+                        <td>630 tokens</td>
+                        <td>70% ↓</td>
+                    </tr>
+                    <tr>
+                        <td>After deduplication</td>
+                        <td>378 tokens</td>
+                        <td>40% ↓</td>
+                    </tr>
+                    <tr>
+                        <td>After context sharing</td>
+                        <td>189 tokens</td>
+                        <td>50% ↓</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Final (with all optimizations)</strong></td>
+                        <td><strong>188 tokens</strong></td>
+                        <td><strong>91% total ↓</strong></td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Section 6: Database -->
+            <div id="database" class="section">
+                <h2>🗄️ Database Schema</h2>
+
+                <h3>PostgreSQL Tables (20 total)</h3>
+
+                <h4>Core Tables (12)</h4>
+                <table>
+                    <tr>
+                        <th>Table</th>
+                        <th>Purpose</th>
+                        <th>Key Fields</th>
+                    </tr>
+                    <tr>
+                        <td><strong>feedback_records</strong></td>
+                        <td>Raw user feedback</td>
+                        <td>response_id, session_id, rating, feedback_type, entity_name, notes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>feedback_classifications</strong></td>
+                        <td>Pre-classified metadata</td>
+                        <td>feedback_id, extracted_entities, sentiment, intent_score, confidence_score</td>
+                    </tr>
+                    <tr>
+                        <td><strong>correction_recommendations</strong></td>
+                        <td>LLM-generated corrections</td>
+                        <td>feedback_id, correction_type, target_entity, cypher_mutation, confidence_score</td>
+                    </tr>
+                    <tr>
+                        <td><strong>correction_execution_history</strong></td>
+                        <td>Audit trail with snapshots</td>
+                        <td>correction_id, action, before_state, after_state, entities_affected</td>
+                    </tr>
+                    <tr>
+                        <td><strong>audit_trail</strong></td>
+                        <td>Compliance logging (immutable)</td>
+                        <td>correction_id, feedback_id, action_type, actor, timestamp</td>
+                    </tr>
+                    <tr>
+                        <td><strong>feedback_metrics</strong></td>
+                        <td>Pre-aggregated daily statistics</td>
+                        <td>date, total_feedback, positive_feedback, avg_confidence, corrections_applied</td>
+                    </tr>
+                    <tr>
+                        <td><strong>entity_correction_log</strong></td>
+                        <td>Entity change tracking</td>
+                        <td>correction_id, entity_name, entity_type, property_changed, old_value, new_value</td>
+                    </tr>
+                    <tr>
+                        <td><strong>feedback_sessions</strong></td>
+                        <td>Session tracking</td>
+                        <td>session_id, user_id, feedback_count, is_active, ended_at</td>
+                    </tr>
+                    <tr>
+                        <td><strong>correction_templates</strong></td>
+                        <td>Reusable correction patterns</td>
+                        <td>name, correction_type, template_cypher, parameters</td>
+                    </tr>
+                    <tr>
+                        <td><strong>evaluation_jobs</strong></td>
+                        <td>Batch evaluation job tracking</td>
+                        <td>batch_id, status, batch_size, started_at, completed_at, recommendations_generated</td>
+                    </tr>
+                    <tr>
+                        <td><strong>feedback_deduplication_cache</strong></td>
+                        <td>1-hour TTL clustering cache</td>
+                        <td>batch_hash, cluster_data, expires_at</td>
+                    </tr>
+                    <tr>
+                        <td><strong>graph_context_snapshot</strong></td>
+                        <td>1-hour TTL graph cache</td>
+                        <td>context_hash, graph_data, expires_at</td>
+                    </tr>
+                </table>
+
+                <h4>Additional Tables</h4>
+                <ul class="feature-list">
+                    <li><strong>llm_evaluation_cache</strong> - 24-hour TTL LLM response cache</li>
+                </ul>
+
+                <h3>Data Flow Through Tables</h3>
+                <div class="diagram-container">
+                    <div class="diagram">feedback_records (raw)
+    ↓ (pre-classify)
+feedback_classifications (metadata)
+    ↓ (LLM evaluation)
+correction_recommendations (proposed)
+    ↓ (validate & approve)
+correction_execution_history (before/after snapshots)
+    ↓ (audit)
+audit_trail (immutable, 1-year retention)
+
+Alongside:
+• entity_correction_log (entity change tracking)
+• evaluation_jobs (cycle tracking)
+• feedback_metrics (daily aggregation)
+• feedback_sessions (session correlation)</div>
+                </div>
+
+                <h3>Indexes & Performance</h3>
+                <p><strong>30+ indexes</strong> optimized for common queries:</p>
+                <ul class="feature-list">
+                    <li>session_id, user_id (feedback correlation)</li>
+                    <li>evaluation_status (pending feedback lookup)</li>
+                    <li>entity_name, feedback_type (entity-specific queries)</li>
+                    <li>confidence_score (high-confidence filters)</li>
+                    <li>created_at (time-range queries)</li>
+                    <li>status (correction status tracking)</li>
+                </ul>
+            </div>
+
+            <!-- Section 7: Implementation -->
+            <div id="implementation" class="section">
+                <h2>🚀 Implementation Details</h2>
+
+                <h3>Technology Stack</h3>
+                <div class="two-column">
+                    <div>
+                        <h4>Backend</h4>
+                        <ul class="feature-list">
+                            <li>FastAPI (HTTP API)</li>
+                            <li>Pydantic (validation)</li>
+                            <li>asyncio (async/await)</li>
+                            <li>asyncpg (PostgreSQL)</li>
+                            <li>APScheduler (task scheduling)</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4>Data & ML</h4>
+                        <ul class="feature-list">
+                            <li>PostgreSQL (feedback buffer)</li>
+                            <li>Neo4j (knowledge graph)</li>
+                            <li>Redis (caching)</li>
+                            <li>Claude API (LLM)</li>
+                            <li>FAISS (embeddings)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Code Structure</h3>
+                <div class="diagram-container">
+                    <div class="diagram">backend/app/
+├── api/routes/
+│   └── feedback.py (404 lines)
+│       ├─ POST /api/feedback
+│       ├─ GET /api/feedback/{id}
+│       ├─ GET /api/feedback/stats/daily
+│       ├─ GET /api/feedback/stats/summary
+│       └─ GET /api/feedback/health
+│
+├── engine/
+│   ├─ feedback_collector.py (380 lines)
+│   │  └─ FeedbackCollector, ResponseMetadataCache
+│   ├─ feedback_processor.py (420 lines)
+│   │  └─ FeedbackProcessor, FeedbackAggregator
+│   ├─ batch_evaluation.py (400 lines)
+│   │  └─ BatchEvaluationEngine (token-optimized)
+│   ├─ graph_corrector.py (520 lines)
+│   │  └─ GraphCorrectionEngine, GraphValidator
+│   ├─ cache_manager.py (380 lines)
+│   │  └─ CacheManager
+│   ├─ postgres_client.py (async wrapper)
+│   │
+│   └─ migrations/
+│       ├─ 001_initial_feedback_schema.sql (600 lines)
+│       └─ migration_runner.py (250 lines)
+│
+└── tasks/
+    └─ evaluation_orchestrator.py (550 lines)
+        ├─ EvaluationOrchestrator
+        ├─ SchedulerManager
+        └─ EvaluationMonitor
+
+Total: ~3,500 lines of production code</div>
+                </div>
+
+                <h3>7 Core Modules</h3>
+                <div class="two-column">
+                    <div class="card">
+                        <h4>1. Feedback Collector</h4>
+                        <p>Receives user feedback, validates, pre-classifies, stores immediately</p>
+                    </div>
+                    <div class="card">
+                        <h4>2. Feedback Processor</h4>
+                        <p>Aggregates feedback, calculates consensus, deduplicates, creates batches</p>
+                    </div>
+                    <div class="card">
+                        <h4>3. Batch Evaluator</h4>
+                        <p>Evaluates batches with LLM, generates corrections with confidence scores</p>
+                    </div>
+                    <div class="card">
+                        <h4>4. Orchestrator</h4>
+                        <p>Schedules and coordinates 6-step evaluation cycles</p>
+                    </div>
+                    <div class="card">
+                        <h4>5. Graph Corrector</h4>
+                        <p>Validates and applies corrections to Neo4j graph</p>
+                    </div>
+                    <div class="card">
+                        <h4>6. Cache Manager</h4>
+                        <p>Invalidates affected caches after graph updates</p>
+                    </div>
+                </div>
+
+                <h3>Integration Checklist</h3>
+                <ul class="feature-list">
+                    <li><strong>FastAPI App:</strong> Initialize PostgreSQL, response cache, feedback collector</li>
+                    <li><strong>Query Endpoint:</strong> Generate response_id, cache metadata, track session_id</li>
+                    <li><strong>Startup:</strong> Initialize PostgreSQL pool, start APScheduler</li>
+                    <li><strong>Shutdown:</strong> Close database pool, stop scheduler</li>
+                    <li><strong>Routes:</strong> Include feedback API routes</li>
+                </ul>
+
+                <h3>Configuration</h3>
+                <div class="code-block"><code># .env
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=feedback
+POSTGRES_PASSWORD=****
+POSTGRES_DB=amc_feedback
+POSTGRES_POOL_SIZE=20
+
+FEEDBACK_ENABLED=true
+FEEDBACK_BATCH_SIZE=25
+FEEDBACK_CONFIDENCE_THRESHOLD=0.85
+FEEDBACK_RETENTION_DAYS=90
+FEEDBACK_SCHEDULE_HOUR=*  # hourly</code></div>
+            </div>
+
+            <!-- Section 8: Success Metrics -->
+            <div id="metrics" class="section">
+                <h2>📈 Success Metrics & KPIs</h2>
+
+                <h3>Operational Metrics</h3>
+                <table>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Target</th>
+                        <th>Purpose</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Feedback Response Time</strong></td>
+                        <td>&lt; 100ms</td>
+                        <td>Immediate user confirmation (non-blocking)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Evaluation Cycle Duration</strong></td>
+                        <td>&lt; 5 minutes</td>
+                        <td>Hourly processing completes quickly</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Token Savings</strong></td>
+                        <td>70-80%</td>
+                        <td>Cost efficiency vs naive evaluation</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Correction Success Rate</strong></td>
+                        <td>&gt; 90%</td>
+                        <td>Applied corrections don't cause errors</td>
+                    </tr>
+                    <tr>
+                        <td><strong>System Uptime</strong></td>
+                        <td>&gt; 99.9%</td>
+                        <td>Reliable operation</td>
+                    </tr>
+                </table>
+
+                <h3>Quality Metrics</h3>
+                <table>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Measurement</th>
+                        <th>Target</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Feedback Quality</strong></td>
+                        <td>Pre-classification confidence score (0.0-1.0)</td>
+                        <td>&gt; 0.7 avg</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Consensus Agreement</strong></td>
+                        <td>Inter-annotator agreement on feedback</td>
+                        <td>&gt; 0.75</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Correction Confidence</strong></td>
+                        <td>LLM confidence scores on proposed corrections</td>
+                        <td>&gt; 0.80 avg</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Positive Feedback %</strong></td>
+                        <td>Ratio of positive to total feedback</td>
+                        <td>&gt; 60%</td>
+                    </tr>
+                </table>
+
+                <h3>Business Metrics</h3>
+                <table>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Tracking</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Feedback Volume/Day</strong></td>
+                        <td>SUM(feedback_records) WHERE created_at > NOW() - 1 day</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Corrections Applied/Day</strong></td>
+                        <td>SUM(correction_execution_history) WHERE timestamp > NOW() - 1 day</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Entities Added/Updated</strong></td>
+                        <td>Count of entities modified by corrections</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Graph Improvement %</strong></td>
+                        <td>Quality of query results after corrections</td>
+                    </tr>
+                    <tr>
+                        <td><strong>LLM Cost Savings</strong></td>
+                        <td>Actual tokens used vs naive baseline</td>
+                    </tr>
+                </table>
+
+                <h3>Dashboard Queries</h3>
+                <div class="card">
+                    <h4>Daily Feedback Summary</h4>
+                    <div class="code-block"><code>SELECT 
+    DATE(created_at) as date,
+    COUNT(*) as total_feedback,
+    SUM(CASE WHEN rating = 'positive' THEN 1 ELSE 0 END) as positive,
+    AVG(confidence_score) as avg_quality
+FROM feedback_records
+GROUP BY DATE(created_at)
+ORDER BY date DESC;</code></div>
+                </div>
+
+                <div class="card">
+                    <h4>Top Entities Being Corrected</h4>
+                    <div class="code-block"><code>SELECT 
+    target_entity,
+    COUNT(*) as correction_count,
+    AVG(confidence_score) as avg_confidence
+FROM correction_recommendations
+WHERE status = 'applied'
+GROUP BY target_entity
+ORDER BY correction_count DESC
+LIMIT 20;</code></div>
+                </div>
+
+                <div class="card">
+                    <h4>Correction Status Overview</h4>
+                    <div class="code-block"><code>SELECT 
+    status,
+    COUNT(*) as count,
+    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 2) as percentage
+FROM correction_recommendations
+GROUP BY status;</code></div>
+                </div>
+
+                <h3>Monthly Review Checklist</h3>
+                <ul class="feature-list">
+                    <li>Feedback volume trends (is adoption increasing?)</li>
+                    <li>Feedback quality distribution (are users providing good feedback?)</li>
+                    <li>Correction success rate (are applied corrections working?)</li>
+                    <li>Top corrected entities (what's changing most?)</li>
+                    <li>Token usage vs baseline (cost efficiency)</li>
+                    <li>System performance (cycle duration, uptime)</li>
+                    <li>User satisfaction (if tracked via surveys)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <p><strong>HITL Feedback Loop Architecture</strong></p>
+            <p>Human-in-the-Loop with Self-Correcting Knowledge Graphs</p>
+            <p>AMC Context Engineering POC | Production Ready</p>
+            <p style="margin-top: 20px; font-size: 12px; color: #999;">
+                Last Updated: January 19, 2024 | Version 1.0
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        function showSection(sectionId) {
+            // Hide all sections
+            const sections = document.querySelectorAll('.section');
+            sections.forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // Show selected section
+            const selectedSection = document.getElementById(sectionId);
+            if (selectedSection) {
+                selectedSection.classList.add('active');
+                selectedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            // Update nav buttons
+            const navBtns = document.querySelectorAll('.nav-btn');
+            navBtns.forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        function switchTab(event, tabId) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Show selected tab
+            const selectedTab = document.getElementById(tabId);
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+            }
+
+            // Update tab buttons
+            const tabButtons = event.target.parentElement.querySelectorAll('.tab-button');
+            tabButtons.forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') {
+                const navBtns = document.querySelectorAll('.nav-btn');
+                const activeBtn = document.querySelector('.nav-btn.active');
+                const currentIndex = Array.from(navBtns).indexOf(activeBtn);
+                const nextBtn = navBtns[(currentIndex + 1) % navBtns.length];
+                if (nextBtn) nextBtn.click();
+            } else if (e.key === 'ArrowLeft') {
+                const navBtns = document.querySelectorAll('.nav-btn');
+                const activeBtn = document.querySelector('.nav-btn.active');
+                const currentIndex = Array.from(navBtns).indexOf(activeBtn);
+                const prevBtn = navBtns[(currentIndex - 1 + navBtns.length) % navBtns.length];
+                if (prevBtn) prevBtn.click();
+            }
+        });
+
+        // Print functionality
+        window.print = function() {
+            window.print();
+        };
+    </script>
+</body>
+</html>

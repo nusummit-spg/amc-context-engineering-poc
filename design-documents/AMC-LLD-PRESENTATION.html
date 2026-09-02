@@ -1,0 +1,1234 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AMC Feedback, Evaluation &amp; Self-Healing RAG â€” Low Level Design</title>
+<style>
+/* â”€â”€ Reset â”€â”€ */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { font-size:15px; scroll-behavior:smooth; }
+
+/* â”€â”€ Palette â€” muted, professional â”€â”€ */
+:root {
+  --ink:        #1a1f2e;   /* near-black for headings */
+  --body:       #374151;   /* body text */
+  --muted:      #6b7280;   /* secondary text */
+  --subtle:     #9ca3af;   /* labels, captions */
+  --rule:       #e5e7eb;   /* borders, dividers */
+  --surface:    #f9fafb;   /* card / table bg */
+  --page:       #ffffff;
+
+  --accent:     #2563eb;   /* primary accent â€” restrained blue */
+  --accent-lt:  #dbeafe;   /* light accent fill */
+  --accent-dk:  #1e40af;   /* dark accent */
+
+  --green:      #166534;   --green-lt:  #dcfce7;
+  --amber:      #92400e;   --amber-lt:  #fef3c7;
+  --red:        #991b1b;   --red-lt:    #fee2e2;
+  --slate:      #334155;   --slate-lt:  #f1f5f9;
+
+  --code-bg:    #1e2433;   /* dark code block */
+  --code-text:  #d1d5db;
+
+  --nav-w:      240px;
+  --hdr-h:      56px;
+}
+
+/* â”€â”€ Base â”€â”€ */
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--page);
+  color: var(--body);
+  line-height: 1.65;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* â”€â”€ Top bar â”€â”€ */
+.topbar {
+  position: fixed; top:0; left:0; right:0; height: var(--hdr-h);
+  background: var(--ink);
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 28px;
+  z-index: 300;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.topbar-title { color: #fff; font-size: 15px; font-weight: 600; white-space: nowrap; }
+.topbar-subtitle { color: rgba(255,255,255,.45); font-size: 12px; margin-top:1px; }
+.topbar-sep { width:1px; height:24px; background:rgba(255,255,255,.15); }
+.topbar-nav { display:flex; gap:4px; margin-left:auto; }
+.topbar-btn {
+  color: rgba(255,255,255,.55); font-size:12px; font-weight:500;
+  padding:5px 11px; border-radius:4px; cursor:pointer;
+  border: none; background: transparent;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.topbar-btn:hover { background:rgba(255,255,255,.1); color:#fff; }
+.topbar-btn.active { background:var(--accent); color:#fff; }
+
+/* â”€â”€ Left nav â”€â”€ */
+.sidenav {
+  position: fixed; top: var(--hdr-h); left:0; bottom:0;
+  width: var(--nav-w);
+  background: var(--surface);
+  border-right: 1px solid var(--rule);
+  overflow-y: auto;
+  z-index: 200;
+  padding: 20px 0 40px;
+}
+.nav-group { margin-bottom:4px; }
+.nav-group-label {
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--subtle);
+  padding: 14px 20px 5px;
+}
+.nav-item {
+  display: block; padding: 7px 20px;
+  font-size: 13px; color: var(--muted);
+  cursor: pointer; border-left: 3px solid transparent;
+  transition: all .15s; border: none; background: none;
+  width: 100%; text-align: left;
+}
+.nav-item:hover { color: var(--accent); background: var(--accent-lt); }
+.nav-item.active {
+  color: var(--accent-dk); font-weight: 600;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-lt);
+}
+
+/* â”€â”€ Main content â”€â”€ */
+.main {
+  margin-left: var(--nav-w);
+  margin-top: var(--hdr-h);
+  flex: 1;
+}
+.section { display: none; padding: 44px 52px 80px; max-width: 1100px; }
+.section.active { display: block; animation: fadein .25s ease; }
+@keyframes fadein { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+/* â”€â”€ Typography â”€â”€ */
+.page-title {
+  font-size: 26px; font-weight: 700; color: var(--ink);
+  margin-bottom: 6px; letter-spacing: -.3px;
+}
+.page-subtitle {
+  font-size: 14px; color: var(--muted);
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 32px;
+}
+h2 {
+  font-size: 17px; font-weight: 700; color: var(--ink);
+  margin: 36px 0 12px;
+  display: flex; align-items: center; gap: 10px;
+}
+h2::after { content:''; flex:1; height:1px; background:var(--rule); }
+h3 { font-size: 14px; font-weight: 700; color: var(--slate); margin: 24px 0 8px; }
+p  { font-size: 14px; color: var(--body); margin-bottom: 12px; line-height: 1.7; }
+strong { color: var(--ink); }
+
+/* â”€â”€ Callouts â”€â”€ */
+.callout {
+  border-radius: 6px; padding: 14px 18px;
+  margin: 16px 0; display: flex; gap: 12px;
+  font-size: 13px; line-height: 1.6;
+}
+.callout-icon { font-size: 16px; flex-shrink:0; margin-top:1px; }
+.callout-body strong { display:block; margin-bottom:3px; font-size:13px; }
+.callout.info   { background:#eff6ff; border-left:3px solid var(--accent); color:#1e3a5f; }
+.callout.warn   { background:var(--amber-lt); border-left:3px solid #d97706; color:var(--amber); }
+.callout.ok     { background:var(--green-lt); border-left:3px solid #16a34a; color:var(--green); }
+.callout.danger { background:var(--red-lt); border-left:3px solid #dc2626; color:var(--red); }
+.callout.neutral{ background:var(--slate-lt); border-left:3px solid #94a3b8; color:var(--slate); }
+
+/* â”€â”€ Flow diagrams â”€â”€ */
+.flow-col {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0; margin: 24px auto; max-width: 480px;
+}
+.fnode {
+  width: 100%; padding: 13px 20px; border-radius: 6px;
+  font-size: 13px; font-weight: 600; text-align: center;
+  border: 1px solid var(--rule); background: var(--surface);
+  color: var(--ink); transition: background .15s;
+}
+.fnode:hover { background: var(--accent-lt); border-color: var(--accent); }
+.fnode.accent { background: var(--accent); color:#fff; border-color:var(--accent-dk); }
+.fnode.dark   { background: var(--ink); color:#fff; border-color:var(--ink); }
+.fnode.green  { background: var(--green-lt); color:var(--green); border-color:#86efac; }
+.fnode.amber  { background: var(--amber-lt); color:var(--amber); border-color:#fcd34d; }
+.fnode.red    { background: var(--red-lt); color:var(--red); border-color:#fca5a5; }
+.fnode-sub { font-size:11px; font-weight:400; opacity:.75; margin-top:2px; }
+.farrow {
+  display:flex; flex-direction:column; align-items:center; height:32px;
+}
+.farrow::before { content:''; width:1px; flex:1; background:var(--rule); }
+.farrow::after  { content:'â–¼'; font-size:10px; color:var(--muted); }
+.farrow-label { font-size:11px; color:var(--muted); margin: 2px 0; }
+
+/* â”€â”€ Horizontal pipeline â”€â”€ */
+.pipe { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin:14px 0; }
+.pstep {
+  border: 1px solid var(--rule); border-radius:5px; background:var(--surface);
+  padding:9px 13px; font-size:12px; font-weight:600; color:var(--ink);
+  transition: all .15s; cursor:default; text-align:center;
+}
+.pstep:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-lt); }
+.pstep.accent { background:var(--accent); color:#fff; border-color:var(--accent-dk); }
+.pstep.green  { background:var(--green-lt); color:var(--green); border-color:#86efac; }
+.pstep.amber  { background:var(--amber-lt); color:var(--amber); border-color:#fcd34d; }
+.parrow { font-size:14px; color:var(--muted); font-weight:700; }
+
+/* â”€â”€ Three-lane diagram â”€â”€ */
+.lanes {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  border: 1px solid var(--rule); border-radius: 8px;
+  overflow: hidden; margin: 24px 0;
+}
+.lane-hdr {
+  padding: 12px 16px; font-size: 12px; font-weight: 700;
+  letter-spacing:.04em; text-align:center;
+  border-bottom: 1px solid var(--rule);
+}
+.lane-hdr.lh-a { background:var(--ink); color:#fff; }
+.lane-hdr.lh-b { background:var(--slate); color:#fff; }
+.lane-hdr.lh-c { background:#334155; color:#fff; }
+.lane-body { padding:14px; display:flex; flex-direction:column; gap:6px;
+  background:var(--surface); border-right:1px solid var(--rule); min-height:480px; }
+.lane:last-child .lane-body { border-right:none; }
+.lbox {
+  border-radius:5px; padding:10px 12px; font-size:11px; font-weight:600;
+  text-align:center; border:1px solid var(--rule);
+  background:#fff; color:var(--ink); line-height:1.4;
+}
+.lbox.la { border-color:#bfdbfe; background:var(--accent-lt); color:var(--accent-dk); }
+.lbox.lb { border-color:#d1d5db; background:#f3f4f6; color:var(--slate); }
+.lbox.lc { border-color:#bbf7d0; background:var(--green-lt); color:var(--green); }
+.lbox.ld { border-color:#fde68a; background:var(--amber-lt); color:var(--amber); }
+.lbox sub { font-size:10px; font-weight:400; display:block; margin-top:2px; opacity:.75; }
+.l-arrow { text-align:center; font-size:11px; color:var(--subtle); padding:2px 0; }
+.lane-note {
+  grid-column:1/-1; background:var(--slate-lt); padding:10px 20px;
+  font-size:12px; color:var(--muted); text-align:center;
+  border-top:1px solid var(--rule);
+}
+@media(max-width:800px){ .lanes { grid-template-columns:1fr; } }
+
+/* â”€â”€ Tables â”€â”€ */
+.tbl {
+  width:100%; border-collapse:collapse; font-size:13px;
+  margin:16px 0; border:1px solid var(--rule); border-radius:6px;
+  overflow:hidden;
+}
+.tbl th {
+  background:var(--ink); color:#fff; padding:11px 14px;
+  text-align:left; font-weight:600; font-size:12px; letter-spacing:.03em;
+}
+.tbl td { padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top; }
+.tbl tr:last-child td { border-bottom:none; }
+.tbl tr:hover td { background:var(--accent-lt); }
+.tbl .hl td { background:var(--slate-lt); font-weight:600; }
+.tbl code { font-family:'Consolas','Menlo',monospace; font-size:12px;
+  background:var(--slate-lt); padding:1px 5px; border-radius:3px; }
+
+/* â”€â”€ Code blocks â”€â”€ */
+pre {
+  background:var(--code-bg); color:var(--code-text);
+  border-radius:6px; padding:18px 20px; overflow-x:auto;
+  font-size:12px; font-family:'Consolas','Menlo',monospace;
+  line-height:1.55; margin:14px 0;
+  border:1px solid #2d3748;
+}
+code { font-family:'Consolas','Menlo',monospace; font-size:12px; }
+:not(pre) > code {
+  background:var(--slate-lt); color:var(--slate);
+  padding:1px 5px; border-radius:3px;
+}
+
+/* â”€â”€ Metric cards â”€â”€ */
+.kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin:18px 0 28px; }
+.kpi {
+  border:1px solid var(--rule); border-radius:8px; padding:18px 16px;
+  text-align:center; background:var(--surface);
+}
+.kpi .val { font-size:28px; font-weight:800; color:var(--ink); line-height:1; }
+.kpi .lbl { font-size:11px; color:var(--muted); margin-top:5px; }
+.kpi.accent .val { color:var(--accent); }
+.kpi.green .val  { color:var(--green); }
+.kpi.amber .val  { color:var(--amber); }
+.kpi.red .val    { color:var(--red); }
+
+/* â”€â”€ Grid cards â”€â”€ */
+.card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; margin:16px 0; }
+.card {
+  border:1px solid var(--rule); border-radius:8px; padding:18px;
+  background:var(--surface); transition:border-color .15s, box-shadow .15s;
+}
+.card:hover { border-color:var(--accent); box-shadow:0 2px 12px rgba(37,99,235,.1); }
+.card-id { font-size:10px; font-weight:700; letter-spacing:.08em; color:var(--subtle); text-transform:uppercase; }
+.card h4 { font-size:13px; font-weight:700; color:var(--ink); margin:4px 0 6px; }
+.card p  { font-size:12px; color:var(--muted); line-height:1.5; margin:0; }
+.card .tag {
+  display:inline-block; margin-top:9px; padding:2px 8px; border-radius:10px;
+  font-size:10px; font-weight:700;
+  background:var(--accent-lt); color:var(--accent-dk);
+}
+.card .tag.green { background:var(--green-lt); color:var(--green); }
+.card .tag.amber { background:var(--amber-lt); color:var(--amber); }
+.card .tag.red   { background:var(--red-lt); color:var(--red); }
+
+/* â”€â”€ Decision ladder â”€â”€ */
+.ladder { border:1px solid var(--rule); border-radius:6px; overflow:hidden; margin:16px 0; }
+.rung {
+  display:grid; grid-template-columns:70px 1fr 110px 80px;
+  align-items:center; padding:11px 14px;
+  border-bottom:1px solid var(--rule); font-size:13px; gap:12px;
+}
+.rung:last-child { border:none; }
+.rung:hover { background:var(--accent-lt); }
+.rung.hdr { background:var(--ink); color:#fff; font-weight:700; font-size:11px; letter-spacing:.04em; }
+.rung.hdr:hover { background:var(--ink); }
+.lvl { border-radius:12px; padding:3px 10px; font-size:11px; font-weight:700; color:#fff; text-align:center; }
+.lv0 { background:#6b7280; } .lv1 { background:#2563eb; } .lv2 { background:#0891b2; }
+.lv3 { background:#d97706; } .lv4 { background:#ea580c; } .lv5 { background:#dc2626; }
+.tok-0 { color:var(--green); font-weight:700; font-size:12px; }
+.tok-s { color:var(--amber); font-weight:700; font-size:12px; }
+.tok-h { color:var(--red); font-weight:700; font-size:12px; }
+
+/* â”€â”€ Check list â”€â”€ */
+.chk { list-style:none; }
+.chk li { padding:8px 0 8px 26px; position:relative; font-size:13px; border-bottom:1px solid var(--rule); }
+.chk li:last-child { border:none; }
+.chk li::before { content:'âœ“'; position:absolute; left:0; color:var(--accent); font-weight:700; }
+.chk li.no::before { content:'âœ—'; color:var(--red); }
+
+/* â”€â”€ Footer â”€â”€ */
+.footer {
+  margin-left:var(--nav-w); background:var(--surface);
+  border-top:1px solid var(--rule); padding:16px 52px;
+  font-size:12px; color:var(--muted);
+}
+
+/* â”€â”€ Print / PDF â”€â”€ */
+@media print {
+  .topbar,.sidenav { display:none; }
+  .main { margin:0; }
+  .section { display:block !important; page-break-after:always; padding:24px; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div>
+    <div class="topbar-title">AMC Feedback, Evaluation &amp; Self-Healing RAG</div>
+    <div class="topbar-subtitle">Low Level Design â€” Architecture Reference v1.0</div>
+  </div>
+  <div class="topbar-sep"></div>
+  <nav class="topbar-nav" id="topnav">
+    <button class="topbar-btn active" onclick="nav('s1',this)">Overview</button>
+    <button class="topbar-btn" onclick="nav('s2',this)">End-to-End Flow</button>
+    <button class="topbar-btn" onclick="nav('s3',this)">Evidence Capture</button>
+    <button class="topbar-btn" onclick="nav('s4',this)">Feedback Pipeline</button>
+    <button class="topbar-btn" onclick="nav('s5',this)">Evaluation Router</button>
+    <button class="topbar-btn" onclick="nav('s6',this)">Failure Taxonomy</button>
+    <button class="topbar-btn" onclick="nav('s7',this)">Self-Healing RAG</button>
+    <button class="topbar-btn" onclick="nav('s8',this)">Compliance Plane</button>
+    <button class="topbar-btn" onclick="nav('s9',this)">Data Models</button>
+  </nav>
+</header>
+
+<!-- SIDE NAV -->
+<aside class="sidenav" id="sidenav">
+  <div class="nav-group">
+    <div class="nav-group-label">Document Map</div>
+    <button class="nav-item active" onclick="nav('s1',this)">LLD-00/01 â€” Overview &amp; Index</button>
+    <button class="nav-item" onclick="nav('s2',this)">End-to-End Flow</button>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Core Pipeline</div>
+    <button class="nav-item" onclick="nav('s3',this)">LLD-02 â€” Evidence Capture</button>
+    <button class="nav-item" onclick="nav('s4',this)">LLD-03 â€” Feedback Pipeline</button>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Evaluation &amp; Diagnosis</div>
+    <button class="nav-item" onclick="nav('s5',this)">LLD-04 â€” Evaluation Router</button>
+    <button class="nav-item" onclick="nav('s6',this)">LLD-05 â€” Failure Taxonomy</button>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Healing &amp; Governance</div>
+    <button class="nav-item" onclick="nav('s7',this)">LLD-06 â€” Self-Healing RAG</button>
+    <button class="nav-item" onclick="nav('s8',this)">LLD-07 â€” Compliance Plane</button>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Reference</div>
+    <button class="nav-item" onclick="nav('s9',this)">LLD-08 â€” Data Models</button>
+  </div>
+</aside>
+
+<main class="main">
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• S1: OVERVIEW -->
+<section id="s1" class="section active">
+  <p class="page-title">System Overview &amp; Design Principles</p>
+  <p class="page-subtitle">
+    A governed feedback and self-healing system for an AMC chatbot. User corrections improve the knowledge graph
+    automatically, within strictly bounded safety constraints and full compliance traceability.
+    The core objective: <strong>deterministic-first, evidence-first, compliance-aware, LLM-last.</strong>
+  </p>
+
+  <div class="callout info">
+    <span class="callout-icon">â„¹</span>
+    <div class="callout-body">
+      <strong>How to read this document</strong>
+      Each section maps to a numbered LLD markdown file in <code>/design-documents/</code>.
+      This presentation provides visual diagrams and explanations; the markdown files contain the full schemas,
+      code patterns, and decision records. For compliance review start at Section 8. For data engineers start at Section 9.
+    </div>
+  </div>
+
+  <h2>Design Philosophy</h2>
+  <p>
+    The system is structured around a prevention-first cascade. Cheap deterministic checks run first and stop escalation
+    as soon as a decisive result is available. LLM evaluation is reserved for genuine semantic ambiguity â€” targeting
+    2â€“5% of traffic at maturity. Every novel failure that is understood gets converted into a deterministic rule,
+    making the system progressively cheaper to operate over time.
+  </p>
+
+  <div class="flow-col" style="max-width:400px;">
+    <div class="fnode dark">PREVENT â€” deterministic invariants</div>
+    <div class="farrow"></div>
+    <div class="fnode">DETECT â€” telemetry + rules (zero tokens)</div>
+    <div class="farrow"></div>
+    <div class="fnode">CONTAIN â€” evidence sufficiency check</div>
+    <div class="farrow"></div>
+    <div class="fnode">DIAGNOSE â€” structured attribution</div>
+    <div class="farrow"></div>
+    <div class="fnode amber">REPAIR ELIGIBILITY â€” R0â€“R5 classes</div>
+    <div class="farrow"></div>
+    <div class="fnode">VALIDATE â€” shadow environment first</div>
+    <div class="farrow"></div>
+    <div class="fnode green">CONTROLLED HEAL â€” atomic promotion</div>
+  </div>
+
+  <h2>Four Control Planes</h2>
+  <p>
+    The system separates four cooperating concerns. Collapsing any two planes introduces compliance risk,
+    makes auditing unreliable, or creates retrieval contamination. The separation is architectural â€” enforced by
+    separate Neo4j instances, separate access policies, and separate versioning.
+  </p>
+
+  <div class="card-grid" style="grid-template-columns:1fr 1fr;">
+    <div class="card">
+      <div class="card-id">Plane 1</div>
+      <h4>Domain / Taxonomy Intelligence</h4>
+      <p>Answers: <em>what does this interaction mean?</em><br/>
+      Entity Â· Intent Â· Claim type Â· Evidence class Â· Failure class Â· Repair semantics.<br/>
+      Must not contain mutable legal obligations.</p>
+      <span class="tag">AMC Taxonomy T1â€“T10</span>
+    </div>
+    <div class="card">
+      <div class="card-id">Plane 2</div>
+      <h4>Compliance Control Plane</h4>
+      <p>Answers: <em>which approved controls apply and what must happen?</em><br/>
+      Jurisdiction Policy Packs, C01â€“C14 control families, ApplicabilityResolver.<br/>
+      Approved by compliance team, not engineering.</p>
+      <span class="tag">Policy Packs Â· C01â€“C14</span>
+    </div>
+    <div class="card">
+      <div class="card-id">Plane 3</div>
+      <h4>Evaluation Control Plane</h4>
+      <p>Answers: <em>what needs evaluation, how deeply, at what cost?</em><br/>
+      Adaptive Router, E0â€“E5 ladder, EvidencePack D0â€“D3, Evaluator Registry,
+      Failure-Attribution Graph.</p>
+      <span class="tag">Adaptive Router Â· E0â€“E5</span>
+    </div>
+    <div class="card">
+      <div class="card-id">Plane 4</div>
+      <h4>RAG Health / Repair Plane</h4>
+      <p>Answers: <em>is there a knowledge defect and can it be safely repaired?</em><br/>
+      RAG Health Engine, Vector + Graph Health, Repair Recipe Registry R001â€“R012,
+      Shadow Environment, Promotion Gate.</p>
+      <span class="tag">R001â€“R012 Â· Shadow Env</span>
+    </div>
+  </div>
+
+  <h2>Key Numbers</h2>
+  <div class="kpi-row">
+    <div class="kpi accent"><div class="val">&lt;100ms</div><div class="lbl">Feedback confirmation</div></div>
+    <div class="kpi accent"><div class="val">70â€“80%</div><div class="lbl">Token savings headline</div></div>
+    <div class="kpi green"><div class="val">E0â€“E5</div><div class="lbl">Evaluation depth levels</div></div>
+    <div class="kpi green"><div class="val">&gt;80%</div><div class="lbl">Deterministic resolution target</div></div>
+    <div class="kpi amber"><div class="val">R0â€“R5</div><div class="lbl">Repair eligibility classes</div></div>
+    <div class="kpi red"><div class="val">0</div><div class="lbl">Mandatory control bypasses (hard)</div></div>
+  </div>
+
+  <h2>Hard Limits â€” Non-Negotiable</h2>
+  <table class="tbl">
+    <tr><th>Constraint</th><th>Value</th><th>Reason</th></tr>
+    <tr><td>Feedback HTTP response latency</td><td>&lt;100 ms p99</td><td>User experience</td></tr>
+    <tr><td>Synchronous critical intercept</td><td>&lt;40 ms</td><td>Response latency budget</td></tr>
+    <tr><td>Mandatory compliance control bypass</td><td>0 (hard)</td><td>Regulatory requirement</td></tr>
+    <tr><td>Human-required decision bypass</td><td>0 (hard)</td><td>Regulatory requirement</td></tr>
+    <tr><td>Raw feedback â†’ direct graph write</td><td>Prohibited</td><td>Feedback poisoning prevention</td></tr>
+    <tr><td>Failure graph â†’ answer retrieval</td><td>Prohibited</td><td>Serving contamination prevention</td></tr>
+    <tr><td>Autonomous regulatory interpretation</td><td>Prohibited</td><td>Compliance boundary (R5)</td></tr>
+  </table>
+</section>
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• S2: E2E FLOW -->
+<section id="s2" class="section">
+  <p class="page-title">End-to-End Architecture Flow</p>
+  <p class="page-subtitle">
+    Three cooperating lanes run in parallel. Lane A is synchronous and user-facing (completes before response delivery).
+    Lanes B and C are fully asynchronous and have no impact on response latency.
+    The hand-off between lanes is the Event Bus â€” a decoupling point that prevents evaluation work from blocking users.
+  </p>
+
+  <div class="callout neutral">
+    <span class="callout-icon">âš¡</span>
+    <div class="callout-body">
+      <strong>Latency split</strong>
+      Lane A (evidence capture + critical intercept) adds &lt;40ms to the synchronous response path.
+      Everything in Lanes B and C happens after the user has already received their answer.
+    </div>
+  </div>
+
+  <div class="lanes">
+    <div class="lane">
+      <div class="lane-hdr lh-a">LANE A â€” Runtime &amp; Evidence Capture<br/><span style="font-weight:400;font-size:10px;">Synchronous Â· &lt;40ms added latency</span></div>
+      <div class="lane-body">
+        <div class="lbox la">ðŸ‘¤ User Query</div><div class="l-arrow">â†“</div>
+        <div class="lbox la">AMC Chatbot â€” retrieval + LLM</div><div class="l-arrow">â†“</div>
+        <div class="lbox la">D0 Response Finalization<sub>response_id Â· model version Â· hash</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox la">D1 Interaction Snapshot<sub>query Â· intent Â· entities Â· config</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox la">D2 EvidencePack â€” frozen<sub>retrievals Â· graph paths Â· source versions</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox la">D3 Applicability Context<sub>jurisdiction Â· role Â· product Â· channel</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox ld">âš  Critical Deterministic Intercept<sub>hard compliance checks Â· PII Â· disclosures</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox lc">âœ“ Deliver Response to User</div><div class="l-arrow">â†“</div>
+        <div class="lbox lb">ðŸ“¡ Event Bus (async handoff)</div>
+      </div>
+    </div>
+    <div class="lane">
+      <div class="lane-hdr lh-b">LANE B â€” Evaluation &amp; Diagnosis<br/><span style="font-weight:400;font-size:10px;">Asynchronous Â· hourly batch</span></div>
+      <div class="lane-body">
+        <div class="lbox lb">ðŸ‘ HITL Feedback Capture<sub>&lt;100ms Â· pre-classify Â· PostgreSQL</sub></div><div class="l-arrow">â†“ + auto signals</div>
+        <div class="lbox lb">Evidence Sufficiency Check<sub>SUFFICIENT / PARTIAL / MISSING / CONFLICTING</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox lb">ðŸ§­ Adaptive Evaluation Router<sub>9 stages Â· mandatory controls Â· incident match</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox lb">E0â€“E5 Evaluation Ladder<sub>rules â†’ semantic â†’ bounded LLM â†’ human</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox lb">Adjudication<sub>factuality Â· citation Â· completeness Â· compliance</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox lb">Failure Observation<sub>F01â€“F14 Â· 4-axis classification</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox lb">Failure-Attribution Graph<sub>separate from Context Graph</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox lb">Incident Correlation<sub>avoid duplicate diagnosis cost</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox lb">Root Cause Attribution<sub>deterministic-first</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox ld">Repair Eligibility R0â€“R5</div>
+      </div>
+    </div>
+    <div class="lane">
+      <div class="lane-hdr lh-c">LANE C â€” Repair, Validation &amp; Governance<br/><span style="font-weight:400;font-size:10px;">Asynchronous Â· triggered by Lane B</span></div>
+      <div class="lane-body">
+        <div class="lbox lc">RAG Health Engine<sub>source manifest diff Â· health checks</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox lb">Vector DB Health<sub>completeness Â· freshness Â· hash integrity</sub></div><div class="l-arrow">â†“ +</div>
+        <div class="lbox lb">Context Graph Health<sub>edges Â· provenance Â· temporal validity</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox lc">Repair Recipe Registry<sub>R001â€“R012 deterministic recipes</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox ld">ðŸ§ª Shadow Repair / Quarantine<sub>never heal production directly</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox ld">Regression + Compliance +<br/>Blast-Radius Validation</div><div class="l-arrow">â†“ FAIL â†’ rollback</div>
+        <div class="lbox lb">Approval Gate<sub>R1/R2 auto Â· R3+ governance</sub></div><div class="l-arrow">â†“</div>
+        <div class="lbox lc">ðŸš€ Atomic Promotion</div><div class="l-arrow">â†“</div>
+        <div class="lbox lc">Post-Change Monitoring<sub>24h/7d window Â· recurrence check</sub></div>
+      </div>
+    </div>
+    <div class="lane-note">
+      Lane A is synchronous (&lt;40ms added) &nbsp;Â·&nbsp; Lanes B &amp; C are asynchronous (hourly, ~3 min for 500 items) &nbsp;Â·&nbsp;
+      Mandatory compliance controls in Lane A always run before delivery
+    </div>
+  </div>
+
+  <h2>Synchronous vs Asynchronous Boundary</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <div class="callout danger">
+      <span class="callout-icon">âš¡</span>
+      <div class="callout-body">
+        <strong>Synchronous critical intercept â€” blocks delivery</strong>
+        Wrong canonical entity ID Â· deterministic numeric mismatch Â·
+        missing mandatory disclosure Â· known prohibited wording Â·
+        hard product/jurisdiction restriction Â· PII violation by rule Â·
+        required authoritative source absent.
+        These are cheap checks (&lt;5ms each) â€” no LLM involved.
+      </div>
+    </div>
+    <div class="callout ok">
+      <span class="callout-icon">ðŸ”„</span>
+      <div class="callout-body">
+        <strong>Asynchronous evaluation â€” zero user latency impact</strong>
+        Semantic completeness Â· citation entailment Â· implicit advice boundary Â·
+        tone nuance Â· complex factual synthesis Â· root-cause attribution Â·
+        incident correlation Â· RAG health investigation Â· batch LLM evaluation Â·
+        shadow repair execution.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• S3: EVIDENCE CAPTURE -->
+<section id="s3" class="section">
+  <p class="page-title">LLD-02 â€” Evidence Capture (EvidencePack D0â€“D3)</p>
+  <p class="page-subtitle">
+    The EvidencePack is the foundational object of the entire evaluation system. It is created immediately after every
+    response is generated and freezes the exact information state at that moment. Without this freeze,
+    an evaluator running hours later would assess the response against updated sources â€” making root-cause attribution
+    unreliable and audit trails meaningless.
+  </p>
+
+  <div class="callout info">
+    <span class="callout-icon">â„¹</span>
+    <div class="callout-body">
+      <strong>The governing rule</strong>
+      A later change to NAV, TER, source document, graph edge, policy, model version, or taxonomy
+      must not retroactively alter the evidence used to judge an older response.
+      All evaluators reference the same frozen D2 object â€” never re-fetch independently.
+    </div>
+  </div>
+
+  <h2>Four Components</h2>
+
+  <div class="card-grid" style="grid-template-columns:1fr 1fr;">
+    <div class="card">
+      <div class="card-id">D0</div>
+      <h4>Response Finalization</h4>
+      <p>Captured the moment the response is assembled. Records identity and operational metadata:
+      <code>response_id</code> (UUID), model version, prompt template version, citations shown,
+      disclosures shown, guardrail state, token counts, tool failures, truncation flag,
+      and <code>response_hash</code> (SHA-256 for tamper evidence).</p>
+      <p><strong>LLM involvement: None.</strong> All fields are operational facts.</p>
+      <span class="tag green">~1ms Â· deterministic</span>
+    </div>
+    <div class="card">
+      <div class="card-id">D1</div>
+      <h4>Interaction Snapshot</h4>
+      <p>Freezes the system state at response time: raw query, normalised query, detected intent node,
+      intent confidence, extracted entities with canonical IDs, retrieval configuration,
+      taxonomy version, guardrail version, model version, and session metadata
+      (user role, channel, jurisdiction, product context).</p>
+      <p><strong>PII note:</strong> <code>user_query</code> is subject to redaction after 30 days.</p>
+      <span class="tag green">~1ms Â· deterministic</span>
+    </div>
+    <div class="card">
+      <div class="card-id">D2</div>
+      <h4>Evidence / Provenance Pack</h4>
+      <p>The full evidence record reused by all evaluators.
+      Contains: vector retrieval (chunk IDs, scores, ranks), graph retrieval (nodes, edges, paths),
+      BM25 retrieval, AMC taxonomy matches, context engineering decisions (what was selected vs rejected),
+      source provenance (authority tier, effective dates, content hashes), and 12 pre-computed
+      deterministic metrics.</p>
+      <span class="tag amber">~5ms Â· no I/O Â· cached in Redis 1h</span>
+    </div>
+    <div class="card">
+      <div class="card-id">D3</div>
+      <h4>Applicability Context</h4>
+      <p>Resolves the compliance control universe that applies:
+      jurisdiction, regulated entity role, product type, channel, customer segment,
+      interaction mode, advice flag, policy pack ID and version, applicable control set ID,
+      and lists of mandatory controls and hard-block controls.
+      Resolution is deterministic (rule/lookup) except when the communication type itself is
+      ambiguous â€” then a semantic classifier determines <code>advice_flag</code>.</p>
+      <span class="tag green">~1ms Â· policy pack cache</span>
+    </div>
+  </div>
+
+  <h2>D2 Derived Metrics â€” Pre-computed at Zero LLM Cost</h2>
+  <p>These 12 metrics are computed when D2 is created, not when evaluation runs. They drive E1 deterministic
+  checks without any additional retrieval or LLM invocation.</p>
+  <table class="tbl">
+    <tr><th>Metric</th><th>Type</th><th>Drives</th></tr>
+    <tr><td><code>citation_coverage</code></td><td>float</td><td>C07 disclosure check</td></tr>
+    <tr><td><code>source_age_days</code></td><td>int</td><td>C02 freshness check</td></tr>
+    <tr><td><code>source_version_mismatch</code></td><td>bool</td><td>R009 recipe trigger</td></tr>
+    <tr><td><code>missing_expected_source</code></td><td>bool</td><td>F04 retrieval miss diagnosis</td></tr>
+    <tr><td><code>context_truncation</code></td><td>bool</td><td>F03 context failure signal</td></tr>
+    <tr><td><code>vector_graph_overlap</code></td><td>float</td><td>Retrieval health baseline</td></tr>
+    <tr><td><code>duplicate_source_ratio</code></td><td>float</td><td>R003 dedup trigger</td></tr>
+    <tr><td><code>highest_source_authority</code></td><td>enum</td><td>Evidence hierarchy check</td></tr>
+    <tr><td><code>retrieval_score_min/mean</code></td><td>float</td><td>Retrieval confidence signal</td></tr>
+    <tr><td><code>bm25_vector_overlap</code></td><td>float</td><td>R006 retrieval regression signal</td></tr>
+  </table>
+
+  <h2>Evidence Sufficiency States</h2>
+  <p>Before any evaluator runs, the evidence state is classified. This prevents evaluators from manufacturing
+  verdicts when evidence is incomplete â€” a critical safeguard against LLM hallucination of facts it cannot verify.</p>
+  <div class="pipe" style="flex-wrap:wrap;gap:8px;margin:16px 0;">
+    <div class="pstep green">SUFFICIENT â†’ proceed</div>
+    <div class="pstep">PARTIAL â†’ attempt recovery</div>
+    <div class="pstep amber">MISSING â†’ recover or UNVERIFIABLE</div>
+    <div class="pstep amber">CONFLICTING â†’ conflict workflow</div>
+    <div class="pstep red">TEMPORALLY_UNCERTAIN â†’ temporal resolution</div>
+  </div>
+  <div class="callout warn">
+    <span class="callout-icon">âš </span>
+    <div class="callout-body">
+      <strong>UNVERIFIABLE is a valid and correct verdict.</strong>
+      Never invoke an LLM to manufacture a verdict when required evidence is absent.
+      <code>UNVERIFIABLE</code> stops evaluation and logs the reason â€” it does not trigger a repair.
+    </div>
+  </div>
+
+  <h2>Temporal Claim Model</h2>
+  <p>
+    All AMC facts must carry temporal validity. A fact without a <code>valid_from</code> / <code>valid_to</code>
+    range cannot be deterministically checked for freshness, making F05 (source/freshness) failures invisible.
+  </p>
+  <pre>Claim {
+  entity_id:     "scheme_axis_bluechip_direct_growth"
+  attribute:     "TER"
+  value:         "0.82%"
+  valid_from:    2026-04-01
+  valid_to:      null              # currently active
+  observed_at:   2026-08-19T10:23:44Z
+  source_id:     "sebi_disclosure_2026_q2"
+  source_version:"v18"
+  confidence:    1.0
+}</pre>
+  <p>
+    This model enables: deterministic freshness checking, source version reconciliation,
+    historical replay (what did the system know at time T?), and precise numeric validation â€” all at zero LLM cost.
+  </p>
+</section>
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• S4: FEEDBACK PIPELINE -->
+<section id="s4" class="section">
+  <p class="page-title">LLD-03 â€” Feedback Pipeline</p>
+  <p class="page-subtitle">
+    Two fully decoupled phases. The synchronous phase confirms feedback to the user in under 100ms and does
+    no LLM work. The asynchronous phase runs hourly, evaluates batches of 25 items per LLM call,
+    and applies only high-confidence corrections. PostgreSQL is the hand-off point between the phases.
+  </p>
+
+  <h2>Phase 1 â€” Synchronous Capture (&lt;100ms)</h2>
+  <div class="flow-col">
+    <div class="fnode accent">POST /api/feedback { response_id, rating, comment }</div>
+    <div class="farrow"></div>
+    <div class="fnode">Validate: response_id exists Â· rating in [1â€“5] Â· comment â‰¤ 2000 chars</div>
+    <div class="farrow"></div>
+    <div class="fnode">Async INSERT â†’ PostgreSQL feedback_records (status='pending')</div>
+    <div class="farrow"></div>
+    <div class="fnode">Schedule BackgroundTask: NER (spaCy) + Sentiment (VADER) + Intent (rule-based)</div>
+    <div class="farrow-label">BackgroundTask fires after HTTP response is sent</div>
+    <div class="fnode green">Return HTTP 202 { feedback_id, status: "recorded" }</div>
+  </div>
+  <div class="callout ok">
+    <span class="callout-icon">âœ“</span>
+    <div class="callout-body">
+      <strong>No LLM anywhere in the synchronous path.</strong>
+      NER uses spaCy (local, ~20ms). Sentiment uses VADER (local, ~5ms). Intent uses rule-based
+      classification (~2ms). Total synchronous cost: &lt;10ms excluding network.
+    </div>
+  </div>
+
+  <h2>Quality Score â€” Pre-LLM Routing</h2>
+  <p>
+    A heuristic score computed during pre-classification. It routes feedback before any LLM work is scheduled,
+    reducing LLM-evaluated items by approximately 60%.
+  </p>
+  <table class="tbl">
+    <tr><th>Condition</th><th>Score Modifier</th><th>Routing</th></tr>
+    <tr><td>Comment present and &gt; 20 chars</td><td>+0.20</td><td rowspan="4">Pending â†’ LLM evaluation queue</td></tr>
+    <tr><td>Named entity extracted from comment</td><td>+0.15</td></tr>
+    <tr><td>Correction text present</td><td>+0.10</td></tr>
+    <tr><td>Highlighted span present</td><td>+0.10</td></tr>
+    <tr><td>Extreme rating with no comment (noise signal)</td><td>âˆ’0.30</td><td>May route to auto-reject</td></tr>
+    <tr><td>Positive sentiment for a 1-star rating (contradiction)</td><td>âˆ’0.40</td><td>Likely spam</td></tr>
+    <tr class="hl"><td>Score â‰¥ 0.95 AND cluster_size â‰¥ 3</td><td>â€”</td><td><strong>Auto-apply â€” bypasses LLM</strong></td></tr>
+    <tr class="hl"><td>Score &lt; 0.20</td><td>â€”</td><td><strong>Auto-reject â€” bypasses LLM</strong></td></tr>
+  </table>
+
+  <h2>Phase 2 â€” Asynchronous Evaluation Cycle (hourly)</h2>
+  <div class="pipe">
+    <div class="pstep accent">1. Fetch pending</div><div class="parrow">â†’</div>
+    <div class="pstep">2. Enrich with EvidencePack</div><div class="parrow">â†’</div>
+    <div class="pstep">3. Aggregate by entity/type</div><div class="parrow">â†’</div>
+    <div class="pstep">4. Semantic dedup<br/><small>âˆ’40% items</small></div><div class="parrow">â†’</div>
+    <div class="pstep">5. Quality route<br/><small>60% skip LLM</small></div><div class="parrow">â†’</div>
+    <div class="pstep accent">6. Batch LLM eval<br/><small>25 items/call</small></div><div class="parrow">â†’</div>
+    <div class="pstep">7. Apply corrections<br/><small>confidence â‰¥ 0.85</small></div><div class="parrow">â†’</div>
+    <div class="pstep green">8. Invalidate caches</div>
+  </div>
+
+  <h2>Token Optimisation â€” Seven Compounding Strategies</h2>
+  <p>Applied sequentially, these strategies reduce the per-item token cost from ~2,100 (naive) to ~188 (optimised) â€”
+  an 88â€“91% reduction. The order of application matters; deduplication must run before batching to maximise impact.</p>
+  <table class="tbl">
+    <tr><th>#</th><th>Strategy</th><th>Mechanism</th><th>Token Impact</th></tr>
+    <tr><td>1</td><td>Quality pre-filter</td><td>Score &lt;0.20 auto-rejected; &gt;0.95 auto-applied</td><td>âˆ’60% items reach LLM</td></tr>
+    <tr><td>2</td><td>Semantic deduplication</td><td>Cosine clustering â‰¥ 0.85; representative per cluster</td><td>âˆ’40% of remaining items</td></tr>
+    <tr><td>3</td><td>Batch processing (25/call)</td><td>System prompt amortised across 25 items in one call</td><td>âˆ’70% prompt tokens</td></tr>
+    <tr><td>4</td><td>Shared graph context</td><td>Neo4j subgraph fetched once per batch, Redis-cached 1h</td><td>âˆ’50% context tokens</td></tr>
+    <tr><td>5</td><td>Few-shot caching</td><td>Examples pre-computed and stored in Redis per feedback_type</td><td>âˆ’15% prompt tokens</td></tr>
+    <tr><td>6</td><td>Structured JSON output</td><td>LLM constrained to JSON schema; no explanations</td><td>âˆ’30% output tokens</td></tr>
+    <tr class="hl"><td>7</td><td>Incident short-circuit</td><td>New items matching active incident skip LLM entirely</td><td>âˆ’100% for matched items</td></tr>
+  </table>
+
+  <h2>Graph Correction â€” Safety Gates</h2>
+  <p>
+    Before any Cypher mutation executes against Neo4j, three gates must pass. The before/after state is captured
+    inside the same transaction, enabling surgical rollback without affecting unrelated graph data.
+  </p>
+  <div class="flow-col" style="max-width:420px;">
+    <div class="fnode">Gate 1: confidence_score â‰¥ 0.85</div>
+    <div class="farrow"></div>
+    <div class="fnode">Gate 2: Cypher syntax validation (static parse)</div>
+    <div class="farrow"></div>
+    <div class="fnode">Gate 3: Graph integrity pre-check (no orphan creation)</div>
+    <div class="farrow"></div>
+    <div class="fnode amber">Capture before_state (for rollback)</div>
+    <div class="farrow"></div>
+    <div class="fnode accent">Execute Cypher mutation (atomic transaction)</div>
+    <div class="farrow"></div>
+    <div class="fnode">Capture after_state Â· Write audit trail</div>
+    <div class="farrow"></div>
+    <div class="fnode green">Surgical cache invalidation (affected entities only)</div>
+  </div>
+</section>
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• S5: EVALUATION ROUTER -->
+<section id="s5" class="section">
+  <p class="page-title">LLD-04 â€” Adaptive Evaluation Router</p>
+  <p class="page-subtitle">
+    A deterministic, policy-driven orchestration engine â€” not an LLM and not an agent.
+    It selects the minimum sufficient evaluator for each interaction, stops the moment a decisive result is available,
+    and emits a fully auditable RouterDecision record for every execution.
+  </p>
+
+  <div class="callout warn">
+    <span class="callout-icon">âš </span>
+    <div class="callout-body">
+      <strong>Anti-pattern: LLM Router</strong>
+      Having an LLM decide what to evaluate introduces nondeterministic evaluator selection, possible mandatory-control
+      omission, difficult reproducibility, harder auditability, and susceptibility to prompt/context variation.
+      The Router must be a deterministic policy engine.
+    </div>
+  </div>
+
+  <h2>6-Level Evaluation Depth Ladder</h2>
+  <p>
+    The cascade ensures cheap mechanisms always run before expensive ones. The Router may skip levels
+    that are irrelevant (e.g. an infrastructure outage stops at E0 â€” no semantic evaluation is useful).
+  </p>
+  <div class="ladder">
+    <div class="rung hdr"><span>Level</span><span>Mechanism &amp; Purpose</span><span>Gen. Tokens</span><span>% Traffic</span></div>
+    <div class="rung"><span><span class="lvl lv0">E0</span></span><span><strong>Telemetry only.</strong> Tool failures, empty retrieval, schema violations, latency anomalies, token anomalies. Infrastructure outages diagnosed and stopped here.</span><span class="tok-0">0</span><span>~100%</span></div>
+    <div class="rung"><span><span class="lvl lv1">E1</span></span><span><strong>Deterministic rules.</strong> Entity IDs, dates, numbers, citation presence, source versions, mandatory disclosures, NAV/TER reconciliation. Cheapest possible quality check.</span><span class="tok-0">0</span><span>~100%</span></div>
+    <div class="rung"><span><span class="lvl lv2">E2</span></span><span><strong>Statistical / cohort.</strong> Retrieval drift detection, inter-annotator agreement, BM25/vector/graph disagreement, feedback deduplication clustering. Aggregated signals.</span><span class="tok-0">0</span><span>broad</span></div>
+    <div class="rung"><span><span class="lvl lv3">E3</span></span><span><strong>Semantic / NLI / classifier.</strong> Claim-evidence entailment, intent classification, advice boundary, tone assessment. Local semantic models â€” no LLM API calls.</span><span class="tok-0">~0 gen.</span><span>10â€“20%</span></div>
+    <div class="rung"><span><span class="lvl lv4">E4</span></span><span><strong>Bounded LLM judge.</strong> Nuanced factual ambiguity unresolved by E3, implicit claims, multi-document contradiction. Receives minimal EvaluationPacket â€” never the full EvidencePack.</span><span class="tok-s">B1â€“B3</span><span>2â€“5%</span></div>
+    <div class="rung"><span><span class="lvl lv5">E5</span></span><span><strong>Agent / Human escalation.</strong> Multi-step investigation with tool calls; regulatory ambiguity requiring compliance sign-off. Human decision mandatory for suitability and R5 repairs.</span><span class="tok-h">B4â€“B5</span><span>0.1â€“0.8%</span></div>
+  </div>
+
+  <h2>Nine Decision Stages (R0â€“R9)</h2>
+  <div class="pipe" style="flex-wrap:wrap;">
+    <div class="pstep accent">R0 Applicability</div><div class="parrow">â†’</div>
+    <div class="pstep accent">R1 Mandatory Controls</div><div class="parrow">â†’</div>
+    <div class="pstep">R2 Signal Dimensions</div><div class="parrow">â†’</div>
+    <div class="pstep">R3 Evidence Sufficiency</div><div class="parrow">â†’</div>
+    <div class="pstep">R4 Incident Match</div><div class="parrow">â†’</div>
+    <div class="pstep">R5 Evaluator Selection</div><div class="parrow">â†’</div>
+    <div class="pstep amber">R6 Budget Band B0â€“B5</div><div class="parrow">â†’</div>
+    <div class="pstep">R7 Execute</div><div class="parrow">â†’</div>
+    <div class="pstep">R8 Stop Rules</div><div class="parrow">â†’</div>
+    <div class="pstep green">R9 Decision Log</div>
+  </div>
+  <p>
+    <strong>R1 (Mandatory Controls)</strong> is the most critical stage. It executes regardless of sampling policy or budget.
+    Applicable hard controls always run â€” cost optimisation never bypasses them.<br/>
+    <strong>R4 (Incident Match)</strong> is the cost-saving stage. If a new observation matches a confirmed active incident
+    with the same causal signature, diagnosis is skipped entirely and the observation is attached to the incident.
+  </p>
+
+  <h2>Five Explicit Stop Rules</h2>
+  <table class="tbl">
+    <tr><th>Rule</th><th>Condition</th><th>Action</th></tr>
+    <tr><td><strong>STOP-1</strong> Deterministic Proof</td><td>Authoritative structured source + exact entity + deterministic mismatch confirmed</td><td>Verdict established â†’ stop. No LLM or agent needed.</td></tr>
+    <tr><td><strong>STOP-2</strong> Evidence Absent</td><td>Required evidence missing + deterministic recovery unavailable</td><td>Return UNVERIFIABLE â†’ stop. Never ask LLM to guess.</td></tr>
+    <tr><td><strong>STOP-3</strong> Known Incident</td><td>Observation matches active confirmed incident with same causal signature</td><td>Attach to incident â†’ stop. Skip re-diagnosis.</td></tr>
+    <tr><td><strong>STOP-4</strong> Semantic Resolves</td><td>Semantic/NLI output within calibrated domain + confidence â‰¥ threshold</td><td>Stop. No LLM needed when classifier is decisive.</td></tr>
+    <tr><td><strong>STOP-5</strong> Human Required</td><td>Policy says HUMAN_REQUIRED for this control</td><td>Stop automated adjudication â†’ route to HITL queue.</td></tr>
+  </table>
+
+  <h2>Token Budget Bands</h2>
+  <p>The Router selects the smallest band compatible with the task. Band assignment is deterministic â€” not LLM-decided.</p>
+  <table class="tbl">
+    <tr><th>Band</th><th>Token Limit</th><th>Typical Use</th><th>AMC Example</th></tr>
+    <tr><td><strong>B0</strong></td><td>0</td><td>Rules, telemetry, numeric checks</td><td>NAV mismatch Â· TER reconciliation Â· citation presence</td></tr>
+    <tr><td><strong>B1</strong></td><td>â‰¤250</td><td>Entity disambiguation fallback</td><td>Direct vs Regular plan ambiguity</td></tr>
+    <tr><td><strong>B2</strong></td><td>â‰¤500</td><td>Unresolved citation entailment</td><td>Citation does not clearly support claim</td></tr>
+    <tr><td><strong>B3</strong></td><td>â‰¤800</td><td>Conflict summarisation (no verdict)</td><td>Two authoritative sources conflict</td></tr>
+    <tr><td><strong>B4</strong></td><td>â‰¤1,500</td><td>Agent investigation</td><td>Multi-step root-cause with tool calls</td></tr>
+    <tr class="hl"><td><strong>B5</strong></td><td>Exception</td><td>Human-approved only</td><td>Regulatory interpretation Â· compliance sign-off</td></tr>
+  </table>
+</section>
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• S6: FAILURE TAXONOMY -->
+<section id="s6" class="section">
+  <p class="page-title">LLD-05 â€” Failure Taxonomy &amp; Root-Cause Attribution</p>
+  <p class="page-subtitle">
+    The most consequential design decision: "hallucination" is a symptom, not a root cause.
+    Most AMC failures are diagnosable deterministically at zero LLM cost. Labelling everything hallucination
+    wastes tokens, triggers the wrong repair, and generates false regression signals.
+  </p>
+
+  <div class="callout danger">
+    <span class="callout-icon">âœ—</span>
+    <div class="callout-body">
+      <strong>The critical separation</strong><br/>
+      <strong>Observable symptom â‰  Technical origin â‰  Repair action</strong><br/><br/>
+      Example: User reports "hallucination" â†’ System diagnosis: stale source â†’ Root cause: ingestion lag â†’
+      Repair: source refresh + selective re-embed â†’ LLM tokens for diagnosis: <strong>0</strong>
+    </div>
+  </div>
+
+  <h2>Failure Analysis Matrix â€” Which Failures Need LLM?</h2>
+  <table class="tbl">
+    <tr><th>Failure Type</th><th>Deterministic?</th><th>LLM Required?</th><th>Typical Cost</th></tr>
+    <tr><td>Stale source (F05)</td><td>Yes â€” version diff check</td><td>Never</td><td class="tok-0">B0</td></tr>
+    <tr><td>Missing retrieval (F04)</td><td>Yes â€” index completeness check</td><td>Never</td><td class="tok-0">B0</td></tr>
+    <tr><td>Numeric mismatch (F08)</td><td>Yes â€” structured data comparison</td><td>Never</td><td class="tok-0">B0</td></tr>
+    <tr><td>Citation broken (F06 integrity)</td><td>Yes â€” citation presence/resolve check</td><td>Never</td><td class="tok-0">B0</td></tr>
+    <tr><td>Infrastructure failure (F13)</td><td>Yes â€” telemetry</td><td>Never</td><td class="tok-0">B0</td></tr>
+    <tr><td>Wrong entity (F02)</td><td>Yes â€” canonical ID lookup</td><td>Rarely</td><td class="tok-0">B0</td></tr>
+    <tr><td>Citation entailment (F06)</td><td>Partial â€” NLI check</td><td>Conditionally</td><td class="tok-s">B0â€“B2</td></tr>
+    <tr><td>Advice boundary (F12)</td><td>Partial â€” classifier</td><td>Conditionally</td><td class="tok-s">B0â€“B2</td></tr>
+    <tr><td>Unsupported claim (F07)</td><td>No â€” semantic check needed</td><td>Conditionally</td><td class="tok-s">B2â€“B3</td></tr>
+    <tr><td>Implicit intent (F01)</td><td>No</td><td>Conditionally</td><td class="tok-s">B1â€“B2</td></tr>
+    <tr><td>Suitability (F12 C06)</td><td>No</td><td>Required (human)</td><td class="tok-h">B5</td></tr>
+  </table>
+
+  <h2>14 Primary Failure Families</h2>
+  <div class="card-grid">
+    <div class="card"><div class="card-id">F01</div><h4>Intent / Understanding</h4><p>Wrong intent, ambiguity not detected, advisory/informational confusion, conversation drift.</p><span class="tag green">Rule + classifier</span></div>
+    <div class="card"><div class="card-id">F02</div><h4>Entity Resolution</h4><p>Wrong entity, alias failure, Direct/Regular confusion, stale entity mapping. Perfectly grounded against wrong entity is NOT hallucination.</p><span class="tag green">Canonical ID rule</span></div>
+    <div class="card"><div class="card-id">F03</div><h4>Context / Conversation State</h4><p>Prior turn ignored, critical evidence truncated, user constraint forgotten.</p><span class="tag green">State rule</span></div>
+    <div class="card"><div class="card-id">F04</div><h4>Retrieval</h4><p>Vector miss, graph miss, rank failure, missing authoritative source. Diagnosable via index diff â€” zero LLM.</p><span class="tag green">Index diagnostic</span></div>
+    <div class="card"><div class="card-id">F05</div><h4>Source / Freshness</h4><p>Stale source, ingestion lag, wrong effective date. Copying stale data is NOT hallucination.</p><span class="tag green">Provenance rule</span></div>
+    <div class="card"><div class="card-id">F06</div><h4>Citation / Attribution</h4><p>Citation missing, broken, or not supporting claim. Split: integrity (rule) vs entailment (NLI).</p><span class="tag">Rule + NLI</span></div>
+    <div class="card"><div class="card-id">F07</div><h4>Grounding / Unsupported</h4><p>True hallucination â€” model generated content inconsistent with retrieved evidence. Narrowest definition. Requires E3/E4.</p><span class="tag amber">Semantic / LLM</span></div>
+    <div class="card"><div class="card-id">F08</div><h4>Factual / Numerical</h4><p>NAV, TER, percentage, date errors. Deterministic comparison against structured source.</p><span class="tag green">Numeric rule</span></div>
+    <div class="card"><div class="card-id">F09</div><h4>Completeness / Relevance</h4><p>Missing required fact, omitted risk info, incomplete comparison. Template check (rule) + semantic completeness (E3).</p><span class="tag">Rule + semantic</span></div>
+    <div class="card"><div class="card-id">F10</div><h4>Reasoning / Consistency</h4><p>Internal contradiction, wrong arithmetic, causal leap. Rules handle arithmetic; LLM for complex inference.</p><span class="tag">Rule + LLM</span></div>
+    <div class="card"><div class="card-id">F11</div><h4>Communication / Tone</h4><p>Misleading certainty, excessive jargon, persuasive language, language mismatch.</p><span class="tag">Classifier</span></div>
+    <div class="card"><div class="card-id">F12</div><h4>Governance / Compliance</h4><p>Advice boundary, missing disclosure, suitability, jurisdiction mismatch, prohibited claim. Maps to C01â€“C14.</p><span class="tag amber">Policy pack + human</span></div>
+    <div class="card"><div class="card-id">F13</div><h4>System / Infrastructure</h4><p>Vector unavailable, index partial, ingestion failed, timeout, cache corruption.</p><span class="tag green">Telemetry</span></div>
+    <div class="card"><div class="card-id">F14</div><h4>Evaluation / Feedback Integrity</h4><p>Evaluator regression, feedback poisoning, threshold miscalibration. The evaluation system itself is governed.</p><span class="tag green">Golden set</span></div>
+  </div>
+
+  <h2>Repair Eligibility Classes R0â€“R5</h2>
+  <p>A confirmed root cause is not automatically eligible for automated repair. Every candidate passes an eligibility
+  checklist covering provability, determinism, reversibility, blast radius, compliance impact, and policy permission.</p>
+  <table class="tbl">
+    <tr><th>Class</th><th>Name</th><th>Example</th><th>Default Action</th></tr>
+    <tr><td><strong>R0</strong></td><td>No Repair</td><td>Invalid feedback, user error</td><td>Close &amp; monitor</td></tr>
+    <tr><td><strong>R1</strong></td><td>Auto-Safe Mechanical</td><td>Missing embedding, broken index chunk</td><td>Automatic + verify</td></tr>
+    <tr><td><strong>R2</strong></td><td>Auto + Shadow</td><td>Stale graph edge with authoritative replacement</td><td>Shadow â†’ regression â†’ promote if pass</td></tr>
+    <tr><td><strong>R3</strong></td><td>Approval Required</td><td>Taxonomy structural change, policy update</td><td>Governance approval gate</td></tr>
+    <tr><td><strong>R4</strong></td><td>Investigative</td><td>Conflicting authoritative sources</td><td>Agent / SME investigation</td></tr>
+    <tr class="hl"><td><strong>R5</strong></td><td>Prohibited Auto-Repair</td><td>Regulatory interpretation, advice boundary</td><td>Human / Compliance only â€” <strong>never automated</strong></td></tr>
+  </table>
+</section>
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• S7: SELF-HEALING RAG -->
+<section id="s7" class="section">
+  <p class="page-title">LLD-06 â€” Self-Healing RAG</p>
+  <p class="page-subtitle">
+    Self-healing is a state-reconciliation problem, not an agentic reasoning problem.
+    The Vector DB and Context Graph are reproducible derivatives of the authoritative source plane.
+    Healing means recomputing the derivative from the source â€” deterministically, with zero LLM cost in over 90% of cases.
+  </p>
+
+  <h2>Source-of-Truth Architecture</h2>
+  <div class="flow-col" style="max-width:420px;">
+    <div class="fnode dark">Authoritative Source Plane<div class="fnode-sub">Regulatory docs Â· Fund disclosures (SID, KIM) Â· Structured data feeds</div></div>
+    <div class="farrow"></div>
+    <div class="fnode">Source Registry + Provenance<div class="fnode-sub">source_id Â· source_version Â· content_hash Â· effective_date Â· authority_tier</div></div>
+    <div class="farrow"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;">
+      <div class="fnode accent" style="min-width:0;">Vector DB<div class="fnode-sub">chunks Â· embeddings</div></div>
+      <div class="fnode green" style="min-width:0;">Context Graph<div class="fnode-sub">entities Â· edges</div></div>
+    </div>
+    <div class="farrow"></div>
+    <div class="fnode">Hybrid RAG Retrieval<div class="fnode-sub">BM25 + Vector + Graph</div></div>
+  </div>
+  <p>
+    Because both serving structures are derivatives, the health validation is a diff operation:
+    <strong>expected state (from source registry) vs actual state (from index/graph)</strong>.
+    The diff drives recipe selection deterministically.
+  </p>
+
+  <h2>Three Levels of Healing</h2>
+  <div class="card-grid" style="grid-template-columns:1fr 1fr 1fr;">
+    <div class="card">
+      <div class="card-id">Level 1</div><h4>Mechanical Healing</h4>
+      <p>Retry, restore, reconstruct, re-embed, re-index, deduplicate, repair metadata. All deterministic.
+      Triggered by source manifest diff or telemetry. No semantic interpretation, no LLM.</p>
+      <span class="tag green">Target: &gt;90% of repairs</span>
+    </div>
+    <div class="card">
+      <div class="card-id">Level 2</div><h4>Knowledge-Structure Healing</h4>
+      <p>Entity canonicalization, graph constraint repair, source version reconciliation, temporal relationship
+      management, expire stale edges. Deterministic where canonical IDs and structured sources exist.</p>
+      <span class="tag">Mostly deterministic</span>
+    </div>
+    <div class="card">
+      <div class="card-id">Level 3</div><h4>Semantic Healing</h4>
+      <p>Ambiguous relation type, conflicting narratives, missing ontology mapping, unclear entity resolution.
+      Cascades: rules â†’ classifier â†’ bounded LLM â†’ agent â†’ human SME.
+      LLM is the last resort here, not the first call.</p>
+      <span class="tag amber">Escalation cascade</span>
+    </div>
+  </div>
+
+  <h2>Standard Repair Recipe Catalogue (R001â€“R012)</h2>
+  <table class="tbl">
+    <tr><th>ID</th><th>Name</th><th>Trigger</th><th>Procedure</th><th>LLM?</th><th>Class</th></tr>
+    <tr><td><strong>R001</strong></td><td>MissingVector</td><td><code>source_chunks â‰  vector_chunks</code></td><td>Identify missing chunk IDs from manifest diff; re-parse from source; re-embed; insert with provenance</td><td class="tok-0">No</td><td>R1</td></tr>
+    <tr><td><strong>R002</strong></td><td>StaleEmbedding</td><td><code>source_hash â‰  embedded_hash</code></td><td>Diff versions; identify changed sections only; rechunk + re-embed affected sections only</td><td class="tok-0">No</td><td>R2</td></tr>
+    <tr><td><strong>R003</strong></td><td>DuplicateChunk</td><td>Duplicate <code>content_hash</code> in index</td><td>Keep highest-authority version; remove others; update metadata</td><td class="tok-0">No</td><td>R1</td></tr>
+    <tr><td><strong>R004</strong></td><td>MetadataMismatch</td><td>Manifest â‰  index metadata</td><td>Rebuild metadata from source manifest</td><td class="tok-0">No</td><td>R1</td></tr>
+    <tr><td><strong>R005</strong></td><td>MissingSource</td><td>Source absent from index entirely</td><td>Full re-ingest from source registry</td><td class="tok-0">No</td><td>R2</td></tr>
+    <tr><td><strong>R006</strong></td><td>RetrievalRegression</td><td>BM25/Graph find source; Vector misses â‰¥3 queries</td><td>Embedding model drift investigation; selective re-embed affected document family</td><td class="tok-0">No</td><td>R2</td></tr>
+    <tr><td><strong>R007</strong></td><td>BrokenGraphEdge</td><td>Source field changed (benchmark, manager, risk)</td><td>Expire old edge (set <code>effective_to</code>); create new edge with source_version + effective_date</td><td class="tok-0">No</td><td>R2</td></tr>
+    <tr><td><strong>R008</strong></td><td>OrphanGraphNode</td><td>Entity node with no relationships</td><td>Re-run entity extraction for source document; recreate relationships</td><td class="tok-s">Classifier only</td><td>R2</td></tr>
+    <tr><td><strong>R009</strong></td><td>SourceVersionMismatch</td><td>Vector at v17, Graph at v18</td><td>Re-process lagging structure to align versions</td><td class="tok-0">No</td><td>R2</td></tr>
+    <tr><td><strong>R010</strong></td><td>EntityDuplicate</td><td>Two nodes share ISIN or canonical scheme code</td><td>Merge nodes; consolidate relationships; update provenance</td><td class="tok-s">Classifier</td><td>R2</td></tr>
+    <tr><td><strong>R011</strong></td><td>MissingProvenance</td><td>Edge has no <code>source_id</code> or <code>effective_date</code></td><td>Trace from extraction logs; backfill provenance fields</td><td class="tok-0">No</td><td>R1</td></tr>
+    <tr><td><strong>R012</strong></td><td>TemporalConflict</td><td>Two active edges for same (entity, attribute)</td><td>Compare <code>effective_from</code>; expire older; validate newer has provenance</td><td class="tok-0">No</td><td>R1</td></tr>
+  </table>
+
+  <h2>Shadow Repair Workflow</h2>
+  <p>
+    Every repair executes in an isolated shadow environment first. The blast-radius assessment determines the scope of
+    regression tests required. Production is only touched by an atomic promotion after all tests pass.
+  </p>
+  <div class="flow-col" style="max-width:460px;">
+    <div class="fnode">Problem detected (health check or failure diagnosis)</div>
+    <div class="farrow"></div>
+    <div class="fnode">RepairCandidate created (links recipe + root cause)</div>
+    <div class="farrow"></div>
+    <div class="fnode amber">Create Shadow Snapshot (affected scope only)</div>
+    <div class="farrow"></div>
+    <div class="fnode">Execute repair in shadow environment</div>
+    <div class="farrow"></div>
+    <div class="fnode">Run Regression Suite: golden queries + cohort + blast-radius + compliance routing</div>
+    <div class="farrow"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;">
+      <div class="fnode red" style="min-width:0;">FAIL â†’ Reject + Rollback</div>
+      <div class="fnode" style="min-width:0;">PASS â†’ Approval Gate<div class="fnode-sub">R1/R2: auto Â· R3+: governance</div></div>
+    </div>
+    <div class="farrow"></div>
+    <div class="fnode green">Atomic Promotion â†’ Post-Change Monitoring (24h/7d)</div>
+  </div>
+</section>
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• S8: COMPLIANCE PLANE -->
+<section id="s8" class="section">
+  <p class="page-title">LLD-07 â€” Compliance Control Plane</p>
+  <p class="page-subtitle">
+    Compliance is a first-class architecture dimension. Mandatory controls always run when applicable
+    and are never traded off against cost or performance. Jurisdiction alone is not enough â€”
+    applicability requires a multidimensional key.
+  </p>
+
+  <div class="callout danger">
+    <span class="callout-icon">âœ—</span>
+    <div class="callout-body">
+      <strong>Compliance failure â‰  factual failure â€” they must be independently adjudicated.</strong>
+      A response can be factually correct with citations but missing a mandatory disclosure (C07 FAIL, factual PASS).
+      A response can have perfect disclosures but cite a stale source with the wrong TER (factual FAIL, compliance PASS).
+      Different root causes, different repairs.
+    </div>
+  </div>
+
+  <h2>Three Layers â€” Never Collapse Them</h2>
+  <table class="tbl">
+    <tr><th>Layer</th><th>Answers</th><th>Example</th><th>Owner</th></tr>
+    <tr><td><strong>AMC Taxonomy</strong></td><td>What does this mean?</td><td>Intent = SUITABILITY_SENSITIVE</td><td>Engineering</td></tr>
+    <tr><td><strong>Jurisdiction Policy Pack</strong></td><td>What must happen?</td><td>India pack: C07 disclosure required for PERFORMANCE_CLAIM</td><td>Compliance team</td></tr>
+    <tr><td><strong>Failure-Attribution Graph</strong></td><td>What went wrong?</td><td>F12 advice_boundary + RootCause: context_engineering omitted disclosure</td><td>System (evaluated)</td></tr>
+  </table>
+
+  <h2>Applicability Is Multidimensional</h2>
+  <pre>Applicability Key:
+  jurisdiction           = "IN"
+  regulated_entity_role  = "investment_adviser"
+  product_type           = "mutual_fund"
+  channel                = "chatbot"
+  customer_segment       = "retail"
+  interaction_mode       = "informational"
+  policy_pack_version    = "INDIA_SEBI_2026_v3"
+      â†“
+  ApplicableControlSet ACS-22</pre>
+
+  <h2>14 Compliance Control Families</h2>
+  <div class="card-grid">
+    <div class="card"><div class="card-id">C01</div><h4>Communication Fairness</h4><p>No misleading statements, no unsubstantiated claims, fair presentation.</p><span class="tag">Rule + semantic</span></div>
+    <div class="card"><div class="card-id">C02</div><h4>Source / Disclosure Currency</h4><p>All facts sourced from current, effective documents. Temporal check from D2 metrics.</p><span class="tag green">Deterministic</span></div>
+    <div class="card"><div class="card-id">C03</div><h4>Factual &amp; Numerical Accuracy</h4><p>NAV, TER, exit load, benchmark, performance figures vs canonical structured source.</p><span class="tag green">Numeric rule</span></div>
+    <div class="card"><div class="card-id">C04</div><h4>Performance / Comparison</h4><p>Consistent periods, same comparison basis, required contextual information present.</p><span class="tag">Rule + template</span></div>
+    <div class="card"><div class="card-id">C05</div><h4>Advice Boundary</h4><p>Has response crossed from information into personalised recommendation?</p><span class="tag amber">Classifier + pack</span></div>
+    <div class="card"><div class="card-id">C06</div><h4>Suitability / Best Interest</h4><p>User discloses personal circumstances â†’ mandatory policy path. Human required where policy specifies.</p><span class="tag red">Human required</span></div>
+    <div class="card"><div class="card-id">C07</div><h4>Required Disclosure / Risk</h4><p>Mandatory risk warnings and notices present, correctly placed, approved wording.</p><span class="tag green">Deterministic</span></div>
+    <div class="card"><div class="card-id">C08</div><h4>Product / Client Eligibility</h4><p>Hard eligibility gates â€” product restrictions, investor categories, jurisdiction gates.</p><span class="tag green">Hard rule</span></div>
+    <div class="card"><div class="card-id">C09</div><h4>Supervision / Approval</h4><p>Cases requiring human review or compliance sign-off. Full audit trail mandatory.</p><span class="tag red">HITL route</span></div>
+    <div class="card"><div class="card-id">C10</div><h4>Recordkeeping / Audit</h4><p>D0â€“D3 capture mandatory for every response. RouterDecision must be persisted. 7-year retention.</p><span class="tag green">Mandatory</span></div>
+    <div class="card"><div class="card-id">C11</div><h4>Privacy / Data Protection</h4><p>PII detection by deterministic rule before any LLM path. LLM must never receive unredacted PII.</p><span class="tag green">Rule only</span></div>
+    <div class="card"><div class="card-id">C12</div><h4>Conflict / Promotion / Bias</h4><p>Promotional language, implied guarantees, persuasive framing, undisclosed conflicts.</p><span class="tag">Rule + classifier</span></div>
+    <div class="card"><div class="card-id">C13</div><h4>Model / Evaluator Governance</h4><p>Version control, golden regression, calibration. Evaluator regression is a first-class failure (F14).</p><span class="tag green">Golden set</span></div>
+    <div class="card"><div class="card-id">C14</div><h4>Operational Resilience</h4><p>Service health, fallback routing, dependency monitoring, incident detection.</p><span class="tag green">Telemetry</span></div>
+  </div>
+
+  <h2>Data Lineage â€” Full Audit Chain</h2>
+  <p>Every production change must be traceable from the original interaction through to the deployed fix.</p>
+  <div class="pipe" style="flex-wrap:wrap;gap:6px;">
+    <div class="pstep accent">Interaction</div><div class="parrow">â†’</div>
+    <div class="pstep">Taxonomy v42<br/>Intent T4.7</div><div class="parrow">â†’</div>
+    <div class="pstep">ControlSet ACS-22</div><div class="parrow">â†’</div>
+    <div class="pstep">PolicyPack INDIA<br/>Control C07</div><div class="parrow">â†’</div>
+    <div class="pstep">Evaluator EV_DISC_011</div><div class="parrow">â†’</div>
+    <div class="pstep">Finding F-201</div><div class="parrow">â†’</div>
+    <div class="pstep">RootCause RC-12</div><div class="parrow">â†’</div>
+    <div class="pstep">RepairCandidate RP-31</div><div class="parrow">â†’</div>
+    <div class="pstep">ValidationRun VR-88</div><div class="parrow">â†’</div>
+    <div class="pstep green">DeploymentChange DC-09</div>
+  </div>
+  <p style="margin-top:10px;">Every link is versioned. This answers regulatory audit questions with a traceable chain â€”
+  not "an agent updated the RAG".</p>
+
+  <h2>Compliance KPIs â€” Hard Targets</h2>
+  <table class="tbl">
+    <tr><th>KPI</th><th>Target</th><th>Hard Limit?</th></tr>
+    <tr><td>Mandatory control coverage</td><td>100%</td><td>âœ“ Yes</td></tr>
+    <tr><td>Mandatory control bypass count</td><td>0</td><td>âœ“ Yes</td></tr>
+    <tr><td>Policy pack version traceability</td><td>100%</td><td>âœ“ Yes</td></tr>
+    <tr><td>Human-required bypass rate</td><td>0</td><td>âœ“ Yes</td></tr>
+    <tr><td>Record reconstruction success rate</td><td>100%</td><td>âœ“ Yes</td></tr>
+    <tr><td>Failure graph â†’ answer leakage</td><td>0</td><td>âœ“ Yes</td></tr>
+    <tr><td>Unapproved autonomous legal rule change</td><td>0</td><td>âœ“ Yes</td></tr>
+    <tr><td>Applicable control resolution rate</td><td>&gt;95%</td><td>No</td></tr>
+    <tr><td>High-risk unresolved rate</td><td>&lt;0.1%</td><td>No</td></tr>
+  </table>
+</section>
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• S9: DATA MODELS -->
+<section id="s9" class="section">
+  <p class="page-title">LLD-08 â€” Data Models</p>
+  <p class="page-subtitle">
+    Schema reference for all persistence layers. Full DDL, Python dataclass definitions, API contracts,
+    and event schemas are in <code>LLD-08-DATA-MODELS.md</code>. This section provides the structural overview
+    and key design decisions.
+  </p>
+
+  <h2>PostgreSQL Tables â€” Overview</h2>
+  <table class="tbl">
+    <tr><th>Table</th><th>Primary Purpose</th><th>Retention</th><th>Key Fields</th></tr>
+    <tr><td><code>evidence_packs</code></td><td>Immutable D0â€“D3 snapshot per response</td><td>90d operational Â· 7yr compliance</td><td><code>response_id</code> (unique), all D0â€“D3 fields as columns + JSONB for arrays</td></tr>
+    <tr><td><code>feedback_records</code></td><td>Raw feedback + pre-classification results</td><td>90 days</td><td><code>response_id</code> FK, <code>rating</code>, <code>ner_tags</code>, <code>quality_score</code>, <code>status</code></td></tr>
+    <tr><td><code>evaluation_jobs</code></td><td>Hourly batch cycle tracking + economics</td><td>90 days</td><td><code>batch_id</code>, item counts, <code>llm_tokens_used</code>, <code>llm_tokens_saved</code></td></tr>
+    <tr><td><code>correction_recommendations</code></td><td>Proposed Cypher mutations with confidence</td><td>90 days</td><td><code>cypher_mutation</code>, <code>confidence_score</code>, <code>repair_class</code>, <code>status</code></td></tr>
+    <tr><td><code>correction_audit_trail</code></td><td>Immutable record of every graph change</td><td>7 years</td><td><code>before_state</code>, <code>after_state</code>, <code>cypher_executed</code>, <code>operator</code></td></tr>
+    <tr><td><code>router_decisions</code></td><td>Adaptive Router execution audit log</td><td>90 days</td><td><code>selected_evaluators</code>, <code>stop_reason</code>, <code>token_budget_band</code>, <code>actual_tokens_used</code></td></tr>
+    <tr><td><code>source_manifests</code></td><td>Health ledger for all source documents</td><td>Permanent</td><td><code>source_id</code>, <code>source_version</code>, <code>content_hash</code>, <code>health_status</code>, chunk counts</td></tr>
+  </table>
+
+  <h2>Key Schema Design Decisions</h2>
+  <ul class="chk">
+    <li>D0â€“D3 scalar fields are stored as typed columns (not collapsed into one JSONB blob) to allow indexed querying by jurisdiction, intent, model version, etc.</li>
+    <li>Array/nested payloads (citations, provenance, graph paths) use JSONB â€” flexible schema, queryable with <code>@&gt;</code> operators.</li>
+    <li><code>correction_audit_trail</code> is append-only â€” no UPDATE or DELETE ever runs against it. 7-year retention enforced at the storage policy level.</li>
+    <li><code>source_manifests</code> uses a UNIQUE constraint on <code>(source_id, source_version)</code> to prevent duplicate health records.</li>
+    <li>All timestamps are <code>TIMESTAMPTZ</code> â€” timezone-aware, stored in UTC.</li>
+  </ul>
+
+  <h2>Redis Key Patterns</h2>
+  <table class="tbl">
+    <tr><th>Key Pattern</th><th>Value</th><th>TTL</th><th>Invalidated By</th></tr>
+    <tr><td><code>evidence:{response_id}</code></td><td>D2 JSON payload</td><td>3600s</td><td>Source update affecting any referenced source</td></tr>
+    <tr><td><code>graph_ctx:{hash(entity_ids)}</code></td><td>Neo4j subgraph snapshot</td><td>3600s</td><td>Any correction applied to affected entities</td></tr>
+    <tr><td><code>few_shot:{feedback_type}</code></td><td>Few-shot example list</td><td>86400s</td><td>Manual invalidation on example update</td></tr>
+    <tr><td><code>incident_active</code></td><td>Set of active incident IDs</td><td>No TTL</td><td>Incident resolution event</td></tr>
+  </table>
+
+  <h2>Neo4j â€” Two Separate Instances</h2>
+  <table class="tbl">
+    <tr><th>Instance</th><th>Purpose</th><th>Who reads it</th><th>Who writes it</th></tr>
+    <tr><td><strong>Context Graph</strong> (production)</td><td>User-facing answer retrieval. Entities, relationships, source provenance. Every factual edge carries <code>source_id</code>, <code>source_version</code>, <code>effective_from</code>, <code>effective_to</code>.</td><td>RAG retrieval engine, chatbot</td><td><code>graph_corrector.py</code> (R1/R2 only, confidence â‰¥ 0.85), approved promotions</td></tr>
+    <tr><td><strong>Failure-Attribution Graph</strong> (operational)</td><td>Failure observations, root causes, incidents, repair history. Never serves answers. Separate access policy.</td><td><code>failure_attribution.py</code>, compliance review</td><td>Evaluation pipeline only. Raw feedback never writes directly.</td></tr>
+  </table>
+
+  <h2>API Contracts â€” Summary</h2>
+  <table class="tbl">
+    <tr><th>Endpoint</th><th>Method</th><th>SLA</th><th>Purpose</th></tr>
+    <tr><td><code>/api/feedback</code></td><td>POST</td><td>p99 &lt;100ms</td><td>Submit feedback. Returns <code>feedback_id</code> immediately. Classification runs async.</td></tr>
+    <tr><td><code>/api/feedback/{id}</code></td><td>GET</td><td>â€”</td><td>Check feedback status, quality score, applied correction ID.</td></tr>
+    <tr><td><code>/api/feedback/stats</code></td><td>GET</td><td>â€”</td><td>Cycle statistics: counts, token economics, last cycle timing.</td></tr>
+    <tr><td><code>/api/corrections/{id}/rollback</code></td><td>POST</td><td>â€”</td><td>Roll back an applied correction using stored before_state.</td></tr>
+    <tr><td><code>/api/health</code></td><td>GET</td><td>â€”</td><td>Component health, pending feedback count, active incidents.</td></tr>
+  </table>
+</section>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="footer">
+  AMC Feedback, Evaluation &amp; Self-Healing RAG â€” Low Level Design v1.0 &nbsp;Â·&nbsp;
+  9 LLD documents in <code>/design-documents/</code> &nbsp;Â·&nbsp;
+  Architecture reference â€” August 2026 &nbsp;Â·&nbsp;
+  Regulatory anchors: SEBI MF Regulations 2026 Â· SEC 2026 Priorities Â· ESMA AI Guidance Â· FCA AI Approach 2026
+</footer>
+
+<script>
+const SECTIONS = ['s1','s2','s3','s4','s5','s6','s7','s8','s9'];
+
+function nav(id, btn) {
+  // hide all sections
+  SECTIONS.forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.classList.remove('active');
+  });
+  // show target
+  const target = document.getElementById(id);
+  if (target) target.classList.add('active');
+
+  // sync top nav buttons
+  document.querySelectorAll('.topbar-btn').forEach(b => b.classList.remove('active'));
+  // sync side nav items
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  // activate clicked button
+  if (btn) btn.classList.add('active');
+
+  // find matching sidenav item by same onclick text
+  document.querySelectorAll('.nav-item, .topbar-btn').forEach(b => {
+    if (b.getAttribute('onclick') === `nav('${id}',this)`) b.classList.add('active');
+  });
+
+  // scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// keyboard navigation
+document.addEventListener('keydown', e => {
+  const active = document.querySelector('.section.active');
+  if (!active) return;
+  const idx = SECTIONS.indexOf(active.id);
+  if (e.key === 'ArrowRight' && idx < SECTIONS.length - 1) {
+    const nextBtn = document.querySelectorAll('.topbar-btn')[idx + 1];
+    nav(SECTIONS[idx + 1], nextBtn);
+  }
+  if (e.key === 'ArrowLeft' && idx > 0) {
+    const prevBtn = document.querySelectorAll('.topbar-btn')[idx - 1];
+    nav(SECTIONS[idx - 1], prevBtn);
+  }
+});
+</script>
+</body>
+</html>

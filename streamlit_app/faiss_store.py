@@ -107,36 +107,85 @@ def _file_hash(path: str) -> str:
 # LAZY LOADERS
 # ─────────────────────────────────────────────────────────────────────────────
 
+EMBED_MODEL_ID   = "sentence-transformers/all-MiniLM-L6-v2"
+EMBED_MODEL_NAME = "all-MiniLM-L6-v2"
+
+HAS_FASTEMBED = False
+_fastembed_instance = None
+try:
+    from fastembed import TextEmbedding
+    HAS_FASTEMBED = True
+except ImportError:
+    HAS_FASTEMBED = False
+
+
+class FastEmbedWrapper:
+    def __init__(self, model):
+        self.model = model
+
+    def encode(self, sentences, show_progress_bar=False, normalize_embeddings=True, batch_size=32):
+        if isinstance(sentences, str):
+            sentences = [sentences]
+        vecs = list(self.model.embed(sentences, batch_size=batch_size))
+        arr = np.array(vecs, dtype=np.float32)
+        if normalize_embeddings and len(arr) > 0:
+            norms = np.linalg.norm(arr, axis=1, keepdims=True)
+            norms[norms == 0] = 1.0
+            arr = arr / norms
+        return arr
+
+
 def _get_embedder():
-    global _embedder
-    if _embedder is None:
-        print("  [embed] Loading sentence-transformer model…", flush=True)
+    global _embedder, _fastembed_instance
+    if _embedder is not None:
+        return _embedder
+
+    # 1. Check FastEmbed ONNX C++ accelerator if available (No PyTorch/c10.dll dependency)
+    if HAS_FASTEMBED:
+        try:
+            if _fastembed_instance is None:
+                print("  [embed] Loading FastEmbed ONNX C++ Model (BAAI/bge-small-en-v1.5)...", flush=True)
+                _fastembed_instance = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
+                print("  [embed] FastEmbed ONNX C++ ready.", flush=True)
+            _embedder = FastEmbedWrapper(_fastembed_instance)
+            return _embedder
+        except Exception as exc:
+            print(f"  [embed] FastEmbed init fallback to SentenceTransformer: {exc}", flush=True)
+
+    # 2. Fallback to SentenceTransformer if FastEmbed is unavailable
+    try:
+        print(f"  [embed] Loading sentence-transformer model ({EMBED_MODEL_NAME})…", flush=True)
         from sentence_transformers import SentenceTransformer
-        # NOTE: The amc_master FAISS index was built with all-MiniLM-L6-v2 (384-dim).
-        # This model is fully cached locally — loads offline without any network call.
         try:
             _embedder = SentenceTransformer(
-                "sentence-transformers/all-MiniLM-L6-v2",
+                EMBED_MODEL_ID,
                 device="cpu",
                 local_files_only=True,
             )
         except Exception:
             _embedder = SentenceTransformer(
-                "sentence-transformers/all-MiniLM-L6-v2",
+                EMBED_MODEL_ID,
                 device="cpu",
             )
-        print("  [embed] Model ready.", flush=True)
+        print(f"  [embed] Model {EMBED_MODEL_NAME} ready.", flush=True)
+    except Exception as exc:
+        print(f"  [embed] SentenceTransformer unavailable: {exc}", flush=True)
+
     return _embedder
 
 
 def _get_ocr_reader():
     global _easyocr_reader
     if _easyocr_reader is None:
-        print("  [ocr] Loading EasyOCR…", flush=True)
-        import easyocr
-        _easyocr_reader = easyocr.Reader(["en", "hi"], gpu=False)
-        print("  [ocr] EasyOCR ready.", flush=True)
-    return _easyocr_reader
+        try:
+            print("  [ocr] Loading EasyOCR…", flush=True)
+            import easyocr
+            _easyocr_reader = easyocr.Reader(["en", "hi"], gpu=False)
+            print("  [ocr] EasyOCR ready.", flush=True)
+        except Exception as exc:
+            print(f"  [ocr] EasyOCR skipped: {exc}", flush=True)
+            _easyocr_reader = False
+    return _easyocr_reader if _easyocr_reader is not False else None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -209,6 +258,12 @@ def extract_page_with_claude(page, page_num: int, verbose: bool = True) -> Optio
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _extract_prose(page) -> str:
+    try:
+        md = page.get_text("markdown")
+        if md and len(md.strip()) > 10:
+            return md
+    except Exception:
+        pass
     return page.get_text("text") or ""
 
 
@@ -263,7 +318,7 @@ def _extract_embedded_images_ocr(page) -> str:
             if w < 100 or h < 50:
                 continue
             img_arr = np.array(img)
-            results = reader.readtext(img_arr, detail=0, paragraph=True, workers=0)
+            results = reader.readtext(img_arr, detail=0, paragraph=False, workers=0)
             text    = "\n".join(results).strip()
             if text:
                 ocr_parts.append(f"[Image OCR]\n{text}")
@@ -282,7 +337,7 @@ def _full_page_ocr(page, dpi: int = 150) -> str:
     img      = Image.open(io.BytesIO(img_bytes)).convert("RGB")
     img_arr  = np.array(img)
     reader   = _get_ocr_reader()
-    results  = reader.readtext(img_arr, detail=0, paragraph=True, workers=0)
+    results  = reader.readtext(img_arr, detail=0, paragraph=False, workers=0)
     return "\n".join(results)
 
 
@@ -459,7 +514,7 @@ def _split_at_sentence_boundary(text: str, target_size: int, overlap: int) -> Li
     # Sentence splitter: split after . ! ? \n  but keep the delimiter
     # Also treat markdown table rows (lines starting with |) as atomic units
     sentence_pattern = re.compile(
-        r'(?<=[.!?])\s+(?=[A-Z\u0900-\u097F\u0980-\u09FF\u0A00-\u0A7F"\'(\[])'
+        r'(?<!\b\d)(?<=[.!?])\s+(?=[A-Z\u0900-\u097F\u0980-\u09FF\u0A00-\u0A7F"\'(\[])'
         r'|\n(?=\n)'       # double newline = paragraph break
         r'|\n(?=\|)'       # line before a table row
         r'(?<=\|)\n',      # line after a table row
@@ -533,13 +588,16 @@ def build_parent_child_chunks(
     """
     Build parent (context) and child (search) chunks from page data.
     Uses sentence-boundary-aware splitting to avoid abrupt cuts.
+    Includes SHA-256 document checksum hashes for cryptographic traceability.
     """
+    import hashlib
     parents:  List[Dict] = []
     children: List[Dict] = []
     parent_id = child_id = 0
 
     for page in pages_data:
         page_text = page["text"]
+        doc_sha256 = hashlib.sha256(page_text.encode("utf-8")).hexdigest()[:16]
 
         parent_texts = _split_at_sentence_boundary(
             page_text, PARENT_CHUNK_SIZE, PARENT_CHUNK_OVERLAP)
@@ -554,6 +612,7 @@ def build_parent_child_chunks(
                 "page_num":     page["page_num"],
                 "source":       page["source"],
                 "product_name": product_name,
+                "doc_sha256":   doc_sha256,
                 "method":       page.get("extraction_method", ""),
             })
 
@@ -570,11 +629,13 @@ def build_parent_child_chunks(
                     "page_num":     page["page_num"],
                     "source":       page["source"],
                     "product_name": product_name,
+                    "doc_sha256":   doc_sha256,
                 })
                 child_id += 1
             parent_id += 1
 
     return parents, children
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -601,7 +662,7 @@ def _embed_texts(texts: List[str], batch_size: int = 32) -> np.ndarray:
         gc.collect()
         print("ok", flush=True)
 
-    return np.vstack(all_vecs).astype("float32")
+    return np.ascontiguousarray(np.vstack(all_vecs), dtype=np.float32)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -680,7 +741,7 @@ def build_faiss_index_for_pdf(
         "methods_used":  list(methods_used),
         "claude_vision_pages": vision_pages,
         "local_pages":   local_pages,
-        "model":         "paraphrase-multilingual-MiniLM-L12-v2",
+        "model":         EMBED_MODEL_NAME,
     }
     meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False))
 
@@ -711,7 +772,10 @@ class BrochureFAISSStore:
                 f"No FAISS index for '{slug}'. "
                 f"Run scripts/build_all_indexes.py.")
 
-        self.index = faiss.read_index(str(faiss_path))
+        try:
+            self.index = faiss.read_index(str(faiss_path), faiss.IO_FLAG_MMAP)
+        except Exception:
+            self.index = faiss.read_index(str(faiss_path))
         with open(pkl_path, "rb") as f:
             data = pickle.load(f)
         self.children    = data["children"]
@@ -733,6 +797,8 @@ class BrochureFAISSStore:
 
         for score, idx in zip(scores[0], indices[0]):
             if idx < 0 or idx >= len(self.children):
+                continue
+            if float(score) < 0.45:
                 continue
             child     = self.children[idx]
             parent_id = child["parent_id"]

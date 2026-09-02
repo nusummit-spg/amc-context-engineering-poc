@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HITL Feedback Loop — Architecture Presentation</title>
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    /* ── Tokens ── */
+    :root {
+      --purple:   #667eea;
+      --violet:   #764ba2;
+      --pink:     #f093fb;
+      --red:      #f5576c;
+      --blue:     #4facfe;
+      --cyan:     #00f2fe;
+      --green:    #43e97b;
+      --teal:     #38f9d7;
+      --orange:   #fa709a;
+      --yellow:   #fee140;
+      --gray-bg:  #f4f6fb;
+      --gray-border: #dde3f0;
+      --text:     #2d3748;
+      --muted:    #718096;
+      --radius:   10px;
+      --shadow:   0 4px 20px rgba(102,126,234,.18);
+      --shadow-lg:0 12px 40px rgba(102,126,234,.25);
+    }
+
+    /* ── Base ── */
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, var(--purple), var(--violet));
+      min-height: 100vh;
+      padding: 24px;
+      color: var(--text);
+    }
+
+    /* ── Shell ── */
+    .shell {
+      max-width: 1300px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 30px 80px rgba(0,0,0,.30);
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    .site-header {
+      background: linear-gradient(135deg, var(--purple) 0%, var(--violet) 100%);
+      padding: 52px 48px 44px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .site-header::before {
+      content:'';
+      position:absolute; inset:0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .site-header h1 {
+      font-size: clamp(28px, 4vw, 46px);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -.5px;
+      position: relative;
+    }
+    .site-header .subtitle {
+      margin-top: 10px;
+      font-size: 17px;
+      color: rgba(255,255,255,.85);
+      position: relative;
+    }
+    .header-badges {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 20px;
+      flex-wrap: wrap;
+      position: relative;
+    }
+    .badge {
+      background: rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.35);
+      color: #fff;
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      backdrop-filter: blur(4px);
+    }
+
+    /* ── Nav ── */
+    .site-nav {
+      background: #fff;
+      border-bottom: 2px solid var(--gray-border);
+      padding: 0 32px;
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-btn {
+      padding: 16px 20px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: color .2s, border-color .2s;
+    }
+    .nav-btn:hover { color: var(--purple); }
+    .nav-btn.active {
+      color: var(--purple);
+      border-bottom-color: var(--purple);
+    }
+
+    /* ── Progress bar ── */
+    .progress-bar {
+      height: 3px;
+      background: linear-gradient(90deg, var(--purple), var(--pink));
+      width: 0%;
+      transition: width .4s ease;
+    }
+
+    /* ── Section slide ── */
+    .content { padding: 44px 48px; }
+    .section { display: none; }
+    .section.active {
+      display: block;
+      animation: slideIn .35s ease;
+    }
+    @keyframes slideIn {
+      from { opacity:0; transform:translateY(14px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* ── Typography ── */
+    .section-title {
+      font-size: 30px;
+      font-weight: 800;
+      color: var(--purple);
+      margin-bottom: 6px;
+    }
+    .section-lead {
+      color: var(--muted);
+      font-size: 15px;
+      margin-bottom: 36px;
+      border-bottom: 2px solid var(--gray-border);
+      padding-bottom: 18px;
+    }
+    h3.sub {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--violet);
+      margin: 36px 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h3.sub::after {
+      content:'';
+      flex:1;
+      height:2px;
+      background: linear-gradient(90deg, var(--gray-border), transparent);
+    }
+
+    /* ── Metric cards ── */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 18px;
+      margin: 20px 0 36px;
+    }
+    .kpi {
+      background: linear-gradient(135deg, var(--purple), var(--violet));
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      transition: transform .25s;
+    }
+    .kpi:hover { transform: translateY(-4px); }
+    .kpi .val { font-size: 38px; font-weight: 800; line-height:1; }
+    .kpi .lbl { font-size: 13px; opacity:.85; margin-top: 6px; }
+    .kpi.alt { background: linear-gradient(135deg, var(--pink), var(--red)); }
+    .kpi.alt2 { background: linear-gradient(135deg, var(--blue), var(--cyan)); }
+    .kpi.alt3 { background: linear-gradient(135deg, var(--green), var(--teal)); }
+
+    /* ── Two column ── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      margin: 20px 0;
+    }
+    @media(max-width:768px){ .two-col{ grid-template-columns:1fr; } }
+
+    /* ── Feature list ── */
+    .check-list { list-style: none; }
+    .check-list li {
+      padding: 9px 0 9px 32px;
+      position: relative;
+      font-size: 15px;
+      border-bottom: 1px solid var(--gray-border);
+    }
+    .check-list li:last-child { border:none; }
+    .check-list li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: var(--purple);
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    /* ── Flowchart lane ── */
+    .flow-lane {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      margin: 24px 0;
+    }
+    .flow-node {
+      background: linear-gradient(135deg, var(--purple), var(--violet));
+      color: #fff;
+      padding: 16px 28px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      text-align: center;
+      min-width: 220px;
+      max-width: 340px;
+      width: 100%;
+      box-shadow: var(--shadow);
+      position: relative;
+      transition: box-shadow .25s, transform .25s;
+    }
+    .flow-node:hover { transform: scale(1.03); box-shadow: var(--shadow-lg); }
+    .flow-node.pink  { background: linear-gradient(135deg, var(--pink), var(--red)); }
+    .flow-node.blue  { background: linear-gradient(135deg, var(--blue), var(--cyan)); }
+    .flow-node.green { background: linear-gradient(135deg, var(--green), var(--teal)); }
+    .flow-node.orange{ background: linear-gradient(135deg, var(--orange), var(--yellow)); }
+    .flow-node.outline {
+      background: #fff;
+      color: var(--purple);
+      border: 2.5px solid var(--purple);
+      font-size: 13px;
+      min-width: 160px;
+    }
+    .flow-node .node-sub {
+      font-size: 12px;
+      opacity: .85;
+      font-weight: 400;
+      margin-top: 3px;
+    }
+    .flow-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 40px;
+      position: relative;
+    }
+    .flow-arrow::before {
+      content:'';
+      width: 2px;
+      flex:1;
+      background: linear-gradient(180deg, var(--purple), var(--pink));
+    }
+    .flow-arrow::after {
+      content:'▼';
+      color: var(--purple);
+      font-size: 14px;
+      margin-top:-2px;
+      animation: arrowBounce 1.8s ease-in-out infinite;
+    }
+    @keyframes arrowBounce {
+      0%,100%{ transform:translateY(0); }
+      50%    { transform:translateY(5px); }
+    }
+
+    /* ── Horizontal pipeline ── */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 16px 0;
+    }
+    .pipe-step {
+      background: var(--gray-bg);
+      border: 2px solid var(--gray-border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      text-align: center;
+      min-width: 120px;
+      transition: all .2s;
+      cursor: default;
+    }
+    .pipe-step:hover {
+      background: var(--purple);
+      color: #fff;
+      border-color: var(--purple);
+      transform: translateY(-3px);
+    }
+    .pipe-arrow { font-size: 18px; color: var(--purple); font-weight: 700; }
+
+    /* ── Phase cards (E2E section) ── */
+    .phase-card {
+      border-radius: 12px;
+      padding: 28px 32px;
+      margin: 20px 0;
+      border-left: 5px solid var(--purple);
+      background: var(--gray-bg);
+      position: relative;
+    }
+    .phase-card.c1 { border-color: var(--purple); }
+    .phase-card.c2 { border-color: var(--red); }
+    .phase-card.c3 { border-color: var(--blue); }
+    .phase-card.c4 { border-color: var(--green); }
+    .phase-card.c5 { border-color: var(--orange); }
+    .phase-card.c6 { border-color: var(--violet); }
+    .phase-card.c7 { border-color: var(--yellow); }
+    .phase-card.c8 { border-color: var(--teal); }
+    .phase-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .phase-title {
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .phase-connector {
+      text-align: center;
+      padding: 8px 0;
+      color: var(--muted);
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    /* ── Component grid ── */
+    .comp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 18px;
+      margin: 20px 0;
+    }
+    .comp-card {
+      background: #fff;
+      border: 2px solid var(--gray-border);
+      border-radius: 12px;
+      padding: 24px 20px;
+      text-align: center;
+      transition: all .25s;
+    }
+    .comp-card:hover {
+      border-color: var(--purple);
+      box-shadow: var(--shadow);
+      transform: translateY(-5px);
+    }
+    .comp-icon { font-size: 38px; margin-bottom: 10px; }
+    .comp-card h4 { font-size: 15px; font-weight: 700; color: var(--purple); margin-bottom: 6px; }
+    .comp-card p  { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .comp-card .comp-tag {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 3px 10px;
+      background: var(--gray-bg);
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--purple);
+    }
+
+    /* ── Optimization cards ── */
+    .opt-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 20px 0;
+    }
+    @media(max-width:640px){ .opt-grid{grid-template-columns:1fr;} }
+    .opt-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      border-left: 4px solid var(--purple);
+      box-shadow: 0 2px 10px rgba(0,0,0,.06);
+    }
+    .opt-card:nth-child(2){ border-color: var(--red); }
+    .opt-card:nth-child(3){ border-color: var(--blue); }
+    .opt-card:nth-child(4){ border-color: var(--green); }
+    .opt-card:nth-child(5){ border-color: var(--orange); }
+    .opt-card:nth-child(6){ border-color: var(--violet); }
+    .opt-card:nth-child(7){ border-color: var(--teal); }
+    .opt-card h4 { font-size: 15px; font-weight: 700; margin-bottom: 5px; }
+    .opt-card p  { font-size: 13px; color: var(--muted); }
+    .opt-badge {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 3px 10px;
+      background: linear-gradient(135deg, var(--purple), var(--violet));
+      color: #fff;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* ── Table ── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.07);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .data-table th {
+      background: linear-gradient(135deg, var(--purple), var(--violet));
+      color: #fff;
+      padding: 14px 18px;
+      text-align: left;
+      font-weight: 700;
+    }
+    .data-table td {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--gray-border);
+    }
+    .data-table tr:last-child td { border:none; }
+    .data-table tr:hover td { background: var(--gray-bg); }
+    .data-table .highlight-row td { font-weight: 700; background: linear-gradient(90deg,#f0f4ff,#fff); }
+
+    /* ── Callout ── */
+    .callout {
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin: 20px 0;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .callout.info  { background:#eef2ff; border-left:4px solid var(--purple); }
+    .callout.warn  { background:#fffbeb; border-left:4px solid var(--yellow); }
+    .callout.success{ background:#ecfdf5; border-left:4px solid var(--green); }
+    .callout-icon  { font-size: 22px; flex-shrink:0; }
+    .callout-body  { font-size: 14px; color: var(--text); }
+    .callout-body strong { display:block; margin-bottom:4px; }
+
+    /* ── Footer ── */
+    .site-footer {
+      background: var(--gray-bg);
+      border-top: 2px solid var(--gray-border);
+      padding: 24px 48px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--gray-bg); }
+    ::-webkit-scrollbar-thumb { background: var(--purple); border-radius: 3px; }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <h1>HITL Feedback Loop Architecture</h1>
+    <p class="subtitle">Human-in-the-Loop · Self-Correcting Knowledge Graph · Token-Optimised</p>
+    <div class="header-badges">
+      <span class="badge">🚀 Production Ready</span>
+      <span class="badge">70-80% Token Savings</span>
+      <span class="badge">⚡ &lt;100ms Feedback</span>
+      <span class="badge">♻️ Self-Improving</span>
+    </div>
+  </header>
+  <div class="progress-bar" id="progressBar"></div>
+
+  <!-- NAV -->
+  <nav class="site-nav" id="siteNav">
+    <button class="nav-btn active" onclick="show('overview',this)">Overview</button>
+    <button class="nav-btn" onclick="show('e2e',this)">End-to-End Flow</button>
+    <button class="nav-btn" onclick="show('components',this)">Components</button>
+    <button class="nav-btn" onclick="show('feedback',this)">Feedback Path</button>
+    <button class="nav-btn" onclick="show('evaluation',this)">Eval Cycle</button>
+    <button class="nav-btn" onclick="show('selfcorrect',this)">Self-Correcting Loop</button>
+    <button class="nav-btn" onclick="show('optimization',this)">Token Optimisation</button>
+    <button class="nav-btn" onclick="show('metrics',this)">Metrics</button>
+  </nav>
+
+  <main class="content">
+
+    <!-- ═══════════════════════════════════════════════ OVERVIEW -->
+    <section id="overview" class="section active">
+      <p class="section-title">📋 Project Overview</p>
+      <p class="section-lead">A production-grade feedback loop that turns every user interaction into a knowledge graph improvement — automatically, efficiently, and safely.</p>
+
+      <div class="two-col">
+        <div>
+          <h3 class="sub">What is HITL?</h3>
+          <p style="color:var(--muted);margin-bottom:16px;line-height:1.7">
+            HITL captures thumbs-up / thumbs-down ratings and free-text corrections from users,
+            buffers them in PostgreSQL, then runs an hourly batch evaluation through an LLM.
+            High-confidence corrections are automatically committed to the Neo4j knowledge graph —
+            so the system gets smarter with every interaction, at minimal LLM cost.
+          </p>
+          <ul class="check-list">
+            <li>Non-blocking feedback capture (&lt;100 ms)</li>
+            <li>Scheduled async evaluation — no user impact</li>
+            <li>Self-correcting Neo4j knowledge graph</li>
+            <li>Full audit trail + rollback capability</li>
+            <li>Token-optimised batch processing</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="sub">Why Does This Matter?</h3>
+          <ul class="check-list">
+            <li><strong>Graph quality degrades without feedback</strong> — entities go stale, relationships break</li>
+            <li><strong>Manual corrections don't scale</strong> — one engineer can't review every query</li>
+            <li><strong>LLM calls are expensive</strong> — naive per-item evaluation costs 25× more</li>
+            <li><strong>Users know best</strong> — domain experts spot errors LLMs miss</li>
+            <li><strong>Compound gains</strong> — each correction improves future retrievals too</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 class="sub">Key Numbers at a Glance</h3>
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="val">&lt;100ms</div>
+          <div class="lbl">Feedback recording latency</div>
+        </div>
+        <div class="kpi alt">
+          <div class="val">70–80%</div>
+          <div class="lbl">Token savings vs naive</div>
+        </div>
+        <div class="kpi alt2">
+          <div class="val">25 items</div>
+          <div class="lbl">Per LLM batch call</div>
+        </div>
+        <div class="kpi alt3">
+          <div class="val">Hourly</div>
+          <div class="lbl">Evaluation cycle</div>
+        </div>
+      </div>
+
+      <div class="callout success">
+        <span class="callout-icon">🎯</span>
+        <div class="callout-body">
+          <strong>Bottom line</strong>
+          Users rate a response in one click. That click — aggregated with hundreds of others — automatically improves what every future user sees. No human engineer in the loop for routine corrections.
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════ E2E FLOW -->
+    <section id="e2e" class="section">
+      <p class="section-title">🔄 Complete End-to-End Flow</p>
+      <p class="section-lead">Eight distinct phases — from the moment a user types a query to the graph correcting itself and delivering a better answer next time.</p>
+
+      <!-- Phase 1 -->
+      <div class="phase-card c1">
+        <div class="phase-label">Phase 1 — Query Path (Existing System)</div>
+        <div class="phase-title">👤 User Query → LLM Response + Response ID</div>
+        <div class="pipeline">
+          <div class="pipe-step">👤 User Query</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">🔍 FAISS Retrieval</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">📊 Neo4j Graph Context</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">🧠 LLM Synthesis</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step" style="border-color:var(--purple);color:var(--purple);">📝 Response + <strong>ID</strong></div>
+        </div>
+        <div class="callout info" style="margin:0;padding:12px 16px;">
+          <span class="callout-icon">🆕</span>
+          <div class="callout-body"><strong>New addition:</strong> Every response gets a unique <code>response_id</code> stored in a short-lived Redis cache. This ID links later feedback to the exact retrieval context used.</div>
+        </div>
+      </div>
+      <div class="phase-connector">⬇</div>
+
+      <!-- Phase 2 -->
+      <div class="phase-card c2">
+        <div class="phase-label">Phase 2 — Synchronous Feedback Capture (&lt;100 ms)</div>
+        <div class="phase-title">👍 User Rates → Validated, Tagged, Stored</div>
+        <div class="pipeline">
+          <div class="pipe-step">👍 Rating + Comment</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">🔗 Lookup Response ID</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">✅ Validate Input</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">🏷️ NER Tagging</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">😊 Sentiment</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">🎯 Intent Score</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step" style="border-color:var(--red);color:var(--red);">💾 PostgreSQL</div>
+        </div>
+        <div class="callout info" style="margin:0;padding:12px 16px;">
+          <span class="callout-icon">⚡</span>
+          <div class="callout-body"><strong>No LLM in this path.</strong> Pre-classification uses lightweight NLP (spaCy NER + VADER sentiment). User sees "Feedback recorded ✓" in under 100 ms.</div>
+        </div>
+      </div>
+      <div class="phase-connector">⬇</div>
+
+      <!-- Phase 3 -->
+      <div class="phase-card c3">
+        <div class="phase-label">Phase 3 — Temporary Buffer (Async, PostgreSQL)</div>
+        <div class="phase-title">💾 12 Core Tables + 6 Cache Tables (90-day retention)</div>
+        <div class="pipeline">
+          <div class="pipe-step">📊 feedback_records</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">🏷️ classifications</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">💬 recommendations</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">📝 audit_trail</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step" style="border-color:var(--blue);color:var(--blue);">⚡ 6 Cache Tables (1–24h TTL)</div>
+        </div>
+      </div>
+      <div class="phase-connector">⬇  (every hour, Orchestrator wakes up)</div>
+
+      <!-- Phase 4 -->
+      <div class="phase-card c4">
+        <div class="phase-label">Phase 4 — Hourly Orchestration (APScheduler)</div>
+        <div class="phase-title">⏰ 8-Step Evaluation Cycle — ~3 min for 500 items</div>
+        <div class="pipeline">
+          <div class="pipe-step">1 Fetch Pending</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">2 Aggregate</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">3 Deduplicate<br/><small style="font-weight:400">−40%</small></div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">4 Route<br/><small style="font-weight:400">60% skip LLM</small></div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">5 Batch<br/><small style="font-weight:400">25/call</small></div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">6 Evaluate</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">7 Apply</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step" style="border-color:var(--green);color:var(--green);">8 Record + Clean</div>
+        </div>
+      </div>
+      <div class="phase-connector">⬇</div>
+
+      <!-- Phase 5 -->
+      <div class="phase-card c5">
+        <div class="phase-label">Phase 5 — LLM Batch Evaluation (Token-Optimised)</div>
+        <div class="phase-title">🤖 One LLM call evaluates 25 feedback items simultaneously</div>
+        <div class="pipeline">
+          <div class="pipe-step" style="border-color:var(--orange);color:var(--orange);">📋 System Prompt<br/><small style="font-weight:400">amortised ×25</small></div>
+          <div class="pipe-arrow">+</div>
+          <div class="pipe-step" style="border-color:var(--orange);color:var(--orange);">🗂️ Graph Snapshot<br/><small style="font-weight:400">cached 1h</small></div>
+          <div class="pipe-arrow">+</div>
+          <div class="pipe-step" style="border-color:var(--orange);color:var(--orange);">📚 Few-Shot<br/><small style="font-weight:400">Redis cached</small></div>
+          <div class="pipe-arrow">+</div>
+          <div class="pipe-step" style="border-color:var(--orange);color:var(--orange);">📝 25 Feedback Items</div>
+          <div class="pipe-arrow">=</div>
+          <div class="pipe-step" style="border-color:var(--green);color:var(--green);font-size:15px;">⚡ 1 LLM Call → JSON Results</div>
+        </div>
+        <div class="callout warn" style="margin:10px 0 0;padding:12px 16px;">
+          <span class="callout-icon">💡</span>
+          <div class="callout-body"><strong>Only items with confidence &gt; 0.85 proceed to correction.</strong> Lower-confidence items are queued for human review or discarded.</div>
+        </div>
+      </div>
+      <div class="phase-connector">⬇</div>
+
+      <!-- Phase 6 -->
+      <div class="phase-card c6">
+        <div class="phase-label">Phase 6 — Graph Correction & Validation</div>
+        <div class="phase-title">📈 Corrections applied to Neo4j in atomic transactions</div>
+        <div class="pipeline">
+          <div class="pipe-step">📝 Correction Plan</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">✅ Schema Validate</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">🔒 Neo4j Transaction</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step">➕ Add Entity</div>
+          <div class="pipe-arrow">|</div>
+          <div class="pipe-step">✏️ Update Prop</div>
+          <div class="pipe-arrow">|</div>
+          <div class="pipe-step">🔗 Add Relation</div>
+          <div class="pipe-arrow">|</div>
+          <div class="pipe-step">🗑️ Remove Relation</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step" style="border-color:var(--violet);color:var(--violet);">📝 Audit Log</div>
+        </div>
+      </div>
+      <div class="phase-connector">⬇</div>
+
+      <!-- Phase 7 -->
+      <div class="phase-card c7">
+        <div class="phase-label">Phase 7 — Cache Invalidation</div>
+        <div class="phase-title">🧹 Stale caches cleared so next query uses updated graph</div>
+        <div class="pipeline">
+          <div class="pipe-step">🗂️ Clear FAISS Index<br/><small>affected entities</small></div>
+          <div class="pipe-arrow">+</div>
+          <div class="pipe-step">⚡ Clear Redis Keys<br/><small>query cache</small></div>
+          <div class="pipe-arrow">+</div>
+          <div class="pipe-step">🔍 Clear Entity Resolver<br/><small>NER cache</small></div>
+          <div class="pipe-arrow">+</div>
+          <div class="pipe-step">📊 Clear Neo4j Traversal<br/><small>path cache</small></div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step" style="border-color:var(--green);color:var(--green);">✅ System Updated</div>
+        </div>
+      </div>
+      <div class="phase-connector">⬇</div>
+
+      <!-- Phase 8 -->
+      <div class="phase-card c8">
+        <div class="phase-label">Phase 8 — The Loop Closes</div>
+        <div class="phase-title">♻️ Better graph → Better retrieval → Better answers → Better feedback</div>
+        <div class="pipeline">
+          <div class="pipe-step" style="border-color:var(--teal);color:var(--teal);">🆕 Next Query</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step" style="border-color:var(--teal);color:var(--teal);">🔍 Improved Retrieval</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step" style="border-color:var(--teal);color:var(--teal);">🧠 Richer LLM Context</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step" style="border-color:var(--teal);color:var(--teal);">📝 Better Response</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step" style="border-color:var(--teal);color:var(--teal);">👍 Higher-Quality Feedback</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-step" style="border-color:var(--teal);color:var(--teal);font-weight:800;">♻️ Repeat</div>
+        </div>
+        <div class="callout success" style="margin:10px 0 0;padding:12px 16px;">
+          <span class="callout-icon">🎯</span>
+          <div class="callout-body"><strong>Compound improvement.</strong> Each correction cycle raises the quality floor — the graph, the embeddings, and the answers all get better together.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════ COMPONENTS -->
+    <section id="components" class="section">
+      <p class="section-title">🔧 Core Components</p>
+      <p class="section-lead">Eight Python modules, each with a single clear responsibility. Designed to be deployed independently and swapped without breaking the pipeline.</p>
+
+      <div class="comp-grid">
+        <div class="comp-card">
+          <div class="comp-icon">📨</div>
+          <h4>Feedback Collector</h4>
+          <p>HTTP endpoint that validates, links to response metadata, runs NER + sentiment, stores to PostgreSQL — all in under 100 ms.</p>
+          <span class="comp-tag">feedback_collector.py</span>
+        </div>
+        <div class="comp-card">
+          <div class="comp-icon">💾</div>
+          <h4>PostgreSQL Buffer</h4>
+          <p>12 normalised tables + 6 cache tables. 90-day rolling retention. Indexed for batch reads. Acts as the source of truth for raw feedback.</p>
+          <span class="comp-tag">postgres_client.py</span>
+        </div>
+        <div class="comp-card">
+          <div class="comp-icon">📦</div>
+          <h4>Feedback Processor</h4>
+          <p>Aggregates votes, semantic deduplication (~40% reduction), builds 25-item batches with shared context payload.</p>
+          <span class="comp-tag">feedback_processor.py</span>
+        </div>
+        <div class="comp-card">
+          <div class="comp-icon">🤖</div>
+          <h4>Batch Evaluator</h4>
+          <p>Sends amortised batch prompts to the LLM. Parses structured JSON output. Confidence gating at 0.85 before passing to corrector.</p>
+          <span class="comp-tag">batch_evaluation.py</span>
+        </div>
+        <div class="comp-card">
+          <div class="comp-icon">📈</div>
+          <h4>Graph Corrector</h4>
+          <p>Validates correction plan, runs Neo4j transactions atomically, writes to audit log, triggers rollback on failure.</p>
+          <span class="comp-tag">graph_corrector.py</span>
+        </div>
+        <div class="comp-card">
+          <div class="comp-icon">🧠</div>
+          <h4>Cache Manager</h4>
+          <p>Surgically invalidates only affected FAISS embeddings, Redis keys, entity-resolver cache, and Neo4j traversal paths.</p>
+          <span class="comp-tag">cache_manager.py</span>
+        </div>
+        <div class="comp-card">
+          <div class="comp-icon">⏰</div>
+          <h4>Orchestrator</h4>
+          <p>APScheduler-driven 6-step coordinator. Configurable cron. Monitors health, retries failures, emits Prometheus metrics.</p>
+          <span class="comp-tag">evaluation_orchestrator.py</span>
+        </div>
+        <div class="comp-card">
+          <div class="comp-icon">📊</div>
+          <h4>Feedback API Routes</h4>
+          <p>FastAPI router: POST /feedback (non-blocking), GET /feedback/status, GET /feedback/stats. OpenAPI documented.</p>
+          <span class="comp-tag">api/routes/feedback.py</span>
+        </div>
+      </div>
+
+      <h3 class="sub">How They Connect</h3>
+      <div class="flow-lane">
+        <div class="flow-node">API Route — receives POST /feedback</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node pink">Feedback Collector — validate, classify, store</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node blue">PostgreSQL Buffer — persists for up to 90 days</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node green">Orchestrator — picks up pending items hourly</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node pink">Feedback Processor — dedupe + batch</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node blue">Batch Evaluator — one LLM call per 25 items</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node green">Graph Corrector — atomic Neo4j transaction</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node orange">Cache Manager — surgical invalidation</div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════ FEEDBACK PATH -->
+    <section id="feedback" class="section">
+      <p class="section-title">📥 Feedback Collection Path</p>
+      <p class="section-lead">The synchronous path from user click to database record. Designed to be invisible — zero latency impact on the query response.</p>
+
+      <h3 class="sub">8-Step Synchronous Flow</h3>
+      <div class="flow-lane">
+        <div class="flow-node">1 — User clicks 👍 or 👎 (optional comment)</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node pink">2 — POST /api/feedback with response_id</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node blue">3 — Validate: response_id exists, rating in range, comment length</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node">4 — NER tagging: extract entities from comment (spaCy)</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node pink">5 — Sentiment scoring: VADER polarity on comment text</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node blue">6 — Intent classification: correction / confirmation / noise</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node green">7 — Async insert into PostgreSQL (non-blocking)</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node orange">8 — Return { feedback_id, status: "recorded" } in &lt;100 ms</div>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">🔑</span>
+        <div class="callout-body">
+          <strong>Why non-blocking matters</strong>
+          Steps 4–6 run in a background task (FastAPI BackgroundTasks). The HTTP response fires immediately after step 3. The user never waits for NLP or DB writes — they're fire-and-forget from the user's perspective.
+        </div>
+      </div>
+
+      <h3 class="sub">What Gets Stored</h3>
+      <table class="data-table">
+        <tr><th>Field</th><th>Type</th><th>Purpose</th></tr>
+        <tr><td>feedback_id</td><td>UUID</td><td>Primary key, returned to client</td></tr>
+        <tr><td>response_id</td><td>UUID</td><td>Links to original query + retrieval context</td></tr>
+        <tr><td>rating</td><td>int (1–5)</td><td>Numeric satisfaction score</td></tr>
+        <tr><td>comment</td><td>text</td><td>Free-text correction or note</td></tr>
+        <tr><td>ner_tags</td><td>jsonb</td><td>Entities extracted from comment</td></tr>
+        <tr><td>sentiment</td><td>float</td><td>VADER compound score (−1 to +1)</td></tr>
+        <tr><td>intent</td><td>enum</td><td>correction / confirmation / noise</td></tr>
+        <tr><td>quality_score</td><td>float</td><td>Pre-computed LLM-worthiness score</td></tr>
+        <tr><td>status</td><td>enum</td><td>pending → evaluated → applied / rejected</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════ EVAL CYCLE -->
+    <section id="evaluation" class="section">
+      <p class="section-title">⏰ Evaluation Cycle</p>
+      <p class="section-lead">Runs every hour as a background job. Invisible to users, asynchronous, and designed to process 500 feedback items in roughly 3 minutes.</p>
+
+      <h3 class="sub">6-Step Orchestrated Process</h3>
+      <div class="flow-lane">
+        <div class="flow-node">Step 1 — Fetch all pending feedback from PostgreSQL</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node pink">Step 2 — Aggregate: group by entity + correction type, sum votes</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node blue">Step 3 — Deduplicate: semantic clustering, keep highest-vote representative (−40% items)</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node green">Step 4 — Route: skip LLM if score &gt; 0.95 (auto-apply) or &lt; 0.20 (auto-reject) — 60% never hit LLM</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node pink">Step 5 — LLM Batch Eval: send remaining in 25-item batches with amortised context</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node blue">Step 6 — Apply corrections &gt; 0.85 confidence → invalidate caches → record metrics → cleanup</div>
+      </div>
+
+      <h3 class="sub">Token Cost: Batch vs Naive</h3>
+      <div class="two-col">
+        <div>
+          <div style="background:var(--gray-bg);border-radius:10px;padding:24px;text-align:center;">
+            <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px;">NAIVE (1 call per item)</div>
+            <div style="font-size:48px;font-weight:800;color:var(--red);">2,100</div>
+            <div style="font-size:14px;color:var(--muted);">tokens per feedback item</div>
+            <div style="font-size:12px;margin-top:8px;color:var(--muted);">System prompt repeated 25× per batch</div>
+          </div>
+        </div>
+        <div>
+          <div style="background:var(--gray-bg);border-radius:10px;padding:24px;text-align:center;">
+            <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px;">BATCHED (25 items / call)</div>
+            <div style="font-size:48px;font-weight:800;color:var(--green);">~188</div>
+            <div style="font-size:14px;color:var(--muted);">tokens per feedback item</div>
+            <div style="font-size:12px;margin-top:8px;color:var(--muted);">System prompt paid once for all 25</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout success">
+        <span class="callout-icon">💰</span>
+        <div class="callout-body">
+          <strong>91% token reduction in the best case.</strong> Even the conservative headline figure (70–80%) represents dramatic cost savings at production scale — thousands of feedback items per day.
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════ SELF-CORRECT -->
+    <section id="selfcorrect" class="section">
+      <p class="section-title">🔄 Self-Correcting Knowledge Graph</p>
+      <p class="section-lead">The graph doesn't just store data — it learns from every interaction. Each correction cycle permanently raises the quality floor.</p>
+
+      <h3 class="sub">The Virtuous Cycle</h3>
+      <div class="flow-lane">
+        <div class="flow-node">👤 User gets a slightly wrong answer</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node pink">👎 Rates it down, adds "Axis Fund NAV is wrong"</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node blue">📊 Feedback buffered with context: entity=AxisFund, field=NAV</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node green">🤖 Batch LLM evaluates: "Update NAV property — confidence 0.92"</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node pink">📈 Graph Corrector updates Neo4j node, clears FAISS index for AxisFund</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-node orange">✅ Next user asking about AxisFund NAV gets the correct value</div>
+      </div>
+
+      <h3 class="sub">Four Correction Types</h3>
+      <div class="comp-grid">
+        <div class="comp-card">
+          <div class="comp-icon">➕</div>
+          <h4>Add Entity</h4>
+          <p>A fund, manager, or metric that doesn't yet exist in the graph gets created with properties and relationships.</p>
+        </div>
+        <div class="comp-card">
+          <div class="comp-icon">✏️</div>
+          <h4>Update Property</h4>
+          <p>An existing entity has a stale value — NAV, AUM, expense ratio, risk rating — corrected in-place.</p>
+        </div>
+        <div class="comp-card">
+          <div class="comp-icon">🔗</div>
+          <h4>Add Relationship</h4>
+          <p>A missing edge between entities added — e.g. "FundManager MANAGES Fund" that the ingestion pipeline missed.</p>
+        </div>
+        <div class="comp-card">
+          <div class="comp-icon">🗑️</div>
+          <h4>Remove Relationship</h4>
+          <p>An incorrect edge deleted — e.g. a manager listed as managing a fund they left two years ago.</p>
+        </div>
+      </div>
+
+      <h3 class="sub">Safety Mechanisms</h3>
+      <ul class="check-list">
+        <li>Confidence threshold (0.85) gates all automatic corrections</li>
+        <li>All corrections run inside atomic Neo4j transactions — partial failures roll back completely</li>
+        <li>Every change written to <code>correction_execution_history</code> with timestamp, confidence, and source feedback IDs</li>
+        <li>Human review queue for items in the 0.5–0.85 confidence band</li>
+        <li>Daily digest email summarises what was corrected (configurable)</li>
+      </ul>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════ OPTIMISATION -->
+    <section id="optimization" class="section">
+      <p class="section-title">💡 Token Optimisation</p>
+      <p class="section-lead">Seven compounding strategies that together reduce per-item token cost from 2,100 to ~188 — a 91% reduction.</p>
+
+      <div class="opt-grid">
+        <div class="opt-card">
+          <h4>1. 📦 Batch Processing</h4>
+          <p>Evaluate 25 items in one LLM call. System prompt, schema, and instructions paid once and amortised.</p>
+          <span class="opt-badge">−70% tokens</span>
+        </div>
+        <div class="opt-card">
+          <h4>2. 🎯 Semantic Deduplication</h4>
+          <p>Cluster similar corrections (same entity + same field), evaluate only the cluster representative. Votes are aggregated.</p>
+          <span class="opt-badge">−40% items</span>
+        </div>
+        <div class="opt-card">
+          <h4>3. 🔄 Shared Graph Context</h4>
+          <p>Neo4j subgraph fetched once per batch and injected into the shared context, not per-item. Cached for 1 hour.</p>
+          <span class="opt-badge">−50% context tokens</span>
+        </div>
+        <div class="opt-card">
+          <h4>4. 🚦 Conditional Routing</h4>
+          <p>Pre-scoring skips the LLM entirely for obvious cases: score &gt; 0.95 auto-applies, score &lt; 0.20 auto-rejects.</p>
+          <span class="opt-badge">60% skip LLM</span>
+        </div>
+        <div class="opt-card">
+          <h4>5. 💾 Cached Few-Shot Examples</h4>
+          <p>Domain-specific correction examples pre-computed and stored in Redis. Retrieved once per cycle, not per batch.</p>
+          <span class="opt-badge">−15% prompt tokens</span>
+        </div>
+        <div class="opt-card">
+          <h4>6. 📝 Structured JSON Output</h4>
+          <p>Response schema provided up-front. LLM returns compact JSON only — no explanations, no markdown, no filler.</p>
+          <span class="opt-badge">−30% output tokens</span>
+        </div>
+        <div class="opt-card">
+          <h4>7. 🧠 Graph Snapshot Caching</h4>
+          <p>A lightweight Neo4j snapshot (affected entity neighbourhood only) cached hourly. Avoids expensive graph traversal mid-batch.</p>
+          <span class="opt-badge">−20% latency</span>
+        </div>
+      </div>
+
+      <h3 class="sub">Cumulative Savings Table</h3>
+      <table class="data-table">
+        <tr><th>Optimisation Applied</th><th>Tokens/Item</th><th>Reduction vs Previous</th><th>Cumulative Saving</th></tr>
+        <tr><td>Baseline (naive per-item)</td><td>2,100</td><td>—</td><td>—</td></tr>
+        <tr><td>+ Batch processing (25/call)</td><td>630</td><td>70%</td><td>70%</td></tr>
+        <tr><td>+ Semantic deduplication</td><td>378</td><td>40%</td><td>82%</td></tr>
+        <tr><td>+ Shared graph context</td><td>189</td><td>50%</td><td>91%</td></tr>
+        <tr><td>+ Structured output</td><td>~188</td><td>&lt;1%</td><td>91%</td></tr>
+        <tr class="highlight-row"><td>Final (all strategies)</td><td>~188</td><td colspan="2">91% total reduction</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════ METRICS -->
+    <section id="metrics" class="section">
+      <p class="section-title">📊 Metrics & KPIs</p>
+      <p class="section-lead">What we measure, why it matters, and what "success" looks like for this system.</p>
+
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="val">&lt;100ms</div>
+          <div class="lbl">Feedback recording p99</div>
+        </div>
+        <div class="kpi alt">
+          <div class="val">~3 min</div>
+          <div class="lbl">Cycle duration (500 items)</div>
+        </div>
+        <div class="kpi alt2">
+          <div class="val">&gt;90%</div>
+          <div class="lbl">Correction success rate</div>
+        </div>
+        <div class="kpi alt3">
+          <div class="val">91%</div>
+          <div class="lbl">Peak token reduction</div>
+        </div>
+      </div>
+
+      <h3 class="sub">Operational Metrics Tracked</h3>
+      <div class="comp-grid">
+        <div class="comp-card">
+          <div class="comp-icon">📈</div>
+          <h4>Feedback Volume</h4>
+          <p>Items per hour / day. Trend analysis to detect usage spikes or drop-offs.</p>
+        </div>
+        <div class="comp-card">
+          <div class="comp-icon">⭐</div>
+          <h4>Quality Distribution</h4>
+          <p>Confidence score histogram. What fraction lands above 0.85, in review band, auto-rejected.</p>
+        </div>
+        <div class="comp-card">
+          <div class="comp-icon">✅</div>
+          <h4>Corrections Applied</h4>
+          <p>Count by type (add / update / remove), entity type, and confidence band per cycle.</p>
+        </div>
+        <div class="comp-card">
+          <div class="comp-icon">💰</div>
+          <h4>Token Cost</h4>
+          <p>Actual tokens consumed vs baseline per cycle. Surfaced as cost savings in dollars.</p>
+        </div>
+        <div class="comp-card">
+          <div class="comp-icon">🔁</div>
+          <h4>Cycle Health</h4>
+          <p>Success/failure per orchestration step, retry counts, p95 cycle duration.</p>
+        </div>
+        <div class="comp-card">
+          <div class="comp-icon">📉</div>
+          <h4>Graph Drift</h4>
+          <p>How many corrections per entity per week — a proxy for data quality at ingestion.</p>
+        </div>
+      </div>
+
+      <div class="callout success">
+        <span class="callout-icon">🏁</span>
+        <div class="callout-body">
+          <strong>Definition of success</strong>
+          Correction success rate &gt; 90% sustained over 30 days, with per-item token cost staying below 300 tokens and feedback-to-correction latency under 70 minutes end-to-end.
+        </div>
+      </div>
+    </section>
+
+  </main><!-- /content -->
+
+  <footer class="site-footer">
+    <strong>HITL Feedback Loop — AMC Context Engineering POC</strong><br/>
+    Production-ready implementation · 7 Python modules · 600-line PostgreSQL schema · 2 presentation editions
+  </footer>
+
+</div><!-- /shell -->
+
+<script>
+  const sections = ['overview','e2e','components','feedback','evaluation','selfcorrect','optimization','metrics'];
+
+  function show(id, btn) {
+    // hide all
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    // show target
+    document.getElementById(id).classList.add('active');
+    if (btn) btn.classList.add('active');
+    // progress bar
+    const idx = sections.indexOf(id);
+    document.getElementById('progressBar').style.width = ((idx+1)/sections.length*100)+'%';
+    // scroll content area to top
+    document.querySelector('.content').scrollTo({ top:0, behavior:'smooth' });
+    window.scrollTo({ top: document.querySelector('.site-nav').offsetTop - 10, behavior:'smooth' });
+  }
+
+  // keyboard nav
+  document.addEventListener('keydown', e => {
+    const active = document.querySelector('.section.active');
+    const idx = sections.indexOf(active.id);
+    if (e.key === 'ArrowRight' && idx < sections.length - 1) {
+      const nextBtn = document.querySelectorAll('.nav-btn')[idx+1];
+      show(sections[idx+1], nextBtn);
+    }
+    if (e.key === 'ArrowLeft' && idx > 0) {
+      const prevBtn = document.querySelectorAll('.nav-btn')[idx-1];
+      show(sections[idx-1], prevBtn);
+    }
+  });
+
+  // init progress bar
+  document.getElementById('progressBar').style.width = (1/sections.length*100)+'%';
+</script>
+</body>
+</html>

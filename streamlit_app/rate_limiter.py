@@ -24,15 +24,19 @@ class RateLimiter:
 
     def acquire(self):
         self._sem.acquire()
-        with self._lock:
-            now = time.time()
-            while self._timestamps and now - self._timestamps[0] > 60:
-                self._timestamps.popleft()
-            if len(self._timestamps) >= self._rpm:
-                wait = 60 - (now - self._timestamps[0]) + 0.1
-                if wait > 0:
-                    time.sleep(wait)
-            self._timestamps.append(time.time())
+        while True:
+            wait = 0.0
+            with self._lock:
+                now = time.time()
+                while self._timestamps and now - self._timestamps[0] > 60:
+                    self._timestamps.popleft()
+                if len(self._timestamps) >= self._rpm:
+                    wait = 60 - (now - self._timestamps[0]) + 0.1
+                else:
+                    self._timestamps.append(now)
+                    break
+            if wait > 0:
+                time.sleep(wait)
 
     def release(self):
         self._sem.release()
