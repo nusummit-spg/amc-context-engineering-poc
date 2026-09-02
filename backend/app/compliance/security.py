@@ -87,30 +87,45 @@ def get_client_role(x_user_role: Optional[str] = Header(None)) -> Role:
     if not x_user_role:
         return Role.ADMIN  # Default to ADMIN in open internal demo environment
 
-    role_str = x_user_role.lower().strip()
+    role_str = x_user_role.lower().strip().replace(" ", "_")
     try:
         return Role(role_str)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid X-User-Role: '{x_user_role}'. Must be one of: viewer, reviewer, resolver, admin"
+            detail=f"Invalid X-User-Role: '{x_user_role}'. Must be one of: {[r.value for r in Role]}"
         )
+
 
 
 def require_roles(allowed_roles: List[Role]):
     """Decorator to enforce role permissions on API routes."""
     def decorator(func: Callable):
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            user_role = kwargs.get("current_role")
-            if user_role and user_role not in allowed_roles:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Access denied. Requires one of roles: {[r.value for r in allowed_roles]}"
-                )
-            return await func(*args, **kwargs)
-        return wrapper
+        import inspect
+        if inspect.iscoroutinefunction(func):
+            @wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                user_role = kwargs.get("current_role")
+                if user_role and user_role not in allowed_roles:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Access denied. Requires one of roles: {[r.value for r in allowed_roles]}"
+                    )
+                return await func(*args, **kwargs)
+            return async_wrapper
+        else:
+            @wraps(func)
+            def sync_wrapper(*args, **kwargs):
+                user_role = kwargs.get("current_role")
+                if user_role and user_role not in allowed_roles:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Access denied. Requires one of roles: {[r.value for r in allowed_roles]}"
+                    )
+                return func(*args, **kwargs)
+            return sync_wrapper
     return decorator
+
 
 
 # ── Sensitive Data Encryption ──────────────────────────────────────────

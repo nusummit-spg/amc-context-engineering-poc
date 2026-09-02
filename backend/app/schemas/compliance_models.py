@@ -228,6 +228,8 @@ class Role(str, Enum):
     REVIEWER = "reviewer"
     RESOLVER = "resolver"
     ADMIN = "admin"
+    COMPLIANCE_OFFICER = "compliance_officer"
+
 
 
 class ResolveViolationRequest(BaseModel):

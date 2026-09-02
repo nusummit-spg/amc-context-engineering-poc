@@ -99,6 +99,28 @@ from app.schemas.api import (
     TraditionalResult,
 )
 
+# phase 1 metrics schemas
+from app.schemas.regulatory_metadata import RegulatoryMetadata
+from app.schemas.fund_metadata import FundAuditMetadata
+from app.schemas.remediation_metrics import RemediationMetrics
+from app.schemas.feedback_quality import FeedbackQualityMetrics
+from app.schemas.feedback_analytics import FeedbackCategoryAnalytics
+from app.schemas.response_quality import ResponseQualityMetrics
+
+# phase 2 analysis schemas
+from app.schemas.root_cause_analysis import RootCauseAnalysis
+from app.schemas.violation_cluster import ViolationCluster
+from app.schemas.evidence_metadata import EvidenceMetadata
+from app.schemas.fund_family_analysis import FundFamilyAnalysis
+
+# phase 3 dashboard schemas
+from app.schemas.audit_trail_access import AuditTrailAccessMetrics
+from app.schemas.realtime_monitoring import RealTimeMonitoringMetrics
+from app.schemas.compliance_dashboard_kpis import ComplianceDashboardKPIs
+
+# monitoring & alert schemas
+from app.schemas.compliance_alert import ComplianceAlert, AlertSeverity, AlertStatus, EscalationTier
+
 __all__ = [
     # documents
     "Chunk", "Document", "DocumentCategory", "DocumentType",
@@ -121,4 +143,17 @@ __all__ = [
     "GraphNodeOut", "GraphResponse", "HealthResponse", "IngestJobResponse",
     "IngestStatusResponse", "QueryRequest", "QueryResponse",
     "TaxonomyNodeDocsResponse", "TaxonomyNodeOut", "TaxonomyTreeResponse", "TraditionalResult",
+    # phase 1 metrics
+    "RegulatoryMetadata", "FundAuditMetadata", "RemediationMetrics",
+    "FeedbackQualityMetrics", "FeedbackCategoryAnalytics", "ResponseQualityMetrics",
+    # phase 2 analysis
+    "RootCauseAnalysis", "ViolationCluster", "EvidenceMetadata", "FundFamilyAnalysis",
+    # phase 3 dashboard
+    "AuditTrailAccessMetrics", "RealTimeMonitoringMetrics", "ComplianceDashboardKPIs",
+    # alerts
+    "ComplianceAlert", "AlertSeverity", "AlertStatus", "EscalationTier",
 ]
+
+
+
+

@@ -135,8 +135,15 @@ def create_app() -> FastAPI:
                    docs.router, ingest.router, status.router, compliance.router, feedback.router, files.router):
         app.include_router(router, prefix="/api")
 
+    # Direct response quality alias endpoint
+    @app.get("/api/responses/{response_id}/quality-score", tags=["feedback"])
+    async def get_response_quality_direct(response_id: str):
+        from app.compliance.metrics_store import get_metrics_store
+        return get_metrics_store().get_response_quality(response_id=response_id)
+
     # Also register files router at /files for direct links
     app.include_router(files.router, prefix="")
+
 
     # Phase 4: Serve React frontend (check mf-context-engine/dist first, then frontend/dist)
     mf_engine_dir = Path(__file__).parent.parent.parent / "mf-context-engine" / "dist"

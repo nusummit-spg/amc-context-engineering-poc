@@ -16,8 +16,9 @@ import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
+
 
 from app.api.deps import Container, get_container
 from app.compliance.audit_integration import log_resolution_audit, store_agent_metrics
@@ -35,6 +36,22 @@ from app.schemas.compliance_models import (
     ViolationResponse,
     ViolationStatusEnum,
 )
+from app.schemas.regulatory_metadata import RegulatoryMetadata
+from app.schemas.fund_metadata import FundAuditMetadata
+from app.schemas.remediation_metrics import RemediationMetrics
+from app.schemas.root_cause_analysis import RootCauseAnalysis
+from app.schemas.violation_cluster import ViolationCluster
+from app.schemas.evidence_metadata import EvidenceMetadata
+from app.schemas.fund_family_analysis import FundFamilyAnalysis
+from app.schemas.audit_trail_access import AuditTrailAccessMetrics
+from app.schemas.realtime_monitoring import RealTimeMonitoringMetrics
+from app.schemas.compliance_dashboard_kpis import ComplianceDashboardKPIs
+from app.schemas.compliance_alert import ComplianceAlert
+from app.compliance.metrics_store import get_metrics_store
+
+
+
+
 
 logger = logging.getLogger("api.routes.compliance")
 router = APIRouter(prefix="/compliance", tags=["compliance"])
@@ -706,3 +723,441 @@ async def get_compliance_status(
         "violations_by_region": region_breakdown,
         "audit_history": len(detector._audit_history) if hasattr(detector, "_audit_history") else 0,
     }
+
+
+# =============================================================================
+# Phase 1 Foundation Layer Compliance Endpoints
+# =============================================================================
+
+@router.get("/rules/{rule_id}/regulatory-metadata", response_model=RegulatoryMetadata)
+async def get_rule_regulatory_metadata(rule_id: str):
+    """
+    Fetch comprehensive RegulatoryMetadata for a specific compliance Rule ID.
+    Links the rule directly to SEBI/SEC/ESMA statutory requirements and circular URLs.
+    """
+    store = get_metrics_store()
+    meta = store.get_regulatory_metadata(rule_id)
+    if not meta:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Regulatory metadata not found for rule ID: {rule_id}"
+        )
+    return meta
+
+
+@router.get("/funds/{fund_id}/audit-metadata", response_model=FundAuditMetadata)
+async def get_fund_audit_metadata(fund_id: str):
+    """
+    Fetch FundAuditMetadata for AMC compliance segmentation, AUM, TER, and manager experience.
+    """
+    store = get_metrics_store()
+    meta = store.get_fund_audit_metadata(fund_id)
+    if not meta:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Fund audit metadata not found for fund ID: {fund_id}"
+        )
+    return meta
+
+
+@router.get("/violations/{violation_id}/remediation-metrics", response_model=RemediationMetrics)
+async def get_violation_remediation_metrics(violation_id: str):
+    """
+    Fetch RemediationMetrics and SLA tracking data for a specific ComplianceViolation.
+    """
+    store = get_metrics_store()
+    metrics = store.get_remediation_metrics(violation_id)
+    if not metrics:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Remediation metrics not found for violation ID: {violation_id}"
+        )
+    return metrics
+
+
+@router.get("/remediation-sla-report", response_model=Dict[str, Any])
+async def get_remediation_sla_report(
+    period: str = Query(default="2024-09", description="Reporting period (e.g. 2024-09)")
+):
+    """
+    Generate SLA adherence report, breach percentages, and average resolution times.
+    """
+    store = get_metrics_store()
+    return store.generate_sla_report(period=period)
+
+
+@router.get("/violations/filter", response_model=Dict[str, Any])
+async def filter_compliance_violations(
+    root_cause_category: Optional[str] = Query(default=None, description="Root cause category filter"),
+    severity: Optional[SeverityEnum] = Query(default=None, description="Severity filter"),
+    status: Optional[ViolationStatusEnum] = Query(default=None, description="Status filter"),
+    region: Optional[RegionEnum] = Query(default=None, description="Region filter"),
+    container: Container = Depends(get_container),
+):
+    """
+    Filter and query violations with root_cause_category and compliance parameters.
+    """
+    detector = getattr(container, "violation_detector", None)
+    if not detector:
+        from app.compliance.violation_detector import ViolationDetector
+        detector = ViolationDetector(container.graph, getattr(container, "rules_engine", None))
+
+    stat_val = status.value if status else None
+    violations = await detector.get_violations(status=stat_val, limit=1000)
+
+    if severity:
+        violations = [v for v in violations if v.severity == severity.value]
+    if region:
+        violations = [v for v in violations if v.region == region.value]
+    if root_cause_category:
+        # Filter violations matching root cause pattern or description
+        rc_lower = root_cause_category.lower()
+        violations = [
+            v for v in violations
+            if rc_lower in (v.description or "").lower() or rc_lower in (v.rule_id or "").lower()
+        ]
+
+    return {
+        "total_matches": len(violations),
+        "filter_applied": {
+            "root_cause_category": root_cause_category,
+            "severity": severity.value if severity else None,
+            "status": status.value if status else None,
+            "region": region.value if region else None,
+        },
+        "violations": [
+            ViolationResponse(
+                violation_id=v.violation_id,
+                rule_id=v.rule_id,
+                fund_id=v.fund_id,
+                severity=SeverityEnum(v.severity),
+                confidence=v.confidence,
+                actual_value=v.actual_value,
+                threshold_value=v.threshold_value,
+                description=v.description,
+                detected_at=v.detected_at,
+                status=ViolationStatusEnum(v.status),
+                region=RegionEnum(v.region),
+                evidence_docs=v.evidence_docs,
+            )
+            for v in violations
+        ],
+    }
+
+
+# =============================================================================
+# Phase 2 Analysis Layer Endpoints
+# =============================================================================
+
+@router.get("/violations/{violation_id}/root-cause", response_model=RootCauseAnalysis)
+async def get_violation_root_cause(violation_id: str):
+    """
+    Fetch Root Cause Analysis (RCA) details for a specific compliance violation.
+    Identifies systemic vs isolated nature, primary category, and preventability score.
+    """
+    store = get_metrics_store()
+    rca = store.get_root_cause_analysis(violation_id)
+    if not rca:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Root cause analysis not found for violation ID: {violation_id}"
+        )
+    return rca
+
+
+@router.post("/violations/{violation_id}/root-cause", response_model=RootCauseAnalysis, status_code=201)
+async def create_or_update_root_cause(violation_id: str, rca_in: RootCauseAnalysis):
+    """
+    Record or update root cause analysis findings for an investigated violation.
+    """
+    store = get_metrics_store()
+    if rca_in.violation_id != violation_id:
+        rca_in.violation_id = violation_id
+    return store.record_root_cause_analysis(rca_in)
+
+
+@router.get("/violation-clusters", response_model=List[ViolationCluster])
+async def list_violation_clusters(
+    amc_id: Optional[str] = Query(None, description="Filter by AMC ID"),
+    severity: Optional[str] = Query(None, description="Filter by severity level: CRITICAL, HIGH, MEDIUM, LOW"),
+):
+    """
+    Retrieve clustered compliance violations across funds and schemes.
+    """
+    store = get_metrics_store()
+    return store.get_violation_clusters(amc_id=amc_id, severity=severity)
+
+
+@router.get("/violation-clusters/{cluster_id}", response_model=ViolationCluster)
+async def get_violation_cluster_details(cluster_id: str):
+    """
+    Retrieve detailed grouping for a specific violation cluster.
+    """
+    store = get_metrics_store()
+    cluster = store.get_violation_cluster(cluster_id)
+    if not cluster:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Violation cluster not found: {cluster_id}"
+        )
+    return cluster
+
+
+@router.post("/violation-clusters", response_model=ViolationCluster, status_code=201)
+async def create_violation_cluster(cluster_in: ViolationCluster):
+    """
+    Register a new systemic violation cluster grouping correlated violations.
+    """
+    store = get_metrics_store()
+    return store.record_violation_cluster(cluster_in)
+
+
+@router.get("/amc/{amc_id}/family-analysis", response_model=FundFamilyAnalysis)
+async def get_amc_family_analysis(amc_id: str):
+    """
+    Fetch AMC-level fund family compliance analysis, cross-fund correlation, and systemic risk flag.
+    """
+    store = get_metrics_store()
+    analysis = store.get_fund_family_analysis(amc_id)
+    if not analysis:
+        # Generate on the fly if not already present
+        analysis = store.run_fund_family_analysis(amc_id)
+    return analysis
+
+
+@router.post("/amc/{amc_id}/family-analysis/run", response_model=FundFamilyAnalysis)
+async def run_amc_family_analysis(amc_id: str):
+    """
+    Trigger live cross-fund correlation and manager accountability analysis across an AMC fund family.
+    """
+    store = get_metrics_store()
+    return store.run_fund_family_analysis(amc_id)
+
+
+@router.get("/evidence/{evidence_id}", response_model=EvidenceMetadata)
+async def get_evidence_metadata_record(evidence_id: str):
+    """
+    Retrieve cryptographic evidence metadata and chain of custody for a document or filing.
+    """
+    store = get_metrics_store()
+    meta = store.get_evidence_metadata(evidence_id)
+    if not meta:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Evidence metadata not found: {evidence_id}"
+        )
+    return meta
+
+
+@router.post("/evidence", response_model=EvidenceMetadata, status_code=201)
+async def record_evidence_metadata_record(evidence_in: EvidenceMetadata):
+    """
+    Register tamper-evident document hash and custodial sign-off for audit defense.
+    """
+    store = get_metrics_store()
+    return store.record_evidence_metadata(evidence_in)
+
+
+# =============================================================================
+# Phase 3 Dashboard Layer Endpoints
+# =============================================================================
+
+@router.get("/dashboard/kpis", response_model=ComplianceDashboardKPIs)
+async def get_compliance_dashboard_kpis(
+    reporting_date: Optional[str] = Query(None, description="Date of KPI snapshot (YYYY-MM-DD)")
+):
+    """
+    Fetch executive C-suite Compliance Dashboard KPIs: compliance index, velocity, SLA rate, and peer rank.
+    """
+    store = get_metrics_store()
+    return store.get_dashboard_kpis(reporting_date=reporting_date)
+
+
+@router.post("/dashboard/kpis/refresh", response_model=ComplianceDashboardKPIs)
+async def refresh_compliance_dashboard_kpis():
+    """
+    Trigger live on-demand recalculation of executive Compliance Dashboard KPIs.
+    """
+    store = get_metrics_store()
+    return store.generate_live_dashboard_kpis()
+
+
+@router.get("/dashboard/realtime-monitoring", response_model=RealTimeMonitoringMetrics)
+async def get_realtime_compliance_monitoring():
+    """
+    Retrieve live intra-day compliance engine monitoring metrics: detections, QPS, uptime, and latency.
+    """
+    store = get_metrics_store()
+    return store.get_realtime_monitoring_metrics()
+
+
+@router.get("/audit-trail/access-logs", response_model=List[AuditTrailAccessMetrics])
+async def list_audit_trail_access_logs(
+    limit: int = Query(default=50, ge=1, le=500, description="Max access logs to retrieve"),
+    user_id: Optional[str] = Query(None, description="Filter access logs by user ID"),
+):
+    """
+    Query tamper-verified access trail logs proving who accessed sensitive data, when, and for what purpose.
+    """
+    store = get_metrics_store()
+    return store.get_audit_trail_access_metrics(limit=limit, user_id=user_id)
+
+
+@router.post("/audit-trail/access-logs", response_model=AuditTrailAccessMetrics, status_code=201)
+async def log_audit_trail_access_event(log_entry: AuditTrailAccessMetrics):
+    """
+    Record and cryptographically verify an access event to sensitive compliance and audit data.
+    """
+    store = get_metrics_store()
+    return store.log_audit_access(log_entry)
+
+
+@router.get("/audit-trail/verify-integrity")
+@router.get("/audit-trail/verify")
+async def verify_audit_trail_integrity():
+    """
+    Cryptographically verify the SHA-256 hash chain of the audit trail to guarantee zero tampering.
+    """
+    store = get_metrics_store()
+    return store.verify_audit_trail_integrity()
+
+
+@router.post("/sync-neo4j")
+async def sync_metrics_to_neo4j():
+    """
+    Asynchronously persist in-memory compliance metrics and graph relationships to Neo4j database.
+    """
+    store = get_metrics_store()
+    return await store.batch_persist_all_metrics()
+
+
+
+class RemediationUpdateIn(BaseModel):
+    remediation_actual_completion_at: Optional[str] = Field(None, description="Completion timestamp (ISO 8601)")
+    remediation_action: Optional[str] = Field(None, description="Remediation actions taken")
+    remediation_effectiveness: Optional[str] = Field(None, description="EFFECTIVE, PARTIAL, INEFFECTIVE, PENDING_VERIFICATION")
+    verified_by_user_id: Optional[str] = Field(None, description="Compliance officer user ID")
+    verification_date: Optional[str] = Field(None, description="Verification timestamp")
+    root_cause_addressed: Optional[bool] = Field(None, description="Whether root cause was addressed")
+    systemic_fix_applied: Optional[bool] = Field(None, description="Whether systemic fix was deployed")
+    escalated: Optional[bool] = Field(None, description="Whether escalated")
+    escalation_reason: Optional[str] = Field(None, description="Escalation reason")
+    remediation_cost_hours: Optional[float] = Field(None, description="Expended person hours")
+
+
+@router.post("/remediations", response_model=RemediationMetrics, status_code=201)
+async def record_new_remediation(remediation_in: RemediationMetrics):
+    """
+    Register a new remediation metrics tracking record for a compliance violation.
+    """
+    store = get_metrics_store()
+    return store.record_remediation(remediation_in)
+
+
+@router.patch("/violations/{violation_id}/remediation", response_model=RemediationMetrics)
+async def update_violation_remediation(
+    violation_id: str,
+    update_in: RemediationUpdateIn
+):
+    """
+    Update an ongoing or resolved remediation, triggering SLA resolution and variance recomputation.
+    """
+    store = get_metrics_store()
+    updated = store.update_remediation(violation_id, update_in.model_dump(exclude_unset=True))
+    if not updated:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Remediation record for violation '{violation_id}' not found"
+        )
+    return updated
+
+
+@router.get("/export")
+async def export_compliance_data(
+    report_type: str = Query(default="sla", description="Report type: 'sla', 'audit', 'kpis'"),
+    format: str = Query(default="csv", description="Export format: 'csv'")
+):
+    """
+    Export compliance records, SLA adherence tables, or audit trails for statutory regulatory filings.
+    """
+    store = get_metrics_store()
+    try:
+        csv_content = store.export_metrics_csv(report_type=report_type)
+        return Response(
+            content=csv_content,
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=compliance_{report_type}_{datetime.utcnow().strftime('%Y%m%d')}.csv"}
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+class AcknowledgeAlertIn(BaseModel):
+    user_id: str = Field(..., description="Officer user ID")
+
+
+class ResolveAlertIn(BaseModel):
+    user_id: str = Field(..., description="Officer user ID")
+    resolution_notes: str = Field(..., min_length=3, description="Resolution commentary")
+
+
+@router.get("/alerts", response_model=List[ComplianceAlert])
+async def list_compliance_alerts(
+    status: Optional[str] = Query(None, description="Filter by status: ACTIVE, ACKNOWLEDGED, SUPPRESSED, RESOLVED"),
+    severity: Optional[str] = Query(None, description="Filter by severity: CRITICAL, HIGH, MEDIUM, LOW"),
+    limit: int = Query(default=50, ge=1, le=100)
+):
+    """
+    Retrieve real-time SLA breach and compliance risk alerts.
+    """
+    store = get_metrics_store()
+    return store.get_alerts(status=status, severity=severity, limit=limit)
+
+
+@router.post("/alerts/evaluate-breaches", response_model=List[ComplianceAlert])
+async def evaluate_sla_breaches():
+    """
+    Trigger real-time SLA breach detection scan across active remediations.
+    Applies multi-tier escalation (L1/L2/L3) and 15-minute suppression window.
+    """
+    store = get_metrics_store()
+    return store.detect_sla_breaches_and_generate_alerts()
+
+
+@router.post("/alerts/{alert_id}/acknowledge", response_model=ComplianceAlert)
+async def acknowledge_compliance_alert(
+    alert_id: str,
+    payload: AcknowledgeAlertIn
+):
+    """
+    Acknowledge an active alert by an authorized compliance officer.
+    """
+    store = get_metrics_store()
+    alert = store.acknowledge_alert(alert_id=alert_id, user_id=payload.user_id)
+    if not alert:
+        raise HTTPException(status_code=404, detail=f"Alert '{alert_id}' not found")
+    return alert
+
+
+@router.post("/alerts/{alert_id}/resolve", response_model=ComplianceAlert)
+async def resolve_compliance_alert(
+    alert_id: str,
+    payload: ResolveAlertIn
+):
+    """
+    Mark an active or acknowledged alert as resolved with audit commentary.
+    """
+    store = get_metrics_store()
+    alert = store.resolve_alert(
+        alert_id=alert_id,
+        user_id=payload.user_id,
+        resolution_notes=payload.resolution_notes
+    )
+    if not alert:
+        raise HTTPException(status_code=404, detail=f"Alert '{alert_id}' not found")
+    return alert
+
+
+
+
+

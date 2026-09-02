@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AMC Active & Passive Feedback — Low-Level Execution Design v1.3</title>
+<style>
+:root{
+  --bg:#f5f7fb;--card:#ffffff;--ink:#172033;--muted:#65708a;--line:#dfe5ef;
+  --navy:#253858;--blue:#2f6fed;--cyan:#0f9fb4;--green:#138a63;--amber:#c47a0a;
+  --red:#c94c4c;--purple:#6d5bd0;--soft-blue:#eef4ff;--soft-green:#eaf8f2;
+  --soft-amber:#fff6e8;--soft-red:#fff0f0;--shadow:0 8px 28px rgba(37,56,88,.10);
+  --r:14px;
+}
+*{box-sizing:border-box} html{scroll-behavior:smooth}
+body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+header{background:linear-gradient(135deg,#253858,#2f6fed);color:#fff;padding:34px 28px 26px;position:sticky;top:0;z-index:30;box-shadow:0 6px 24px rgba(20,32,55,.18)}
+.header-inner{max-width:1500px;margin:auto}.topline{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;flex-wrap:wrap}
+h1{font-size:clamp(24px,3vw,40px);line-height:1.12;margin:0 0 8px}.subtitle{opacity:.86;max-width:980px;margin:0;font-size:14px}.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.badge{font-size:11px;border:1px solid rgba(255,255,255,.32);background:rgba(255,255,255,.11);padding:5px 9px;border-radius:999px}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.btn{border:1px solid rgba(255,255,255,.38);background:rgba(255,255,255,.12);color:#fff;border-radius:9px;padding:8px 12px;cursor:pointer;font-size:12px}.btn:hover{background:rgba(255,255,255,.20)}
+nav{max-width:1500px;margin:0 auto;padding:12px 20px;display:flex;gap:8px;overflow:auto;position:sticky;top:154px;z-index:25;background:rgba(245,247,251,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.tab{white-space:nowrap;border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 12px;cursor:pointer;color:#4c5871;font-weight:650;font-size:12px}.tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+main{max-width:1500px;margin:0 auto;padding:24px 20px 70px}.panel{display:none}.panel.on{display:block}.section-title{font-size:26px;color:var(--navy);margin:4px 0 6px}.lead{color:var(--muted);margin:0 0 22px;max-width:1150px}.callout{padding:14px 16px;border-radius:12px;border:1px solid var(--line);background:#fff;margin:14px 0}.callout strong{color:var(--navy)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}@media(max-width:1000px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px}.card h3,.card h4{margin:0 0 8px;color:var(--navy)}.card p{margin:6px 0;color:#4e5a73;font-size:13px}
+.kpi{padding:16px;border-radius:12px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow)}.kpi b{font-size:24px;color:var(--navy)}.kpi span{display:block;font-size:12px;color:var(--muted);margin-top:4px}
+/* master flow */
+.flow-shell{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px;overflow:auto}
+.flow{min-width:1120px;display:flex;flex-direction:column;align-items:center;gap:0}.node{width:820px;border:1px solid #cfd8e7;background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 3px 12px rgba(37,56,88,.07)}.node b{display:block;color:var(--navy);font-size:14px}.node small{display:block;color:var(--muted);margin-top:3px}.node.active{border-left:5px solid var(--blue);background:var(--soft-blue)}.node.passive{border-left:5px solid var(--green);background:var(--soft-green)}.node.gate{border-left:5px solid var(--amber);background:var(--soft-amber)}.node.repair{border-left:5px solid var(--purple);background:#f4f1ff}.node.stop{border-left:5px solid var(--red);background:var(--soft-red)}
+.arrow{height:34px;width:2px;background:#9aa8be;position:relative}.arrow:after{content:"";position:absolute;bottom:-1px;left:-4px;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid #9aa8be}.split{display:grid;grid-template-columns:1fr 1fr;gap:34px;width:100%;padding:0 70px}.split .branch{display:flex;flex-direction:column;align-items:center}.split .node{width:100%}.merge-label{font-size:11px;color:var(--muted);background:#eef1f6;padding:5px 10px;border-radius:999px;margin:2px 0}
+/* step cards */
+.steps{display:flex;flex-direction:column;gap:10px}.step{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 3px 14px rgba(37,56,88,.06);overflow:hidden}.step-head{display:grid;grid-template-columns:50px 1fr auto;gap:12px;align-items:center;padding:13px 14px;cursor:pointer}.n{width:36px;height:36px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px}.step-head h4{margin:0;color:var(--navy);font-size:14px}.step-head .mini{font-size:12px;color:var(--muted)}.pill{font-size:10px;font-weight:800;padding:4px 8px;border-radius:999px;background:#eef2f8;color:#53607a}.step-body{display:none;border-top:1px solid var(--line);padding:14px;background:#fbfcfe}.step.open .step-body{display:block}.wwx{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.wwx>div{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff}.wwx b{font-size:11px;letter-spacing:.5px;color:var(--navy)}.wwx p{font-size:12px;margin:5px 0;color:#536078}.tech{margin-top:10px;padding:10px;border-radius:9px;background:#f0f3f8;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;color:#364258;white-space:pre-wrap}.stakeholder .tech{display:none}.stakeholder .step-body .tech-label{display:none}
+.routebar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 18px}.routebtn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 10px;font-size:12px;cursor:pointer}.routebtn.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.example-banner{border-radius:14px;padding:16px;color:#fff;margin-bottom:14px}.ex-a{background:linear-gradient(135deg,#2f6fed,#5b8df0)}.ex-b{background:linear-gradient(135deg,#6d5bd0,#8e7ce3)}.ex-c{background:linear-gradient(135deg,#138a63,#39a982)}.ex-d{background:linear-gradient(135deg,#c47a0a,#dd9a35)}.example-banner h3{margin:0 0 6px}.example-banner p{margin:0;opacity:.9;font-size:13px}
+.matrix{width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}.matrix th{background:var(--navy);color:#fff;padding:10px;text-align:left;position:sticky;top:0}.matrix td{border:1px solid var(--line);padding:9px;vertical-align:top}.yes{color:var(--green);font-weight:800}.opt{color:var(--amber);font-weight:800}.no{color:#9aa3b3}
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}.legend span{font-size:11px;padding:5px 8px;border-radius:999px;border:1px solid var(--line);background:#fff}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}.d-a{background:var(--blue)}.d-p{background:var(--green)}.d-g{background:var(--amber)}.d-r{background:var(--purple)}
+.object{background:#111827;color:#dce7ff;border-radius:12px;padding:14px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;white-space:pre-wrap;overflow:auto}
+.footer{margin-top:34px;color:var(--muted);font-size:11px;text-align:center}
+@media(max-width:760px){header{position:static}nav{top:0}.wwx{grid-template-columns:1fr}.node{width:720px}.split{padding:0 35px}.step-head{grid-template-columns:42px 1fr}.step-head .pill{display:none}}
+
+/* mapped example flow */
+.exflow{display:flex;flex-direction:column;align-items:center;gap:0}
+.exflow .step{width:min(1080px,100%)}
+.exflow .arrow{height:22px}
+.flow-note{margin:10px 0 16px;padding:12px 14px;border-radius:12px;background:#fff;border:1px solid var(--line);color:#50607b;font-size:13px}
+.step.flow-active{border-left:5px solid var(--blue);background:var(--soft-blue)}
+.step.flow-passive{border-left:5px solid var(--green);background:var(--soft-green)}
+.step.flow-gate{border-left:5px solid var(--amber);background:var(--soft-amber)}
+.step.flow-repair{border-left:5px solid var(--purple);background:#f4f1ff}
+.step.flow-common,.step.flow-base{border-left:5px solid #8ba1c8;background:#fff}
+.step.skip{border-left:5px dashed #b8c2d2;background:#f7f8fb;opacity:.92}
+.step.skip .n{background:#b5bfd0}
+.step.flow-active .n{background:var(--blue)}
+.step.flow-passive .n{background:var(--green)}
+.step.flow-gate .n{background:var(--amber)}
+.step.flow-repair .n{background:var(--purple)}
+.step.flow-common .n,.step.flow-base .n{background:var(--navy)}
+.pill.hit{background:#eaf0fb;color:#39537d}
+.pill.skip{background:#eef1f5;color:#6d7788}
+.explain{font-size:11px;color:var(--muted);margin-top:8px}
+
+
+/* example presentation upgrade */
+.scenario-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;margin:14px 0 16px}@media(max-width:1000px){.scenario-grid{grid-template-columns:1fr}}
+.journey-card,.expect-card,.stress-card,.impact-card,.ops-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 3px 14px rgba(37,56,88,.06)}
+.journey-card h4,.expect-card h4,.stress-card h4,.impact-card h4,.ops-card h4{margin:0 0 8px;color:var(--navy)}
+.dialogue{display:grid;grid-template-columns:110px 1fr;gap:8px 12px;font-size:12px}.dialogue b{color:var(--navy)}.dialogue div{padding:7px 9px;border-radius:8px;background:#f6f8fc}
+.metric-badges{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.metric{font-size:10px;font-weight:800;padding:5px 8px;border-radius:999px;background:#eef2f8;color:#44526a;border:1px solid #dfe5ef}.metric.high{background:#fff0f0;color:#a33939}.metric.med{background:#fff6e8;color:#9b6108}.metric.good{background:#eaf8f2;color:#0d7050}.metric.blue{background:#eef4ff;color:#285ebf}
+.outcome-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:16px 0}@media(max-width:1100px){.outcome-strip{grid-template-columns:repeat(3,1fr)}}@media(max-width:700px){.outcome-strip{grid-template-columns:1fr}}
+.outcome-box{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;min-height:112px}.outcome-box b{display:block;font-size:10px;letter-spacing:.7px;color:var(--navy);margin-bottom:5px}.outcome-box p{font-size:11px;color:#536078;margin:0}.outcome-box.fix{border-top:4px solid var(--purple)}.outcome-box.after{border-top:4px solid var(--green)}.outcome-box.detect{border-top:4px solid var(--blue)}.outcome-box.diag{border-top:4px solid var(--amber)}
+.component-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin-top:10px}.component{border:1px solid var(--line);border-radius:9px;padding:9px;background:#fafbfd;font-size:11px}.component .state{font-weight:900;display:block;margin-bottom:3px}.component.change .state{color:var(--purple)}.component.nochange .state{color:#7d8798}.component.validate .state{color:var(--green)}
+.ops-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px}.ops-item{background:#f7f9fc;border:1px solid var(--line);border-radius:9px;padding:9px}.ops-item b{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}.ops-item span{font-size:12px;color:var(--navy);font-weight:750}
+.stress-card{border-left:5px solid var(--red);margin:16px 0}.stress-card .stress-title{font-weight:850;color:#9f3b3b}.stress-flow{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:8px}.stress-flow span{font-size:11px;padding:6px 8px;border-radius:8px;background:#f7f8fb;border:1px solid var(--line)}.stress-flow i{font-style:normal;color:#8a95a7}
+.exec-label{font-size:11px;font-weight:850;color:var(--navy);letter-spacing:.4px;margin:18px 0 6px;text-transform:uppercase}
+
+
+/* v1.3 operational overlays */
+.ops-overlay{margin:16px 0 20px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 3px 14px rgba(37,56,88,.06);padding:14px}
+.ops-overlay h4{margin:0 0 10px;color:var(--navy)}
+.timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:10px 0 14px}@media(max-width:1100px){.timeline{grid-template-columns:repeat(3,1fr)}}@media(max-width:700px){.timeline{grid-template-columns:1fr}}
+.tl{position:relative;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fafbfd;min-height:92px}.tl .time{font-size:10px;font-weight:900;color:var(--blue);text-transform:uppercase;letter-spacing:.45px}.tl b{display:block;font-size:12px;color:var(--navy);margin:4px 0}.tl p{font-size:11px;color:var(--muted);margin:0}
+.owner-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:8px}.owner{border:1px solid var(--line);border-radius:9px;padding:9px;background:#f8fafc}.owner b{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}.owner span{display:block;font-size:12px;color:var(--navy);font-weight:760;margin-top:3px}.owner small{display:block;color:var(--muted);margin-top:3px}
+.operational-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}@media(max-width:900px){.operational-grid{grid-template-columns:1fr}}
+.mini-panel{border:1px solid var(--line);border-radius:10px;padding:11px;background:#fbfcfe}.mini-panel h5{margin:0 0 7px;font-size:12px;color:var(--navy)}.mini-panel p,.mini-panel li{font-size:11px;color:#536078}.mini-panel ul{margin:6px 0 0;padding-left:18px}
+.audit-chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.audit-chain span{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:10px;padding:5px 7px;border-radius:7px;background:#eef2f8;border:1px solid var(--line);color:#39465d}.audit-chain i{font-style:normal;color:#8a95a7}
+.sla{display:grid;grid-template-columns:90px 1fr;gap:8px;align-items:start}.sla .sev{font-size:11px;font-weight:900;border-radius:8px;padding:6px 8px;text-align:center;background:#fff0f0;color:#9f3b3b}.sla .target{font-size:11px;color:#536078}.sla-note{font-size:10px;color:var(--muted);margin-top:6px;font-style:italic}
+.change-boundary{display:grid;grid-template-columns:1fr 1fr;gap:10px}.change-boundary>div{border:1px solid var(--line);border-radius:9px;padding:9px}.change-boundary b{font-size:11px;color:var(--navy)}.change-boundary p{font-size:11px;color:#536078;margin:5px 0 0}.change-boundary .no{background:#f7f8fb}.change-boundary .yeschg{background:#f4f1ff}
+.success-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px}.success-item{border:1px solid #cfe7dc;background:#f1fbf6;border-radius:9px;padding:8px}.success-item b{font-size:10px;color:#287558;text-transform:uppercase}.success-item span{display:block;font-size:11px;color:#405b50;margin-top:2px}
+.exec-impact{margin:18px 0;padding:16px;border-radius:14px;background:linear-gradient(135deg,#253858,#304e78);color:#fff}.exec-impact h3{margin:0 0 10px}.exec-impact-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}@media(max-width:1100px){.exec-impact-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:700px){.exec-impact-grid{grid-template-columns:1fr}}
+.exec-impact-grid div{border:1px solid rgba(255,255,255,.20);background:rgba(255,255,255,.08);border-radius:10px;padding:10px}.exec-impact-grid b{display:block;font-size:11px}.exec-impact-grid span{display:block;font-size:11px;opacity:.84;margin-top:4px}
+
+</style>
+</head>
+<body class="stakeholder">
+<header>
+  <div class="header-inner">
+    <div class="topline">
+      <div>
+        <h1>AMC Active & Passive Feedback — Low-Level Execution Design v1.3</h1>
+        <p class="subtitle">Worked execution model from response delivery → user feedback / no feedback → evaluation → diagnosis → controlled repair → governance → post-fix verification.</p>
+        <div class="badges"><span class="badge">Active = Human-originated feedback</span><span class="badge">Passive = System-observed signal</span><span class="badge">Feedback ≠ Ground Truth</span><span class="badge">Deterministic-first</span><span class="badge">LLM-last</span><span class="badge">Governed self-healing</span></div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="viewToggle" onclick="toggleView()">Switch to Engineering View</button>
+        <button class="btn" onclick="expandAll(true)">Expand all</button>
+        <button class="btn" onclick="expandAll(false)">Collapse all</button>
+      </div>
+    </div>
+  </div>
+</header>
+<nav>
+  <button class="tab on" data-panel="overview">1. Overview</button>
+  <button class="tab" data-panel="master">2. Master LLD Flow</button>
+  <button class="tab" data-panel="ex1">3. Example 1 · Active</button>
+  <button class="tab" data-panel="ex2">4. Example 2 · Active</button>
+  <button class="tab" data-panel="ex3">5. Example 3 · Passive</button>
+  <button class="tab" data-panel="ex4">6. Example 4 · Converged</button>
+  <button class="tab" data-panel="patch">7. Patch Layer Zoom</button>
+  <button class="tab" data-panel="objects">8. Data Objects</button>
+  <button class="tab" data-panel="coverage">9. Coverage Matrix</button>
+</nav>
+<main>
+<section class="panel on" id="overview">
+  <h2 class="section-title">What this LLD is intended to prove</h2>
+  <p class="lead">The loop starts one level earlier than evaluation: after a response reaches the user, the system must explicitly handle both possibilities—<b>the user gives feedback</b> or <b>the user gives no feedback</b>. Active and Passive feedback are different signal-generation routes, but neither is automatically trusted and both converge into the same evidence-backed adjudication, failure-attribution and controlled-repair system.</p>
+  <div class="grid4">
+    <div class="kpi"><b>2</b><span>Feedback origins: Active + Passive</span></div>
+    <div class="kpi"><b>4</b><span>Worked end-to-end examples</span></div>
+    <div class="kpi"><b>33+</b><span>Explicit execution steps/gates</span></div>
+    <div class="kpi"><b>1</b><span>Unified evaluation + audit record</span></div>
+  </div>
+  <div class="grid2" style="margin-top:16px">
+    <div class="card"><h3>Active Feedback</h3><p><b>Starts because a human acts.</b> Examples: thumbs-down, selects “Outdated”, writes “this number is wrong”, disputes a citation, or sends a dissatisfaction follow-up.</p><p>The human signal is captured as an assertion and must be validated against the frozen evidence snapshot.</p></div>
+    <div class="card"><h3>Passive Feedback</h3><p><b>Starts because the system observes risk without human input.</b> Signals can come from grounding, citation, freshness, numeric, retrieval-confidence, guardrail, latency/cost, anomaly, sampling, or high-value interaction checks.</p><p>Passive feedback is also only a signal; evaluator failures and false positives are possible.</p></div>
+  </div>
+  <div class="callout"><strong>Key stakeholder message:</strong> “No user complaint” does not mean “no quality loop.” Passive evaluation gives coverage where humans remain silent, while Active feedback contributes high-value human observations. Both feed the same controlled mechanism.</div>
+<div class="exec-impact"><h3>Why this architecture matters to the business</h3><div class="exec-impact-grid"><div><b>Quality</b><span>Detects both complained-about and silent failures.</span></div><div><b>Recovery</b><span>Contains material issues quickly, then fixes the correct layer.</span></div><div><b>Efficiency</b><span>Uses deterministic checks first and spends LLM/agent budget only when needed.</span></div><div><b>Governance</b><span>Separates provisional behavior changes from permanent canonical changes.</span></div><div><b>Compliance</b><span>Mandatory controls cannot be sampled away and critical cases escalate explicitly.</span></div><div><b>Auditability</b><span>Creates a trace from interaction → signal → incident → repair → approval → deployment.</span></div></div></div>
+  <div class="callout"><strong>Two adversarial control cases are now included:</strong> one where Active human feedback is wrong and must be rejected, and one where Passive evaluation itself produces false positives and must be rolled back. These demonstrate that neither humans nor evaluators are automatically trusted.</div>
+  <h3>Four examples chosen to exercise different repair targets</h3>
+  <div class="grid4">
+    <div class="card"><h4>1 · Active — Outdated expense ratio</h4><p>User reports an old fund expense ratio. Root cause: stale source/ingestion. Repair: source refresh + provisional narrow correction + selective reindex.</p></div>
+    <div class="card"><h4>2 · Active — Citation mismatch</h4><p>User says the cited document does not support the statement. Root cause: context/citation alignment. Repair: citation selection/context-engineering logic; no KG write.</p></div>
+    <div class="card"><h4>3 · Passive — Numeric mismatch</h4><p>No feedback. A deterministic check catches a response number that differs from authoritative evidence. Repair: numeric binding/response validation control.</p></div>
+    <div class="card"><h4>4 · Active + Passive — Suitability incident</h4><p>Passive control flags an unqualified recommendation; later user feedback confirms concern. Signals correlate into one compliance incident. Repair: rule-pack/guardrail/router change under governance.</p></div>
+  </div>
+</section>
+
+<section class="panel" id="master">
+  <h2 class="section-title">Master low-level flow — starts before feedback exists</h2>
+  <p class="lead">This is the canonical flow. Examples later highlight different branches rather than inventing separate architectures.</p>
+  <div class="legend"><span><i class="dot d-a"></i>Active path</span><span><i class="dot d-p"></i>Passive path</span><span><i class="dot d-g"></i>Decision/gate</span><span><i class="dot d-r"></i>Repair/governance</span></div>
+  <div class="flow-shell"><div class="flow">
+    <div class="node"><b>0 · User Query</b><small>Normal AMC chatbot interaction starts.</small></div><div class="arrow"></div>
+    <div class="node"><b>1 · Retrieval → Context Engineering → Guardrails → Response Generated</b><small>Hybrid Vector + Context Graph evidence is assembled and policy controls run.</small></div><div class="arrow"></div>
+    <div class="node"><b>2 · Freeze Interaction Snapshot + EvidencePack</b><small>Query, answer, sources, graph paths, citations, taxonomy, source versions, guardrail decisions, model/prompt/config and runtime metrics.</small></div><div class="arrow"></div>
+    <div class="node gate"><b>3 · Did the user provide feedback / dissatisfaction follow-up?</b><small>This is the explicit Active vs Passive split.</small></div><div class="arrow"></div>
+    <div class="split">
+      <div class="branch"><div class="node active"><b>4A · ACTIVE feedback begins</b><small>Capture explicit selection/free-text/follow-up; preserve raw words + UI category + user/session context.</small></div><div class="arrow"></div><div class="node active"><b>5A · Validate intent + same-referent</b><small>Confirm the feedback is about this answer/claim before expensive evaluation.</small></div></div>
+      <div class="branch"><div class="node passive"><b>4P · PASSIVE feedback begins</b><small>No human signal. Automatic metrics/rules/GNN/sampling/high-value triggers inspect response and evidence.</small></div><div class="arrow"></div><div class="node passive"><b>5P · Create SystemObservation</b><small>Grounding/citation/freshness/numeric/retrieval/guardrail/cost-latency/anomaly signals are normalized.</small></div></div>
+    </div>
+    <div class="arrow"></div><div class="merge-label">ACTIVE + PASSIVE CONVERGE</div><div class="arrow"></div>
+    <div class="node"><b>6 · Normalize SignalRecord</b><small>Origin, category, disputed claim, evidence refs, timestamp, confidence, source/evaluator version.</small></div><div class="arrow"></div>
+    <div class="node"><b>7 · Localize exact referent / claim / node / edge / attribute</b><small>Avoid treating “wrong answer” as a repair target.</small></div><div class="arrow"></div>
+    <div class="node gate"><b>8 · Resolve AMC taxonomy + jurisdiction / product / channel / user applicability</b><small>Mandatory compliance controls are selected before routing.</small></div><div class="arrow"></div>
+    <div class="node gate"><b>9 · Evidence Sufficiency Gate</b><small>Can the captured evidence adjudicate the signal? If not, obtain authoritative evidence or escalate—do not invent truth.</small></div><div class="arrow"></div>
+    <div class="node"><b>10 · Incident Correlation</b><small>Attach to an active incident if the same source/version/entity/rule/evaluator already explains the symptom.</small></div><div class="arrow"></div>
+    <div class="node"><b>11 · Adaptive Evaluation Router</b><small>Mandatory controls + minimum sufficient evaluation + budget + stop/escalation rules.</small></div><div class="arrow"></div>
+    <div class="node"><b>12 · Tier 0/1 Metrics + Deterministic Rule Checks</b><small>Schema/type, temporal, numeric/unit, cross-source, referential, hierarchy, freshness, citation and jurisdiction checks.</small></div><div class="arrow"></div>
+    <div class="node"><b>13 · GNN Structural Plausibility (where graph claim applies)</b><small>Frozen scorer checks candidate triple/neighborhood anomaly using fixed threshold.</small></div><div class="arrow"></div>
+    <div class="node gate"><b>14 · Resolved with sufficient confidence?</b><small>If yes, stop spending tokens; if no, move deeper.</small></div><div class="arrow"></div>
+    <div class="node"><b>15 · Tier 2 Semantic / NLI Evaluation</b><small>Support / contradict / neutral; claim-evidence consistency and completeness.</small></div><div class="arrow"></div>
+    <div class="node gate"><b>16 · Still unresolved?</b><small>Only ambiguous/high-impact cases escalate.</small></div><div class="arrow"></div>
+    <div class="node"><b>17 · Tier 3 Bounded LLM / Agent / HITL</b><small>Last resort for semantic ambiguity, multi-source conflict or exceptional investigation.</small></div><div class="arrow"></div>
+    <div class="node"><b>18 · Adjudication</b><small>Valid / Partially Valid / Invalid / Subjective / Insufficient Evidence; or Confirmed / Rejected / Ambiguous finding.</small></div><div class="arrow"></div>
+    <div class="node"><b>19 · Unified EvaluationRecord</b><small>Same schema regardless of Active or Passive origin.</small></div><div class="arrow"></div>
+    <div class="node"><b>20 · Failure Observation → Failure Attribution Graph</b><small>Separate symptom from technical cause.</small></div><div class="arrow"></div>
+    <div class="node"><b>21 · Root Cause + Severity + Confidence + Impact</b><small>Knowledge? source? ingestion? retrieval? graph? context? taxonomy? reasoning? guardrail? compliance? presentation? evaluator?</small></div><div class="arrow"></div>
+    <div class="node gate"><b>22 · Action required?</b><small>No → monitor/analytics/incident evidence. Yes → repair eligibility.</small></div><div class="arrow"></div>
+    <div class="node gate"><b>23 · Repair Eligibility</b><small>Evidence-backed? bounded? reversible? authorized? compliant? no unresolved authoritative conflict?</small></div><div class="arrow"></div>
+    <div class="node repair"><b>24 · Repair Target Selection</b><small>Source refresh · re-ingestion · vector/index · graph · retrieval/reranker · context · taxonomy · jurisdiction rule pack · guardrail · prompt/model config · no-change.</small></div><div class="arrow"></div>
+    <div class="node repair"><b>25 · Candidate Repair / CorrectionPatch</b><small>Precise scope, expected outcome, provenance, confidence, evidence refs, TTL where provisional.</small></div><div class="arrow"></div>
+    <div class="node gate"><b>26 · Patch/Repair Safety Gates</b><small>Conflict check · corrected-claim plausibility · confidence/corroboration · anomaly/poisoning check · lightweight regression.</small></div><div class="arrow"></div>
+    <div class="node repair"><b>27 · Shadow / Quarantine Validation</b><small>Apply candidate outside canonical production state.</small></div><div class="arrow"></div>
+    <div class="node gate"><b>28 · Regression + Compliance + Blast-Radius Tests</b><small>Original issue fixed? Known-good unaffected? Compliance routing preserved? Latency/token budgets acceptable?</small></div><div class="arrow"></div>
+    <div class="node gate"><b>29 · Promotion authority required?</b><small>Canonical KG / taxonomy / control-policy changes require human governance approval.</small></div><div class="arrow"></div>
+    <div class="node repair"><b>30 · Controlled Promotion OR Rollback</b><small>Fast lane may expose a provisional patch; slow lane governs permanent canonical changes.</small></div><div class="arrow"></div>
+    <div class="node repair"><b>31 · Reindex / Cache Invalidate / Scheduled GNN Refresh as applicable</b><small>Derived serving structures are synchronized after approved canonical changes.</small></div><div class="arrow"></div>
+    <div class="node"><b>32 · Post-change Monitoring</b><small>Recurrence, quality, compliance, satisfaction, false positives, cost, latency.</small></div><div class="arrow"></div>
+    <div class="node"><b>33 · Close / Reopen / Feed evidence back into the loop</b><small>A fix is complete only when the failure stops recurring without creating new failures.</small></div>
+  </div></div>
+</section>
+
+
+<section class="panel" id="ex1">
+  <div class="example-banner ex-a"><h3>Example 1 — ACTIVE Feedback: “This expense ratio is outdated.”</h3><p>User provides explicit human feedback. The system proves the claim using authoritative current evidence, localizes stale ingestion, applies a bounded provisional correction, refreshes source data, validates and promotes.</p></div>
+  
+  <div class="scenario-grid">
+    <div class="journey-card"><h4>Business journey · Product cost disclosure</h4><div class="dialogue"><b>User query</b><div>“What is the current expense ratio of Fund Alpha Direct Growth?”</div><b>Original response</b><div>“The expense ratio is <strong>1.20%</strong>.” Cites June 2026 factsheet.</div><b>Active feedback</b><div>User selects <strong>Outdated</strong>: “The latest factsheet says 1.05%.”</div><b>Corrected response</b><div>“The current expense ratio is <strong>1.05%</strong> according to the August 2026 approved factsheet.”</div></div></div>
+    <div class="expect-card"><h4>Expected correct behavior</h4><p>Retrieve the latest approved product document, use the current attribute value, cite the current source, and never silently overwrite canonical knowledge from one user complaint.</p><div class="metric-badges"><span class="metric high">Severity · High</span><span class="metric blue">Confidence · 99%</span><span class="metric high">Impact · Cost disclosure</span><span class="metric good">LLM tokens · 0</span></div></div>
+  </div>
+<div class="routebar"><button class="routebtn on">Human signal</button><button class="routebtn">Knowledge/source issue</button><button class="routebtn">Patch used</button><button class="routebtn">Canonical update governed</button></div>
+  <div class="flow-note"><strong>Mapped to Master LLD:</strong> every box below reuses the same step/component language as the Master LLD flow. Colored boxes are executed for this scenario; grey boxes are explicitly bypassed or not needed.</div>
+  <div class="exflow" data-flow-example="ex1"></div>
+
+  <div class="exec-label">Executive outcome strip</div><div class="outcome-strip"><div class="outcome-box"><b>BEFORE</b><p>1.20% served from superseded June source.</p></div><div class="outcome-box detect"><b>DETECTION</b><p>Active “Outdated” feedback validated against current factsheet.</p></div><div class="outcome-box diag"><b>DIAGNOSIS</b><p>Ingestion lag propagated stale value into serving structures.</p></div><div class="outcome-box fix"><b>FIX</b><p>Source refresh + narrow provisional patch + selective reindex.</p></div><div class="outcome-box"><b>VALIDATION</b><p>Known-good, compliance and blast-radius tests pass.</p></div><div class="outcome-box after"><b>AFTER</b><p>1.05% served from current source; patch ratified and retired.</p></div></div>
+  <div class="grid2"><div class="impact-card"><h4>Component impact</h4><div class="component-grid"><div class="component change"><span class="state">CHANGED</span>Source registry / ingestion</div><div class="component change"><span class="state">CHANGED</span>Vector/index entries</div><div class="component change"><span class="state">CHANGED</span>KG attribute after approval</div><div class="component nochange"><span class="state">UNCHANGED</span>Prompt/model</div><div class="component nochange"><span class="state">UNCHANGED</span>Guardrails</div><div class="component validate"><span class="state">VALIDATED</span>GNN scorer</div></div></div><div class="ops-card"><h4>Cost / audit / governance</h4><div class="ops-grid"><div class="ops-item"><b>Evaluation</b><span>Rules + GNN</span></div><div class="ops-item"><b>LLM tokens</b><span>0</span></div><div class="ops-item"><b>Incident</b><span>12 observations → INC-STALE-042</span></div><div class="ops-item"><b>Approval</b><span>Human governance for canonical write</span></div><div class="ops-item"><b>Rollback</b><span>Patch revoke + version rollback</span></div><div class="ops-item"><b>Audit</b><span>EvaluationRecord + ApprovalToken</span></div></div></div></div>
+
+  <div class="ops-overlay"><h4>Operational execution overlay · Example 1</h4>
+    <div class="timeline"><div class="tl"><span class="time">T+0</span><b>Response delivered</b><p>1.20% shown from superseded source.</p></div><div class="tl"><span class="time">T+user action</span><b>Active signal</b><p>User marks the answer Outdated.</p></div><div class="tl"><span class="time">Target ≤ 15 min</span><b>Contain / patch</b><p>High-confidence narrow patch may enter fast lane after safety gates.</p></div><div class="tl"><span class="time">Target ≤ 4 h</span><b>Root cause + shadow repair</b><p>Stale ingestion is localized and source refresh is tested.</p></div><div class="tl"><span class="time">Target ≤ 1 business day</span><b>Governance</b><p>Canonical source/KG promotion receives accountable approval.</p></div><div class="tl"><span class="time">Monitoring window</span><b>Verify</b><p>Recurrence, citation freshness and affected product facts are monitored.</p></div></div>
+    <div class="owner-grid"><div class="owner"><b>Runtime / Feedback UI</b><span>Capture + freeze</span><small>InteractionSnapshot and raw Active feedback.</small></div><div class="owner"><b>Evaluation Engine</b><span>Rules + GNN</span><small>Freshness, value mismatch and corrected-claim plausibility.</small></div><div class="owner"><b>Data / RAG Team</b><span>Source repair</span><small>Refresh, selective re-ingestion and reindex.</small></div><div class="owner"><b>Human Governance</b><span>Canonical approval</span><small>Owns permanent KG/source promotion.</small></div><div class="owner"><b>Monitoring / SRE</b><span>Post-change verification</span><small>Recurrence and operating-health checks.</small></div></div>
+    <div class="operational-grid"><div class="mini-panel"><h5>User remediation decision</h5><p>For the same active session, return the corrected 1.05% answer once validated. If the product supports affected-user notification and the stale fact is material, mark impacted interactions for controlled follow-up; otherwise guarantee all subsequent responses use the provisional/canonical correction.</p></div><div class="mini-panel"><h5>Illustrative severity / SLA path</h5><div class="sla"><div class="sev">HIGH</div><div class="target">Contain or safely override quickly; triage within hours; canonical repair governed on the next approved cycle.</div></div><div class="sla-note">Illustrative operating targets only; make configurable by severity, product and jurisdiction.</div></div><div class="mini-panel"><h5>Audit breadcrumb</h5><div class="audit-chain"><span>INT-1042</span><i>→</i><span>SIG-A-881</span><i>→</i><span>EVAL-552</span><i>→</i><span>INC-STALE-042</span><i>→</i><span>REP-217</span><i>→</i><span>APR-119</span><i>→</i><span>DEP-v43</span></div></div><div class="mini-panel"><h5>Change boundary</h5><div class="change-boundary"><div class="yeschg"><b>Changed</b><p>Approved source version, ingestion outputs, affected index entries, narrow KG attribute after approval.</p></div><div class="no"><b>Did NOT change</b><p>LLM weights, prompt, AMC taxonomy, guardrails, unrelated Fund Alpha attributes.</p></div></div></div></div>
+    <h5 style="margin:12px 0 7px;color:var(--navy)">Success criteria</h5><div class="success-list"><div class="success-item"><b>Recurrence</b><span>0 stale 1.20% responses across next 10,000 applicable interactions.</span></div><div class="success-item"><b>Freshness</b><span>100% of applicable answers reference the approved current source version.</span></div><div class="success-item"><b>Regression</b><span>No change to unrelated fund attributes or known-good product answers.</span></div><div class="success-item"><b>Audit</b><span>Patch, approval and canonical version remain traceable end-to-end.</span></div></div>
+  </div>
+
+</section>
+
+<section class="panel" id="ex2">
+  <div class="example-banner ex-b"><h3>Example 2 — ACTIVE Feedback: “Your citation does not support that statement.”</h3><p>The user is correct, but the canonical fact is not wrong. Root cause is citation/context alignment. The repair changes citation-selection/context logic—not the KG.</p></div>
+  
+  <div class="scenario-grid">
+    <div class="journey-card"><h4>Business journey · Policy/feature explanation with citation</h4><div class="dialogue"><b>User query</b><div>“Does Scheme X permit feature Y?”</div><b>Original response</b><div>“Yes, Scheme X permits feature Y.” Cites <strong>Document A §4</strong>.</div><b>Active feedback</b><div>“Your citation does not support that statement.”</div><b>Corrected response</b><div>Same factual answer, but with the correct supporting citation: <strong>Document B §9</strong>.</div></div></div>
+    <div class="expect-card"><h4>Expected correct behavior</h4><p>Evaluate the claim and citation independently. If the fact is correct but the evidence link is wrong, repair citation/context selection only—do not modify the KG.</p><div class="metric-badges"><span class="metric med">Severity · Medium/High</span><span class="metric blue">Confidence · 97%</span><span class="metric high">Impact · Auditability</span><span class="metric med">Tier 2 NLI used</span></div></div>
+  </div>
+<div class="routebar"><button class="routebtn on">Human signal</button><button class="routebtn">Context/citation issue</button><button class="routebtn">No KG write</button></div>
+  <div class="flow-note"><strong>Mapped to Master LLD:</strong> this example follows the same master control path, but the repair target is context/citation logic rather than source/KG repair.</div>
+  <div class="exflow" data-flow-example="ex2"></div>
+
+  <div class="exec-label">Executive outcome strip</div><div class="outcome-strip"><div class="outcome-box"><b>BEFORE</b><p>Correct fact, unsupported citation A §4.</p></div><div class="outcome-box detect"><b>DETECTION</b><p>Active citation complaint triggers evidence checks.</p></div><div class="outcome-box diag"><b>DIAGNOSIS</b><p>Citation selector attached nearest chunk, not supporting chunk.</p></div><div class="outcome-box fix"><b>FIX</b><p>Selector + claim→citation entailment gate.</p></div><div class="outcome-box"><b>VALIDATION</b><p>Citation precision improves; latency remains within budget.</p></div><div class="outcome-box after"><b>AFTER</b><p>Claim unchanged; correct supporting citation B §9 shown.</p></div></div>
+  <div class="grid2"><div class="impact-card"><h4>Component impact</h4><div class="component-grid"><div class="component change"><span class="state">CHANGED</span>Context/citation selector</div><div class="component change"><span class="state">CHANGED</span>Entailment gate</div><div class="component nochange"><span class="state">UNCHANGED</span>Canonical KG</div><div class="component nochange"><span class="state">UNCHANGED</span>Source registry</div><div class="component nochange"><span class="state">UNCHANGED</span>Taxonomy</div><div class="component nochange"><span class="state">UNCHANGED</span>Guardrail</div></div></div><div class="ops-card"><h4>Cost / audit / governance</h4><div class="ops-grid"><div class="ops-item"><b>Evaluation</b><span>Rule + NLI</span></div><div class="ops-item"><b>LLM</b><span>Not required</span></div><div class="ops-item"><b>Canonical write</b><span>No</span></div><div class="ops-item"><b>Deployment</b><span>Canary → Full</span></div><div class="ops-item"><b>Rollback</b><span>selector_v13 → v12</span></div><div class="ops-item"><b>Audit</b><span>Claim and citation verdict separated</span></div></div></div></div>
+
+  <div class="ops-overlay"><h4>Operational execution overlay · Example 2</h4>
+    <div class="timeline"><div class="tl"><span class="time">T+0</span><b>Response delivered</b><p>Correct claim is paired with the wrong citation span.</p></div><div class="tl"><span class="time">T+user action</span><b>Active citation signal</b><p>User disputes evidence support.</p></div><div class="tl"><span class="time">Target ≤ 4 h</span><b>Evaluate</b><p>Citation checks + NLI separate claim accuracy from citation accuracy.</p></div><div class="tl"><span class="time">Target ≤ 1 business day</span><b>Candidate fix</b><p>Selector and entailment-gate change is replayed in shadow.</p></div><div class="tl"><span class="time">Controlled release</span><b>Canary</b><p>Config version is promoted with rollback pointer.</p></div><div class="tl"><span class="time">Monitoring</span><b>Verify</b><p>Citation mismatch and unsupported-citation rates are tracked.</p></div></div>
+    <div class="owner-grid"><div class="owner"><b>Feedback UI</b><span>Capture complaint</span><small>Preserve raw wording and claim/citation reference.</small></div><div class="owner"><b>Evaluation Engine</b><span>Citation + NLI</span><small>Judge fact and evidence independently.</small></div><div class="owner"><b>Context Engineering</b><span>Repair selector</span><small>Fix claim→supporting-span mapping.</small></div><div class="owner"><b>Release Owner</b><span>Canary promotion</span><small>Versioned config deployment and rollback.</small></div><div class="owner"><b>Monitoring</b><span>Citation quality</span><small>Watch precision, support rate and latency.</small></div></div>
+    <div class="operational-grid"><div class="mini-panel"><h5>User remediation decision</h5><p>Because the fact is correct, the user receives a citation correction rather than a factual retraction: “The statement remains correct; the previous citation was wrong. The supporting source is Document B §9.”</p></div><div class="mini-panel"><h5>Illustrative severity / SLA path</h5><div class="sla"><div class="sev">MED/HIGH</div><div class="target">Prompt triage for regulated/audited communication; selector repair can follow the normal controlled release path if no material factual harm exists.</div></div><div class="sla-note">Targets remain configurable by claim type and channel.</div></div><div class="mini-panel"><h5>Audit breadcrumb</h5><div class="audit-chain"><span>INT-2091</span><i>→</i><span>SIG-A-903</span><i>→</i><span>EVAL-604</span><i>→</i><span>INC-CITE-011</span><i>→</i><span>REP-228</span><i>→</i><span>DEP-selector-v13</span></div></div><div class="mini-panel"><h5>Change boundary</h5><div class="change-boundary"><div class="yeschg"><b>Changed</b><p>Citation selector, claim→citation entailment gate and selector configuration.</p></div><div class="no"><b>Did NOT change</b><p>Claim truth, canonical KG, source registry, taxonomy, LLM weights or guardrails.</p></div></div></div></div>
+    <h5 style="margin:12px 0 7px;color:var(--navy)">Success criteria</h5><div class="success-list"><div class="success-item"><b>Citation support</b><span>≥99.5% support rate on the approved citation golden set.</span></div><div class="success-item"><b>Claim stability</b><span>No degradation in factual accuracy for the same query family.</span></div><div class="success-item"><b>Latency</b><span>Selector/NLI overhead remains inside configured serving budget.</span></div><div class="success-item"><b>False repair</b><span>Wrong human feedback continues to produce “no system change.”</span></div></div>
+  </div>
+  <div class="stress-card"><div class="stress-title">Stress branch · What if the human feedback is wrong?</div><p>User says “That citation is wrong,” but frozen evidence shows the cited span directly supports the claim and the source is current. Active feedback is therefore <strong>Invalid</strong>; no repair occurs.</p><div class="stress-flow"><span>Active complaint</span><i>→</i><span>Evidence check PASS</span><i>→</i><span>NLI SUPPORTS</span><i>→</i><span>Adjudication: INVALID FEEDBACK</span><i>→</i><span>No system change</span><i>→</i><span>Feedback retained for audit</span></div><p class="explain">This demonstrates the governing principle: <strong>human feedback ≠ ground truth</strong>.</p></div>
+
+</section>
+
+<section class="panel" id="ex3">
+  <div class="example-banner ex-c"><h3>Example 3 — PASSIVE Feedback: Numeric mismatch detected with no user complaint</h3><p>The user says nothing. A deterministic numeric consistency check compares the generated value with the authoritative evidence and raises a SystemObservation. Diagnosis points to number binding/response validation.</p></div>
+  
+  <div class="scenario-grid">
+    <div class="journey-card"><h4>Business journey · Fund performance disclosure</h4><div class="dialogue"><b>User query</b><div>“What is the 1-year return of Fund Beta?”</div><b>Original response</b><div>“The 1-year return is <strong>12.8%</strong>.”</div><b>Human feedback</b><div><strong>None.</strong> User leaves without rating or complaint.</div><b>Passive signal</b><div>Numeric consistency control compares the answer with cited evidence showing <strong>10.8%</strong>.</div><b>Corrected response</b><div>“The 1-year return is <strong>10.8%</strong>,” with source-aligned numeric binding.</div></div></div>
+    <div class="expect-card"><h4>Expected correct behavior</h4><p>Cheap deterministic validation should compare material numbers against cited evidence before/after generation and prevent unsupported numerical output even when users remain silent.</p><div class="metric-badges"><span class="metric high">Severity · High</span><span class="metric blue">Confidence · 99.9%</span><span class="metric high">Impact · Performance disclosure</span><span class="metric good">LLM tokens · 0</span></div></div>
+  </div>
+<div class="routebar"><button class="routebtn on">No human signal</button><button class="routebtn">Automatic observation</button><button class="routebtn">No KG write</button></div>
+  <div class="flow-note"><strong>Mapped to Master LLD:</strong> this flow makes the Passive start explicit: “no feedback” still becomes a normalized signal and traverses the same controlled repair pipeline.</div>
+  <div class="exflow" data-flow-example="ex3"></div>
+
+  <div class="exec-label">Executive outcome strip</div><div class="outcome-strip"><div class="outcome-box"><b>BEFORE</b><p>12.8% generated while evidence says 10.8%.</p></div><div class="outcome-box detect"><b>DETECTION</b><p>Passive numeric consistency rule fires with no complaint.</p></div><div class="outcome-box diag"><b>DIAGNOSIS</b><p>Correct evidence reached model; formatter/number binding corrupted output.</p></div><div class="outcome-box fix"><b>FIX</b><p>Numeric binding validator + fail-closed interceptor.</p></div><div class="outcome-box"><b>VALIDATION</b><p>Golden numeric set, FP rate and latency all pass.</p></div><div class="outcome-box after"><b>AFTER</b><p>10.8% served consistently; passive detector verifies non-recurrence.</p></div></div>
+  <div class="grid2"><div class="impact-card"><h4>Component impact</h4><div class="component-grid"><div class="component change"><span class="state">CHANGED</span>Response numeric validator</div><div class="component change"><span class="state">CHANGED</span>Formatter/binding</div><div class="component nochange"><span class="state">UNCHANGED</span>Source</div><div class="component nochange"><span class="state">UNCHANGED</span>KG</div><div class="component nochange"><span class="state">UNCHANGED</span>Vector DB</div><div class="component validate"><span class="state">VALIDATED</span>Passive detector</div></div></div><div class="ops-card"><h4>Cost / audit / governance</h4><div class="ops-grid"><div class="ops-item"><b>Evaluation</b><span>Deterministic Tier 1</span></div><div class="ops-item"><b>LLM tokens</b><span>0</span></div><div class="ops-item"><b>Incident</b><span>3 events → INC-NUM-009</span></div><div class="ops-item"><b>Latency delta</b><span>+5ms</span></div><div class="ops-item"><b>Rollback</b><span>validator_v2 → v1</span></div><div class="ops-item"><b>Audit</b><span>Passive finding fully versioned</span></div></div></div></div>
+
+  <div class="ops-overlay"><h4>Operational execution overlay · Example 3</h4>
+    <div class="timeline"><div class="tl"><span class="time">T+0</span><b>Response delivered</b><p>12.8% is shown while evidence contains 10.8%.</p></div><div class="tl"><span class="time">T+milliseconds</span><b>Passive check</b><p>Numeric consistency rule creates SystemObservation automatically.</p></div><div class="tl"><span class="time">Immediate</span><b>Containment</b><p>Future mismatched numeric responses can fail closed or be withheld.</p></div><div class="tl"><span class="time">Target ≤ 1 h</span><b>Incident/root cause</b><p>Formatter/binding version is identified as common cause.</p></div><div class="tl"><span class="time">Controlled release</span><b>Validator v2</b><p>Shadow replay → canary → promotion.</p></div><div class="tl"><span class="time">Monitoring</span><b>Passive verification</b><p>The same detector proves non-recurrence.</p></div></div>
+    <div class="owner-grid"><div class="owner"><b>Runtime</b><span>Freeze evidence</span><small>Store response number and cited table cell.</small></div><div class="owner"><b>Passive Evaluator</b><span>Detect mismatch</span><small>Tier-1 numeric/unit rules.</small></div><div class="owner"><b>Failure Attribution</b><span>Localize formatter</span><small>Separate source/retrieval health from output binding.</small></div><div class="owner"><b>Response Platform</b><span>Implement validator</span><small>Add numeric binding/fail-closed control.</small></div><div class="owner"><b>Evaluator Governance</b><span>Watch detector health</span><small>Rollback evaluator if false positives spike.</small></div></div>
+    <div class="operational-grid"><div class="mini-panel"><h5>User remediation decision</h5><p>If the passive finding is detected while the session is still active and product UX permits, issue a correction to 10.8%; otherwise mark the interaction as affected for audit/controlled follow-up and immediately prevent recurrence in subsequent answers.</p></div><div class="mini-panel"><h5>Illustrative severity / SLA path</h5><div class="sla"><div class="sev">HIGH</div><div class="target">Immediate automatic containment is preferred because the error is deterministic and material; root-cause triage should be rapid.</div></div><div class="sla-note">The specific remediation/notification policy should be configurable by business impact.</div></div><div class="mini-panel"><h5>Audit breadcrumb</h5><div class="audit-chain"><span>INT-3017</span><i>→</i><span>SIG-P-774</span><i>→</i><span>EVAL-701</span><i>→</i><span>INC-NUM-009</span><i>→</i><span>REP-244</span><i>→</i><span>DEP-validator-v2</span></div></div><div class="mini-panel"><h5>Change boundary</h5><div class="change-boundary"><div class="yeschg"><b>Changed</b><p>Numeric binding validator, formatter behavior and fail-closed interception.</p></div><div class="no"><b>Did NOT change</b><p>Authoritative evidence, KG, Vector DB, prompt, model weights or taxonomy.</p></div></div></div></div>
+    <h5 style="margin:12px 0 7px;color:var(--navy)">Success criteria</h5><div class="success-list"><div class="success-item"><b>Numeric integrity</b><span>100% pass on approved numeric golden and adversarial-format sets.</span></div><div class="success-item"><b>Recurrence</b><span>0 confirmed mismatches across the next 10,000 performance-number responses.</span></div><div class="success-item"><b>False positives</b><span>Passive detector remains within configured FP threshold.</span></div><div class="success-item"><b>Latency</b><span>Validator overhead remains within the response budget.</span></div></div>
+  </div>
+  <div class="stress-card"><div class="stress-title">Stress branch · What if Passive feedback is a false positive?</div><p>Suppose evaluator version <strong>E7</strong> incorrectly parses “10.8%” as “108” and raises hundreds of numeric mismatches. Golden-set replay shows the RAG outputs are unchanged and correct—the evaluator regressed.</p><div class="stress-flow"><span>Passive alerts spike</span><i>→</i><span>Incident correlation: same evaluator E7</span><i>→</i><span>Golden set: RAG PASS</span><i>→</i><span>Root cause: EVALUATION_INTEGRITY</span><i>→</i><span>Disable/rollback E7</span><i>→</i><span>Do not “heal” healthy RAG</span></div><p class="explain">This proves the evaluation system itself is treated as a governed component and can be the root cause.</p></div>
+
+</section>
+
+<section class="panel" id="ex4">
+  <div class="example-banner ex-d"><h3>Example 4 — PASSIVE + ACTIVE Convergence: Suitability / recommendation incident</h3><p>The passive compliance path first flags an unqualified “you should buy Fund X” response. Later, a user questions the recommendation. Both signals correlate to the same incident; the fix changes the applicable control/routing behaviour under governance.</p></div>
+  
+  <div class="scenario-grid">
+    <div class="journey-card"><h4>Business journey · Fund comparison crossing suitability boundary</h4><div class="dialogue"><b>User query</b><div>“Which one should I buy—Fund X or Fund Y?”</div><b>Original response</b><div>“You should buy <strong>Fund X</strong>; it is the best option for you.”</div><b>Passive signal</b><div>Advice-boundary control flags personalized recommendation language without suitability evidence.</div><b>Later active feedback</b><div>“Why are you recommending this to me? You don’t know my risk profile.”</div><b>Corrected response</b><div>Provide a neutral comparison and state that a personalized recommendation requires the approved suitability process.</div></div></div>
+    <div class="expect-card"><h4>Expected correct behavior</h4><p>Resolve product/user/channel/jurisdiction applicability, enforce approved advice-boundary controls, and avoid personalized recommendation language when suitability evidence is absent.</p><div class="metric-badges"><span class="metric high">Severity · Critical</span><span class="metric blue">Confidence · 99%</span><span class="metric high">Impact · Compliance</span><span class="metric med">8 passive + 1 active → 1 incident</span></div></div>
+  </div>
+<div class="routebar"><button class="routebtn on">Passive starts first</button><button class="routebtn">Later active corroboration</button><button class="routebtn">Compliance / governance critical</button></div>
+  <div class="flow-note"><strong>Mapped to Master LLD:</strong> the initial route begins through Passive feedback, and a later Active feedback signal is attached to the same incident to enrich confidence, impact and auditability.</div>
+  <div class="exflow" data-flow-example="ex4"></div>
+
+  <div class="exec-label">Executive outcome strip</div><div class="outcome-strip"><div class="outcome-box"><b>BEFORE</b><p>Personalized “buy Fund X” recommendation without suitability evidence.</p></div><div class="outcome-box detect"><b>DETECTION</b><p>8 passive controls flag issue; later 1 active complaint corroborates impact.</p></div><div class="outcome-box diag"><b>DIAGNOSIS</b><p>Taxonomy/routing gap prevented suitability guardrail activation.</p></div><div class="outcome-box fix"><b>FIX</b><p>Taxonomy + router + guardrail + approved safe response.</p></div><div class="outcome-box"><b>VALIDATION</b><p>Compliance, false-positive and neighboring-intent tests pass.</p></div><div class="outcome-box after"><b>AFTER</b><p>Neutral comparison shown; personalized advice requires suitability process.</p></div></div>
+  <div class="grid2"><div class="impact-card"><h4>Component impact</h4><div class="component-grid"><div class="component change"><span class="state">CHANGED</span>AMC taxonomy mapping</div><div class="component change"><span class="state">CHANGED</span>Adaptive Router</div><div class="component change"><span class="state">CHANGED</span>Guardrail/control trigger</div><div class="component change"><span class="state">CHANGED</span>Approved safe response</div><div class="component nochange"><span class="state">UNCHANGED</span>Canonical product facts</div><div class="component nochange"><span class="state">UNCHANGED</span>Vector source data</div></div></div><div class="ops-card"><h4>Cost / audit / governance</h4><div class="ops-grid"><div class="ops-item"><b>Aggregation</b><span>8 Passive + 1 Active = 1 incident</span></div><div class="ops-item"><b>Severity</b><span>Critical</span></div><div class="ops-item"><b>Mandatory path</b><span>Compliance controls</span></div><div class="ops-item"><b>Approval</b><span>Compliance owner</span></div><div class="ops-item"><b>Rollback</b><span>G23 → G22</span></div><div class="ops-item"><b>Audit</b><span>Approver + rationale + evidence + version</span></div></div></div></div>
+
+  <div class="ops-overlay"><h4>Operational execution overlay · Example 4</h4>
+    <div class="timeline"><div class="tl"><span class="time">T+0</span><b>Risky response</b><p>Personalized “buy Fund X” guidance is delivered without suitability evidence.</p></div><div class="tl"><span class="time">T+milliseconds</span><b>Passive compliance alert</b><p>Mandatory advice-boundary control flags the response.</p></div><div class="tl"><span class="time">Immediate</span><b>Containment</b><p>Matching recommendation behavior is blocked/reframed to an approved safe response.</p></div><div class="tl"><span class="time">Target ≤ 15 min</span><b>Compliance escalation</b><p>Critical incident is routed to accountable compliance ownership.</p></div><div class="tl"><span class="time">Governed cycle</span><b>Repair approval</b><p>Taxonomy/router/guardrail bundle is approved before permanent promotion.</p></div><div class="tl"><span class="time">Monitoring window</span><b>Verify</b><p>Recommendation catches, false positives and affected-user signals are monitored.</p></div></div>
+    <div class="owner-grid"><div class="owner"><b>Passive Compliance Control</b><span>Detect + contain</span><small>Mandatory control path operates without user complaint.</small></div><div class="owner"><b>Incident Manager</b><span>Correlate signals</span><small>8 Passive + later Active → one incident.</small></div><div class="owner"><b>Compliance Owner</b><span>Accountability</span><small>Owns applicability decision and approval rationale.</small></div><div class="owner"><b>Taxonomy / Router Team</b><span>Repair mapping</span><small>Correct suitability-sensitive classification and trigger.</small></div><div class="owner"><b>Monitoring</b><span>Safety + service quality</span><small>Watch recurrence and over-triggering.</small></div></div>
+    <div class="operational-grid"><div class="mini-panel"><h5>User remediation decision</h5><p>Immediately replace or follow up with an approved neutral comparison, explicitly state that personalized advice requires the suitability process, and—where policy permits—flag affected interactions for supervised remediation.</p></div><div class="mini-panel"><h5>Illustrative severity / SLA path</h5><div class="sla"><div class="sev">CRITICAL</div><div class="target">Immediate containment; compliance escalation within minutes; no permanent control/taxonomy promotion without accountable approval.</div></div><div class="sla-note">Critical-path timings are operating targets, not legal commitments; jurisdiction packs may impose stricter requirements.</div></div><div class="mini-panel"><h5>Audit breadcrumb</h5><div class="audit-chain"><span>INT-4412</span><i>→</i><span>SIG-P-811..818</span><i>+</i><span>SIG-A-990</span><i>→</i><span>EVAL-830</span><i>→</i><span>INC-COMP-015</span><i>→</i><span>REP-301</span><i>→</i><span>APR-COMP-77</span><i>→</i><span>DEP-G23</span></div></div><div class="mini-panel"><h5>Change boundary</h5><div class="change-boundary"><div class="yeschg"><b>Changed</b><p>Taxonomy mapping, router trigger, guardrail/control activation and approved safe response behavior.</p></div><div class="no"><b>Did NOT change</b><p>Canonical product facts, source data, embeddings, LLM weights; no autonomous legal/regulatory interpretation was created.</p></div></div></div></div>
+    <h5 style="margin:12px 0 7px;color:var(--navy)">Success criteria</h5><div class="success-list"><div class="success-item"><b>Control coverage</b><span>100% of suitability-sensitive matched cases traverse mandatory controls.</span></div><div class="success-item"><b>Recurrence</b><span>0 confirmed unqualified personalized recommendations in the monitored cohort.</span></div><div class="success-item"><b>False positives</b><span>Ordinary factual fund comparisons remain available within configured FP target.</span></div><div class="success-item"><b>Governance</b><span>Every control-affecting version change has approver, rationale, evidence and rollback trace.</span></div></div>
+  </div>
+
+</section>
+<section class="panel" id="patch">
+  <h2 class="section-title">Correction Patch Layer — low-level zoom</h2>
+  <p class="lead">Used only when the confirmed repair is a factual/graph correction. It is deliberately not the universal fix mechanism.</p>
+  <div class="flow-shell"><div class="flow">
+    <div class="node repair"><b>P1 · Build CorrectionPatch</b><small>scope=entity/edge/attribute; original_claim; corrected_claim; provenance; confidence; evidence_refs; TTL.</small></div><div class="arrow"></div>
+    <div class="node gate"><b>P2 · Existing active patch on same scope?</b><small>Yes → conflict; never last-write-wins; route to arbitration.</small></div><div class="arrow"></div>
+    <div class="node gate"><b>P3 · Re-score corrected claim with GNN / structural checks</b><small>A proposed fix must not be structurally less plausible than the original.</small></div><div class="arrow"></div>
+    <div class="node gate"><b>P4 · Confidence tier</b><small>High/HITL-confirmed can continue; low/self-adjudicated is held for corroboration or expires.</small></div><div class="arrow"></div>
+    <div class="node gate"><b>P5 · Corroboration / TTL</b><small>Second independent signal or early governance can promote a held patch; otherwise it expires.</small></div><div class="arrow"></div>
+    <div class="node gate"><b>P6 · Rate / anomaly / poisoning check</b><small>Repeated entity patches or one user/session dominating changes → hold + governance review.</small></div><div class="arrow"></div>
+    <div class="node gate"><b>P7 · Lightweight known-good regression</b><small>Entity-local test set; failure blocks the patch.</small></div><div class="arrow"></div>
+    <div class="node repair"><b>P8 · Provisional LIVE — fast lane</b><small>Exact key lookup and/or stricter-threshold correction-card retrieval; patch remains separate from canonical evidence and is visibly provisional.</small></div><div class="arrow"></div>
+    <div class="node repair"><b>P9 · Governance queue — slow lane</b><small>Approved → canonical KG update + reindex + patch ratified. Rejected → patch revoked. No approval → provisional/TTL lifecycle continues.</small></div><div class="arrow"></div>
+    <div class="node"><b>P10 · Outcome logging</b><small>application_count, last_applied_at, recurrence, satisfaction/quality impact → new evidence for governance.</small></div>
+  </div></div>
+</section>
+
+<section class="panel" id="objects">
+  <h2 class="section-title">Key data objects carried through the flow</h2>
+  <p class="lead">These shapes make the process implementable and auditable. Field names are illustrative LLD guidance, not a locked API contract.</p>
+  <div class="grid2">
+    <div><h3>InteractionSnapshot / EvidencePack</h3><div class="object">{
+  interaction_id,
+  query,
+  response,
+  retrieved_sources[], source_versions[],
+  vector_hits[], graph_paths[], taxonomy_nodes[],
+  selected_context[], citations[],
+  guardrail_decisions[],
+  model_version, prompt_version, config_version,
+  latency_ms, token_usage,
+  jurisdiction_context, product_context, user_context
+}</div></div>
+    <div><h3>SignalRecord</h3><div class="object">{
+  signal_id, interaction_id,
+  origin: "ACTIVE" | "PASSIVE",
+  raw_feedback?, ui_category?,
+  system_observation?, evaluator_version?,
+  disputed_claim?, referent_id?,
+  category, confidence,
+  evidence_refs[], timestamp
+}</div></div>
+    <div><h3>EvaluationRecord</h3><div class="object">{
+  interaction_id, signal_ids[],
+  applicability_context,
+  deterministic_results[],
+  gnn_plausibility_score?,
+  semantic_results?, llm_evaluation?,
+  adjudication: {verdict, confidence, evidence_refs},
+  root_cause, severity, impact,
+  incident_id?, repair_candidate?, lifecycle_status
+}</div></div>
+    <div><h3>RepairCandidate / CorrectionPatch</h3><div class="object">{
+  repair_id, repair_class,
+  target_scope,
+  original_state, proposed_state,
+  provenance, confidence, evidence_refs[],
+  ttl?, rollback_plan,
+  required_approvals[],
+  shadow_test_results[],
+  blast_radius, status
+}</div></div>
+  </div>
+</section>
+
+<section class="panel" id="coverage">
+  <h2 class="section-title">Coverage matrix — which example demonstrates which control?</h2>
+  <p class="lead">The Master LLD contains every control. The examples are intentionally diverse so stakeholders can see why different failures must produce different repairs.</p>
+  <div style="overflow:auto"><table class="matrix">
+    <thead><tr><th>Control / Step</th><th>Ex1 Active stale data</th><th>Ex2 Active citation</th><th>Ex3 Passive numeric</th><th>Ex4 Converged compliance</th></tr></thead>
+    <tbody id="coverageBody"></tbody>
+  </table></div>
+  <div class="callout"><strong>Important:</strong> A low-level design should not force every incident through every expensive evaluator. “Covered” means the control exists and is evaluated/routed as applicable. The Adaptive Router is allowed to stop early once authoritative evidence is decisive—except mandatory compliance controls, which cannot be sampled away.</div>
+</section>
+<div class="footer">Design basis: AMC feedback/evaluation/self-healing architecture + Correction Patch Layer methodology. This HTML is an execution-level companion for stakeholder walkthroughs and engineering decomposition.</div>
+</main>
+
+<script>
+const masterSteps = [
+  {id:'0',  title:'User Query', purpose:'Normal AMC chatbot interaction starts.', cls:'base'},
+  {id:'1',  title:'Retrieval → Context Engineering → Guardrails → Response Generated', purpose:'Hybrid retrieval, evidence assembly and runtime policy checks produce the answer that the user actually sees.', cls:'base'},
+  {id:'2',  title:'Freeze Interaction Snapshot + EvidencePack', purpose:'The system freezes the exact answer, evidence, citations, graph paths, taxonomy context, source versions and runtime telemetry before any later evaluation occurs.', cls:'common'},
+  {id:'3',  title:'Did the user provide feedback / dissatisfaction follow-up?', purpose:'This is the explicit Active-vs-Passive split. The system must handle both outcomes rather than assuming that quality work only begins when a human complains.', cls:'gate'},
+  {id:'4A', title:'ACTIVE feedback begins', purpose:'Capture explicit selection, free-text or dissatisfaction follow-up as a human-originated signal.', cls:'active'},
+  {id:'5A', title:'Validate intent + same-referent', purpose:'Confirm the human feedback is actually about this answer/claim before spending evaluation budget.', cls:'active'},
+  {id:'4P', title:'PASSIVE feedback begins', purpose:'No human signal exists, so system-observed triggers such as rules, anomalies, guardrails, sampling or high-value coverage start the loop.', cls:'passive'},
+  {id:'5P', title:'Create SystemObservation', purpose:'Convert raw passive detections into the same normalized signal shape used elsewhere in the architecture.', cls:'passive'},
+  {id:'6',  title:'Normalize SignalRecord', purpose:'Every signal—Active or Passive—is normalized into a common structure with origin, claim, evidence refs, confidence and timestamp.', cls:'common'},
+  {id:'7',  title:'Localize exact referent / claim / node / edge / attribute', purpose:'Avoid treating “wrong answer” as the repair target. The system must pinpoint what exact thing is under dispute.', cls:'common'},
+  {id:'8',  title:'Resolve AMC taxonomy + jurisdiction / product / channel / user applicability', purpose:'Mandatory controls depend on the domain context, claim type and jurisdiction/product/channel/user applicability.', cls:'gate'},
+  {id:'9',  title:'Evidence Sufficiency Gate', purpose:'The system must decide whether captured evidence is enough to adjudicate the signal. If not, it must obtain authoritative evidence or escalate rather than invent the truth.', cls:'gate'},
+  {id:'10', title:'Incident Correlation', purpose:'Repeated failures that share the same source version, component version, rule pack or evaluator should become one incident, not many duplicated diagnoses.', cls:'common'},
+  {id:'11', title:'Adaptive Evaluation Router', purpose:'Select the minimum sufficient evaluation path, while always honoring mandatory controls and defined escalation rules.', cls:'common'},
+  {id:'12', title:'Tier 0/1 Metrics + Deterministic Rule Checks', purpose:'Start with the cheapest reliable evaluators: freshness, numeric, temporal, citation, referential, hierarchy, cross-source, format, guardrail and jurisdiction checks.', cls:'common'},
+  {id:'13', title:'GNN Structural Plausibility (where graph claim applies)', purpose:'When a graph claim or graph correction is involved, the frozen structural scorer checks whether the candidate claim is plausible in the current graph neighborhood.', cls:'common'},
+  {id:'14', title:'Resolved with sufficient confidence?', purpose:'If deterministic/cheap evidence is already decisive, the system should stop spending more evaluation budget.', cls:'gate'},
+  {id:'15', title:'Tier 2 Semantic / NLI Evaluation', purpose:'If still unresolved, use semantic entailment/contradiction checks to compare claim and evidence.', cls:'common'},
+  {id:'16', title:'Still unresolved?', purpose:'Only ambiguous or high-impact cases should move deeper into expensive evaluators.', cls:'gate'},
+  {id:'17', title:'Tier 3 Bounded LLM / Agent / HITL', purpose:'Use the most expensive evaluators only for genuine ambiguity, multi-source conflict or exceptional investigation.', cls:'common'},
+  {id:'18', title:'Adjudication', purpose:'Produce an explicit verdict with confidence rather than leaving evaluation results as disconnected raw signals.', cls:'common'},
+  {id:'19', title:'Unified EvaluationRecord', purpose:'Collapse Active and Passive routes into one auditable record schema.', cls:'common'},
+  {id:'20', title:'Failure Observation → Failure Attribution Graph', purpose:'Separate observable symptom from technical origin so the system does not repair the wrong layer.', cls:'common'},
+  {id:'21', title:'Root Cause + Severity + Confidence + Impact', purpose:'Determine what actually went wrong and whether it matters enough to justify intervention.', cls:'common'},
+  {id:'22', title:'Action required?', purpose:'Some findings only need monitoring; others require a repair workflow.', cls:'gate'},
+  {id:'23', title:'Repair Eligibility', purpose:'Self-healing is permitted only when the candidate repair is evidence-backed, bounded, reversible, authorized and compliant.', cls:'gate'},
+  {id:'24', title:'Repair Target Selection', purpose:'Choose the layer that should be changed: source, ingestion, vector/index, graph, retrieval, context, taxonomy, rule pack, guardrail, prompt/config or no-change.', cls:'repair'},
+  {id:'25', title:'Candidate Repair / CorrectionPatch', purpose:'Create the candidate repair object with exact scope, evidence, confidence, rollback plan and provisional/TTL semantics where applicable.', cls:'repair'},
+  {id:'26', title:'Patch/Repair Safety Gates', purpose:'Run safety checks such as conflict detection, anomaly/poisoning screening, plausibility and lightweight regression.', cls:'gate'},
+  {id:'27', title:'Shadow / Quarantine Validation', purpose:'Apply the candidate in quarantine first so the fix can be evaluated before broad production impact.', cls:'repair'},
+  {id:'28', title:'Regression + Compliance + Blast-Radius Tests', purpose:'A good fix solves the original issue without breaking known-good behavior, control routing or operating budgets.', cls:'gate'},
+  {id:'29', title:'Promotion authority required?', purpose:'Some changes—especially canonical knowledge, taxonomy or control changes—need explicit human governance approval.', cls:'gate'},
+  {id:'30', title:'Controlled Promotion OR Rollback', purpose:'Only validated changes move forward; otherwise the system rolls back or holds. Fast-lane provisional behavior and slow-lane canonical governance may differ.', cls:'repair'},
+  {id:'31', title:'Reindex / Cache Invalidate / Scheduled GNN Refresh as applicable', purpose:'After approved changes, the system synchronizes its derived serving structures.', cls:'repair'},
+  {id:'32', title:'Post-change Monitoring', purpose:'Observe recurrence, quality, compliance, false positives, user impact, latency and cost after the change lands.', cls:'common'},
+  {id:'33', title:'Close / Reopen / Feed evidence back into the loop', purpose:'A fix is complete only after monitoring shows the issue stopped recurring without causing new failures.', cls:'common'}
+];
+
+const TAKEN = (summary, outcome, tech, why) => ({status:'TAKEN', state:'taken', summary, outcome, tech, why});
+const SKIPPED = (summary, outcome='This component is explicitly bypassed in this scenario.', tech='n/a') => ({status:'SKIPPED', state:'skip', summary, outcome, tech});
+
+const exampleFlows = {
+  ex1: {
+    '0':  TAKEN('User asks about Fund Alpha and receives an expense-ratio answer.', 'The scenario begins with a normal product-fact interaction.', 'query=Fund Alpha expense ratio'),
+    '1':  TAKEN('The answer says “1.20%” and cites an older June factsheet.', 'The delivered answer is the object under review.', 'response.value=1.20%; cited_source=factsheet_2026_06'),
+    '2':  TAKEN('The interaction snapshot freezes the answer, citation, graph node and source version.', 'Later evaluation can now reference a stable auditable snapshot.', 'snapshot={value:1.20%, source_v:2026_06, node:FundAlpha.expense_ratio}'),
+    '3':  TAKEN('Yes—an explicit user complaint arrives, so the Active branch is taken.', 'The system should not wait for a passive trigger when a human directly complains.', 'feedback_present=true'),
+    '4A': TAKEN('User selects “Outdated” and writes that the latest factsheet says 1.05%.', 'This creates a human-originated signal.', 'SignalRecord.origin=ACTIVE; category=OUTDATED'),
+    '5A': TAKEN('The complaint is validated as referring to FundAlpha.expense_ratio.', 'This prevents unrelated dissatisfaction from mutating the wrong entity/claim.', 'referent=FundAlpha.expense_ratio; same_referent=.98'),
+    '4P': SKIPPED('Passive start is not the primary route because a human explicitly complained first.'),
+    '5P': SKIPPED('No SystemObservation is needed as the initiating signal in this case.'),
+    '6':  TAKEN('The feedback is normalized into a SignalRecord with disputed claim, evidence refs and confidence.', 'Everything downstream now treats it in a consistent shape.', 'signal={origin:ACTIVE, category:OUTDATED, claim:FundAlpha.expense_ratio}'),
+    '7':  TAKEN('The exact disputed attribute is localized: Fund Alpha → expense ratio.', 'Repairs must be narrow and precise, not whole-entity rewrites.', 'scope=attribute'),
+    '8':  TAKEN('Claim type resolves to PRODUCT_FACT / COST_DISCLOSURE in AMC context.', 'Freshness and disclosure controls become mandatory.', 'applicability={taxonomy:COST_DISCLOSURE, jurisdiction:India}'),
+    '9':  TAKEN('The current August factsheet is fetched from the approved source registry and clearly shows 1.05%.', 'The correction must come from authoritative evidence, not evaluator invention.', 'authoritative_ref=factsheet_2026_08; evidence_sufficient=true'),
+    '10': TAKEN('The issue attaches to an existing stale-ingestion incident for the same source family.', 'This prevents duplicate diagnosis effort.', 'incident_id=INC-STALE-042'),
+    '11': TAKEN('The router chooses deterministic freshness and cross-source numeric comparison.', 'This is the cheapest sufficient path.', 'plan=[freshness_rule,cross_source_numeric]'),
+    '12': TAKEN('Deterministic checks fail: the served value differs from the current authoritative value.', 'The issue is now strongly supported without expensive semantics.', 'OUTDATED_SOURCE=FAIL; VALUE_MISMATCH=FAIL'),
+    '13': TAKEN('The corrected triple FundAlpha → expense_ratio → 1.05 is structurally plausible.', 'The fix itself is screened before any patch is considered safe.', 'gnn_score=.94; threshold=.80'),
+    '14': TAKEN('Yes—confidence is already sufficient after deterministic evidence and plausibility scoring.', 'The system should stop here instead of spending more budget.', 'resolved=true'),
+    '15': SKIPPED('Tier 2 semantic evaluation is unnecessary because deterministic evidence is decisive.'),
+    '16': SKIPPED('The case is already resolved, so no deeper ambiguity gate remains.'),
+    '17': SKIPPED('No bounded LLM / HITL investigation is required for this routine stale-data correction.'),
+    '18': TAKEN('The feedback is adjudicated Valid.', 'An explicit verdict is now recorded, not just raw rule failures.', 'adjudication=VALID'),
+    '19': TAKEN('A Unified EvaluationRecord is written.', 'The record combines feedback, evidence, verdict and provenance.', 'evaluation_record.created=true'),
+    '20': TAKEN('The symptom is connected to the failure-attribution graph.', '“Wrong number” is separated from “why the number was wrong.”', 'observation→incident→component linkage created'),
+    '21': TAKEN('Root cause is diagnosed as ingestion lag / stale source propagation.', 'The model is not blamed for a source freshness problem.', 'root_cause=INGESTION_LAG; severity=HIGH'),
+    '22': TAKEN('Action is required because the error affects user-visible cost disclosure and repeats across interactions.', 'Exposure and materiality justify repair.', 'action_required=true'),
+    '23': TAKEN('The repair is eligible: authoritative evidence exists, scope is narrow, rollback is defined.', 'This satisfies the bounded-self-healing requirement.', 'eligible=true'),
+    '24': TAKEN('Repair target = source refresh + selective re-ingestion/reindex + provisional narrow patch.', 'The system repairs both immediate behavior and the underlying source path.', 'repair_class=[SOURCE_REFRESH,SELECTIVE_REINDEX,PATCH]'),
+    '25': TAKEN('A CorrectionPatch is built for FundAlpha.expense_ratio 1.20 → 1.05 with provenance and TTL.', 'Immediate user-visible correction remains separate from canonical truth until governed.', 'patch_scope=attribute; ttl=7d'),
+    '26': TAKEN('Conflict, anomaly, plausibility and lightweight regression gates all pass.', 'Even a likely-correct patch must prove it is safe.', 'patch_gate=PASS'),
+    '27': TAKEN('Selective ingestion and reindex are run in shadow/quarantine.', 'The underlying repair must work before canonical promotion.', 'shadow_retrieval=returns_1.05'),
+    '28': TAKEN('Regression, compliance and blast-radius tests pass.', 'The fix works without breaking related product-fact behavior.', 'validation=PASS'),
+    '29': TAKEN('Yes—canonical source/KG update requires governance approval, while the fast-lane patch can go live provisionally.', 'This preserves the fast-lane / slow-lane trust split.', 'governance_required=true'),
+    '30': TAKEN('The provisional patch goes live and the governed canonical update is approved.', 'Behavior improves immediately while permanent truth remains governed.', 'fast_lane=LIVE; slow_lane=APPROVED'),
+    '31': TAKEN('Affected vectors/graph entries are reindexed and the GNN is refreshed on governed cadence.', 'Derived structures are synchronized after approval.', 'reindex=true; gnn_refresh=scheduled'),
+    '32': TAKEN('Monitoring watches recurrence, citations, user impact and operating metrics.', 'Deployment alone does not prove success.', 'monitoring_window=active'),
+    '33': TAKEN('No recurrence appears after the observation window, so the incident is closed.', 'Closure is evidence-based, not assumed.', 'incident_status=CLOSED')
+  },
+
+  ex2: {
+    '0':  TAKEN('User asks an AMC policy/feature question and receives a cited answer.', 'This begins as a normal informational interaction.', 'query=Scheme X feature question'),
+    '1':  TAKEN('The answer says “Scheme X permits feature Y” and cites Document A §4.', 'The claim and the citation are both part of what the user experienced.', 'response.claim=C7; citation=A#4'),
+    '2':  TAKEN('The snapshot freezes the answer, chosen context and citation span.', 'The evaluation must examine the exact evidence path the user saw.', 'evidencepack.includes_selected_context=true'),
+    '3':  TAKEN('Yes—an explicit citation complaint arrives, so the Active branch is taken.', 'The user is giving a direct signal about evidence quality.', 'feedback_present=true'),
+    '4A': TAKEN('User writes: “That citation does not support this statement.”', 'The system captures the objection without yet assuming the canonical fact is wrong.', 'SignalRecord.origin=ACTIVE; category=CITATION_MISMATCH'),
+    '5A': TAKEN('The complaint is linked to claim C7 and citation A#4.', 'The likely repair target may be citation wiring rather than the fact itself.', 'same_referent=true'),
+    '4P': SKIPPED('Passive start is not the initiating route here because a human raised the issue directly.'),
+    '5P': SKIPPED('No passive SystemObservation is needed as the first signal in this example.'),
+    '6':  TAKEN('The feedback becomes a normalized SignalRecord.', 'This allows it to enter the shared control plane.', 'signal.category=CITATION_MISMATCH'),
+    '7':  TAKEN('The localized dispute is “claim C7 ↔ citation A#4”.', 'This keeps the system from editing the wrong layer.', 'localized_target=claim+citation'),
+    '8':  TAKEN('AMC applicability resolves to informational claim/citation quality controls.', 'Citation integrity is a first-class regulated communication concern.', 'applicability={claim_type:INFORMATIONAL, control:CITATION_INTEGRITY}'),
+    '9':  TAKEN('The system retrieves the cited span and alternative authoritative supporting spans.', 'We must test whether the fact is wrong, the citation is wrong, or both.', 'A#4=neutral; B#9=supports claim'),
+    '10': TAKEN('No existing incident fully explains the issue, so a new observation/incident seed is created.', 'This keeps the case traceable even if it later clusters with others.', 'incident_seed=true'),
+    '11': TAKEN('The router selects citation-span checks, context trace and NLI.', 'Only evaluators relevant to the failure family should run.', 'plan=[citation_span_check,nli,context_trace]'),
+    '12': TAKEN('Deterministic citation checks show the selected citation span does not support the claim.', 'A routing/alignment problem is already visible.', 'citation_target_mismatch=FAIL'),
+    '13': SKIPPED('GNN plausibility is not relevant because no graph claim or graph correction is being proposed.'),
+    '14': TAKEN('Not fully resolved yet—the system still needs to know whether the fact itself is wrong.', 'This determines the correct repair layer.', 'need_semantic_check=true'),
+    '15': TAKEN('NLI shows Document A §4 is neutral, while Document B §9 supports the claim.', 'Semantic evaluation separates factual correctness from citation correctness.', 'semantic_result={A#4:neutral,B#9:support}'),
+    '16': TAKEN('The case is now resolved, so no further escalation is needed.', 'The combined signal is sufficiently confident.', 'resolved=true'),
+    '17': SKIPPED('No bounded LLM / HITL escalation is needed because the claim/citation relationship is already resolved.'),
+    '18': TAKEN('Adjudication concludes: feedback is Valid, claim factuality Pass, citation quality Fail.', 'The system can now say exactly what was wrong.', 'adjudication=CITATION_FAIL'),
+    '19': TAKEN('A Unified EvaluationRecord is written.', 'The audit trail now shows that the issue lived in citation support, not in canonical knowledge.', 'evaluation_record.created=true'),
+    '20': TAKEN('The failure is inserted into the attribution graph.', 'The same observable complaint is tied to its real technical origin.', 'attribution_node=CITATION_ALIGNMENT'),
+    '21': TAKEN('Root cause = citation selector / context alignment attached the wrong supporting span.', 'The knowledge layer is healthy; the presentation/evidence layer is not.', 'root_cause=CITATION_ALIGNMENT; severity=MEDIUM_HIGH'),
+    '22': TAKEN('Action is required because unsupported citations damage auditability and trust.', 'Even if the fact is true, the evidence path must still be correct.', 'action_required=true'),
+    '23': TAKEN('The repair is eligible because it is bounded, testable and does not require inventing new truth.', 'This is a safe engineering/configuration repair.', 'eligible=true'),
+    '24': TAKEN('Repair target = context/citation selector + claim→citation entailment gate.', 'The system repairs the responsible layer instead of editing the KG.', 'repair_class=CONTEXT_CITATION'),
+    '25': TAKEN('A candidate selector/configuration repair is prepared; no CorrectionPatch or KG change is created.', 'Not every confirmed issue should become a patch against canonical knowledge.', 'candidate_change=selector_v13'),
+    '26': TAKEN('Repair safety gates run using citation-focused tests and latency checks.', 'The new selector must be safe before rollout.', 'safety_gate=PASS'),
+    '27': TAKEN('Golden-query replay is executed in shadow.', 'We need to prove supported citations are now selected.', 'shadow.claim_C7→B#9'),
+    '28': TAKEN('Regression and blast-radius tests pass; latency increases only slightly and remains within budget.', 'The fix improves support quality without harming the system.', 'validation=PASS; latency_delta=+8ms'),
+    '29': TAKEN('No special canonical-governance approval is required; standard controlled deployment approval is sufficient.', 'This is not a canonical graph/taxonomy/control-law change.', 'governance_required=false'),
+    '30': TAKEN('The selector/config update is canaried, then promoted.', 'This bounds production exposure and preserves rollback.', 'deployment=CANARY→FULL'),
+    '31': SKIPPED('No canonical graph reindex or GNN refresh is required because only citation-selection logic changed.'),
+    '32': TAKEN('Post-change monitoring tracks citation mismatch rate and unsupported-citation alerts.', 'Ongoing evidence is needed to prove the repair holds.', 'metric=citation_mismatch_rate'),
+    '33': TAKEN('Mismatch rate drops below threshold and the issue is closed.', 'Closure follows measured improvement.', 'status=CLOSED')
+  },
+
+  ex3: {
+    '0':  TAKEN('User asks a performance question and receives a response containing a 1-year return figure.', 'The scenario begins as a standard answer with no human objection.', 'query=1-year return'),
+    '1':  TAKEN('The response says “12.8%”, while the cited evidence table actually contains “10.8%”.', 'This hidden inconsistency is what the passive path will detect.', 'response.number=12.8%; source.number=10.8%'),
+    '2':  TAKEN('The system freezes the answer, table cell and selected evidence.', 'Passive evaluation must use the same immutable context the model had.', 'snapshot.numeric_cells=stored'),
+    '3':  TAKEN('No user feedback arrives, so the Passive branch is taken.', 'Silence is not evidence of correctness.', 'feedback_present=false'),
+    '4A': SKIPPED('The Active branch is not taken because the user does not complain or follow up.'),
+    '5A': SKIPPED('No same-referent validation is needed for a human-originated signal because there is none.'),
+    '4P': TAKEN('Automatic coverage starts from passive evaluation controls.', 'The quality loop should still operate with no human signal.', 'passive_trigger=true'),
+    '5P': TAKEN('A SystemObservation is created from a numeric consistency rule.', 'Passive detections are normalized into the same control schema.', 'SystemObservation.category=NUMERIC_MISMATCH'),
+    '6':  TAKEN('The SystemObservation is normalized into a SignalRecord.', 'This lets Passive findings use the same downstream flow as Active findings.', 'signal.origin=PASSIVE'),
+    '7':  TAKEN('The dispute is localized to a specific generated number and source field.', 'This supports precise repair targeting.', 'target=response.number ↔ cited_table_cell'),
+    '8':  TAKEN('The claim resolves to PERFORMANCE_NUMBER / DISCLOSURE controls.', 'Numeric and disclosure checks are mandatory for this claim class.', 'control_set=PERFORMANCE_DISCLOSURE'),
+    '9':  TAKEN('Evidence sufficiency is straightforward because the cited table clearly says 10.8%.', 'No semantic interpretation is required here.', 'evidence_sufficient=true'),
+    '10': TAKEN('Similar failures correlate to the same response formatter / binding version.', 'This reveals a systemic issue rather than an isolated observation.', 'incident_id=INC-NUM-009'),
+    '11': TAKEN('The router chooses deterministic numeric/unit validation only.', 'The cheapest decisive path should win.', 'plan=[numeric_compare]'),
+    '12': TAKEN('Deterministic evaluation confirms 12.8 ≠ 10.8.', 'The mismatch is directly machine-verifiable.', 'numeric_mismatch=FAIL'),
+    '13': SKIPPED('GNN plausibility is not relevant because the issue is a generated numeric binding error, not a graph claim.'),
+    '14': TAKEN('Yes—the issue is resolved with sufficient confidence at Tier 1.', 'No further evaluation budget is needed.', 'resolved=true'),
+    '15': SKIPPED('Semantic/NLI evaluation is unnecessary because the deterministic mismatch is decisive.'),
+    '16': SKIPPED('No deeper ambiguity gate remains once Tier 1 resolves the case.'),
+    '17': SKIPPED('No bounded LLM / HITL investigation is required for this numeric-binding failure.'),
+    '18': TAKEN('The passive finding is adjudicated Confirmed.', 'Passive findings still receive formal verdicts and confidence.', 'adjudication=CONFIRMED'),
+    '19': TAKEN('A Unified EvaluationRecord is written.', 'This keeps passive signals fully auditable.', 'evaluation_record.created=true'),
+    '20': TAKEN('The failure enters the attribution graph.', 'The system must separate the symptom from the component that caused it.', 'attribution_edge=created'),
+    '21': TAKEN('Root cause = number binding / response formatter defect, not retrieval or source knowledge.', 'The authoritative evidence was already correct and present.', 'root_cause=NUMBER_BINDING; severity=HIGH'),
+    '22': TAKEN('Action is required because performance numbers are material.', 'The system should not leave this as a monitoring-only issue.', 'action_required=true'),
+    '23': TAKEN('The repair is eligible and deterministic: add numeric binding validation and fix formatter behavior.', 'This is bounded and reversible.', 'eligible=true'),
+    '24': TAKEN('Repair target = response validator + formatter logic.', 'The right repair is preventive control, not a knowledge edit.', 'repair_class=RESPONSE_VALIDATOR'),
+    '25': TAKEN('A candidate repair is created to validate numeric binding and fail closed when unsupported.', 'This prevents recurrence at generation time.', 'candidate_change=validator_v2'),
+    '26': TAKEN('Repair safety gates check false-positive tolerance and safe-action behavior.', 'A defensive validator is itself a risk if it overfires.', 'safety_gate=PASS'),
+    '27': TAKEN('Shadow replay runs a numeric golden set with adversarial formats.', 'The repair must generalize across number representations.', 'shadow=PASS'),
+    '28': TAKEN('Regression, compliance and performance tests pass with acceptable latency overhead.', 'The fix works without unacceptable cost.', 'validation=PASS; latency_delta=+5ms'),
+    '29': TAKEN('No special governance approval is required beyond standard release control.', 'This is not a canonical knowledge or policy change.', 'governance_required=false'),
+    '30': TAKEN('The validator is canaried and then promoted, with rollback retained.', 'Deployment remains controlled and reversible.', 'status=PROMOTED'),
+    '31': SKIPPED('No graph reindex or GNN refresh is needed because no canonical knowledge structure changed.'),
+    '32': TAKEN('Passive numeric monitoring remains active after deployment.', 'The same detector that found the issue now verifies the fix.', 'post_monitor=numeric_mismatch_rate'),
+    '33': TAKEN('No recurrence occurs during the monitoring window, so the incident closes.', 'Measured non-recurrence completes the loop.', 'status=CLOSED')
+  },
+
+  ex4: {
+    '0':  TAKEN('A retail user asks a comparative question that elicits recommendation-style language.', 'This begins as a normal user interaction but has compliance sensitivity.', 'query=Which one should I buy?'),
+    '1':  TAKEN('The assistant says: “You should buy Fund X; it is the best option for you.”', 'The delivered response contains recommendation-like language.', 'response_contains_recommendation=true'),
+    '2':  TAKEN('The system freezes the answer, context, user/applicability state and guardrail decisions.', 'Compliance review needs the exact user/product/channel/applicability context.', 'snapshot.includes_guardrail_decisions=true'),
+    '3':  TAKEN('No user feedback arrives initially, so the Passive branch starts first.', 'Mandatory compliance controls cannot depend on user complaints.', 'feedback_present_initially=false'),
+    '4A': SKIPPED('The Active branch is not the initial route; a later human complaint will be attached to the same incident as corroboration.'),
+    '5A': SKIPPED('Initial same-referent validation for a human signal is deferred because the first signal is passive.'),
+    '4P': TAKEN('A passive compliance trigger detects advice-boundary / suitability-risk language.', 'The system should detect regulated risk even when the user stays silent.', 'passive_trigger=ADVICE_BOUNDARY_RISK'),
+    '5P': TAKEN('A SystemObservation is created for the recommendation-like response.', 'This converts passive compliance concern into a normalized auditable signal.', 'SystemObservation.category=ADVICE_BOUNDARY_RISK'),
+    '6':  TAKEN('The passive signal is normalized; later, the user’s complaint is also normalized and attached to the same incident record.', 'Active and Passive evidence should converge, not fork into separate repair stories.', 'signals={passive_1, active_later_1}'),
+    '7':  TAKEN('The disputed referent is localized to recommendation language and the missed applicability/control decision.', 'This points the repair toward routing/control logic rather than source facts.', 'target=recommendation_language + control_applicability'),
+    '8':  TAKEN('AMC, jurisdiction, product, channel and user applicability are resolved explicitly.', 'Country alone is insufficient; the system needs full context to select the correct control set.', 'applicability=India_AMC_retail_suitability_sensitive'),
+    '9':  TAKEN('Evidence sufficiency confirms that no investor-profile / suitability evidence exists, so the advice-boundary concern is supportable.', 'The system does not infer suitability from generic product facts.', 'profile_evidence_present=false'),
+    '10': TAKEN('Multiple passive events correlate under one compliance incident; later active feedback is linked to the same incident.', 'This avoids duplicate diagnosis and increases confidence/impact evidence.', 'incident_id=INC-COMP-015'),
+    '11': TAKEN('The router enforces mandatory compliance evaluation and intent classification.', 'Compliance paths must be authoritative and reproducible.', 'router=MANDATORY_COMPLIANCE'),
+    '12': TAKEN('Deterministic rule checks flag that an approved suitability pathway was not satisfied.', 'Policy applicability failure is already visible at cheap layers.', 'control_applicability=FAIL'),
+    '13': SKIPPED('GNN plausibility is not relevant because the issue concerns policy/routing/guardrails, not graph structure.'),
+    '14': TAKEN('Deterministic checks identify a likely violation, but intent nuance still matters.', 'This justifies a semantic layer before final closure.', 'needs_semantic_confirmation=true'),
+    '15': TAKEN('Semantic intent evaluation confirms the response reads as recommendation-style advice rather than neutral information.', 'This disambiguates user-intent and communication mode.', 'semantic_result=RECOMMENDATION_INTENT'),
+    '16': TAKEN('The case is now sufficiently resolved and does not require deeper LLM/HITL investigation for interpretation.', 'Approved rules + semantic support are enough here.', 'resolved=true'),
+    '17': SKIPPED('No bounded LLM / HITL escalation is required because an approved control set already covers the scenario.'),
+    '18': TAKEN('Adjudication confirms a compliance failure; later active feedback is also marked valid.', 'The system now has a formal verdict plus corroborating user-impact evidence.', 'adjudication=CONFIRMED'),
+    '19': TAKEN('A Unified EvaluationRecord links passive observation, active feedback, incident and verdict.', 'This yields one accountable audit story.', 'evaluation_record.linked_signals=2'),
+    '20': TAKEN('The failure enters the attribution graph.', 'The system must separate the observed risky answer from the technical reason it occurred.', 'attribution_graph.updated=true'),
+    '21': TAKEN('Root cause = taxonomy/routing gap: the request was classified too narrowly, so the guardrail did not activate.', 'The source knowledge is not the issue; the control-selection path is.', 'root_cause=TAXONOMY_ROUTING_GAP; severity=CRITICAL'),
+    '22': TAKEN('Action is required immediately due to regulated exposure and repeated users affected.', 'Compliance risk elevates priority and accountability.', 'action_required=true'),
+    '23': TAKEN('The repair is eligible because an approved control already exists; the system is not inventing new legal interpretation.', 'The repair modifies mapping/routing behavior under governance.', 'eligible=true; governance_required=true'),
+    '24': TAKEN('Repair target = taxonomy mapping + adaptive router trigger + guardrail + approved safe response behavior.', 'Multiple connected layers must be corrected together.', 'repair_class=[TAXONOMY,ROUTER,GUARDRAIL]'),
+    '25': TAKEN('A candidate governed repair bundle is prepared.', 'The proposed change is explicitly versioned and reviewable.', 'candidate_bundle=G23'),
+    '26': TAKEN('Safety gates check policy integrity, false positives and adjacent query behavior.', 'Compliance repairs must not over-block legitimate informational usage.', 'safety_gate=PASS'),
+    '27': TAKEN('The repair is replayed in shadow against affected and neighboring intents.', 'This proves control activation improves without harming ordinary product-fact answers.', 'shadow=PASS'),
+    '28': TAKEN('Compliance, regression and blast-radius tests pass.', 'The fix must preserve both safety and service quality.', 'validation=PASS'),
+    '29': TAKEN('Yes—human governance approval is mandatory because the change affects control applicability.', 'This preserves accountability for regulated behavior changes.', 'approval=GRANTED'),
+    '30': TAKEN('The approved change is canaried, promoted and kept rollback-ready.', 'Promotion remains controlled even after approval.', 'status=PROMOTED; rollback=available'),
+    '31': TAKEN('Applicable control/config caches are refreshed after rollout; graph/GNN refresh is not needed.', 'Only the derived runtime artifacts relevant to this repair are synchronized.', 'cache_refresh=true'),
+    '32': TAKEN('Monitoring tracks recommendation-language catches, false positives, complaints and related incidents.', 'Both safety and usability must be watched after release.', 'monitoring=compliance_incident_metrics'),
+    '33': TAKEN('No recurrence is observed and the incident closes after review.', 'Post-change evidence completes the lifecycle.', 'status=CLOSED')
+  }
+};
+
+function styleClass(cls){
+  if(['active','passive','gate','repair','common','base'].includes(cls)) return 'flow-'+cls;
+  return 'flow-common';
+}
+function pillClass(state){ return state==='skip' ? 'skip' : 'hit'; }
+function mappedStepHTML(m, entry){
+  const e = entry || TAKEN('This scenario follows the standard master-flow behavior at this step.', 'No additional exception or special branch is called out here.', 'standard=true');
+  const stateClass = e.state === 'skip' ? 'skip' : styleClass(e.style || m.cls);
+  const summary = e.summary || 'Follows standard master-flow behavior.';
+  const why = e.why || m.purpose;
+  const outcome = e.outcome || 'Standard behavior continues.';
+  const tech = e.tech || 'n/a';
+  return `<div class="step ${stateClass}"><div class="step-head" onclick="this.parentElement.classList.toggle('open')"><div class="n">${m.id}</div><div><h4>${m.title}</h4><div class="mini">${e.status} · ${summary}</div></div><span class="pill ${pillClass(e.state)}">${e.status}</span></div><div class="step-body"><div class="wwx"><div><b>WHAT</b><p>${summary}</p></div><div><b>WHY</b><p>${why}</p></div><div><b>EXAMPLE OUTCOME</b><p>${outcome}</p></div></div><div class="tech-label" style="font-size:10px;font-weight:800;color:#536078;margin-top:10px">ENGINEERING TRACE</div><div class="tech">${tech}</div></div></div>`;
+}
+
+Object.keys(exampleFlows).forEach(k=>{
+  const el=document.querySelector(`[data-flow-example="${k}"]`);
+  if(!el) return;
+  let html='';
+  masterSteps.forEach((m,idx)=>{
+    html += mappedStepHTML(m, exampleFlows[k][m.id]);
+    if(idx < masterSteps.length-1) html += '<div class="arrow"></div>';
+  });
+  el.innerHTML = html;
+});
+
+const coverage=[
+['Response + immutable snapshot','yes','yes','yes','yes'],['Explicit Active-feedback start','yes','yes','no','yes'],['Passive-feedback start','no','no','yes','yes'],['Same-referent / claim localization','yes','yes','yes','yes'],['AMC taxonomy + jurisdiction applicability','yes','yes','yes','yes'],['Evidence sufficiency gate','yes','yes','yes','yes'],['Incident correlation','yes','yes','yes','yes'],['Adaptive evaluation router','yes','yes','yes','yes'],['Deterministic rule evaluation','yes','yes','yes','yes'],['GNN structural plausibility','yes','no','no','no'],['Semantic / NLI evaluation','no','yes','no','yes'],['Bounded LLM / HITL escalation','no','no','no','no'],['Adjudication + Unified EvaluationRecord','yes','yes','yes','yes'],['Failure attribution / root cause','yes','yes','yes','yes'],['Severity + impact + action gate','yes','yes','yes','yes'],['Repair eligibility','yes','yes','yes','yes'],['Repair target selection','yes','yes','yes','yes'],['CorrectionPatch fast lane','yes','no','no','no'],['Shadow / quarantine validation','yes','yes','yes','yes'],['Regression + compliance + blast radius','yes','yes','yes','yes'],['Human governance approval','yes','no','no','yes'],['Controlled promotion / rollback','yes','yes','yes','yes'],['Reindex / GNN refresh when applicable','yes','no','no','yes'],['Post-change monitoring','yes','yes','yes','yes']];
+function mark(v){return v==='yes'?'<span class="yes">● Covered</span>':v==='opt'?'<span class="opt">◐ Conditional</span>':'<span class="no">— Not needed</span>'}
+document.getElementById('coverageBody').innerHTML=coverage.map(r=>`<tr><td><b>${r[0]}</b></td><td>${mark(r[1])}</td><td>${mark(r[2])}</td><td>${mark(r[3])}</td><td>${mark(r[4])}</td></tr>`).join('');
+
+[...document.querySelectorAll('.tab')].forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('on'));t.classList.add('on');document.getElementById(t.dataset.panel).classList.add('on');window.scrollTo({top:0,behavior:'smooth'})}));
+function toggleView(){document.body.classList.toggle('stakeholder');const on=document.body.classList.contains('stakeholder');document.getElementById('viewToggle').textContent=on?'Switch to Engineering View':'Switch to Stakeholder View'}
+function expandAll(open){document.querySelectorAll('.step').forEach(s=>s.classList.toggle('open',open))}
+</script>
+
+</body>
+</html>
