@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AMC Chatbot — Feedback, Evaluation & Self-Correction Architecture</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0f1117; --surface:#1a1d27; --surface2:#21253a; --border:#2e3450;
+  --text:#e2e8f0; --muted:#8892b0; --dim:#4a5568;
+  --purple:#818cf8; --violet:#a78bfa; --pink:#f472b6;
+  --blue:#60a5fa;  --cyan:#22d3ee;   --green:#34d399;
+  --teal:#2dd4bf;  --yellow:#fbbf24; --orange:#fb923c;
+  --red:#f87171;   --indigo:#6366f1;
+  --r:10px;
+}
+body{
+  font-family:'Segoe UI',system-ui,sans-serif;
+  background:var(--bg);color:var(--text);
+  min-height:100vh;padding:0 0 60px;
+}
+
+/* ── Header ── */
+.hdr{
+  background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#1e1b4b 100%);
+  border-bottom:1px solid var(--border);
+  padding:40px 48px 32px;text-align:center;
+}
+.hdr h1{font-size:clamp(18px,2.8vw,30px);font-weight:800;color:#fff;letter-spacing:-.4px;}
+.hdr p{margin-top:8px;font-size:13.5px;color:rgba(255,255,255,.65);max-width:760px;margin-left:auto;margin-right:auto;line-height:1.6;}
+.hdr-badges{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap;}
+.hbadge{background:rgba(129,140,248,.18);border:1px solid rgba(129,140,248,.35);color:#a5b4fc;padding:3px 12px;border-radius:20px;font-size:11.5px;font-weight:600;}
+
+/* ── Legend ── */
+.legend{
+  display:flex;gap:20px;flex-wrap:wrap;justify-content:center;
+  padding:16px 32px;background:var(--surface);border-bottom:1px solid var(--border);
+}
+.leg{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+.leg-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+
+/* ── Main canvas ── */
+.canvas{
+  max-width:900px;margin:0 auto;padding:40px 24px;
+  display:flex;flex-direction:column;align-items:center;gap:0;
+}
+
+/* ── Nodes ── */
+.node{
+  position:relative;border-radius:var(--r);padding:13px 20px;
+  font-size:13px;font-weight:600;text-align:center;line-height:1.4;
+  border:1.5px solid var(--border);background:var(--surface2);
+  width:100%;max-width:520px;
+  transition:border-color .2s,box-shadow .2s;
+}
+.node:hover{box-shadow:0 0 0 2px rgba(129,140,248,.3);}
+.node sub-text{display:block;font-size:11.5px;font-weight:400;color:var(--muted);margin-top:4px;line-height:1.5;}
+.node.wide{max-width:680px;}
+.node.full{max-width:800px;}
+
+/* node colour variants */
+.n-start   {background:linear-gradient(135deg,#312e81,#1e1b4b);border-color:var(--purple);color:#c7d2fe;}
+.n-pipeline{background:linear-gradient(135deg,#1e3a5f,#1e2d4f);border-color:var(--blue);color:#bfdbfe;}
+.n-evidence{background:linear-gradient(135deg,#1a2e1a,#1a3328);border-color:var(--green);color:#bbf7d0;}
+.n-diamond {background:linear-gradient(135deg,#3b2800,#2d2000);border-color:var(--yellow);color:#fde68a;border-radius:8px;}
+.n-hitl    {background:linear-gradient(135deg,#2d1f48,#3b1f5c);border-color:var(--violet);color:#ddd6fe;}
+.n-eval    {background:linear-gradient(135deg,#1a1f3a,#202840);border-color:var(--indigo);color:#c7d2fe;}
+.n-tier1   {background:linear-gradient(135deg,#1a2540,#172340);border-color:#3b82f6;color:#bfdbfe;}
+.n-tier2   {background:linear-gradient(135deg,#0e2a2a,#0f3030);border-color:var(--cyan);color:#a5f3fc;}
+.n-tier3   {background:linear-gradient(135deg,#2a1a00,#2d1c00);border-color:var(--orange);color:#fed7aa;}
+.n-verdict {background:linear-gradient(135deg,#1a2d1a,#1e3820);border-color:var(--teal);color:#99f6e4;}
+.n-unified {background:linear-gradient(135deg,#1e1b4b,#2e1b6e);border-color:var(--purple);color:#e9d5ff;}
+.n-diag    {background:linear-gradient(135deg,#2d1a2d,#3b1a3b);border-color:var(--pink);color:#fbcfe8;}
+.n-action  {background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:var(--muted);color:#94a3b8;}
+.n-patch   {background:linear-gradient(135deg,#1a2d1a,#153018);border-color:var(--green);color:#bbf7d0;}
+.n-govern  {background:linear-gradient(135deg,#2d1a00,#321d00);border-color:var(--yellow);color:#fde68a;}
+.n-deploy  {background:linear-gradient(135deg,#1a2540,#1a2d40);border-color:var(--blue);color:#bfdbfe;}
+.n-measure {background:linear-gradient(135deg,#1a1f3a,#1e2545);border-color:var(--indigo);color:#c7d2fe;}
+
+/* subgraph boxes */
+.subgraph{
+  width:100%;max-width:800px;
+  border:1.5px dashed var(--border);border-radius:14px;
+  padding:18px 20px 20px;background:rgba(255,255,255,.02);
+  display:flex;flex-direction:column;align-items:center;gap:0;
+}
+.subgraph-title{
+  align-self:flex-start;
+  font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  color:var(--muted);padding:3px 10px;
+  background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  margin-bottom:14px;
+}
+.subgraph.sg-detect{border-color:#3b82f6;}
+.subgraph.sg-detect .subgraph-title{color:var(--blue);border-color:#3b82f6;}
+.subgraph.sg-eval  {border-color:var(--purple);}
+.subgraph.sg-eval   .subgraph-title{color:var(--purple);border-color:var(--purple);}
+.subgraph.sg-res   {border-color:var(--green);}
+.subgraph.sg-res    .subgraph-title{color:var(--green);border-color:var(--green);}
+
+/* ── Arrows / connectors ── */
+.arr{
+  display:flex;flex-direction:column;align-items:center;
+  width:100%;max-width:800px;
+  padding:0;position:relative;
+}
+.arr-line{width:2px;height:28px;background:linear-gradient(180deg,var(--dim),var(--dim));}
+.arr-head{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid var(--dim);}
+.arr-label{
+  font-size:11px;font-weight:600;color:var(--muted);
+  background:var(--surface);border:1px solid var(--border);
+  padding:2px 10px;border-radius:10px;margin:2px 0;white-space:nowrap;
+}
+
+/* ── Split: YES / NO fork ── */
+.fork{
+  width:100%;max-width:800px;
+  display:grid;gap:16px;
+  margin:4px 0;
+}
+.fork.two  {grid-template-columns:1fr 1fr;}
+.fork.three{grid-template-columns:1fr 1fr 1fr;}
+.fork-lane{display:flex;flex-direction:column;align-items:center;gap:0;}
+.fork-label{
+  font-size:10.5px;font-weight:700;color:var(--muted);
+  border:1px solid var(--border);background:var(--surface);
+  padding:2px 9px;border-radius:8px;margin-bottom:6px;
+}
+.fork-label.yes{color:var(--green);border-color:var(--green);}
+.fork-label.no {color:var(--red);border-color:var(--red);}
+.fork-label.hitl-yes{color:var(--violet);border-color:var(--violet);}
+.fork-label.hitl-no {color:var(--cyan);border-color:var(--cyan);}
+
+/* ── Merge line ── */
+.merge{
+  width:100%;max-width:800px;
+  height:2px;background:var(--dim);
+  position:relative;margin:4px 0;
+}
+
+/* ── Data store chip ── */
+.store{
+  display:flex;gap:6px;flex-wrap:wrap;justify-content:center;
+  width:100%;max-width:680px;margin:6px 0;
+}
+.store-chip{
+  font-size:11.5px;color:var(--muted);background:var(--surface2);
+  border:1px solid var(--border);border-radius:6px;
+  padding:4px 11px;line-height:1.3;text-align:center;
+}
+
+/* small inline annotation */
+.ann{display:block;font-size:11px;font-weight:400;color:var(--muted);margin-top:4px;line-height:1.45;}
+
+/* section label */
+.sec-label{
+  width:100%;max-width:800px;
+  font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--dim);display:flex;align-items:center;gap:8px;margin:28px 0 6px;
+}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.sec-label:first-child{margin-top:0;}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <h1>AMC Chatbot — Feedback, Evaluation &amp; Self-Correction Architecture</h1>
+  <p>HITL and agentic (no-feedback) evaluation are two entry routes into one pipeline: Feedback → Evaluation → Diagnosis → Controlled Improvement. Every response ends up in the same evidence record, the same tiered evaluation, the same diagnosis step, and the same governed correction path.</p>
+  <div class="hdr-badges">
+    <span class="hbadge">🟣 HITL Path</span>
+    <span class="hbadge">🔵 No-Feedback Path</span>
+    <span class="hbadge">⚪ Shared Pipeline</span>
+    <span class="hbadge">📦 3-Stage KG Correction</span>
+    <span class="hbadge">🔒 Governed Deployment</span>
+  </div>
+</header>
+
+<div class="legend">
+  <div class="leg"><div class="leg-dot" style="background:#818cf8;"></div> Pipeline / Chatbot</div>
+  <div class="leg"><div class="leg-dot" style="background:#34d399;"></div> Evidence / Capture</div>
+  <div class="leg"><div class="leg-dot" style="background:#fbbf24;"></div> Decision (diamond)</div>
+  <div class="leg"><div class="leg-dot" style="background:#a78bfa;"></div> HITL Path</div>
+  <div class="leg"><div class="leg-dot" style="background:#22d3ee;"></div> No-Feedback Path</div>
+  <div class="leg"><div class="leg-dot" style="background:#f472b6;"></div> Diagnosis / Scoring</div>
+  <div class="leg"><div class="leg-dot" style="background:#60a5fa;"></div> KG Correction</div>
+  <div class="leg"><div class="leg-dot" style="background:#fb923c;"></div> Governance / Deploy</div>
+</div>
+
+<div class="canvas">
+
+  <!-- ══════════════ A → CHATBOT PIPELINE ══════════════ -->
+  <div class="sec-label">Response Pipeline</div>
+
+  <div class="node n-start">
+    👤 User Query
+  </div>
+
+  <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+  <div class="node n-pipeline wide">
+    🤖 AMC Chatbot Pipeline
+    <span class="ann">generates the answer</span>
+  </div>
+
+  <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+  <div class="node n-pipeline wide">
+    🔍 Retrieval
+    <span class="ann">Vector search + Knowledge Graph traversal</span>
+  </div>
+
+  <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+  <div class="node n-pipeline wide">
+    🏗️ Context Engineering
+    <span class="ann">assembles evidence into the prompt</span>
+  </div>
+
+  <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+  <div class="node n-pipeline wide">
+    🛡️ Guardrails / Policy Checks
+    <span class="ann">pre-response compliance gate</span>
+  </div>
+
+  <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+  <div class="node n-verdict wide" style="font-size:14px;font-weight:800;">
+    ✅ Response Generated
+  </div>
+
+  <!-- ══════════════ EVIDENCE CAPTURE ══════════════ -->
+  <div class="sec-label">Evidence Capture (immutable — written before any feedback exists)</div>
+
+  <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+  <div class="node n-evidence wide">
+    📦 Capture Interaction Evidence
+    <span class="ann">immutable record, written before any feedback exists</span>
+  </div>
+
+  <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+  <div class="node n-evidence full" style="text-align:left;font-size:12px;font-weight:400;padding:14px 22px;">
+    <span style="font-weight:700;font-size:13px;color:var(--green);">Stores:</span><br/>
+    • Query + Response text<br/>
+    • Retrieved evidence, graph paths, citations, taxonomy nodes<br/>
+    • Guardrail decisions, model / prompt version<br/>
+    • Latency / token / system metrics
+  </div>
+
+  <!-- ══════════════ FORK: Human feedback or not? ══════════════ -->
+  <div class="sec-label">Entry Route — HITL path (left) vs No-Feedback path (right)</div>
+
+  <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+  <div class="node n-diamond" style="max-width:360px;">
+    🔀 Human Feedback or follow-up?
+  </div>
+
+  <div class="arr" style="height:8px;"><div class="arr-line" style="height:8px;"></div></div>
+
+  <!-- TWO-LANE FORK -->
+  <div class="fork two" style="max-width:840px;align-items:flex-start;">
+
+    <!-- LEFT: HITL PATH -->
+    <div class="fork-lane">
+      <div class="arr-label fork-label hitl-yes">YES — HITL Path</div>
+
+      <div class="node n-hitl" style="width:100%;">
+        💬 Structured HITL Feedback
+        <span class="ann">explicit selection OR a dissatisfaction<br/>follow-up converted into the same shape</span>
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <div class="node n-hitl" style="width:100%;">
+        🔄 Dissatisfaction Follow-up Handling
+        <span class="ann">frustration/intent classifier + same-referent check<br/>turns unstructured pushback into a structured claim<br/>before anything expensive runs</span>
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <div class="node n-hitl" style="width:100%;text-align:left;font-size:12px;font-weight:400;">
+        <span style="font-weight:700;font-size:12.5px;color:#c4b5fd;">Category (F1):</span><br/>
+        Hallucination · Accuracy · Missing Context · Incomplete<br/>
+        Outdated · Citation · Tone · Compliance · Other
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <div class="node n-eval" style="width:100%;">
+        ⚖️ Feedback Validation Layer
+        <span class="ann">routes the claim to the cheapest tier that can resolve it</span>
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <div class="node n-tier1" style="width:100%;text-align:left;font-size:12px;font-weight:400;">
+        <span style="font-weight:700;font-size:12.5px;color:#93c5fd;">Tier 1 — Rule Categories:</span><br/>
+        Schema/Type · Cardinality · Referential · Temporal<br/>
+        Numeric · Cross-Source · Duplicate · Hierarchy · Jurisdiction
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <div class="node n-tier1" style="width:100%;">
+        🕸️ Tier 1 — GNN Structural Plausibility
+        <span class="ann">frozen model, fixed threshold — deterministic at inference<br/>no LLM tokens, flags neighbourhood anomalies rules miss</span>
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <div class="node n-diamond" style="width:100%;">
+        Resolved by rules + GNN alone?
+      </div>
+
+      <!-- YES branch goes straight to adjudication (shown below in merge) -->
+      <div class="arr"><div class="arr-line" style="height:18px;"></div></div>
+      <div class="arr-label fork-label no">NO — escalate</div>
+
+      <div class="node n-tier2" style="width:100%;">
+        🧠 Tier 2 — Semantic Evaluation
+        <span class="ann">NLI / entailment: claim vs evidence</span>
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <div class="node n-diamond" style="width:100%;">
+        Enough confidence?
+      </div>
+
+      <div class="arr"><div class="arr-line" style="height:18px;"></div></div>
+      <div class="arr-label fork-label no">NO — escalate</div>
+
+      <div class="node n-tier3" style="width:100%;">
+        🤖 Tier 3 — LLM / Agent Evaluator
+        <span class="ann">last resort, most expensive</span>
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <div class="node n-verdict" style="width:100%;text-align:left;font-size:12px;font-weight:400;">
+        <span style="font-weight:700;font-size:12.5px;color:#99f6e4;">Feedback Adjudication (H1):</span><br/>
+        Valid · Partially Valid · Invalid · Subjective · Insufficient Evidence
+      </div>
+    </div>
+
+    <!-- RIGHT: NO-FEEDBACK PATH -->
+    <div class="fork-lane">
+      <div class="arr-label fork-label hitl-no">NO — Automatic Path</div>
+
+      <div class="node n-eval" style="width:100%;">
+        🤖 Automatic Evaluation Trigger
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <div class="node n-tier1" style="width:100%;">
+        ⚡ Tier 0/1 — Cheap Deterministic + GNN
+        <span class="ann">runs on 100% of responses</span>
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <div class="node n-tier1" style="width:100%;text-align:left;font-size:12px;font-weight:400;">
+        <span style="font-weight:700;font-size:12.5px;color:#93c5fd;">Checks:</span><br/>
+        Grounding · Citation · Source freshness<br/>
+        Numeric consistency · Retrieval confidence<br/>
+        Guardrail events · Schema/formatting · Cost/latency
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <div class="node n-diamond" style="width:100%;">
+        Suspicious / sampled / high-value?
+      </div>
+
+      <!-- NO → store; YES → semantic -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:4px;">
+
+        <div class="fork-lane">
+          <div class="arr-label fork-label no">NO</div>
+          <div class="node n-action" style="width:100%;">
+            📊 Store Evaluation<br/>+ Metrics
+          </div>
+        </div>
+
+        <div class="fork-lane">
+          <div class="arr-label fork-label yes">YES</div>
+          <div class="node n-tier2" style="width:100%;">
+            🧠 Tier 2 — Semantic Evaluation
+            <span class="ann">claim-evidence consistency,<br/>completeness, contradiction,<br/>relevance, factuality</span>
+          </div>
+
+          <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+          <div class="node n-diamond" style="width:100%;">
+            Resolved with confidence?
+          </div>
+
+          <div class="arr"><div class="arr-line" style="height:14px;"></div></div>
+          <div class="arr-label fork-label no">NO</div>
+
+          <div class="node n-tier3" style="width:100%;">
+            🤖 Tier 3 — LLM /<br/>Agent Evaluator
+          </div>
+
+          <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+          <div class="node n-verdict" style="width:100%;">
+            📋 Evaluation Finding
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ MERGE → UNIFIED EVALUATION RECORD ══════════════ -->
+  <div class="sec-label">Unified Pipeline — both paths merge here</div>
+
+  <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+  <div class="node n-unified full">
+    📄 Unified Evaluation Record
+    <span class="ann">same schema regardless of entry route — HITL verdict or Evaluation Finding both feed this</span>
+  </div>
+
+  <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+  <!-- ══════════════ FAILURE DIAGNOSIS ══════════════ -->
+  <div class="node n-diag full">
+    🔬 Failure Diagnosis
+    <span class="ann">where in the stack did this actually go wrong?</span>
+  </div>
+
+  <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+  <div class="node n-diag full" style="text-align:left;font-size:12px;font-weight:400;">
+    <span style="font-weight:700;font-size:12.5px;color:#fbcfe8;">Root-cause candidates:</span><br/>
+    Knowledge / Data &nbsp;·&nbsp; Retrieval &nbsp;·&nbsp; Graph &nbsp;·&nbsp; Context Engineering &nbsp;·&nbsp; Taxonomy<br/>
+    Reasoning / Model &nbsp;·&nbsp; Guardrail &nbsp;·&nbsp; Compliance &nbsp;·&nbsp; Presentation &nbsp;·&nbsp; User-feedback issue
+  </div>
+
+  <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+  <div class="node n-diag full">
+    📊 Severity + Confidence + Impact Scoring
+  </div>
+
+  <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+  <div class="node n-diamond" style="max-width:340px;">
+    🔀 Action required?
+  </div>
+
+  <!-- FORK: NO → monitor / YES → correction -->
+  <div class="fork two" style="max-width:840px;align-items:flex-start;margin-top:6px;">
+
+    <div class="fork-lane">
+      <div class="arr-label fork-label no">NO</div>
+      <div class="node n-action" style="width:100%;">
+        📊 Monitor / Analytics
+        <span class="ann">stored, tracked, no graph change</span>
+      </div>
+    </div>
+
+    <div class="fork-lane">
+      <div class="arr-label fork-label yes">YES → 3-Stage KG Correction</div>
+
+      <!-- ══════ SUBGRAPH 1: DETECTION ══════ -->
+      <div class="subgraph sg-detect" style="width:100%;margin-bottom:0;">
+        <div class="subgraph-title">1 — DETECTION &nbsp;·&nbsp; localise the candidate correction</div>
+
+        <div class="node n-tier1" style="width:100%;text-align:left;font-size:12px;font-weight:400;">
+          <span style="font-weight:700;color:#93c5fd;">Candidate Correction Event — three entry points:</span><br/>
+          • HITL-confirmed feedback<br/>
+          • Scheduled GNN structural sweep (catches drift with zero user complaints)<br/>
+          • Ingestion-time source conflict (new source vs. controlled base taxonomy)
+        </div>
+
+        <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+        <div class="node n-tier1" style="width:100%;">
+          🎯 Localise exact disputed node / edge / triple
+        </div>
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <!-- ══════ SUBGRAPH 2: EVALUATION ══════ -->
+      <div class="subgraph sg-eval" style="width:100%;margin-bottom:0;">
+        <div class="subgraph-title">2 — EVALUATION &nbsp;·&nbsp; judge it, cheapest signal first</div>
+
+        <div class="node n-eval" style="width:100%;">
+          🔀 Merge: Rule Categories + GNN Plausibility + NLI Entailment
+        </div>
+
+        <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+        <div class="node n-diamond" style="width:100%;">
+          Confident verdict?
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:4px;">
+          <div class="fork-lane">
+            <div class="arr-label fork-label no">NO — escalate</div>
+            <div class="node n-tier3" style="width:100%;">
+              🤖 Escalate to HITL /<br/>LLM Evaluator
+            </div>
+          </div>
+          <div class="fork-lane" style="justify-content:flex-end;">
+            <div class="arr-label fork-label yes">YES</div>
+            <div style="width:100%;height:60px;"></div>
+          </div>
+        </div>
+
+        <div class="arr"><div class="arr-line" style="height:14px;"></div></div>
+
+        <div class="node n-verdict" style="width:100%;">
+          📋 Verdict: Confirmed / Rejected / Ambiguous
+        </div>
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <!-- ══════ SUBGRAPH 3: RESOLUTION ══════ -->
+      <div class="subgraph sg-res" style="width:100%;margin-bottom:0;">
+        <div class="subgraph-title">3 — RESOLUTION &nbsp;·&nbsp; act only on a confirmed verdict</div>
+
+        <div class="node n-diamond" style="width:100%;">
+          Confirmed?
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:4px;">
+
+          <div class="fork-lane">
+            <div class="arr-label fork-label no">NO</div>
+            <div class="node n-action" style="width:100%;">
+              🚫 Close — no patch,<br/>no graph change, logged
+            </div>
+          </div>
+
+          <div class="fork-lane">
+            <div class="arr-label fork-label yes">YES</div>
+
+            <div class="node n-patch" style="width:100%;">
+              🩹 Correction Patch Layer
+              <span class="ann">keyed override, confidence + provenance + TTL</span>
+            </div>
+
+            <div class="arr"><div class="arr-line" style="height:14px;"></div></div>
+
+            <!-- TWO outputs from patch layer -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;">
+              <div class="node n-patch" style="width:100%;font-size:12px;font-weight:400;">
+                <span style="font-weight:700;color:#bbf7d0;">Immediate:</span><br/>
+                LLM uses patch as context override for future responses<br/>
+                <em style="font-size:11px;color:var(--muted);">"LLM learns from feedback"<br/>— reversible, not a weight update</em>
+              </div>
+              <div class="node n-patch" style="width:100%;font-size:12px;font-weight:400;">
+                <span style="font-weight:700;color:#bbf7d0;">Improvement Queue</span><br/>
+                NOT direct self-learning<br/>
+                <em style="font-size:11px;color:var(--muted);">feeds offline regression testing</em>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ GOVERNANCE PATH ══════════════ -->
+  <div class="sec-label">Governance &amp; Controlled Deployment</div>
+
+  <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+  <div class="node n-govern full">
+    🧪 Offline Test / Regression
+    <span class="ann">every confirmed correction goes through regression before governance</span>
+  </div>
+
+  <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+  <div class="node n-diamond" style="max-width:300px;">
+    Pass?
+  </div>
+
+  <div class="fork two" style="max-width:840px;align-items:flex-start;margin-top:6px;">
+
+    <div class="fork-lane">
+      <div class="arr-label fork-label no">NO</div>
+      <div class="node n-action" style="width:100%;">
+        🔁 Reject / Refine
+        <span class="ann">loop back to correction patch</span>
+      </div>
+    </div>
+
+    <div class="fork-lane">
+      <div class="arr-label fork-label yes">YES</div>
+
+      <div class="node n-govern" style="width:100%;">
+        👥 Human Governance Approval
+        <span class="ann">weekly batch — only path that can write<br/>to the canonical graph</span>
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <div class="node n-deploy" style="width:100%;">
+        🚀 Controlled Deployment
+        <span class="ann">Canonical KG Update + Reindex</span>
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <div class="node n-deploy" style="width:100%;">
+        🕸️ Scheduled GNN Embedding Refresh
+        <span class="ann">same governed cadence — keeps structural scorer<br/>in sync with the canonical graph write</span>
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <div class="node n-measure" style="width:100%;">
+        📈 Measure Post-change Outcome
+      </div>
+
+      <div class="arr"><div class="arr-line"></div><div class="arr-head"></div></div>
+
+      <div class="node n-evidence" style="width:100%;font-size:12px;">
+        ♻️ Feeds back into Capture Interaction Evidence
+        <span class="ann">loop closes — next response has a better graph to retrieve from</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /canvas -->
+</body>
+</html>

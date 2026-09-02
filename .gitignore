@@ -31,3 +31,4 @@ streamlit_app/logs/
 .idea/
 .vscode/
 .claude/
+/streamlit_app.backup/

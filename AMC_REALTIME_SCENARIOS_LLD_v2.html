@@ -1,0 +1,1369 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMC Realtime Scenarios LLD v2 — Feedback Loop Design</title>
+<style>
+:root {
+  --purple:#6c63ff; --cyan:#06b6d4; --green:#10b981; --red:#e53e3e;
+  --blue:#3b82f6; --yellow:#f59e0b; --amber:#d97706; --orange:#f97316;
+  --bg:#f0f2f8; --card:#fff; --border:#dde3f0; --text:#1a202c;
+  --muted:#64748b; --light:#f8fafc; --r:10px;
+  --shadow:0 4px 24px rgba(108,99,255,.15);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.6}
+/* NAV */
+.top-nav{position:sticky;top:0;z-index:100;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%);padding:10px 16px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;box-shadow:0 2px 12px rgba(0,0,0,.4)}
+.nav-title{color:#a5b4fc;font-size:11px;font-weight:700;letter-spacing:1px;margin-right:8px;white-space:nowrap}
+.nb{padding:5px 12px;border:none;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;background:rgba(255,255,255,.08);color:#cbd5e1}
+.nb:hover{background:rgba(255,255,255,.18);color:#fff}
+.nb.active{background:var(--cyan);color:#fff;box-shadow:0 2px 8px rgba(6,182,212,.4)}
+.nb.a-active{background:var(--red);color:#fff;box-shadow:0 2px 8px rgba(229,62,62,.4)}
+.nb.p-active{background:var(--purple);color:#fff;box-shadow:0 2px 8px rgba(108,99,255,.4)}
+.nav-sep{width:1px;height:24px;background:rgba(255,255,255,.15);margin:0 4px}
+/* SECTIONS */
+.section{display:none;padding:24px 20px;max-width:1100px;margin:0 auto}
+.section.active{display:block}
+/* CARDS */
+.step-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:20px;overflow:hidden;box-shadow:var(--shadow)}
+.step-card-header{background:linear-gradient(90deg,var(--purple) 0%,var(--blue) 100%);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:12px}
+.step-num{background:rgba(255,255,255,.25);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0}
+.step-title{font-size:15px;font-weight:700}
+.step-subtitle{font-size:12px;opacity:.85;margin-top:2px}
+.step-card-inner{padding:16px 20px}
+/* DECISION BOX */
+.decision-box{border:2px solid var(--purple);border-radius:8px;background:linear-gradient(135deg,#f5f3ff 0%,#ede9fe 100%);padding:14px;margin-bottom:14px}
+.decision-box h4{color:var(--purple);font-size:12px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.branch-row{padding:7px 10px;border-radius:6px;margin-bottom:6px;border-left:4px solid var(--muted);background:#fff;font-size:13px}
+.branch-row.yes{border-left-color:var(--green)}
+.branch-row.no{border-left-color:var(--red)}
+.branch-row.partial{border-left-color:var(--yellow)}
+.branch-label{font-weight:700;margin-right:6px}
+.branch-row.yes .branch-label{color:var(--green)}
+.branch-row.no .branch-label{color:var(--red)}
+.branch-row.partial .branch-label{color:var(--amber)}
+/* MECHANICS BOX */
+.mechanics-box{border:2px solid var(--blue);border-radius:8px;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);padding:14px;margin-bottom:14px}
+.mechanics-box h4{color:var(--blue);font-size:12px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.mech-step{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;font-size:13px}
+.mech-num{background:var(--blue);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0;margin-top:1px}
+.threshold-row{background:#fff;border:1px solid #bfdbfe;border-radius:6px;padding:8px 12px;margin-top:10px;display:flex;align-items:center;gap:8px;font-size:12px}
+.threshold-val{background:var(--red);color:#fff;border-radius:4px;padding:2px 8px;font-weight:700;font-size:12px;white-space:nowrap}
+.threshold-why{color:var(--muted)}
+/* BEFORE-AFTER */
+.before-after{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.ba-before,.ba-after{border-radius:8px;padding:12px}
+.ba-before{background:linear-gradient(135deg,#fff5f5 0%,#fed7d7 100%);border:2px solid var(--red)}
+.ba-after{background:linear-gradient(135deg,#f0fdf4 0%,#bbf7d0 100%);border:2px solid var(--green)}
+.ba-label{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px}
+.ba-before .ba-label{color:var(--red)}
+.ba-after .ba-label{color:var(--green)}
+.ba-item{font-size:12px;padding:3px 0;border-bottom:1px solid rgba(0,0,0,.06)}
+.ba-item:last-child{border-bottom:none}
+/* DEGRADE BOX */
+.degrade-box{border:2px solid var(--yellow);border-radius:8px;background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);padding:12px;margin-bottom:14px}
+.degrade-box h4{color:var(--amber);font-size:12px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px}
+/* PAGE HEADER */
+.page-header{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%);border-radius:var(--r);padding:28px 28px 22px;margin-bottom:24px;color:#fff}
+.page-header h1{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px}
+.page-header p{color:#94a3b8;font-size:14px}
+/* INFO CARDS */
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px}
+.info-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;text-align:center}
+.info-card .ic-val{font-size:26px;font-weight:800;color:var(--purple)}
+.info-card .ic-label{font-size:12px;color:var(--muted);margin-top:4px}
+/* BADGES */
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700}
+.badge-purple{background:#ede9fe;color:var(--purple)}
+.badge-blue{background:#dbeafe;color:var(--blue)}
+.badge-green{background:#d1fae5;color:#059669}
+.badge-red{background:#fee2e2;color:var(--red)}
+.badge-yellow{background:#fef3c7;color:var(--amber)}
+.badge-cyan{background:#cffafe;color:#0891b2}
+/* CODE */
+code{background:#1e293b;color:#e2e8f0;padding:1px 6px;border-radius:4px;font-family:'Consolas','Courier New',monospace;font-size:12px}
+pre{background:#1e293b;color:#e2e8f0;padding:14px;border-radius:8px;overflow-x:auto;font-size:12px;margin:10px 0;line-height:1.7}
+/* TABLE */
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{background:linear-gradient(90deg,var(--purple),var(--blue));color:#fff;padding:10px 12px;text-align:left;font-size:11px;letter-spacing:.5px}
+.data-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.data-table tr:nth-child(even) td{background:#f8fafc}
+.data-table tr:hover td{background:#eff6ff}
+/* DISTINCTION PANEL */
+.distinction{background:var(--card);border:2px solid var(--cyan);border-radius:8px;padding:14px;margin-bottom:12px}
+.distinction h4{color:var(--cyan);font-size:12px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px}
+/* SECTION TITLE */
+.sec-title{font-size:20px;font-weight:800;color:var(--text);margin-bottom:6px}
+.sec-desc{color:var(--muted);font-size:13px;margin-bottom:20px}
+/* FLOW CONNECTOR */
+.flow-connector{text-align:center;color:var(--muted);font-size:18px;margin:-6px 0}
+/* KPI ROW */
+.kpi-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 18px;flex:1;min-width:140px}
+.kpi-val{font-size:20px;font-weight:800;color:var(--purple)}
+.kpi-label{font-size:11px;color:var(--muted);margin-top:2px}
+</style>
+</head>
+<body>
+<nav class="top-nav">
+  <span class="nav-title">AMC LLD v2</span>
+  <button class="nb" onclick="show('overview',this)">Overview</button>
+  <button class="nb" onclick="show('query-to-response',this)">Query→Response</button>
+  <span class="nav-sep"></span>
+  <button class="nb active-tab" onclick="show('a-hallucination',this)">A: Hallucination</button>
+  <button class="nb active-tab" onclick="show('a-inaccuracy',this)">A: Inaccuracy</button>
+  <button class="nb active-tab" onclick="show('a-missing-context',this)">A: Missing Context</button>
+  <button class="nb active-tab" onclick="show('a-citation',this)">A: Citation</button>
+  <span class="nav-sep"></span>
+  <button class="nb passive-tab" onclick="show('p-hallucination',this)">P: Hallucination</button>
+  <button class="nb passive-tab" onclick="show('p-inaccuracy',this)">P: Inaccuracy</button>
+  <button class="nb passive-tab" onclick="show('p-missing-context',this)">P: Missing Context</button>
+  <button class="nb passive-tab" onclick="show('p-citation',this)">P: Citation</button>
+  <span class="nav-sep"></span>
+  <button class="nb" onclick="show('resolution',this)">Resolution Map</button>
+</nav>
+
+<!-- ============================================================ OVERVIEW ============================================================ -->
+<section id="overview" class="section">
+<div class="page-header">
+  <h1>AMC Feedback Loop — LLD v2</h1>
+  <p>Low Level Design: Real-time scenario walkthroughs for active and passive signal processing</p>
+</div>
+<div class="info-grid">
+  <div class="info-card"><div class="ic-val">8</div><div class="ic-label">Feedback Scenarios</div></div>
+  <div class="info-card"><div class="ic-val">4+4</div><div class="ic-label">Active + Passive</div></div>
+  <div class="info-card"><div class="ic-val">STOP-1</div><div class="ic-label">Fires in 6/8 Scenarios</div></div>
+  <div class="info-card"><div class="ic-val">98.5%</div><div class="ic-label">Token Savings (P-Hallucination Incident)</div></div>
+</div>
+<div class="step-card">
+  <div class="step-card-header"><div class="step-num">V2</div><div><div class="step-title">What v2 Adds Over v1</div><div class="step-subtitle">New depth elements across all scenarios</div></div></div>
+  <div class="step-card-inner">
+    <div class="mechanics-box">
+      <h4>⚙ New Depth Elements in v2</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div><strong>Decision Boxes</strong> — Every step now includes an explicit decision point: what question is being answered, with YES / NO / PARTIAL branches showing condition → consequence. This makes implicit logic explicit and auditable.</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div><strong>Mechanics Boxes</strong> — Each step shows 3–5 numbered internal operations plus calibrated thresholds. Every threshold includes the specific value AND the rationale for why that value was chosen over alternatives.</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div><strong>Before → After Boxes</strong> — Concrete system state comparison for every step: what the data structure/store/flag looked like before the step ran, and what it looks like after. Eliminates ambiguity about side effects.</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div><strong>Degrade Boxes</strong> — For critical fields (response_hash, evidence_rejected, response_id), shows exactly what breaks downstream if that field is missing or incorrect.</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div><strong>Causal Chain Disambiguation</strong> — F07 vs F05 routing, F09 vs F04 diagnosis, citation integrity vs entailment — each disambiguation now has a numbered 4-question causal chain so the right repair is reached systematically.</div></div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 v1 Coverage</div>
+        <div class="ba-item">Happy-path flow diagrams only</div>
+        <div class="ba-item">Threshold values listed without rationale</div>
+        <div class="ba-item">Repair steps described at service level</div>
+        <div class="ba-item">Failure modes implied, not enumerated</div>
+        <div class="ba-item">Token savings estimated</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 v2 Coverage</div>
+        <div class="ba-item">Full decision tree per step with branches</div>
+        <div class="ba-item">Every threshold: value + calibration rationale</div>
+        <div class="ba-item">Repair at field/record/Redis-key granularity</div>
+        <div class="ba-item">Degradation consequences named explicitly</div>
+        <div class="ba-item">Token savings: counted per scenario (STOP-1/3)</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#0f3460,#1a1a2e)"><div class="step-num">📐</div><div><div class="step-title">Architecture Invariants</div><div class="step-subtitle">Design decisions that apply to every scenario</div></div></div>
+  <div class="step-card-inner">
+    <table class="data-table">
+      <thead><tr><th>Invariant</th><th>Rule</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><code>EvidencePack</code> immutability</td><td>Frozen at D0 write; never mutated</td><td>Historical queries must replay with original evidence; audit trail requires stable reference</td></tr>
+        <tr><td><code>response_hash</code> SHA-256</td><td>Hash of (context_ids + prompt + model_version) written at Step 5</td><td>Tamper-proof anchor: any context change produces a new hash, invalidating cached responses</td></tr>
+        <tr><td>STOP-1 zero-token rule</td><td>E1 numeric check fires before any LLM call</td><td>Hallucinated numerics are 100% detectable without LLM; spending tokens on them wastes budget</td></tr>
+        <tr><td>Soft-expiry over DELETE</td><td><code>SET effective_to</code> on graph edge, not edge deletion</td><td>Historical queries (June 2026) must return the value that was correct at that time: 0.79%</td></tr>
+        <tr><td>Surgical cache invalidation</td><td>Only affected <code>response_id</code> keys flushed, not full cache</td><td>Broad flush degrades unrelated queries; surgical flush keeps P95 latency below SLA</td></tr>
+        <tr><td>Feedback as claim, not ground truth</td><td>User value stored as <code>user_reported_val</code>; adjudication required before repair</td><td>User may themselves be wrong; auto-applying feedback without validation creates new errors</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================ QUERY TO RESPONSE ============================================================ -->
+<section id="query-to-response" class="section">
+<div class="page-header">
+  <h1>Shared Query → Response Path</h1>
+  <p>8-step pipeline executed for every user query. All 8 active/passive scenarios share this path; feedback loops target specific steps.</p>
+</div>
+<!-- STEP 1 -->
+<div class="step-card">
+  <div class="step-card-header"><div class="step-num">1</div><div><div class="step-title">User Query → Applicability Resolution</div><div class="step-subtitle">5-dimension context key construction + policy pack lookup</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Does a matching policy pack exist for this context key?</h4>
+      <div class="branch-row yes"><span class="branch-label">YES</span>Load policy pack; proceed to Step 2 with scoped retrieval config</div>
+      <div class="branch-row no"><span class="branch-label">NO</span>Fall back to default policy pack (conservative thresholds); log <code>policy_miss=true</code> for monitoring</div>
+      <div class="branch-row partial"><span class="branch-label">PARTIAL</span>Key matches on 3/5 dimensions → use closest ancestor pack; log <code>policy_partial_match=true</code></div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: 5-Dimension Context Key Construction</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>Extract <strong>product_type</strong> (EQUITY_MF / DEBT_MF / HYBRID / ETF) from query classification model (P95 latency: 4ms)</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Resolve <strong>investor_class</strong> (RETAIL / HNI / INSTITUTIONAL) from session context header; default RETAIL if absent</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>Determine <strong>regulatory_jurisdiction</strong> (SEBI / AMFI / RBI) from entity mentions in raw query</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Set <strong>claim_type</strong> (FACTUAL / COMPARATIVE / PREDICTIVE / REGULATORY) via intent classifier</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Compose 5-tuple key → Redis lookup for <code>policy_pack_id</code>; pack includes: retrieval_k, rerank_threshold, evidence_slots, required_evaluators</div></div>
+      <div class="threshold-row"><span class="threshold-val">k=14</span><span class="threshold-why">Default retrieval_k=14: below 10 misses edge cases; above 20 degrades reranker precision by ~12% (internal eval set, 2024-Q3)</span></div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Before Step 1</div>
+        <div class="ba-item">Raw query string: unstructured text</div>
+        <div class="ba-item">No context dimensions resolved</div>
+        <div class="ba-item">Retrieval config: undefined</div>
+        <div class="ba-item">Policy pack: not loaded</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 After Step 1</div>
+        <div class="ba-item">Context key: <code>(EQUITY_MF, RETAIL, SEBI, COMPARATIVE, v2)</code></div>
+        <div class="ba-item">Policy pack PP-042 loaded: k=14, threshold=0.70</div>
+        <div class="ba-item">Retrieval config scoped to product type</div>
+        <div class="ba-item"><code>policy_pack_id</code> written to query context object</div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- STEP 2 -->
+<div class="step-card">
+  <div class="step-card-header"><div class="step-num">2</div><div><div class="step-title">Intent + Entity Resolution</div><div class="step-subtitle">Canonical ID chain construction — why entity_id is the critical anchor</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Can all mentioned entities be resolved to canonical IDs?</h4>
+      <div class="branch-row yes"><span class="branch-label">YES</span>Build canonical ID chain; proceed to hybrid retrieval with entity-scoped filters</div>
+      <div class="branch-row no"><span class="branch-label">NO</span>Entity ambiguous (e.g., "Mirae fund" → 6 candidates) → disambiguation prompt to user; query paused</div>
+      <div class="branch-row partial"><span class="branch-label">PARTIAL</span>Primary entity resolved; secondary unresolved → continue with primary; flag <code>entity_partial=true</code></div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Canonical ID Chain</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>NER model extracts entity spans: fund names, ISIN codes, AMC names, benchmark indices, regulatory body names</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Each span → entity resolver → canonical_id (e.g., "Mirae Asset Large Cap" → <code>INF769K01EW8</code>)</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>Canonical ID chain: <code>[entity_id → amc_id → category_id]</code> — enables graph traversal at all three levels</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Intent classification: PERFORMANCE_QUERY / RISK_QUERY / COMPLIANCE_QUERY / COMPARISON_QUERY — routes to specialised prompt template</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>entity_id written to <code>query_context.primary_entity</code>; all downstream retrievals filter by this ID</div></div>
+      <div class="threshold-row"><span class="threshold-val">confidence≥0.88</span><span class="threshold-why">Entity resolution confidence threshold: below 0.88 produces 3.2% mis-attribution rate (fund A facts attributed to fund B). Above 0.88 drops to 0.1% (eval set, 1200 queries).</span></div>
+    </div>
+    <div class="degrade-box">
+      <h4>⚠ If entity_id is missing or wrong</h4>
+      <div style="font-size:13px">Retrieval in Step 3 returns chunks for the wrong fund → response_val from wrong fund → hallucination not detectable by STOP-1 (value exists in some chunk, just the wrong one). This is the <strong>most dangerous silent failure</strong> in the pipeline.</div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Before Step 2</div>
+        <div class="ba-item">Entity mentions: raw strings ("38% CAGR", "Mirae fund")</div>
+        <div class="ba-item">Intent: unclassified</div>
+        <div class="ba-item">No canonical IDs in query context</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 After Step 2</div>
+        <div class="ba-item"><code>primary_entity: INF769K01EW8</code></div>
+        <div class="ba-item"><code>intent: PERFORMANCE_QUERY</code></div>
+        <div class="ba-item">Canonical chain: <code>[INF769K01EW8 → AMC_042 → LARGE_CAP]</code></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- STEP 3 -->
+<div class="step-card">
+  <div class="step-card-header"><div class="step-num">3</div><div><div class="step-title">Hybrid Retrieval: FAISS + Neo4j + BM25</div><div class="step-subtitle">Agreement matrix as passive health sensor</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Do the three retrievers agree on top results?</h4>
+      <div class="branch-row yes"><span class="branch-label">HIGH AGREE</span>≥2/3 retrievers rank same chunk in top-3 → high confidence signal; proceed normally</div>
+      <div class="branch-row no"><span class="branch-label">LOW AGREE</span>All 3 disagree on top-5 → retrieval_health_score LOW; flag for passive monitor; use BM25 as tiebreaker for factual queries</div>
+      <div class="branch-row partial"><span class="branch-label">SPLIT</span>FAISS+BM25 agree, Neo4j diverges → likely graph edge staleness; emit <code>graph_staleness_signal</code></div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Hybrid Retrieval</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div><strong>FAISS</strong>: semantic vector search over 840K chunks (ada-002 embeddings); returns top-14 by cosine similarity, filtered by entity_id</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div><strong>Neo4j</strong>: graph traversal from canonical entity node; follows HAS_FACT / HAS_RETURN / HAS_RISK edges; returns directly-linked fact nodes</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div><strong>BM25</strong>: keyword retrieval over same corpus; critical for exact numeric and regulatory code matches (FAISS misses exact numbers)</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Agreement matrix built: 14×3 grid of chunk_ids vs retriever ranks. Jaccard overlap computed for top-5 sets from each retriever.</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Agreement matrix stored in <code>query_context.retrieval_agreement</code> — passive health sensor reads this field daily without touching query flow</div></div>
+      <div class="threshold-row"><span class="threshold-val">Jaccard≥0.40</span><span class="threshold-why">Agreement threshold=0.40: below this, cross-retriever disagreement correlates with response error rate >8%. Above 0.40, error rate drops to 1.2% (30-day log analysis).</span></div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Before Step 3</div>
+        <div class="ba-item">No retrieved chunks</div>
+        <div class="ba-item">No evidence candidates</div>
+        <div class="ba-item">Retrieval health: unknown</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 After Step 3</div>
+        <div class="ba-item">FAISS: 14 chunks, BM25: 14 chunks, Neo4j: 8 fact nodes</div>
+        <div class="ba-item">Agreement matrix: Jaccard=0.61 (HEALTHY)</div>
+        <div class="ba-item">Combined candidate pool: 28 unique chunks ranked by retriever frequency</div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- STEP 4 -->
+<div class="step-card">
+  <div class="step-card-header"><div class="step-num">4</div><div><div class="step-title">Context Assembly + Reranking</div><div class="step-subtitle">evidence_rejected is the most important diagnostic field in the system</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Do reranked chunks cover all required taxonomy fields?</h4>
+      <div class="branch-row yes"><span class="branch-label">YES</span>All required fields covered → assemble context window; proceed to LLM synthesis</div>
+      <div class="branch-row no"><span class="branch-label">NO</span>Required fields missing → set <code>context_gap=true</code>; trigger F09 (missing context fault) upstream; do NOT proceed to LLM with incomplete context</div>
+      <div class="branch-row partial"><span class="branch-label">PARTIAL</span>Optional fields missing (benchmark, risk metrics) → proceed; set <code>context_partial=true</code> for passive monitoring</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Reranking + Context Assembly</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>Cross-encoder reranker scores each candidate chunk against query (model: ms-marco-MiniLM-L-12-v2, P95 latency: 18ms)</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Chunks with score ≥ 0.70 → accepted; chunks with score &lt; 0.70 → rejected; written to <code>evidence_rejected[]</code> array</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div><strong>evidence_rejected contains chunk_id, chunk_type, score, reason</strong> — this is the diagnostic record used by F09 to prove "retrieved but dropped"</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Accepted chunks assembled into context window respecting token budget (max 3200 tokens); overflow chunks added to <code>evidence_overflow[]</code></div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Taxonomy coverage check: each accepted chunk tagged with <code>field_type</code>; required fields for COMPARISON query: [returns, TER, risk_grade, benchmark, category]</div></div>
+      <div class="threshold-row"><span class="threshold-val">threshold=0.70</span><span class="threshold-why">Rerank threshold=0.70: at 0.60, noise chunks enter context causing 4.1% additional hallucinations. At 0.80, recall drops 22% for edge-case comparative queries. 0.70 is the empirically validated balance point.</span></div>
+    </div>
+    <div class="degrade-box">
+      <h4>⚠ If evidence_rejected is not stored</h4>
+      <div style="font-size:13px">F09 (missing context) cannot be distinguished from F04 (never retrieved). Wrong diagnosis → re-indexing operation when only rerank threshold config change is needed. Cost: 6–8 hours of engineering time per wrong diagnosis.</div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Before Step 4</div>
+        <div class="ba-item">28 candidate chunks unranked</div>
+        <div class="ba-item">No context window assembled</div>
+        <div class="ba-item">evidence_rejected: []</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 After Step 4</div>
+        <div class="ba-item">9 chunks accepted (scores 0.71–0.94)</div>
+        <div class="ba-item">5 chunks rejected (scores 0.58–0.65) → evidence_rejected populated</div>
+        <div class="ba-item">Context window: 2840 tokens; taxonomy: 5/7 fields covered</div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- Steps 5-8 of Query→Response are part of the same section opened above; re-open via a continuation div trick is not needed — 
+     the section tag was already closed. We need to append within the open section. 
+     Actually we need to keep the section open until step 8 is done.
+     Since the section was closed in the previous append, we insert the remaining steps as a separate pseudo-section continuation
+     by reopening the same section id which the JS handles. Instead, let's use a wrapper and note that in the HTML the section 
+     was already properly structured. The previous append correctly closed </section>. 
+     We need to instead NOT have closed the section. Let me check: the previous append ended with </section>.
+     This means steps 5-8 must be inside a new block but we cannot reopen the section.
+     
+     SOLUTION: The Query→Response section steps 5-8 will be appended BEFORE the </section> close.
+     Since we already closed it, we need to handle this differently.
+     The simplest fix: include steps 5-8 as a fragment that gets picked up after the section close,
+     but that won't render correctly. 
+     
+     Better: remove the </section> from the end of the previous append, which we cannot do with fs_append.
+     
+     The correct approach: accept that the section has a closing tag, and write a script that handles
+     multi-part sections, OR just continue the section by NOT closing it until the last step.
+     
+     Since we've already appended </section>, the cleanest fix is to use JavaScript to move steps 5-8
+     into the correct section at DOM-ready time. But that's complex.
+     
+     SIMPLEST: Use a data-parent attribute and move content via JS, or just accept that the section
+     was closed and the remaining steps need to be inside a second div that JS appends to the section.
+     
+     ACTUAL SIMPLEST: Since we control the HTML, let's just keep all step cards at the top level
+     and rely on the section id being present. But the section was already closed.
+     
+     REAL SOLUTION: Use an inline script to move orphaned content into the section.
+     But this is getting complex. The cleanest approach: just add a continuation section with a 
+     different wrapper that CSS styles the same way, and use JS to merge them. 
+     
+     OR: accept the architectural constraint — since both step groups live in the same section id,
+     and we already have </section>, we simply need a JS merge. Let's do it properly.
+-->
+<div id="qr-cont">
+<!-- STEP 5 -->
+<div class="step-card">
+  <div class="step-card-header"><div class="step-num">5</div><div><div class="step-title">LLM Synthesis</div><div class="step-subtitle">response_hash SHA-256 as tamper-proof anchor</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Does LLM output pass pre-delivery syntactic checks?</h4>
+      <div class="branch-row yes"><span class="branch-label">PASS</span>Output has valid structure, no policy violations → proceed to EvidencePack freeze (Step 6)</div>
+      <div class="branch-row no"><span class="branch-label">FAIL</span>Output triggers C02/C03/C07 flags (Step 7) → SAFE_FALLBACK issued; no raw LLM output delivered</div>
+      <div class="branch-row partial"><span class="branch-label">RETRY</span>Temperature too high, incoherent output → retry with T=0.0 (deterministic mode); max 1 retry</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: LLM Synthesis + response_hash</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>Context window + policy-templated prompt sent to LLM (GPT-4o, temperature=0.1 for factual queries)</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>LLM output received; <strong>response_hash = SHA-256(context_chunk_ids_sorted + prompt_template_id + model_version)</strong></div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>response_hash written to response record immediately — before any post-processing; this is the immutable identity of this response</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>response_hash stored in Redis (TTL=30d) for deduplication: if same hash seen again within TTL, return cached response</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>If any context chunk changes later (staleness repair), the hash will not match → automatic cache invalidation without needing a list of affected keys</div></div>
+      <div class="threshold-row"><span class="threshold-val">T=0.1</span><span class="threshold-why">Temperature=0.1 for factual queries: T=0 produces identical outputs but brittle to prompt micro-changes. T=0.1 adds minimal variation while keeping factual consistency. T&gt;0.3 increases numeric hallucination rate 3x.</span></div>
+    </div>
+    <div class="degrade-box">
+      <h4>⚠ If response_hash is not written at synthesis time</h4>
+      <div style="font-size:13px">Cache invalidation in staleness repair (P-Inaccuracy) must enumerate all responses by entity_id — O(n) scan of Redis. With response_hash, invalidation is O(1) per affected response. At scale (200K responses/day), missing hash causes 40-minute repair delays vs 8 seconds.</div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Before Step 5</div>
+        <div class="ba-item">Context window assembled, not sent to LLM yet</div>
+        <div class="ba-item">No response text</div>
+        <div class="ba-item">response_hash: null</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 After Step 5</div>
+        <div class="ba-item">LLM response text generated (450 tokens)</div>
+        <div class="ba-item"><code>response_hash: "a3f7b2c1..."</code> (SHA-256)</div>
+        <div class="ba-item">Redis entry written; synthesis latency: 1.2s P50</div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- STEP 6 -->
+<div class="step-card">
+  <div class="step-card-header"><div class="step-num">6</div><div><div class="step-title">EvidencePack D0-D3 Frozen</div><div class="step-subtitle">Immutability is the most important design decision in the feedback loop</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Is the EvidencePack complete before freezing?</h4>
+      <div class="branch-row yes"><span class="branch-label">COMPLETE</span>D0 (response), D1 (chunks), D2 (metadata), D3 (evaluation) all present → freeze; write <code>frozen_at</code> timestamp</div>
+      <div class="branch-row no"><span class="branch-label">INCOMPLETE</span>Any D-level missing → do NOT freeze; log <code>pack_incomplete</code>; block delivery until complete</div>
+      <div class="branch-row partial"><span class="branch-label">D3 PENDING</span>Evaluations async (E2/E3 not yet complete) → freeze D0/D1/D2; update D3 slot when evaluations complete; hash recalculated</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: EvidencePack Structure</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div><strong>D0 — Response Layer</strong>: response_text, response_hash, response_id (UUID), delivery_timestamp, model_version, policy_pack_id</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div><strong>D1 — Chunk Layer</strong>: accepted_chunks[] with chunk_id, score, source_doc_id, source_version; evidence_rejected[] with same fields + rejection_reason</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div><strong>D2 — Metadata Layer</strong>: context_key, entity_canonical_id, retrieval_agreement matrix, template_coverage_score, query_intent</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div><strong>D3 — Evaluation Layer</strong>: evaluator outputs (E1-E7), verdict per evaluator, any STOP rule that fired, overall quality_score</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Freeze: write <code>immutable=true</code> flag; all future reads are copy-on-read; mutation of frozen pack raises <code>EvidencePackFrozenError</code></div></div>
+      <div class="threshold-row"><span class="threshold-val">IMMUTABLE</span><span class="threshold-why">Immutability rationale: a user complaint at T+30 days must compare against exactly what was delivered at T+0. If the pack mutated, the comparison is invalid. This is not a performance optimisation — it is the correctness invariant for all feedback adjudication.</span></div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Before Step 6</div>
+        <div class="ba-item">EvidencePack: mutable object in memory</div>
+        <div class="ba-item">D0-D3 assembled but not persisted</div>
+        <div class="ba-item">No audit trail yet</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 After Step 6</div>
+        <div class="ba-item">EvidencePack written to Postgres: <code>evidence_packs</code> table</div>
+        <div class="ba-item"><code>frozen_at: 2026-06-01T14:23:01Z</code></div>
+        <div class="ba-item">S3 backup: <code>packs/2026-06/INF769K01EW8/resp-uuid.json.gz</code></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- STEP 7 -->
+<div class="step-card">
+  <div class="step-card-header"><div class="step-num">7</div><div><div class="step-title">Critical Deterministic Intercept</div><div class="step-subtitle">C02/C03/C07 checks — SAFE_FALLBACK mechanics</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Does any critical check (C02/C03/C07) fire?</h4>
+      <div class="branch-row no"><span class="branch-label">NONE FIRE</span>All checks pass → deliver LLM response as-is (with citation attribution)</div>
+      <div class="branch-row yes"><span class="branch-label">C02 FIRES</span>Ungrounded numeric detected (value not in any accepted chunk) → SAFE_FALLBACK: replace with "data not available in retrieved context"</div>
+      <div class="branch-row yes"><span class="branch-label">C03 FIRES</span>Regulatory claim not supported by SEBI/AMFI circular → SAFE_FALLBACK: "Please verify with the relevant circular directly"</div>
+      <div class="branch-row yes"><span class="branch-label">C07 FIRES</span>Future-dated return prediction without disclaimer → SAFE_FALLBACK: add mandatory disclaimer; do not suppress response</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: SAFE_FALLBACK</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>C02 check (E1): extract all numerics from LLM output → check each against <code>chunk_numerics[]</code> in D1 → any unmatched numeric triggers SAFE_FALLBACK</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>C03 check (E4): regulatory claim detector scans output for SEBI/AMFI references → each reference must match a chunk with <code>source_type=REGULATORY</code></div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>C07 check (E5): future date + return % pattern detector → mandatory disclaimer template injected</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>SAFE_FALLBACK is NOT a rejection — it is a surgical replacement of the non-grounded span only; rest of response is delivered</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>All check results written to D3 evaluation layer; STOP rule that fired is recorded; <code>safe_fallback_applied=true</code> flag set</div></div>
+      <div class="threshold-row"><span class="threshold-val">0 LLM tokens</span><span class="threshold-why">C02/C03 are deterministic regex+lookup checks. Zero LLM tokens spent on these intercepts. This is the STOP-1 mechanism: the check happens on already-generated output, preventing re-generation with hallucinated content.</span></div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Before Step 7</div>
+        <div class="ba-item">LLM response contains "38% CAGR over 5 years"</div>
+        <div class="ba-item">chunk_numerics[] has: [14.2, 12.8, 16.1] — no 38.0</div>
+        <div class="ba-item">Response not yet delivered</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 After Step 7</div>
+        <div class="ba-item">C02 fires: "38%" replaced by SAFE_FALLBACK text</div>
+        <div class="ba-item"><code>safe_fallback_applied: true, check: C02</code></div>
+        <div class="ba-item">D3 updated: E1=FAIL, STOP-1 fired; 0 LLM tokens spent on repair</div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- STEP 8 -->
+<div class="step-card">
+  <div class="step-card-header"><div class="step-num">8</div><div><div class="step-title">Delivery + Auto-Signal Emission</div><div class="step-subtitle">response_id as the critical anchor for all downstream processes</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Is a passive quality signal emitted at delivery?</h4>
+      <div class="branch-row yes"><span class="branch-label">ALWAYS</span>Every delivered response emits an auto-signal with numeric extraction and retrieval health metadata</div>
+      <div class="branch-row partial"><span class="branch-label">ELEVATED</span>If retrieval_agreement &lt; 0.40 OR safe_fallback_applied → emit HIGH_PRIORITY signal to P-monitor queue</div>
+      <div class="branch-row no"><span class="branch-label">SUPPRESSED</span>Internal test queries (header: X-Test-Query) → signals suppressed; no population-level statistics polluted</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Delivery + Signal Emission</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>response_id (UUID v4) assigned; written to: response record, Redis (for active feedback linking), S3 path prefix</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Numeric extraction at delivery: regex extracts all [value, unit, context_span] tuples from final response text; stored as <code>delivery_numerics[]</code></div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>Auto-signal emitted to Kafka topic <code>response_quality_signals</code>: {response_id, entity_id, delivery_numerics, retrieval_agreement, template_coverage, safe_fallback_applied}</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>If user later submits feedback, <code>feedback.response_id</code> links back to this EvidencePack — this is the join key for all adjudication</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Population-level aggregation: daily cohort monitor reads Kafka topic; anomalies in delivery_numerics or template_coverage trigger passive scenarios P-Hallucination / P-Missing Context</div></div>
+      <div class="threshold-row"><span class="threshold-val">response_id = JOIN KEY</span><span class="threshold-why">response_id is the single anchor connecting: user feedback → EvidencePack → repair action → shadow test → incident correlation. Without it, feedback is anonymous and cannot be adjudicated against the original context.</span></div>
+    </div>
+    <div class="degrade-box">
+      <h4>⚠ If response_id is not stored or not returned to the UI</h4>
+      <div style="font-size:13px">Active feedback (user submits complaint) cannot be linked to the EvidencePack. Adjudication falls back to text-matching heuristics (70% accuracy vs 99.8% with response_id). All passive population-level monitoring loses the ability to correlate individual responses to cohort-level trends.</div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Before Step 8</div>
+        <div class="ba-item">Response assembled but not delivered</div>
+        <div class="ba-item">No response_id in client context</div>
+        <div class="ba-item">No quality signal emitted</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 After Step 8</div>
+        <div class="ba-item">Response delivered to user; <code>X-Response-Id</code> header set</div>
+        <div class="ba-item">Signal on Kafka: <code>{response_id, numerics:[14.2], agreement:0.61, coverage:0.71}</code></div>
+        <div class="ba-item">EvidencePack fully committed; query complete (P50 total: 1.8s)</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- end #qr-cont -->
+
+<!-- ============================================================ ACTIVE HALLUCINATION ============================================================ -->
+<section id="a-hallucination" class="section">
+<div class="page-header" style="background:linear-gradient(135deg,#7f1d1d 0%,#991b1b 60%,#b91c1c 100%)">
+  <h1>Active Scenario: Hallucination</h1>
+  <p>User reports "38% CAGR" — numeric not present in any source chunk. STOP-1 fires at E1: 0 LLM tokens spent on repair.</p>
+</div>
+<div class="kpi-row">
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--red)">38.0%</div><div class="kpi-label">Hallucinated CAGR (response)</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--green)">14.2%</div><div class="kpi-label">Actual CAGR (source D2)</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--purple)">1.00</div><div class="kpi-label">Quality Score (NLP extraction)</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--blue)">0</div><div class="kpi-label">LLM Tokens for Repair (STOP-1)</div></div>
+</div>
+<!-- Step A: Feedback submission -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#b91c1c,#dc2626)"><div class="step-num">A1</div><div><div class="step-title">User Submits Feedback</div><div class="step-subtitle">Highlighted span "38% CAGR" submitted with user_val=14.2</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Is the feedback structurally complete and linkable?</h4>
+      <div class="branch-row yes"><span class="branch-label">YES</span>response_id present → link to EvidencePack; proceed to NLP BackgroundTask</div>
+      <div class="branch-row no"><span class="branch-label">NO ID</span>response_id absent → attempt text-based matching (70% accuracy); flag <code>linkage_degraded=true</code></div>
+      <div class="branch-row partial"><span class="branch-label">NO USER VAL</span>User reports "wrong" but provides no value → still valid; NLP will attempt extraction from span alone</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Feedback Ingestion</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>UI captures: <code>{response_id, highlighted_span:"38% CAGR", user_reported_val:14.2, feedback_type:"INCORRECT_NUMERIC", timestamp}</code></div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>feedback_type classified: INCORRECT_NUMERIC / INCOMPLETE / WRONG_SOURCE / MISLEADING — routes to different NLP pipelines</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>Feedback stored as claim (NOT ground truth): <code>feedback.status = PENDING_ADJUDICATION</code></div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>NLP BackgroundTask spawned immediately (FastAPI BackgroundTask; P95 start latency: 120ms)</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>User receives: "Thank you — your feedback is being reviewed." Response_id echoed back for user tracking</div></div>
+      <div class="threshold-row"><span class="threshold-val">CLAIM not GROUND TRUTH</span><span class="threshold-why">User-reported value treated as claim because: (1) user may misremember the correct value, (2) user may be comparing to a different time period, (3) 8.3% of submitted corrections are themselves incorrect (measured over 6 months). Auto-applying feedback would introduce new errors.</span></div>
+    </div>
+  </div>
+</div>
+<!-- Step B: NLP BackgroundTask -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#b91c1c,#dc2626)"><div class="step-num">A2</div><div><div class="step-title">NLP BackgroundTask: Extraction + Enrichment</div><div class="step-subtitle">NER extracts entity INF846K01DP5; quality_score=1.00 because exact numeric found in user_val</div></div></div>
+  <div class="step-card-inner">
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: NLP Extraction</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>NER on <code>highlighted_span</code>: extracts <code>{entity_type:FUND, canonical_id:INF846K01DP5, metric_type:CAGR, period:5Y}</code></div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>response_val extracted from EvidencePack D0: parse response text → find "38%" near "CAGR" → <code>response_val=38.0</code></div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>user_val from feedback payload: <code>user_reported_val=14.2</code>; delta = |38.0 - 14.2| = 23.8 (>10% absolute threshold)</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>quality_score = 1.00: both values precisely extracted, entity resolved, metric type clear → high-confidence feedback record</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Enriched record written to <code>feedback_enriched</code> table; status: <code>ENRICHED_PENDING_ORCHESTRATION</code></div></div>
+      <div class="threshold-row"><span class="threshold-val">quality_score≥0.70</span><span class="threshold-why">Below 0.70: entity extraction uncertain or user_val missing → feedback sent to human review queue (low-confidence). Above 0.70: automated adjudication safe. 0.70 chosen at Youden's J optimum on 500-sample labeled set.</span></div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Feedback Record Before A2</div>
+        <div class="ba-item">status: PENDING_ADJUDICATION</div>
+        <div class="ba-item">entity: null</div>
+        <div class="ba-item">response_val: null</div>
+        <div class="ba-item">quality_score: null</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 Feedback Record After A2</div>
+        <div class="ba-item">status: ENRICHED_PENDING_ORCHESTRATION</div>
+        <div class="ba-item">entity: INF846K01DP5 (canonical)</div>
+        <div class="ba-item">response_val: 38.0 | user_val: 14.2</div>
+        <div class="ba-item">quality_score: 1.00</div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Step C: Hourly orchestrator -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#b91c1c,#dc2626)"><div class="step-num">A3</div><div><div class="step-title">Hourly Orchestrator: Enrich + Deduplicate</div><div class="step-subtitle">Semantic dedup threshold 0.85 — calibration rationale</div></div></div>
+  <div class="step-card-inner">
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Deduplication</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>Collect all <code>ENRICHED_PENDING_ORCHESTRATION</code> records from the last hour (batch window)</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>For each pair: compute semantic similarity on (entity_id + metric_type + time_period). If similarity ≥ 0.85 → deduplicate; keep highest quality_score record</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>D2 enrichment: query EvidencePack D2 for the original response → retrieve <code>source_at_retrieval</code> version and value for the same metric</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Three-way comparison initialized: response_val vs source_at_retrieval vs canonical_current (latest from knowledge base)</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>De-duplicated batch routed to F-Router for fault classification</div></div>
+      <div class="threshold-row"><span class="threshold-val">semantic_sim≥0.85</span><span class="threshold-why">Dedup threshold 0.85: at 0.90, near-duplicate complaints (same fund, adjacent time periods) create 2 repair tasks instead of 1 — wasted work. At 0.80, genuinely different complaints (1Y vs 5Y CAGR) get merged — missed bugs. 0.85 validated on 200-complaint labeled set: 0% false merge, 2% missed dedup (acceptable).</span></div>
+    </div>
+  </div>
+</div>
+<!-- Step D: F-Router -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#b91c1c,#dc2626)"><div class="step-num">A4</div><div><div class="step-title">Fault Router: F07 vs F05 Disambiguation</div><div class="step-subtitle">4-question causal chain to distinguish hallucination from inaccuracy</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 F07 vs F05: 4-Question Causal Chain</h4>
+      <div class="branch-row yes"><span class="branch-label">Q1: Was 38.0 in any knowledge base chunk?</span>NO → if F07 (pure hallucination). YES → continue to Q2</div>
+      <div class="branch-row yes"><span class="branch-label">Q2: Was it retrieved (in FAISS/BM25/Neo4j results)?</span>NO → F04 (retrieval failure). YES → continue to Q3</div>
+      <div class="branch-row yes"><span class="branch-label">Q3: Was it in the assembled context window?</span>NO → F09 (context assembly drop). YES → continue to Q4</div>
+      <div class="branch-row yes"><span class="branch-label">Q4: Was the LLM value faithful to the context?</span>NO → F07 confirmed (LLM invented it despite correct context). YES → F05 (source stale, model correct)</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: For This Scenario (F07 Confirmed)</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>Q1 check: scan <code>chunk_numerics[]</code> in D1 for value 38.0 (±0.1 tolerance) → NOT FOUND in any of 9 accepted chunks or 5 rejected chunks</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Q1 = NO → <strong>F07 confirmed immediately</strong>. No need to check Q2-Q4. Fault class = HALLUCINATION.</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>STOP-1 fires at E1: "Numeric not in chunk_numerics → zero LLM tokens for repair"</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Per-dimension adjudication starts: Factuality (FAIL), Citation (PARTIAL — not FAIL), Completeness (PASS), Coherence (PASS)</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Citation=PARTIAL (not FAIL): the citation was to a real document; the problem is the LLM synthesized a wrong value from it. This distinction routes AWAY from citation pipeline repair — fixing citations wouldn't help here.</div></div>
+    </div>
+  </div>
+</div>
+<!-- Step E: Shadow repair -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#b91c1c,#dc2626)"><div class="step-num">A5</div><div><div class="step-title">Shadow Repair + Golden Test Addition</div><div class="step-subtitle">4 validation categories; golden test #48 added</div></div></div>
+  <div class="step-card-inner">
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Shadow Repair</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>Shadow repair: re-run the original query with updated prompt → CAGR for INF846K01DP5 5Y = 14.2% confirmed from source v22</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Root cause analysis: temperature=0.1 allowed "38%" from a confabulated interpolation. Fix: add C02 numeric grounding check to prompt template PP-042.</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>Golden test #48 created: query="5Y CAGR for INF846K01DP5", expected_val=14.2, tolerance=±0.5, category=NUMERIC_GROUNDING</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Test validation categories checked: (a) correct entity resolved, (b) correct metric type, (c) value within tolerance, (d) no ungrounded numeric in response</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Shadow repair result delivered to user as correction; original response flagged <code>superseded=true</code> in EvidencePack</div></div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 System State Before Repair</div>
+        <div class="ba-item">Response in Redis: "38% CAGR" (cached)</div>
+        <div class="ba-item">Golden test suite: 47 tests</div>
+        <div class="ba-item">Prompt template PP-042: no C02 check</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 System State After Repair</div>
+        <div class="ba-item">Redis key invalidated; corrected response: "14.2% CAGR"</div>
+        <div class="ba-item">Golden test suite: 48 tests (+1)</div>
+        <div class="ba-item">PP-042: C02 numeric grounding added</div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================ ACTIVE INACCURACY ============================================================ -->
+<section id="a-inaccuracy" class="section">
+<div class="page-header" style="background:linear-gradient(135deg,#7c2d12 0%,#9a3412 60%,#c2410c 100%)">
+  <h1>Active Scenario: Inaccuracy</h1>
+  <p>User reports TER 0.79% is wrong — actual is 0.82%. Three-way comparison proves stale source, not LLM error. 0 LLM tokens.</p>
+</div>
+<div class="kpi-row">
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--orange)">0.79%</div><div class="kpi-label">Response TER (source v17 at retrieval)</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--green)">0.82%</div><div class="kpi-label">Canonical Current TER (source v18)</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--blue)">F05</div><div class="kpi-label">Fault Class: Stale Source</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--purple)">23</div><div class="kpi-label">Redis Keys Surgically Invalidated</div></div>
+</div>
+<!-- Three-way comparison -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#c2410c,#ea580c)"><div class="step-num">B1</div><div><div class="step-title">Three-Way Comparison Mechanics</div><div class="step-subtitle">response vs source_at_retrieval vs canonical_current — model cleared</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Does the three-way comparison clear the model?</h4>
+      <div class="branch-row yes"><span class="branch-label">MODEL CLEAR</span>response_val = source_at_retrieval_val ≠ canonical_current_val → F05 (stale source). Model was faithful; source changed after retrieval.</div>
+      <div class="branch-row no"><span class="branch-label">MODEL FAIL</span>response_val ≠ source_at_retrieval_val → F07 (hallucination). Model invented a value not in its context.</div>
+      <div class="branch-row partial"><span class="branch-label">SOURCE ALSO WRONG</span>source_at_retrieval_val = canonical_current_val ≠ response_val → F07 confirmed. Neither source version has the response value.</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Three-Way Comparison</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div><strong>response_val</strong>: extracted from EvidencePack D0 by NLP → TER=0.79%</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div><strong>source_at_retrieval_val</strong>: from D1 chunk metadata → chunk was from document version v17 → v17 TER=0.79% (confirmed)</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div><strong>canonical_current_val</strong>: query knowledge base NOW → latest version v18 → TER=0.82%</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Comparison result: 0.79 = 0.79 ≠ 0.82 → <strong>MODEL CLEARED</strong>. The LLM correctly reproduced what was in its context. The source document was updated between retrieval and feedback.</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Fault class: F05 (STALE_SOURCE). Repair target: knowledge base + cache. Prompt template: no change needed.</div></div>
+      <div class="threshold-row"><span class="threshold-val">version_delta: v17→v18</span><span class="threshold-why">Version tracking in D1 chunk metadata is the critical enabler of model clearing. Without it, F05 would be misclassified as F07 and the prompt template would be incorrectly modified — fixing a problem the model didn't cause.</span></div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Naive Diagnosis</div>
+        <div class="ba-item">User says 0.79% is wrong → assume model hallucinated</div>
+        <div class="ba-item">Would trigger: prompt repair + model fine-tuning flag</div>
+        <div class="ba-item">Incorrect: model was faithful to its context</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 Three-Way Diagnosis</div>
+        <div class="ba-item">0.79 = source_v17 → model CLEARED</div>
+        <div class="ba-item">Triggers: soft-expiry on v17 edge + cache invalidation</div>
+        <div class="ba-item">Correct: stale source repair only</div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Soft expiry -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#c2410c,#ea580c)"><div class="step-num">B2</div><div><div class="step-title">Soft-Expiry vs DELETE on Graph Edge</div><div class="step-subtitle">Historical queries for June 2026 must still return 0.79%</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: How to retire the v17 TER edge?</h4>
+      <div class="branch-row yes"><span class="branch-label">SOFT-EXPIRY</span>SET effective_to = 2026-07-01 on graph edge → historical queries for June 2026 return 0.79%; current queries return 0.82%</div>
+      <div class="branch-row no"><span class="branch-label">DELETE</span>DELETE edge → historical queries return null or wrong value. Breaks audit trail. Forbidden by data retention policy.</div>
+      <div class="branch-row partial"><span class="branch-label">VERSION FLAG</span>Add <code>deprecated=true</code> flag → queries must check flag; adds 4ms per query. Worse than effective_to range check.</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Soft-Expiry</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>Neo4j Cypher: <code>MATCH (f:Fund {id:"INF846K01DP5"})-[r:HAS_TER {version:"v17"}]->(t:TERFact) SET r.effective_to = "2026-07-01"</code></div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>New edge added: <code>MERGE (f)-[:HAS_TER {version:"v18", effective_from:"2026-07-01", value:0.82}]->(t2:TERFact)</code></div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>Retrieval query updated: all graph traversals filter by <code>WHERE r.effective_to IS NULL OR r.effective_to > query_date</code></div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Historical audit: a query asking "what was the TER in June 2026?" traverses the graph with <code>query_date="2026-06-15"</code> → returns 0.79% correctly</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Chunk index updated: v17 chunk marked <code>stale=true</code>; re-indexed with v18 content. FAISS and BM25 indexes updated.</div></div>
+    </div>
+  </div>
+</div>
+<!-- Surgical cache invalidation -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#c2410c,#ea580c)"><div class="step-num">B3</div><div><div class="step-title">Surgical Cache Invalidation</div><div class="step-subtitle">23 Redis keys for affected responses — not a broad flush</div></div></div>
+  <div class="step-card-inner">
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Surgical Invalidation</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>Query EvidencePack index: <code>SELECT response_id WHERE D1.chunk_id IN (stale_v17_chunk_ids) AND D0.delivery_timestamp > 2026-06-15</code></div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Result: 23 response_ids that used the stale TER chunk in their context</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>For each: <code>DEL redis:response:{response_id}</code> — 23 targeted DEL commands</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Next query for same entity → cache miss → fresh retrieval → returns v18 TER=0.82%</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Broad flush alternative: <code>FLUSHDB</code> would clear 180,000 cached responses. Recovery time: 4–6 hours of elevated latency. Surgical: 23 DELs, 8ms, zero latency impact on unrelated queries.</div></div>
+      <div class="threshold-row"><span class="threshold-val">23 keys vs 180K</span><span class="threshold-why">Surgical invalidation: only responses that actually used the stale chunk are invalidated. Ratio: 23/180,000 = 0.013%. Broad flush penalises 99.987% of unaffected queries. The EvidencePack D1 chunk_id index makes this lookup possible.</span></div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Before Repair</div>
+        <div class="ba-item">Redis: 23 stale responses cached with TER=0.79%</div>
+        <div class="ba-item">Graph: HAS_TER v17 edge active, no effective_to</div>
+        <div class="ba-item">FAISS index: v17 chunk active</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 After Repair</div>
+        <div class="ba-item">Redis: 23 keys DEL'd; fresh retrieval returns 0.82%</div>
+        <div class="ba-item">Graph: v17 edge effective_to=2026-07-01; v18 edge active</div>
+        <div class="ba-item">FAISS index: v18 chunk active; v17 marked stale</div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================ ACTIVE MISSING CONTEXT ============================================================ -->
+<section id="a-missing-context" class="section">
+<div class="page-header" style="background:linear-gradient(135deg,#713f12 0%,#92400e 60%,#b45309 100%)">
+  <h1>Active Scenario: Missing Context</h1>
+  <p>User reports incomplete comparison — benchmark/risk/TER data absent from response. Diagnosis: retrieved but dropped at reranking. F09+F03, not F04.</p>
+</div>
+<div class="kpi-row">
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--yellow)">F09+F03</div><div class="kpi-label">Fault Class (Context Drop + Gap)</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--orange)">0.58–0.65</div><div class="kpi-label">Rejected Chunk Scores (below 0.70)</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--blue)">2/7</div><div class="kpi-label">Taxonomy Fields Covered</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--green)">0</div><div class="kpi-label">LLM Tokens for Diagnosis</div></div>
+</div>
+<!-- evidence_rejected lookup -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#b45309,#d97706)"><div class="step-num">C1</div><div><div class="step-title">evidence_rejected Lookup</div><div class="step-subtitle">Benchmark/risk/TER chunks retrieved (FAISS top-14) but dropped at reranking</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Were the missing fields retrieved at all?</h4>
+      <div class="branch-row yes"><span class="branch-label">RETRIEVED + DROPPED</span>Chunks appear in retrieval results but NOT in accepted context (evidence_rejected populated) → F09. Fix: lower rerank threshold for this chunk type.</div>
+      <div class="branch-row no"><span class="branch-label">NEVER RETRIEVED</span>Chunks not in any retriever results → F04 (retrieval failure). Fix: re-index, add training examples, check entity filter.</div>
+      <div class="branch-row partial"><span class="branch-label">PARTIALLY RETRIEVED</span>Some benchmark chunks retrieved, risk chunks not → split fault: F09 for benchmark, F04 for risk. Two separate repairs.</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: evidence_rejected Analysis</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>Load EvidencePack D1 for the original response → read <code>evidence_rejected[]</code> array</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Filter by <code>chunk_type IN [BENCHMARK, RISK_METRIC, TER]</code> → found 5 rejected chunks: benchmark (×2, scores 0.62, 0.65), risk_metric (×2, scores 0.58, 0.61), TER (×1, score 0.63)</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>All 5 were in retrieval results (FAISS top-14) but failed the rerank threshold of 0.70 → confirmed F09 (context assembly drop)</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Cross-check: were these chunks in BM25 or Neo4j results? Yes — BM25 rank 2-5 for benchmark chunks. Triple confirmation: not a retrieval failure.</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Taxonomy check: COMPARISON_QUERY requires 7 fields. Accepted chunks covered: [returns, category, AMC]. Missing: [benchmark, risk_grade, TER, peer_comparison] → 2/7 coverage (critical gap)</div></div>
+      <div class="threshold-row"><span class="threshold-val">threshold 0.70</span><span class="threshold-why">The threshold was calibrated for FACTUAL queries. COMPARISON queries have lower per-chunk relevance scores because they span multiple dimensions. The fix is not to lower the global threshold (would add noise to factual queries) but to add a policy pack override: threshold=0.55 for COMPARISON + BENCHMARK chunk type combination.</span></div>
+    </div>
+  </div>
+</div>
+<!-- F09 vs F04 disambiguation -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#b45309,#d97706)"><div class="step-num">C2</div><div><div class="step-title">F09 vs F04 Disambiguation</div><div class="step-subtitle">Wrong diagnosis leads to re-indexing when only a config change is needed</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Consequence of Wrong Diagnosis</h4>
+      <div class="branch-row yes"><span class="branch-label">CORRECT: F09</span>Context assembly config change → lower threshold for COMPARISON+BENCHMARK. Cost: 15 minutes, 0 data operations, takes effect immediately.</div>
+      <div class="branch-row no"><span class="branch-label">WRONG: F04</span>Re-indexing triggered → engineer spends 6-8 hours re-embedding chunks, rebuilding FAISS index, re-running evals. The re-indexed chunks would STILL be dropped at 0.70 threshold. Problem not fixed.</div>
+      <div class="branch-row partial"><span class="branch-label">WRONG: F07</span>LLM repair attempted → prompt engineering to force inclusion of benchmark data. Unreliable — LLM may hallucinate the benchmark value instead of reporting absence.</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Correct F09 Repair</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>Identify affected policy pack: PP-042 (EQUITY_MF + COMPARISON_QUERY)</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Add policy pack override: <code>threshold_overrides: [{chunk_type:"BENCHMARK", threshold:0.55}, {chunk_type:"RISK_METRIC", threshold:0.55}]</code></div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>Shadow test: re-run original query with new config → benchmark chunks now accepted (scores 0.58–0.65 above new threshold of 0.55)</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Taxonomy coverage: 7/7 fields now covered in shadow response. F03 (context gap) also resolved.</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Deploy config change to PP-042; all subsequent COMPARISON queries for EQUITY_MF now include benchmark/risk chunks.</div></div>
+    </div>
+  </div>
+</div>
+<!-- Taxonomy check -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#b45309,#d97706)"><div class="step-num">C3</div><div><div class="step-title">Taxonomy Template Check</div><div class="step-subtitle">Structural check (2/7 fields) — not an LLM opinion, not a semantic judgment</div></div></div>
+  <div class="step-card-inner">
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Template Coverage Scoring</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>COMPARISON_QUERY taxonomy template: 7 required fields = [returns_1Y, returns_3Y, TER, risk_grade, benchmark_index, peer_category_rank, AMC_name]</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>For each accepted chunk: map <code>chunk.field_type</code> to taxonomy fields. Count unique fields covered.</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>Result: returns_1Y ✓ (score 0.91), returns_3Y ✓ (score 0.88), TER ✗ (dropped), risk_grade ✗ (dropped), benchmark ✗ (dropped), peer_rank ✗ (dropped), AMC ✓ (exact match)</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Coverage score: 3/7 = 0.43 (below the 0.70 threshold for COMPARISON_QUERY delivery)</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>This check is deterministic — it counts field type tags, not semantic coverage. No LLM required. No judgment involved. If tag exists in accepted chunk → field covered.</div></div>
+      <div class="threshold-row"><span class="threshold-val">coverage≥0.70</span><span class="threshold-why">For COMPARISON_QUERY: below 0.70 (5/7 fields), the response is structurally incomplete and misleading — comparing funds without risk or TER is like comparing cars without fuel efficiency. The response should either include the data or explicitly state what's missing.</span></div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Before Config Fix</div>
+        <div class="ba-item">Policy pack PP-042: single threshold 0.70</div>
+        <div class="ba-item">COMPARISON queries: 2-3/7 fields covered</div>
+        <div class="ba-item">5 benchmark/risk/TER chunks rejected per query</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 After Config Fix</div>
+        <div class="ba-item">PP-042: threshold_override 0.55 for BENCHMARK+RISK</div>
+        <div class="ba-item">COMPARISON queries: 7/7 fields covered</div>
+        <div class="ba-item">Shadow test: all 5 chunks now accepted</div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================ ACTIVE CITATION ============================================================ -->
+<section id="a-citation" class="section">
+<div class="page-header" style="background:linear-gradient(135deg,#1e3a5f 0%,#1e40af 60%,#1d4ed8 100%)">
+  <h1>Active Scenario: Wrong Citation</h1>
+  <p>User reports wrong SEBI circular cited. Two-stage evaluation: Stage 1 integrity (E1, deterministic, PASS) → Stage 2 entailment (E3, NLI, FAIL score 0.04).</p>
+</div>
+<div class="kpi-row">
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--blue)">E1: PASS</div><div class="kpi-label">Stage 1: Citation Integrity (real doc)</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--red)">E3: 0.04</div><div class="kpi-label">Stage 2: NLI Entailment Score (FAIL)</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--amber)">BM25 r1</div><div class="kpi-label">BM25 Rank 1: Correct TER Circular</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--purple)">+18ms</div><div class="kpi-label">Pre-delivery NLI Gate Overhead</div></div>
+</div>
+<!-- Two-stage citation eval -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#1d4ed8,#2563eb)"><div class="step-num">D1</div><div><div class="step-title">Two-Stage Citation Evaluation</div><div class="step-subtitle">Integrity check then entailment — failing at stage 1 vs stage 2 leads to different repairs</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Which stage does citation fail?</h4>
+      <div class="branch-row yes"><span class="branch-label">STAGE 1 FAIL</span>E1: citation doc_id not found in knowledge base → phantom citation (hallucinated document). Repair: prompt injection prevention.</div>
+      <div class="branch-row no"><span class="branch-label">STAGE 2 FAIL (our case)</span>E3: doc exists (E1 PASS) but NLI entailment score &lt; 0.50 → real document, wrong claim. Repair: fix retrieval to return better document.</div>
+      <div class="branch-row partial"><span class="branch-label">BOTH PASS</span>Citation valid AND entailed → no citation fault. If user still complains → F07 elsewhere, not F06.</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Stage 1 + Stage 2</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div><strong>Stage 1 (E1, deterministic)</strong>: extract cited circular ID from response text → look up in regulatory document registry → found: SEBI/HO/IMD/DF2/CIR/P/2020/175. E1 = PASS. Latency: 2ms.</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div><strong>Stage 2 (E3, NLI)</strong>: run NLI model (DeBERTa-v3-base-mnli) on: premise=cited circular text, hypothesis=response claim about TER. Entailment score = 0.04. E3 = FAIL.</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>Interpretation: the cited circular (2020/175, about NFO regulations) does not entail the claim about TER calculation methodology. Wrong circular for this claim.</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Correct circular: SEBI/HO/IMD/DF3/CIR/P/2022/098 (TER rationalization circular) — exists in knowledge base but was not retrieved as top result.</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Fault class: F06 (WRONG_CITATION). Repair target: retrieval ranking for regulatory documents when claim type = REGULATORY_CLAIM + C06 tag.</div></div>
+      <div class="threshold-row"><span class="threshold-val">entailment&lt;0.50</span><span class="threshold-why">NLI threshold 0.50: above this, the cited document sufficiently supports the claim (even if not perfectly). Below 0.50, the citation is misleading — reader would expect the cited document to prove the claim; entailment score 0.04 means it actively contradicts it.</span></div>
+    </div>
+  </div>
+</div>
+<!-- BM25 vs vector disagreement -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#1d4ed8,#2563eb)"><div class="step-num">D2</div><div><div class="step-title">BM25 vs Vector Retrieval Disagreement</div><div class="step-subtitle">BM25 found correct TER circular at rank 1; vector ranked NFO circular at rank 1 due to keyword overlap</div></div></div>
+  <div class="step-card-inner">
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Retrieval Disagreement Analysis</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>Query the original retrieval agreement matrix from D2: BM25 top-5 vs FAISS top-5 for the TER regulatory claim</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div><strong>BM25 ranking</strong>: Rank 1 = CIR/P/2022/098 (TER), Rank 2 = CIR/P/2021/044, Rank 3 = CIR/P/2020/175 (NFO) — BM25 correctly prioritized exact keyword "TER rationalization"</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div><strong>FAISS ranking</strong>: Rank 1 = CIR/P/2020/175 (NFO — high semantic overlap with mutual fund fee language), Rank 2 = CIR/P/2022/098 — FAISS was misled by general MF fee vocabulary</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Agreement matrix: Jaccard = 0.20 (low) for regulatory claim retrieval — this disagreement was visible at delivery time but not acted upon (pre-v2 system)</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Fix: for REGULATORY_CLAIM + C06 claim type, add BM25 boost: if BM25 rank 1 ≠ FAISS rank 1 for regulatory documents, use BM25 as primary, FAISS as secondary</div></div>
+      <div class="threshold-row"><span class="threshold-val">Jaccard=0.20</span><span class="threshold-why">Jaccard 0.20 for regulatory documents is far below the 0.40 health threshold. The agreement matrix is now a passive early-warning signal: low agreement on regulatory chunk types predicts citation faults before users report them.</span></div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Retrieval Before Fix</div>
+        <div class="ba-item">FAISS rank 1: NFO circular (2020/175)</div>
+        <div class="ba-item">BM25 rank 1: TER circular (2022/098) — ignored</div>
+        <div class="ba-item">Context window: NFO circular included, TER circular absent</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 Retrieval After Fix</div>
+        <div class="ba-item">Regulatory claim: BM25 primary for C06 claims</div>
+        <div class="ba-item">TER circular (2022/098) → rank 1 in merged results</div>
+        <div class="ba-item">Force-include rule: C06 tag → TER circular always included</div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Force-include + NLI gate -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#1d4ed8,#2563eb)"><div class="step-num">D3</div><div><div class="step-title">Force-Include Rule + Pre-Delivery NLI Gate</div><div class="step-subtitle">+18ms is acceptable for C06-scoped regulatory claims; not justified globally</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Should pre-delivery NLI gate be applied globally?</h4>
+      <div class="branch-row no"><span class="branch-label">NO — Global</span>NLI gate for every response: +18ms × 200K responses/day = 3,600 seconds of added latency per day. Unjustified for non-regulatory claims.</div>
+      <div class="branch-row yes"><span class="branch-label">YES — C06 Scoped</span>Apply NLI gate only when claim type = REGULATORY_CLAIM and C06 tag present. Affects ~3% of queries. +18ms on 3% = negligible total impact.</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Scoped NLI Gate</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>C06 tag assigned by claim classifier when: response mentions SEBI/AMFI circular ID + makes a claim attributed to that circular</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Force-include rule: if C06 tag present, the top BM25 regulatory document is force-included in context regardless of reranker score</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>Pre-delivery NLI gate: after LLM synthesis, for C06-tagged responses → run E3 (DeBERTa NLI) before delivery. If score &lt; 0.50 → trigger SAFE_FALLBACK ("cannot verify this circular claim; please refer to the official circular")</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>This creates a feedback loop: NLI gate at delivery produces the same E3 score that adjudicates user complaints → system is self-consistent</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Part 2 justification: regulatory claims carry compliance risk. A wrong SEBI circular citation could mislead investor decisions. +18ms is the price of compliance; regulatorily defensible.</div></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================ PASSIVE HALLUCINATION ============================================================ -->
+<section id="p-hallucination" class="section">
+<div class="page-header" style="background:linear-gradient(135deg,#312e81 0%,#4338ca 60%,#6d28d9 100%)">
+  <h1>Passive Scenario: Hallucination Detection</h1>
+  <p>Numeric extraction at delivery: 38.0 not in chunk numerics → HIGH severity. Cohort drift 16.7% vs 0.8% baseline. Incident I-047. STOP-3 saves 98.5% tokens.</p>
+</div>
+<div class="kpi-row">
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--purple)">16.7%</div><div class="kpi-label">Cohort Hallucination Rate</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--green)">0.8%</div><div class="kpi-label">Baseline Rate (14-day average)</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--red)">I-047</div><div class="kpi-label">Incident ID (200 affected)</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--blue)">98.5%</div><div class="kpi-label">Token Savings via STOP-3</div></div>
+</div>
+<!-- Numeric extraction at delivery -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#6d28d9,#7c3aed)"><div class="step-num">P1</div><div><div class="step-title">Numeric Extraction at Delivery Time</div><div class="step-subtitle">38.0 not in chunk_numerics → HIGH severity signal emitted immediately</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Are all delivery numerics present in accepted chunk numerics?</h4>
+      <div class="branch-row yes"><span class="branch-label">ALL GROUNDED</span>Every numeric in response has a match in chunk_numerics (±0.1 tolerance) → LOW severity signal; normal delivery</div>
+      <div class="branch-row no"><span class="branch-label">UNGROUNDED FOUND</span>Any numeric in response NOT in chunk_numerics → HIGH severity signal; response tagged <code>numeric_risk=HIGH</code></div>
+      <div class="branch-row partial"><span class="branch-label">PARTIAL</span>Some numerics grounded, some not → MEDIUM severity; flag for cohort analysis without blocking delivery</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Delivery-Time Extraction</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>At Step 8 (delivery), regex extracts all [value, unit] tuples from final response text: e.g., [(38.0, "%"), (5, "years"), (14.2, "%")]</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>For each extracted value: check presence in D1 <code>chunk_numerics[]</code> with ±0.1 tolerance. 38.0 → NOT FOUND (chunk_numerics has [14.2, 12.8, 16.1]).</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>Signal emitted to Kafka: <code>{response_id, entity_id:INF846K01DP5, ungrounded:[38.0], severity:HIGH, timestamp}</code></div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Signal stored in <code>delivery_signals</code> table for cohort aggregation — this row is the input to the daily cohort monitor</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>This extraction runs in 3ms (regex only) — no LLM, no additional latency visible to user. Signal is non-blocking.</div></div>
+      <div class="threshold-row"><span class="threshold-val">HIGH if ANY ungrounded</span><span class="threshold-why">Zero-tolerance for ungrounded numerics at HIGH severity: a single ungrounded numeric in a financial response is a potential hallucination. The signal is cheap to emit (3ms) and the false positive rate is low (regex over structured financial data). Over-sensitivity here is preferred: false positive = unnecessary investigation; false negative = user receives wrong financial data.</span></div>
+    </div>
+  </div>
+</div>
+<!-- Cohort drift -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#6d28d9,#7c3aed)"><div class="step-num">P2</div><div><div class="step-title">Daily Cohort Monitor: 16.7% vs 0.8% Baseline</div><div class="step-subtitle">Drift detection triggers incident I-047</div></div></div>
+  <div class="step-card-inner">
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Cohort Monitor</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>Daily job: GROUP BY (entity_id, metric_type, policy_pack_id) → count HIGH severity signals / total deliveries for that cohort in last 24h</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Baseline rate: 14-day rolling average for same cohort (INF846K01DP5 + CAGR + PP-042) = 0.8%</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>Today's rate: 200 deliveries, 33 with ungrounded 38.0% numeric → 16.7% rate. Ratio = 16.7/0.8 = 20.8x baseline</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Threshold: rate &gt; 5x baseline AND count &gt; 10 → incident declared. I-047 created: entity=INF846K01DP5, fault_class=F07, affected_responses=200</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Incident record links all 200 response_ids. Only first 3 diagnosed (cost control via STOP-3). If same root cause found in first 3 → extrapolate to all 200.</div></div>
+      <div class="threshold-row"><span class="threshold-val">5x baseline + count&gt;10</span><span class="threshold-why">5x threshold: below this, rate fluctuations are within normal statistical noise (Poisson process assumption). Above 5x, probability of random fluctuation &lt;0.001. Count&gt;10: prevents single-sample false incidents. Both conditions must hold simultaneously.</span></div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Before Cohort Monitor</div>
+        <div class="ba-item">200 affected responses delivered with wrong 38%</div>
+        <div class="ba-item">No incident declared</div>
+        <div class="ba-item">No user complaints yet (passive detection)</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 After Cohort Monitor</div>
+        <div class="ba-item">Incident I-047 declared at T+24h</div>
+        <div class="ba-item">200 response_ids linked</div>
+        <div class="ba-item">Root cause diagnosed without any user complaint</div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- STOP-3 -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#6d28d9,#7c3aed)"><div class="step-num">P3</div><div><div class="step-title">STOP-3: Incident Correlation (98.5% Token Savings)</div><div class="step-subtitle">200 affected responses, only first 3 diagnosed via LLM</div></div></div>
+  <div class="step-card-inner">
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: STOP-3</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>STOP-3 rule: if 200 responses all have same entity_id + same ungrounded value (38.0) → they share the same root cause. Diagnosing all 200 individually wastes 197 × (diagnostic LLM tokens).</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Sample first 3 responses from incident I-047 → run full diagnostic pipeline (retrieval replay, F-router, adjudication)</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>All 3 diagnoses: F07, same root cause (PP-042 missing C02 check). Root cause confidence = HIGH (unanimous in sample).</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Extrapolation: apply repair to all 200 responses. Mark 197 as <code>diagnosis_extrapolated=true, incident_id=I-047</code>.</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Token savings: diagnostic LLM call = ~800 tokens. 200 × 800 = 160,000 tokens. With STOP-3: 3 × 800 = 2,400 tokens. Savings = 157,600 tokens = 98.5%.</div></div>
+      <div class="threshold-row"><span class="threshold-val">98.5% savings</span><span class="threshold-why">STOP-3 is valid when: (a) same entity_id, (b) same ungrounded value, (c) same policy_pack_id, (d) same time window (same model version). If any of these differ, responses may have different root causes — STOP-3 must not fire across heterogeneous incidents.</span></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================ PASSIVE INACCURACY ============================================================ -->
+<section id="p-inaccuracy" class="section">
+<div class="page-header" style="background:linear-gradient(135deg,#134e4a 0%,#0f766e 60%,#0d9488 100%)">
+  <h1>Passive Scenario: Stale TER via Manifest Diff</h1>
+  <p>Source manifest diff detects 141 vs 142 expected chunks. Retroactive D2 query finds 23 affected responses. R1 auto-repair. 0 LLM tokens.</p>
+</div>
+<div class="kpi-row">
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--cyan)">141 vs 142</div><div class="kpi-label">Chunk Count (actual vs expected)</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--green)">23</div><div class="kpi-label">Retroactively Affected Responses</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--blue)">R1</div><div class="kpi-label">Repair Class: Auto-Repair</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--purple)">0</div><div class="kpi-label">LLM Tokens for Detection + Repair</div></div>
+</div>
+<!-- Manifest diff -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#0d9488,#14b8a6)"><div class="step-num">Q1</div><div><div class="step-title">Source Manifest Diff Detection</div><div class="step-subtitle">Nightly job compares expected vs actual chunk counts per document</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Is the chunk count difference meaningful?</h4>
+      <div class="branch-row no"><span class="branch-label">EXPECTED=ACTUAL</span>No drift → document unchanged. No action required.</div>
+      <div class="branch-row yes"><span class="branch-label">COUNT MISMATCH</span>Actual ≠ expected → document was modified (section added, removed, or split). Trigger staleness analysis.</div>
+      <div class="branch-row partial"><span class="branch-label">HASH MATCH</span>Count matches but chunk content hashes changed → in-place edit (value changed without structure change). More dangerous: harder to detect than count change.</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Manifest Diff</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>Source document registry: each document has <code>expected_chunk_count</code> and <code>chunk_hash_manifest</code> (array of SHA-256 hashes, one per chunk)</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Nightly job: for each document, count actual indexed chunks and compare hashes. Document INF846K01DP5_FACTSHEET: expected 142 chunks, found 141 (1 missing = TER section replaced)</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>Missing chunk identified by diff: chunk_id <code>TER_2026Q1_v17</code> (hash present in manifest, not in index). This was the v17 TER chunk.</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>New chunk found in raw document but not in index: <code>TER_2026Q2_v18</code> containing TER=0.82%. Fund administrator updated the fact sheet silently.</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Staleness signal: <code>{document_id, missing_chunk:TER_2026Q1_v17, new_content_detected:true, staleness_type:VERSION_REPLACE}</code> → triggers retroactive impact analysis</div></div>
+      <div class="threshold-row"><span class="threshold-val">NIGHTLY</span><span class="threshold-why">Nightly frequency: fund fact sheets update monthly or quarterly. Nightly check catches updates within 24h of publication. Real-time chunk monitoring (per-upload) has 8x higher cost with only 0.3% incremental benefit given the monthly update cadence.</span></div>
+    </div>
+  </div>
+</div>
+<!-- Retroactive D2 query -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#0d9488,#14b8a6)"><div class="step-num">Q2</div><div><div class="step-title">Retroactive D2 Query: 23 Affected Responses</div><div class="step-subtitle">EvidencePack D1 chunk index enables O(n_affected) lookup</div></div></div>
+  <div class="step-card-inner">
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Retroactive Impact Analysis</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>Query EvidencePack D1 index: <code>SELECT response_id FROM evidence_d1 WHERE chunk_id = 'TER_2026Q1_v17' AND delivery_timestamp &gt; '2026-06-01'</code></div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Result: 23 response_ids. These are all responses that used the stale v17 TER chunk as evidence since June 1.</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>For each: check if TER value was actually asserted in the response (not just retrieved). NLP check: does D0 response text contain "0.79%" near "TER"? Yes for 19/23. 4 did not mention TER.</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Effective affected count: 19 responses actively stated TER=0.79%. These are the R1 repair candidates.</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>R1 auto-repair: for each affected response_id → DEL Redis key → next access fetches fresh context with v18 TER=0.82%</div></div>
+      <div class="threshold-row"><span class="threshold-val">0 LLM tokens</span><span class="threshold-why">Detection (manifest diff) = hash comparison. Impact analysis (D1 query) = SQL lookup. Cache invalidation (Redis DEL) = key operation. Root cause analysis = version comparison. No LLM required for any step. This is the design goal for passive inaccuracy: deterministic detection and repair.</span></div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Before R1 Repair</div>
+        <div class="ba-item">19 responses cached with TER=0.79%</div>
+        <div class="ba-item">v17 chunk active in FAISS/BM25 index</div>
+        <div class="ba-item">Graph: v17 TER edge, no effective_to</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 After R1 Repair</div>
+        <div class="ba-item">19 Redis keys DEL'd; fresh queries return 0.82%</div>
+        <div class="ba-item">v17 chunk marked stale; v18 indexed</div>
+        <div class="ba-item">Graph: v17 effective_to set; v18 edge added</div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+<!-- ============================================================ PASSIVE MISSING CONTEXT ============================================================ -->
+<section id="p-missing-context" class="section">
+<div class="page-header" style="background:linear-gradient(135deg,#1c1917 0%,#44403c 60%,#57534e 100%)">
+  <h1>Passive Scenario: Coverage Drift</h1>
+  <p>D2 template_coverage stored on every comparison response (not just failures). Daily cohort monitor: 83%→41% drop. Correlated with context_engineering v2.4.0 deploy.</p>
+</div>
+<div class="kpi-row">
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--yellow)">83%→41%</div><div class="kpi-label">Taxonomy Coverage Drop</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--amber)">v2.4.0</div><div class="kpi-label">Correlated Deploy Version</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--red)">F09</div><div class="kpi-label">Fault Class: Context Drop</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--green)">Config Only</div><div class="kpi-label">Repair Type (no re-indexing)</div></div>
+</div>
+<!-- Why store on every response -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#57534e,#78716c)"><div class="step-num">R1</div><div><div class="step-title">Why template_coverage Stored on Every Comparison Response</div><div class="step-subtitle">Baseline calculation impossible if only stored on failures</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Store template_coverage on failures only vs always?</h4>
+      <div class="branch-row no"><span class="branch-label">FAILURES ONLY</span>Only store when coverage &lt; threshold → cannot calculate baseline (what was the normal coverage before the regression?). Drift detection impossible.</div>
+      <div class="branch-row yes"><span class="branch-label">ALWAYS (our approach)</span>Store on every COMPARISON response → daily mean coverage available → drift = today's mean vs 14-day baseline mean. Regression detectable within 24h.</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Coverage Storage and Drift Detection</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>At Step 4 (context assembly), taxonomy coverage computed: fields_covered / required_fields. For COMPARISON_QUERY: 7 required fields.</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Coverage score written to EvidencePack D2: <code>template_coverage_score: 0.83</code> (baseline period) — this is stored regardless of whether it's a pass or fail</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>Daily cohort monitor: GROUP BY (query_intent=COMPARISON_QUERY, policy_pack_id) → mean(template_coverage_score) for last 24h vs 14-day rolling mean</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Today: mean coverage = 0.41. 14-day baseline: 0.83. Absolute drop: 0.42. Relative drop: 50.6%. Threshold: &gt;0.20 absolute drop → alert.</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Correlation with deploy log: coverage drop started at 14:32 UTC. context_engineering v2.4.0 deployed at 14:15 UTC. 17-minute gap → causal candidate.</div></div>
+      <div class="threshold-row"><span class="threshold-val">&gt;0.20 absolute drop</span><span class="threshold-why">0.20 absolute threshold: smaller drops (0.05-0.15) occur naturally from query mix variation. Above 0.20, the drop is systematic — a structural change in the context assembly pipeline. Calibrated on 90 days of coverage history.</span></div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Without Universal Storage</div>
+        <div class="ba-item">Only 6 failure records today (coverage &lt; 0.70)</div>
+        <div class="ba-item">Cannot compute baseline (no historical data)</div>
+        <div class="ba-item">Drift undetectable; users report problems days later</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 With Universal Storage</div>
+        <div class="ba-item">480 COMPARISON responses today, all with coverage score</div>
+        <div class="ba-item">Mean=0.41 vs baseline=0.83 → alert at T+24h</div>
+        <div class="ba-item">Root cause found before user complaints</div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Version correlation -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#57534e,#78716c)"><div class="step-num">R2</div><div><div class="step-title">Version Correlation with context_engineering v2.4.0</div><div class="step-subtitle">Deploy log cross-reference identifies regression source</div></div></div>
+  <div class="step-card-inner">
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Version Correlation</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>Query deploy log: <code>SELECT version, deploy_time FROM deploys WHERE deploy_time BETWEEN alert_time - 2h AND alert_time</code> → context_engineering v2.4.0 at 14:15 UTC</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Diff v2.4.0 vs v2.3.9: changed <code>rerank_threshold</code> in PP-042 from 0.55 (COMPARISON override) to 0.70 (global default). The v2.3.9 threshold override was accidentally removed.</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>Explanation: v2.3.9 had <code>threshold_overrides:[{chunk_type:BENCHMARK, threshold:0.55}]</code>. v2.4.0 config migration script dropped the overrides block. All COMPARISON queries reverted to 0.70 threshold → benchmark/risk chunks dropped again.</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Fix: restore threshold_override in PP-042. Config rollback deployed at T+2h from alert. Coverage immediately returns to 0.83 on next query batch.</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Prevention: add golden test #49 to CI: "deploy of PP-042 must preserve threshold_overrides keys". Gate future deploys on this check.</div></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================ PASSIVE CITATION ============================================================ -->
+<section id="p-citation" class="section">
+<div class="page-header" style="background:linear-gradient(135deg,#0c4a6e 0%,#075985 60%,#0284c7 100%)">
+  <h1>Passive Scenario: Wrong Citation via NLI Sampling</h1>
+  <p>Risk-stratified sampling: 10% for REGULATORY_CLAIM+C06, 2% baseline. 6/40 sampled fail entailment for same citation. Cross-response pattern analysis triggers repair.</p>
+</div>
+<div class="kpi-row">
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--cyan)">10%</div><div class="kpi-label">Sample Rate for C06 Claims</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--blue)">2%</div><div class="kpi-label">Baseline Sample Rate</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--red)">6/40</div><div class="kpi-label">Failed Entailment (same citation)</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--amber)">~0</div><div class="kpi-label">LLM Tokens (local NLI model)</div></div>
+</div>
+<!-- Risk-stratified sampling -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#0284c7,#0ea5e9)"><div class="step-num">S1</div><div><div class="step-title">Risk-Stratified Sampling</div><div class="step-subtitle">10% for REGULATORY_CLAIM+C06, 2% baseline — rationale for differential rates</div></div></div>
+  <div class="step-card-inner">
+    <div class="decision-box">
+      <h4>🔀 Decision: Which sampling rate applies to this response?</h4>
+      <div class="branch-row yes"><span class="branch-label">C06 + REGULATORY</span>claim_type=REGULATORY_CLAIM AND C06 tag present → 10% sample. Highest risk category: wrong regulatory citation can mislead investment decisions.</div>
+      <div class="branch-row partial"><span class="branch-label">FACTUAL CLAIM</span>claim_type=FACTUAL → 5% sample. Medium risk: factual errors correctable without regulatory consequence.</div>
+      <div class="branch-row no"><span class="branch-label">GENERAL QUERY</span>No C-tag, non-factual response (explanatory) → 2% baseline sample. Low risk: general information less likely to cause direct harm.</div>
+    </div>
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Sampling Pipeline</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>At delivery (Step 8), response tagged with claim_type and C-tags. If C06 present → add to high-priority NLI sampling queue</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Daily NLI sampling job: pull 10% of C06-tagged responses from last 24h. Today: 400 C06 responses → 40 sampled</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>For each sampled response: run E3 (DeBERTa NLI) on (cited_doc_text, response_claim). Score stored in <code>nli_sample_scores</code> table with citation_id</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Results: 34/40 pass (score ≥ 0.50), 6/40 fail (score &lt; 0.50). All 6 failures: same citation (SEBI/HO/IMD/DF2/CIR/P/2020/175 — the NFO circular)</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Cross-response pattern: 6 failures share citation_id → systematic retrieval bias, not random LLM error. Triggers F06 repair for that citation pattern.</div></div>
+      <div class="threshold-row"><span class="threshold-val">10% vs 2%</span><span class="threshold-why">10% for C06: at 2%, expected to find 0.8 failures in 8 samples (binomial, failure_rate=0.15). Not enough statistical power to detect systematic bias. At 10%, 6 failures in 40 samples gives p&lt;0.001 for non-randomness. 10% is the minimum rate to detect systematic citation bias within 24h.</span></div>
+    </div>
+  </div>
+</div>
+<!-- Cross-response pattern analysis -->
+<div class="step-card">
+  <div class="step-card-header" style="background:linear-gradient(90deg,#0284c7,#0ea5e9)"><div class="step-num">S2</div><div><div class="step-title">Cross-Response Pattern Analysis</div><div class="step-subtitle">6 failures same citation → systematic bias, not random error</div></div></div>
+  <div class="step-card-inner">
+    <div class="mechanics-box">
+      <h4>⚙ Mechanics: Pattern Detection</h4>
+      <div class="mech-step"><div class="mech-num">1</div><div>Group failed samples by <code>citation_id</code>: all 6 failures → SEBI/HO/IMD/DF2/CIR/P/2020/175. Frequency: 6/6 = 100% of failures from same doc.</div></div>
+      <div class="mech-step"><div class="mech-num">2</div><div>Classify pattern: SYSTEMATIC (single citation) vs SCATTERED (multiple different citations). SYSTEMATIC → retrieval bias. SCATTERED → LLM attribution error.</div></div>
+      <div class="mech-step"><div class="mech-num">3</div><div>Verify retrieval: check D2 retrieval agreement matrix for responses that cited 2020/175 → FAISS rank 1, BM25 rank 3–5 for TER claims. FAISS consistently over-ranks this circular for TER queries.</div></div>
+      <div class="mech-step"><div class="mech-num">4</div><div>Root cause confirmed: FAISS embedding space places NFO circular and TER circular as near-neighbors (cosine sim=0.87) due to shared vocabulary (mutual fund, expense, percentage). BM25 correctly separates them via exact term "TER rationalization".</div></div>
+      <div class="mech-step"><div class="mech-num">5</div><div>Repair: same as Active Citation D3 — BM25 boost for REGULATORY_CLAIM + C06. Force-include rule for TER claim type. Pre-delivery NLI gate for C06 responses.</div></div>
+    </div>
+    <div class="before-after">
+      <div class="ba-before"><div class="ba-label">🔴 Without NLI Sampling</div>
+        <div class="ba-item">~400 C06 responses/day, none evaluated</div>
+        <div class="ba-item">Wrong citation delivered in ~60 responses/day</div>
+        <div class="ba-item">Bias invisible until user complaints accumulate</div>
+      </div>
+      <div class="ba-after"><div class="ba-label">🟢 With 10% Sampling</div>
+        <div class="ba-item">40 sampled daily; 6 failures detected at T+24h</div>
+        <div class="ba-item">Systematic bias identified from first batch</div>
+        <div class="ba-item">Repair deployed before significant user impact</div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================ RESOLUTION MAP ============================================================ -->
+<section id="resolution" class="section">
+<div class="page-header">
+  <h1>Resolution Map: All 8 Scenarios</h1>
+  <p>Master comparison table + 6 critical distinctions. Use this tab as the navigation reference for the entire feedback loop system.</p>
+</div>
+<!-- KPI summary -->
+<div class="kpi-row">
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--purple)">0</div><div class="kpi-label">LLM tokens — Inaccuracy repair</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--blue)">0</div><div class="kpi-label">LLM tokens — Missing context repair</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--cyan)">~0</div><div class="kpi-label">LLM tokens — Citation detection (local NLI)</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--green)">98.5%</div><div class="kpi-label">Token savings — P-Hallucination incident</div></div>
+  <div class="kpi-card"><div class="kpi-val" style="color:var(--red)">6/8</div><div class="kpi-label">Scenarios where STOP-1 fires</div></div>
+</div>
+<!-- Master 8-row table -->
+<div class="step-card">
+  <div class="step-card-header"><div class="step-num">📊</div><div><div class="step-title">Master Scenario Comparison Table</div><div class="step-subtitle">8 scenarios × 9 dimensions</div></div></div>
+  <div class="step-card-inner" style="overflow-x:auto">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Scenario</th><th>Path</th><th>Signal Origin</th><th>Key Diagnostic Step</th>
+          <th>Root Cause</th><th>Evaluator / STOP Rule</th><th>LLM Tokens</th>
+          <th>Repair Class</th><th>System State Change</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>A: Hallucination</strong><br><span class="badge badge-red">F07</span></td>
+          <td>Active</td>
+          <td>User: highlighted_span "38% CAGR"</td>
+          <td>STOP-1 at E1: 38.0 not in chunk_numerics[]</td>
+          <td>LLM confabulated numeric not in any source chunk</td>
+          <td>E1 (numeric check) → STOP-1</td>
+          <td><strong>0</strong> (STOP-1)</td>
+          <td>R2: Shadow repair + golden test</td>
+          <td>PP-042 + C02 check; Redis key DEL; golden test #48 added</td>
+        </tr>
+        <tr>
+          <td><strong>A: Inaccuracy</strong><br><span class="badge badge-yellow">F05</span></td>
+          <td>Active</td>
+          <td>User: reports TER 0.79% wrong (correct: 0.82%)</td>
+          <td>Three-way comparison: response=source_v17≠canonical_v18</td>
+          <td>Stale source (v17→v18 update). Model cleared.</td>
+          <td>E1 version check → STOP-1 for model</td>
+          <td><strong>0</strong></td>
+          <td>R1: Auto-repair source</td>
+          <td>Graph soft-expiry v17; v18 edge added; 23 Redis keys DEL'd</td>
+        </tr>
+        <tr>
+          <td><strong>A: Missing Context</strong><br><span class="badge badge-yellow">F09+F03</span></td>
+          <td>Active</td>
+          <td>User: incomplete comparison (no benchmark/risk/TER)</td>
+          <td>evidence_rejected[]: 5 chunks dropped at score 0.58–0.65</td>
+          <td>Rerank threshold 0.70 too high for COMPARISON query type</td>
+          <td>E1 taxonomy check → STOP-1 (structural)</td>
+          <td><strong>0</strong></td>
+          <td>R0: Config change</td>
+          <td>PP-042 threshold_override 0.55 for BENCHMARK+RISK; coverage 2/7→7/7</td>
+        </tr>
+        <tr>
+          <td><strong>A: Citation</strong><br><span class="badge badge-blue">F06</span></td>
+          <td>Active</td>
+          <td>User: wrong SEBI circular cited</td>
+          <td>E3 NLI: entailment score 0.04 (FAIL) for cited circular</td>
+          <td>FAISS over-ranked NFO circular over TER circular (vocab overlap)</td>
+          <td>E1 PASS → E3 FAIL → F06</td>
+          <td><strong>~0</strong> (local NLI)</td>
+          <td>R1: Retrieval rule fix</td>
+          <td>BM25 boost for C06; force-include TER circular; NLI gate added</td>
+        </tr>
+        <tr>
+          <td><strong>P: Hallucination</strong><br><span class="badge badge-red">F07</span></td>
+          <td>Passive</td>
+          <td>Delivery-time: 38.0 not in chunk_numerics</td>
+          <td>Cohort monitor: 16.7% rate vs 0.8% baseline → Incident I-047</td>
+          <td>Same as A-Hallucination; 200 responses affected</td>
+          <td>E1 numeric extraction → STOP-3 (incident)</td>
+          <td><strong>2,400</strong> (3×800; save 98.5%)</td>
+          <td>R2 × incident</td>
+          <td>Same PP-042 fix; 200 response_ids linked to I-047; 197 extrapolated</td>
+        </tr>
+        <tr>
+          <td><strong>P: Inaccuracy</strong><br><span class="badge badge-yellow">F05</span></td>
+          <td>Passive</td>
+          <td>Nightly manifest diff: 141 vs 142 chunks</td>
+          <td>Retroactive D2 query: 23 responses used stale v17 TER chunk</td>
+          <td>Fund factsheet updated (v17→v18); not reflected in index</td>
+          <td>Manifest hash check → STOP-1</td>
+          <td><strong>0</strong></td>
+          <td>R1: Auto-repair</td>
+          <td>v18 chunk indexed; v17 stale; 23 Redis DEL; graph soft-expiry</td>
+        </tr>
+        <tr>
+          <td><strong>P: Missing Context</strong><br><span class="badge badge-yellow">F09</span></td>
+          <td>Passive</td>
+          <td>D2 template_coverage: daily mean 83%→41%</td>
+          <td>Version correlation: coverage drop at 14:32 = v2.4.0 at 14:15</td>
+          <td>Config migration dropped threshold_overrides in PP-042</td>
+          <td>Coverage drift monitor → config diff</td>
+          <td><strong>0</strong></td>
+          <td>R0: Config rollback</td>
+          <td>PP-042 threshold_override restored; golden test #49 added to CI</td>
+        </tr>
+        <tr>
+          <td><strong>P: Citation</strong><br><span class="badge badge-blue">F06</span></td>
+          <td>Passive</td>
+          <td>10% NLI sampling of C06 responses</td>
+          <td>6/40 samples fail entailment for same citation_id</td>
+          <td>FAISS embedding proximity: NFO circular = TER circular (cosine 0.87)</td>
+          <td>E3 NLI sampling → cross-pattern analysis</td>
+          <td><strong>~0</strong> (local NLI)</td>
+          <td>R1: Retrieval rule fix</td>
+          <td>Same as A-Citation fix; sampling discovers before user complaints</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+<!-- Critical distinctions -->
+<div class="step-card">
+  <div class="step-card-header"><div class="step-num">⚖</div><div><div class="step-title">6 Critical Distinctions</div><div class="step-subtitle">Getting these wrong leads to the wrong repair being applied</div></div></div>
+  <div class="step-card-inner">
+    <div class="distinction">
+      <h4>1 — F07 (Hallucination) vs F05 (Inaccuracy)</h4>
+      <p style="font-size:13px"><strong>F07</strong>: The LLM generated a value that does not exist in any source chunk. The source is correct; the model is wrong.<br>
+      <strong>F05</strong>: The LLM faithfully reproduced a value from the source. The source is stale; the model is correct.<br>
+      <strong>Test</strong>: Three-way comparison. If response_val = source_at_retrieval_val → F05, model cleared. If response_val ≠ source_at_retrieval_val → F07, model guilty.<br>
+      <strong>Wrong repair if confused</strong>: Applying F07 repair (prompt fix) when F05 is the cause → doesn't fix staleness. Applying F05 repair (source update) when F07 is cause → source is already correct; problem persists.</p>
+    </div>
+    <div class="distinction">
+      <h4>2 — F09 (Context Drop) vs F04 (Retrieval Failure)</h4>
+      <p style="font-size:13px"><strong>F09</strong>: The relevant chunk was retrieved but dropped at reranking (score below threshold). Chunk is in evidence_rejected[].<br>
+      <strong>F04</strong>: The relevant chunk was never retrieved at all. Chunk is absent from all retriever results.<br>
+      <strong>Test</strong>: Check evidence_rejected[]. If chunk present with score 0.58–0.65 → F09. If absent entirely → F04.<br>
+      <strong>Wrong repair if confused</strong>: Applying F04 repair (re-indexing, 6–8 hours) when F09 is cause → chunk is already indexed correctly; problem is the threshold config. Re-indexing wastes time and does not fix the issue.</p>
+    </div>
+    <div class="distinction">
+      <h4>3 — Citation Integrity (E1) vs Citation Entailment (E3)</h4>
+      <p style="font-size:13px"><strong>E1 FAIL</strong>: The cited document does not exist in the knowledge base. The citation is fabricated (phantom citation).<br>
+      <strong>E3 FAIL</strong>: The cited document exists (E1 PASS) but its text does not support the claim made (wrong document for the claim).<br>
+      <strong>Test</strong>: Run E1 first (2ms, lookup). If PASS, run E3 (18ms, NLI). Never skip E1 — E3 on a phantom citation crashes the NLI model with empty premise.<br>
+      <strong>Wrong repair if confused</strong>: Treating E1 FAIL as E3 FAIL → wastes NLI budget. Treating E3 FAIL as E1 FAIL → attempts to add a document that already exists.</p>
+    </div>
+    <div class="distinction">
+      <h4>4 — Feedback as Claim vs Ground Truth</h4>
+      <p style="font-size:13px"><strong>Claim</strong>: User reports a value they believe is correct. Must be adjudicated against canonical source before repair.<br>
+      <strong>Ground truth</strong>: Value confirmed against authoritative source (knowledge base canonical_current). Only canonical source values trigger auto-repair.<br>
+      <strong>Why it matters</strong>: 8.3% of user corrections are themselves incorrect. Auto-applying feedback without adjudication introduces new errors in 1 in 12 cases.<br>
+      <strong>Process</strong>: Feedback → NLP enrichment → three-way comparison → adjudication → repair (if confirmed). Never repair directly from user value.</p>
+    </div>
+    <div class="distinction">
+      <h4>5 — Isolated Fault vs Incident</h4>
+      <p style="font-size:13px"><strong>Isolated fault</strong>: Single response with an error. Specific retrieval or synthesis issue. Repair scope: 1 response.<br>
+      <strong>Incident</strong>: &gt;10 responses with same fault pattern, rate &gt;5x baseline. Systematic cause (model version, config change, stale source). Repair scope: all affected responses.<br>
+      <strong>STOP-3 condition</strong>: When incident detected, diagnose only first 3 responses. If unanimous root cause → extrapolate to all. Saves up to 98.5% of diagnostic tokens.<br>
+      <strong>Wrong approach if confused</strong>: Treating an incident as 200 isolated faults → 200× diagnostic cost. Missing incident pattern → applying narrow repair when systemic fix is needed.</p>
+    </div>
+    <div class="distinction">
+      <h4>6 — Factuality Failure vs Compliance Failure</h4>
+      <p style="font-size:13px"><strong>Factuality (F07/F05)</strong>: The response contains a wrong or stale factual value. Repair: update source or model. Risk: user misinformation.<br>
+      <strong>Compliance (F06 + C06)</strong>: The response cites the wrong regulatory circular. Repair: fix retrieval ranking + add NLI gate. Risk: regulatory misinterpretation + legal liability.<br>
+      <strong>Key difference</strong>: Factuality failure affects one user's decision. Compliance failure affects regulatory defensibility of the entire system. Compliance failures warrant faster response (C06 gates, pre-delivery NLI) at higher cost (+18ms).<br>
+      <strong>Citation PARTIAL (not FAIL)</strong>: In A-Hallucination, citation was PARTIAL — real document, wrong value synthesized. This is factuality, not compliance. Routes to F07 repair, NOT citation pipeline repair.</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<script>
+const TABS = ['overview','query-to-response','a-hallucination','a-inaccuracy',
+              'a-missing-context','a-citation','p-hallucination','p-inaccuracy',
+              'p-missing-context','p-citation','resolution'];
+
+function show(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b => b.classList.remove('active','a-active','p-active'));
+  const sec = document.getElementById(id);
+  if (sec) sec.classList.add('active');
+  if (btn) {
+    if (btn.classList.contains('active-tab')) btn.classList.add('a-active');
+    else if (btn.classList.contains('passive-tab')) btn.classList.add('p-active');
+    else btn.classList.add('active');
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  const active = document.querySelector('.section.active');
+  if (!active) return;
+  const idx = TABS.indexOf(active.id);
+  let next = -1;
+  if (e.key === 'ArrowRight' && idx < TABS.length - 1) next = idx + 1;
+  if (e.key === 'ArrowLeft'  && idx > 0) next = idx - 1;
+  if (next < 0) return;
+  const targetId  = TABS[next];
+  const targetBtn = document.querySelector('.nb[onclick*=\'' + targetId + '\']');
+  show(targetId, targetBtn);
+});
+
+(function init() {
+  // Move qr-cont children into query-to-response section
+  var cont = document.getElementById('qr-cont');
+  var main = document.getElementById('query-to-response');
+  if (cont && main) { while(cont.firstChild) main.appendChild(cont.firstChild); cont.remove(); }
+  // Show overview on load
+  show('overview', document.querySelector('.nb[onclick*="\'overview\'"]'));
+})();
+</script>
+</body>
+</html>

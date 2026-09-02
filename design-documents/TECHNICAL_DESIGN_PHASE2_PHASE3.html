@@ -1,0 +1,1440 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Technical Design — Phase 2 &amp; Phase 3 | AMC Context Engineering</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#f5f6fa;--surf:#ffffff;--surf2:#f0f2f8;--bdr:#dde3f0;
+  --txt:#1a202c;--muted:#64748b;--dim:#94a3b8;
+  --purple:#6c63ff;--blue:#3b82f6;--green:#10b981;--yellow:#f59e0b;
+  --red:#ef4444;--cyan:#06b6d4;--orange:#f97316;--pink:#ec4899;
+  --indigo:#4f46e5;--teal:#14b8a6;--violet:#7c3aed;
+  --sidebar:248px;--shadow:0 2px 12px rgba(0,0,0,.08);
+}
+body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans-serif;display:flex;min-height:100vh;font-size:14px;line-height:1.6;}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:var(--sidebar);min-width:var(--sidebar);
+  background:var(--surf);border-right:1px solid var(--bdr);
+  position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:100;
+  display:flex;flex-direction:column;
+  box-shadow:2px 0 8px rgba(0,0,0,.06);
+}
+.sb-logo{padding:20px 16px 14px;border-bottom:1px solid var(--bdr);}
+.sb-logo .lg-title{font-size:13px;font-weight:800;color:var(--purple);line-height:1.3;}
+.sb-logo .lg-sub{font-size:10.5px;color:var(--muted);margin-top:2px;}
+.sb-badge{margin:10px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:6px 10px;font-size:10px;font-weight:700;color:var(--orange);text-align:center;letter-spacing:.4px;}
+.sb-grp{padding:10px 14px 3px;font-size:9px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);}
+.nav-item{
+  display:flex;align-items:center;gap:8px;padding:7px 14px;
+  font-size:12px;font-weight:500;color:var(--muted);
+  cursor:pointer;border-left:3px solid transparent;
+  border:none;background:transparent;width:100%;text-align:left;
+  transition:all .15s;
+}
+.nav-item:hover{color:var(--purple);background:#f5f3ff;}
+.nav-item.active{color:var(--purple);border-left:3px solid var(--purple);background:#ede9fe;font-weight:600;}
+.nav-item .ni{font-size:13px;flex-shrink:0;}
+
+/* ── MAIN ── */
+.main{margin-left:var(--sidebar);flex:1;padding:0;}
+.section{display:none;padding:40px 52px 64px;max-width:1080px;}
+#cover{display:block;}
+.section.active{display:block;animation:fi .25s ease;}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── TYPOGRAPHY ── */
+.pg-title{font-size:28px;font-weight:800;color:var(--txt);letter-spacing:-.5px;margin-bottom:6px;}
+.pg-sub{font-size:14px;color:var(--muted);margin-bottom:28px;line-height:1.65;}
+h2{font-size:17px;font-weight:700;color:var(--txt);margin:32px 0 14px;display:flex;align-items:center;gap:8px;}
+h2::after{content:'';flex:1;height:1px;background:var(--bdr);}
+h3{font-size:14px;font-weight:700;color:var(--purple);margin:18px 0 8px;}
+h4{font-size:13px;font-weight:700;color:var(--blue);margin:12px 0 6px;}
+p{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:10px;}
+code{font-family:'Cascadia Code','Consolas',monospace;background:#ede9fe;color:var(--purple);padding:1px 6px;border-radius:4px;font-size:11.5px;}
+
+/* ── TABLES ── */
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin:12px 0 20px;border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+.tbl th{background:linear-gradient(135deg,var(--purple),var(--indigo));color:#fff;padding:10px 15px;text-align:left;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.tbl td{padding:10px 15px;border-bottom:1px solid var(--bdr);vertical-align:top;line-height:1.55;}
+.tbl tr:last-child td{border:none;}
+.tbl tr:nth-child(even) td{background:#fafbff;}
+.tbl tr:hover td{background:#f0f0ff;}
+
+/* ── CARDS ── */
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:18px 22px;margin-bottom:14px;box-shadow:var(--shadow);}
+.card.purple{border-top:3px solid var(--purple);background:#fafafe;}
+.card.blue  {border-top:3px solid var(--blue);  background:#f8fbff;}
+.card.green {border-top:3px solid var(--green); background:#f6fefa;}
+.card.yellow{border-top:3px solid var(--yellow);background:#fffdf5;}
+.card.red   {border-top:3px solid var(--red);   background:#fff8f8;}
+.card.cyan  {border-top:3px solid var(--cyan);  background:#f5fdff;}
+.card.orange{border-top:3px solid var(--orange);background:#fff8f5;}
+.card.teal  {border-top:3px solid var(--teal);  background:#f5fffe;}
+.card-title{font-size:13px;font-weight:700;margin-bottom:8px;}
+.card.purple .card-title{color:var(--purple);}
+.card.blue   .card-title{color:var(--blue);}
+.card.green  .card-title{color:var(--green);}
+.card.yellow .card-title{color:var(--yellow);}
+.card.red    .card-title{color:var(--red);}
+.card.cyan   .card-title{color:var(--cyan);}
+.card.orange .card-title{color:var(--orange);}
+.card.teal   .card-title{color:var(--teal);}
+
+/* ── BADGES ── */
+.badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap;}
+.b-green {background:#d1fae5;color:#065f46;}
+.b-yellow{background:#fef3c7;color:#92400e;}
+.b-red   {background:#fee2e2;color:#991b1b;}
+.b-blue  {background:#dbeafe;color:#1e40af;}
+.b-purple{background:#ede9fe;color:#5b21b6;}
+.b-cyan  {background:#cffafe;color:#0e7490;}
+.b-orange{background:#ffedd5;color:#9a3412;}
+.b-muted {background:#f1f5f9;color:var(--muted);}
+
+/* ── CALLOUTS ── */
+.callout{border-radius:8px;padding:14px 18px;margin:14px 0;display:flex;gap:12px;font-size:13px;line-height:1.65;}
+.callout.info  {background:#ede9fe;border-left:4px solid var(--purple);}
+.callout.warn  {background:#fef3c7;border-left:4px solid var(--yellow);}
+.callout.danger{background:#fee2e2;border-left:4px solid var(--red);}
+.callout.ok    {background:#d1fae5;border-left:4px solid var(--green);}
+.callout.note  {background:#cffafe;border-left:4px solid var(--cyan);}
+.callout.orange{background:#ffedd5;border-left:4px solid var(--orange);}
+.ci{font-size:18px;flex-shrink:0;margin-top:1px;}
+.cb{color:var(--txt);}
+.cb b{font-weight:700;}
+.cb code{background:#fff;border:1px solid var(--bdr);}
+
+/* ── CODE BLOCK ── */
+.codeblock{background:#1e1e2e;border-radius:8px;padding:16px;margin:12px 0;overflow-x:auto;}
+.codeblock pre{font-family:'Cascadia Code','Consolas',monospace;font-size:12px;color:#cdd6f4;line-height:1.85;}
+.ck{color:#cba6f7;}.cs{color:#a6e3a1;}.cc{color:#6c7086;font-style:italic;}.ct{color:#89b4fa;}.cn{color:#fab387;}
+
+/* ── SCHEMA BLOCK ── */
+.schema-blk{background:#1e1e2e;border-radius:8px;padding:14px 16px;margin:10px 0;font-family:'Cascadia Code','Consolas',monospace;font-size:12px;line-height:1.9;overflow-x:auto;color:#cdd6f4;}
+.sf{color:#cdd6f4;}.st{color:#89b4fa;}.sk{color:#cba6f7;}.sc{color:#6c7086;font-style:italic;}.ss{color:#a6e3a1;}
+
+/* ── GRIDS ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:12px 0;}
+.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin:12px 0;}
+@media(max-width:860px){.grid2,.grid3,.grid4{grid-template-columns:1fr;}}
+
+/* ── KPI ROW ── */
+.kpi-row{display:flex;gap:12px;margin:16px 0 24px;flex-wrap:wrap;}
+.kpi{border-radius:10px;padding:18px 20px;flex:1;min-width:130px;text-align:center;box-shadow:var(--shadow);}
+.kpi .kv{font-size:26px;font-weight:800;line-height:1;}
+.kpi .kl{font-size:11px;opacity:.85;margin-top:5px;}
+.kpi.k1{background:linear-gradient(135deg,#ede9fe,#ddd6fe);color:var(--purple);}
+.kpi.k2{background:linear-gradient(135deg,#d1fae5,#a7f3d0);color:#065f46;}
+.kpi.k3{background:linear-gradient(135deg,#ffedd5,#fed7aa);color:#9a3412;}
+.kpi.k4{background:linear-gradient(135deg,#dbeafe,#bfdbfe);color:#1e40af;}
+.kpi.k5{background:linear-gradient(135deg,#cffafe,#a5f3fc);color:#0e7490;}
+
+/* ── FLOW LANES ── */
+.flow-lanes{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:16px 0;}
+.lane{border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:0;}
+.lane.act{background:#faf5ff;border:1.5px solid #c4b5fd;}
+.lane.pas{background:#f0fdfe;border:1.5px solid #a5f3fc;}
+.lane-title{font-size:11px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;margin-bottom:12px;}
+.lane.act .lane-title{color:var(--purple);}
+.lane.pas .lane-title{color:var(--cyan);}
+.fstep{background:#fff;border:1px solid var(--bdr);border-radius:6px;padding:8px 12px;font-size:12px;margin-bottom:4px;color:var(--txt);}
+.farr{text-align:center;color:var(--dim);font-size:11px;padding:1px 0;}
+.merge{background:linear-gradient(135deg,#d1fae5,#a7f3d0);border:1px solid #6ee7b7;border-radius:8px;padding:12px;text-align:center;font-size:13px;font-weight:700;color:#065f46;margin:14px 0;}
+
+/* ── TIER LADDER ── */
+.tier{border-radius:9px;padding:14px 18px;margin-bottom:10px;border-left:4px solid var(--bdr);}
+.tier.t0{border-color:var(--green);background:#f0fdf4;}
+.tier.t1{border-color:var(--blue); background:#f0f7ff;}
+.tier.t2{border-color:var(--cyan); background:#f0fdfe;}
+.tier.t3{border-color:var(--orange);background:#fff7f0;}
+.tier-hdr{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.tier-lbl{font-size:12px;font-weight:800;}
+.tier.t0 .tier-lbl{color:var(--green);}
+.tier.t1 .tier-lbl{color:var(--blue);}
+.tier.t2 .tier-lbl{color:var(--cyan);}
+.tier.t3 .tier-lbl{color:var(--orange);}
+.tier-cost{font-size:11px;color:var(--muted);background:#fff;border:1px solid var(--bdr);padding:2px 8px;border-radius:10px;}
+
+/* ── SIGNAL GRID ── */
+.sig-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:10px;margin:12px 0;}
+.sig{background:var(--surf);border-radius:8px;padding:12px;border-left:3px solid var(--dim);box-shadow:var(--shadow);}
+.sig.high{border-color:var(--red);}
+.sig.med {border-color:var(--yellow);}
+.sig.low {border-color:var(--blue);}
+.sig-name{font-size:12px;font-weight:700;color:var(--txt);margin-bottom:2px;}
+.sig-desc{font-size:11px;color:var(--muted);line-height:1.4;}
+.sig-sev{font-size:10px;font-weight:700;margin-top:5px;}
+.sig.high .sig-sev{color:var(--red);}
+.sig.med  .sig-sev{color:var(--yellow);}
+.sig.low  .sig-sev{color:var(--blue);}
+
+/* ── STAGES ── */
+.stages{display:flex;gap:0;margin:16px 0;}
+.stage{flex:1;padding:18px;text-align:center;border:1px solid var(--bdr);}
+.stage:first-child{border-radius:10px 0 0 10px;}
+.stage:last-child{border-radius:0 10px 10px 0;}
+.stage-ico{font-size:24px;margin-bottom:6px;}
+.stage-title{font-size:13px;font-weight:800;margin-bottom:3px;}
+.stage-sub{font-size:11px;color:var(--muted);}
+.stage.s1{background:#eff6ff;border-color:#bfdbfe;}.stage.s1 .stage-title{color:var(--blue);}
+.stage.s2{background:#f5f3ff;border-color:#c4b5fd;}.stage.s2 .stage-title{color:var(--purple);}
+.stage.s3{background:#f0fdf4;border-color:#86efac;}.stage.s3 .stage-title{color:var(--green);}
+.stg-arr{display:flex;align-items:center;padding:0 4px;color:var(--dim);font-size:20px;font-weight:700;}
+
+/* ── SPRINT CARDS ── */
+.sprint{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:18px 22px;margin-bottom:14px;box-shadow:var(--shadow);}
+.sprint-hdr{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.sprint-num{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0;}
+.sprint-title{font-size:14px;font-weight:700;color:var(--txt);}
+.sprint-sub{font-size:12px;color:var(--muted);}
+.stask-list{list-style:none;counter-reset:stc;display:flex;flex-direction:column;gap:5px;}
+.stask-list li{font-size:12.5px;color:var(--muted);padding:6px 10px 6px 26px;position:relative;background:var(--surf2);border-radius:6px;counter-increment:stc;}
+.stask-list li::before{content:counter(stc);position:absolute;left:8px;top:7px;font-size:10px;font-weight:800;color:var(--purple);}
+
+/* ── ENTRY POINT CARDS ── */
+.ep-card{background:var(--surf);border-radius:10px;padding:16px 20px;margin-bottom:12px;border-left:4px solid var(--bdr);box-shadow:var(--shadow);}
+.ep-card.ep1{border-color:var(--purple);}
+.ep-card.ep2{border-color:var(--blue);}
+.ep-card.ep3{border-color:var(--orange);}
+.ep-title{font-size:13px;font-weight:700;margin-bottom:6px;}
+.ep-card.ep1 .ep-title{color:var(--purple);}
+.ep-card.ep2 .ep-title{color:var(--blue);}
+.ep-card.ep3 .ep-title{color:var(--orange);}
+
+/* ── RISK TABLE ── */
+.risk-high td:first-child{border-left:4px solid var(--red);}
+.risk-med  td:first-child{border-left:4px solid var(--yellow);}
+.risk-low  td:first-child{border-left:4px solid var(--green);}
+
+/* ── MISC ── */
+ul.blist{list-style:none;margin:8px 0;display:flex;flex-direction:column;gap:5px;}
+ul.blist li{font-size:12.5px;color:var(--muted);padding:4px 0 4px 18px;position:relative;line-height:1.5;}
+ul.blist li::before{content:'→';position:absolute;left:0;color:var(--purple);font-size:11px;top:5px;}
+ul.blist li b{color:var(--txt);}
+.sep{height:1px;background:var(--bdr);margin:22px 0;}
+.method-card{background:#f8fafc;border:1px solid var(--bdr);border-radius:8px;padding:12px 16px;margin:8px 0;}
+.method-name{font-family:'Cascadia Code','Consolas',monospace;font-size:12px;font-weight:700;color:var(--purple);margin-bottom:4px;}
+.method-desc{font-size:12px;color:var(--muted);line-height:1.5;}
+.method-note{font-size:11px;color:var(--blue);margin-top:3px;font-style:italic;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:#c7d2fe;border-radius:3px;}
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sb-logo">
+    <div class="lg-title">AMC Context Engineering</div>
+    <div class="lg-sub">Technical Design · Phase 2 &amp; Phase 3</div>
+  </div>
+  <div class="sb-badge">🔒 Design Only · Awaiting Approval</div>
+
+  <div class="sb-grp">Overview</div>
+  <button class="nav-item active" onclick="show('cover',this)"><span class="ni">🏠</span>Cover &amp; Scope</button>
+  <button class="nav-item" onclick="show('phase1',this)"><span class="ni">✅</span>Phase 1 Status</button>
+  <button class="nav-item" onclick="show('p2ov',this)"><span class="ni">🔄</span>Phase 2 Overview</button>
+
+  <div class="sb-grp">Phase 2 — Feedback Pipeline</div>
+  <button class="nav-item" onclick="show('p2schemas',this)"><span class="ni">📐</span>3.2 Schemas</button>
+  <button class="nav-item" onclick="show('p2pgclient',this)"><span class="ni">🗄️</span>3.3 PostgreSQL Client</button>
+  <button class="nav-item" onclick="show('p2db',this)"><span class="ni">🏛️</span>3.4 DB Schema</button>
+  <button class="nav-item" onclick="show('p2evidence',this)"><span class="ni">📦</span>3.5 Evidence Capture</button>
+  <button class="nav-item" onclick="show('p2batch',this)"><span class="ni">⚡</span>3.6 Batch Evaluation</button>
+  <button class="nav-item" onclick="show('p2tiered',this)"><span class="ni">🏗️</span>3.7 Tiered Evaluation</button>
+  <button class="nav-item" onclick="show('p2passive',this)"><span class="ni">📡</span>3.8 Passive Path</button>
+  <button class="nav-item" onclick="show('p2orch',this)"><span class="ni">⚙️</span>3.9–3.10 Orchestrator</button>
+
+  <div class="sb-grp">Phase 3 — KG Correction</div>
+  <button class="nav-item" onclick="show('p3ov',this)"><span class="ni">🔭</span>Phase 3 Overview</button>
+  <button class="nav-item" onclick="show('p3detect',this)"><span class="ni">🔍</span>4.2 Detection</button>
+  <button class="nav-item" onclick="show('p3eval',this)"><span class="ni">⚖️</span>4.3 Evaluation</button>
+  <button class="nav-item" onclick="show('p3resolve',this)"><span class="ni">🩹</span>4.4–4.5 Resolution</button>
+  <button class="nav-item" onclick="show('p3gnn',this)"><span class="ni">🕸️</span>4.6–4.7 GNN &amp; Loop</button>
+
+  <div class="sb-grp">Implementation</div>
+  <button class="nav-item" onclick="show('integration',this)"><span class="ni">🔌</span>Integration Map</button>
+  <button class="nav-item" onclick="show('newfiles',this)"><span class="ni">📁</span>New Files &amp; Config</button>
+  <button class="nav-item" onclick="show('risks',this)"><span class="ni">⚠️</span>Risks</button>
+  <button class="nav-item" onclick="show('buildseq',this)"><span class="ni">🗓️</span>Build Sequence</button>
+</nav>
+
+<main class="main">
+<!-- ══ COVER ══ -->
+<section id="cover" class="section active">
+  <div style="margin-bottom:32px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">AMC Context Engineering PoC · August 2026</div>
+    <div class="pg-title" style="font-size:34px;line-height:1.2;">Technical Design<br/><span style="color:var(--purple);">Phase 2 &amp; Phase 3</span></div>
+    <div class="pg-sub">Feedback, Evaluation &amp; Self-Correction Architecture<br/>Grounded in full repository inventory · No code before architect approval</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+      <span class="badge b-orange">🔒 Design Only</span>
+      <span class="badge b-blue">Ref: AMC_REALTIME_SCENARIOS_LLD.html</span>
+      <span class="badge b-purple">Ref: AMC_FEEDBACK_LOOP_ARCHITECTURE_v2.html</span>
+    </div>
+  </div>
+  <div class="grid3">
+    <div class="card green"><div class="card-title">✅ Phase 1 — Operational</div><p style="font-size:12px;">Hybrid GraphRAG, Neo4j KG, FAISS, NER, Streamlit UI, RBAC, guardrails all live. Six feedback modules written but blocked by 5 missing pieces.</p></div>
+    <div class="card purple"><div class="card-title">🔵 Phase 2 — This Design</div><p style="font-size:12px;">Feedback Intelligence &amp; Evaluation Pipeline. Active path (user feedback) + Passive path (auto-metrics). Connects all written modules by supplying the 5 missing pieces.</p></div>
+    <div class="card cyan"><div class="card-title">🔭 Phase 3 — This Design</div><p style="font-size:12px;">Self-Correcting Knowledge Graph &amp; Governed Deployment. 3-stage KG correction (Detection → Evaluation → Resolution), GNN plausibility, Correction Patch Layer, weekly governance.</p></div>
+  </div>
+  <h2>The Core Principle</h2>
+  <div class="callout info"><span class="ci">🔑</span><div class="cb"><b>Feedback ≠ Learning. Evaluation ≠ Learning. Diagnosis ≠ Learning.</b><br/>The chatbot never directly learns from one user's say-so. The graph changes only via governed weekly batches. The LLM's "learning" is a confidence-scored, TTL-bound context patch — not a weight update. This guards against feedback poisoning, adversarial corrections, and AMC taxonomy corruption while still improving visible behaviour immediately after confirmation.</div></div>
+  <h2>Two Signal Paths — One Pipeline</h2>
+  <div class="flow-lanes">
+    <div class="lane act">
+      <div class="lane-title">🟣 Active Path — User Provides Feedback</div>
+      <div class="fstep">👤 User clicks 👎 or submits correction</div><div class="farr">↓</div>
+      <div class="fstep">POST /api/feedback → validate · NER · sentiment · quality score</div><div class="farr">↓</div>
+      <div class="fstep">PostgreSQL feedback_records buffer</div><div class="farr">↓</div>
+      <div class="fstep">Hourly orchestration cycle picks up pending items</div><div class="farr">↓</div>
+      <div class="fstep">Tiered evaluation: Rule → GNN → NLI → LLM</div><div class="farr">↓</div>
+      <div class="fstep">Adjudication verdict written</div>
+    </div>
+    <div class="lane pas">
+      <div class="lane-title">🔵 Passive Path — Auto-Captured (100% coverage)</div>
+      <div class="fstep">📡 Auto-signal emitted on every response delivery</div><div class="farr">↓</div>
+      <div class="fstep">8 checks: numeric mismatch · citation · staleness · guardrail…</div><div class="farr">↓</div>
+      <div class="fstep">Routing: HIGH → queue · MEDIUM → queue · else E0 (metrics only)</div><div class="farr">↓</div>
+      <div class="fstep">Cohort health monitor (daily background job)</div><div class="farr">↓</div>
+      <div class="fstep">Anomaly alert → evaluation queue</div><div class="farr">↓</div>
+      <div class="fstep">Same pipeline as Active path</div>
+    </div>
+  </div>
+  <div class="merge">⬇ Both paths → Unified Evaluation Record → Failure Diagnosis → Severity Scoring → KG Correction Decision ⬇</div>
+</section>
+
+<!-- ══ PHASE 1 STATUS ══ -->
+<section id="phase1" class="section">
+  <div class="pg-title">Phase 1 — What's Already Built</div>
+  <div class="pg-sub">Precise inventory of current repo state — what is operational, what is written-but-blocked, and the 5 critical gaps blocking the entire feedback loop.</div>
+  <h2>Capability Inventory</h2>
+  <table class="tbl">
+    <thead><tr><th>Capability</th><th>Status</th><th>Key File(s)</th></tr></thead>
+    <tbody>
+      <tr><td>Hybrid GraphRAG query pipeline</td><td><span class="badge b-green">✅ Complete</span></td><td><code>engine/retrieval.py</code>, <code>engine/context_engineering.py</code></td></tr>
+      <tr><td>Neo4j knowledge graph</td><td><span class="badge b-green">✅ Complete</span></td><td><code>engine/graph_store.py</code>, <code>graph/client.py</code></td></tr>
+      <tr><td>FAISS vector store (dual instance)</td><td><span class="badge b-green">✅ Complete</span></td><td><code>engine/faiss_store.py</code>, <code>vector/client.py</code></td></tr>
+      <tr><td>Two-layer NER (rule + GLiNER)</td><td><span class="badge b-green">✅ Complete</span></td><td><code>engine/ner_pipeline.py</code></td></tr>
+      <tr><td>Intent-driven retrieval routing</td><td><span class="badge b-green">✅ Complete</span></td><td><code>engine/query_classifier.py</code>, <code>retrieval/orchestrator.py</code></td></tr>
+      <tr><td>Text-to-Cypher aggregation</td><td><span class="badge b-green">✅ Complete</span></td><td><code>engine/text_to_cypher.py</code></td></tr>
+      <tr><td>Streamlit UI with RBAC (5 roles)</td><td><span class="badge b-green">✅ Complete</span></td><td><code>streamlit_app/app.py</code>, <code>rbac.py</code></td></tr>
+      <tr><td>Compliance guardrails (SEBI)</td><td><span class="badge b-green">✅ Complete</span></td><td><code>streamlit_app/compliance_guardrails.py</code></td></tr>
+      <tr><td>Feedback API routes (4 endpoints)</td><td><span class="badge b-yellow">⚠️ Written, not wired</span></td><td><code>api/routes/feedback.py</code></td></tr>
+      <tr><td>FeedbackCollector class</td><td><span class="badge b-yellow">⚠️ Written, blocked</span></td><td><code>engine/feedback_collector.py</code></td></tr>
+      <tr><td>FeedbackProcessor class</td><td><span class="badge b-yellow">⚠️ Written, blocked</span></td><td><code>engine/feedback_processor.py</code></td></tr>
+      <tr><td>GraphCorrectionEngine class</td><td><span class="badge b-yellow">⚠️ Written, blocked</span></td><td><code>engine/graph_corrector.py</code></td></tr>
+      <tr><td>CacheManager class</td><td><span class="badge b-yellow">⚠️ Written, blocked</span></td><td><code>engine/cache_manager.py</code></td></tr>
+      <tr><td>EvaluationOrchestrator + APScheduler</td><td><span class="badge b-yellow">⚠️ Written, never started</span></td><td><code>tasks/evaluation_orchestrator.py</code></td></tr>
+    </tbody>
+  </table>
+  <h2>🚨 The 5 Critical Missing Pieces</h2>
+  <p>All six feedback/evaluation modules are fully coded but import from files that don't exist. Fixing these 5 gaps unblocks the entire pipeline with zero rewrites to existing code.</p>
+  <div class="callout danger"><span class="ci">1️⃣</span><div class="cb"><b>app/schemas/feedback.py</b> — Pydantic models (<code>FeedbackRequest</code>, <code>FeedbackResponse</code>, <code>EvaluationRecord</code>, <code>RatingType</code>, <code>FeedbackType</code> enums). Referenced by every feedback module. Without this, no module can be imported — FastAPI won't start with feedback routes registered.</div></div>
+  <div class="callout danger"><span class="ci">2️⃣</span><div class="cb"><b>app/engine/postgres_client.py</b> — <code>PostgreSQLFeedbackClient</code> class. Referenced as a constructor dependency by all 4 feedback modules: FeedbackCollector, FeedbackProcessor, GraphCorrectionEngine, and EvaluationOrchestrator. The single most-blocking missing file.</div></div>
+  <div class="callout danger"><span class="ci">3️⃣</span><div class="cb"><b>app/engine/batch_evaluation.py</b> — <code>BatchEvaluationEngine</code>. The LLM evaluation step. Zero existing code. The only component in the entire pipeline that needs to be written completely from scratch.</div></div>
+  <div class="callout danger"><span class="ci">4️⃣</span><div class="cb"><b>PostgreSQL schema + migrations</b> — The <code>migrations/</code> directory exists but is empty. 5 tables are needed: <code>feedback_records</code>, <code>feedback_classifications</code>, <code>evaluation_records</code>, <code>correction_recommendations</code>, <code>correction_execution_history</code>.</div></div>
+  <div class="callout danger"><span class="ci">5️⃣</span><div class="cb"><b>Wiring in app/api/deps.py + startup in app/main.py</b> — The <code>Container</code> class has no feedback attributes. The APScheduler is never started. The feedback router is never registered. Requires adding ~25 lines to existing files. No new logic, just wiring.</div></div>
+</section>
+
+<!-- ══ P2 OVERVIEW ══ -->
+<section id="p2ov" class="section">
+  <div class="pg-title">Phase 2 — Feedback Intelligence &amp; Evaluation Pipeline</div>
+  <div class="pg-sub">Connects all the already-written modules by providing the 5 missing pieces and wiring the evaluation orchestrator end-to-end. Active path + Passive path merge into a single unified evaluation record.</div>
+  <div class="kpi-row">
+    <div class="kpi k1"><div class="kv">5</div><div class="kl">New/wired files unlock the pipeline</div></div>
+    <div class="kpi k2"><div class="kv">91%</div><div class="kl">Peak token reduction</div></div>
+    <div class="kpi k3"><div class="kv">100%</div><div class="kl">Response coverage via passive signals</div></div>
+    <div class="kpi k4"><div class="kv">0.85</div><div class="kl">Auto-apply confidence threshold</div></div>
+    <div class="kpi k5"><div class="kv">Hourly</div><div class="kl">Evaluation cycle cadence</div></div>
+  </div>
+  <h2>Phase 2 Component Map</h2>
+  <table class="tbl">
+    <thead><tr><th>§</th><th>Component</th><th>File</th><th>Status</th><th>What Phase 2 Does</th></tr></thead>
+    <tbody>
+      <tr><td>3.2</td><td>Pydantic Schemas</td><td><code>schemas/feedback.py</code></td><td><span class="badge b-red">❌ Missing</span></td><td>Create — unblocks all imports</td></tr>
+      <tr><td>3.3</td><td>PostgreSQL Client</td><td><code>engine/postgres_client.py</code></td><td><span class="badge b-red">❌ Missing</span></td><td>Create — enables all persistence</td></tr>
+      <tr><td>3.4</td><td>DB Schema / Migrations</td><td><code>migrations/001, 002</code></td><td><span class="badge b-red">❌ Missing</span></td><td>Create 5 core + 1 evidence table</td></tr>
+      <tr><td>3.5</td><td>Evidence Capture</td><td><code>routes/query.py</code> extension</td><td><span class="badge b-yellow">⚠️ Partial</span></td><td>Add snapshot write + auto-signal emission</td></tr>
+      <tr><td>3.6</td><td>Batch Evaluation Engine</td><td><code>engine/batch_evaluation.py</code></td><td><span class="badge b-red">❌ Missing</span></td><td>Create — only truly new code in Phase 2</td></tr>
+      <tr><td>3.7</td><td>Tiered Evaluation (HITL)</td><td>New wrapper over existing graph_store</td><td><span class="badge b-yellow">⚠️ Design only</span></td><td>Wire 9 rule categories + GNN stub + NLI</td></tr>
+      <tr><td>3.8</td><td>Passive Evaluation Path</td><td><code>routes/query.py</code> + new job</td><td><span class="badge b-red">❌ Missing</span></td><td>Auto-signals + cohort health monitor</td></tr>
+      <tr><td>3.9</td><td>Evaluation Orchestrator</td><td><code>tasks/evaluation_orchestrator.py</code></td><td><span class="badge b-yellow">⚠️ Written, never started</span></td><td>Wire dependencies + start APScheduler</td></tr>
+      <tr><td>3.10</td><td>Dependency Wiring</td><td><code>api/deps.py</code> + <code>main.py</code></td><td><span class="badge b-yellow">⚠️ No feedback attrs in Container</span></td><td>Add 8 Container attributes + scheduler lifecycle</td></tr>
+    </tbody>
+  </table>
+  <div class="callout note"><span class="ci">🔗</span><div class="cb"><b>Phase 2 → Phase 3 handoff:</b> Phase 2 generates <code>CorrectionRecommendation</code> records. Records above 0.85 confidence are auto-applied to Neo4j by the existing <code>GraphCorrectionEngine</code>. Records needing deeper verification feed Phase 3 from three entry points: HITL-confirmed feedback, the GNN structural sweep, and ingestion-time source conflicts.</div></div>
+</section>
+
+<!-- ══ P2 SCHEMAS ══ -->
+<section id="p2schemas" class="section">
+  <div class="pg-title">3.2 — app/schemas/feedback.py <span class="badge b-red" style="font-size:13px;">❌ Missing</span></div>
+  <div class="pg-sub">Pydantic models that define the data contract for all feedback flowing through the system. Currently absent — blocks every downstream module from importing. No logic, just typed definitions.</div>
+  <div class="callout danger"><span class="ci">🚨</span><div class="cb"><b>Highest-priority file to create.</b> Until this file exists, FastAPI cannot start with feedback routes enabled. All six feedback/evaluation modules fail at import time with <code>ModuleNotFoundError</code>. Zero other work can proceed.</div></div>
+  <h2>Enums</h2>
+  <div class="grid2">
+    <div class="card blue"><div class="card-title">RatingType (enum)</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+        <span class="badge b-green">positive</span><span class="badge b-red">negative</span><span class="badge b-muted">neutral</span>
+      </div>
+      <p style="font-size:12px;margin-top:8px;">String-backed. Maps to VARCHAR(20) in PostgreSQL. Positive = thumbs-up or confirmed-correct. Negative = thumbs-down or correction request.</p>
+    </div>
+    <div class="card blue"><div class="card-title">FeedbackType (enum)</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+        <span class="badge b-red">entity_incorrect</span><span class="badge b-orange">relationship_missing</span><span class="badge b-yellow">information_outdated</span><span class="badge b-purple">hallucination</span><span class="badge b-muted">missing_context</span><span class="badge b-cyan">citation_wrong</span><span class="badge b-muted">tone</span><span class="badge b-blue">compliance_concern</span><span class="badge b-muted">other</span>
+      </div>
+    </div>
+  </div>
+  <h2>FeedbackRequest — Fields</h2>
+  <table class="tbl">
+    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>response_id</code></td><td>str (UUID)</td><td><span class="badge b-red">Yes</span></td><td>Links to the original response. Validated against <code>ResponseMetadataCache</code> (24h TTL). 404 if not found.</td></tr>
+      <tr><td><code>session_id</code></td><td>str (UUID)</td><td><span class="badge b-red">Yes</span></td><td>User session identifier. Used for duplicate detection within 5-minute window.</td></tr>
+      <tr><td><code>user_id</code></td><td>Optional[str]</td><td><span class="badge b-muted">No</span></td><td>Nullable for anonymous feedback. Role-based — compliance officers tracked explicitly.</td></tr>
+      <tr><td><code>rating</code></td><td>RatingType</td><td><span class="badge b-red">Yes</span></td><td>Overall satisfaction signal. Positive/negative used as prior weight in quality score.</td></tr>
+      <tr><td><code>feedback_type</code></td><td>FeedbackType</td><td><span class="badge b-red">Yes</span></td><td>Category of the complaint or correction. Drives evaluation tier selection.</td></tr>
+      <tr><td><code>entity_name</code></td><td>Optional[str]</td><td><span class="badge b-muted">No</span></td><td>The entity the user is correcting (e.g. "Axis Bluechip Fund"). NER also extracts from <code>notes</code> field.</td></tr>
+      <tr><td><code>entity_type</code></td><td>Optional[str]</td><td><span class="badge b-muted">No</span></td><td>Taxonomy label: FUND, SCHEME, BENCHMARK, MANAGER, etc.</td></tr>
+      <tr><td><code>notes</code></td><td>Optional[str] max 2000</td><td><span class="badge b-muted">No</span></td><td>Free-text correction or complaint. NER + VADER sentiment run on this field.</td></tr>
+      <tr><td><code>corrections</code></td><td>Optional[dict]</td><td><span class="badge b-muted">No</span></td><td>Structured: <code>{proposed_entity, proposed_value, proposed_relationship}</code>.</td></tr>
+      <tr><td><code>timestamp</code></td><td>Optional[datetime]</td><td><span class="badge b-muted">No</span></td><td>Client timestamp. Falls back to server time if absent.</td></tr>
+    </tbody>
+  </table>
+  <h2>FeedbackResponse — Fields</h2>
+  <table class="tbl">
+    <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>feedback_id</code></td><td>str (UUID)</td><td>Generated server-side. Returned to client for status polling.</td></tr>
+      <tr><td><code>status</code></td><td>str</td><td><code>recorded</code> | <code>invalid</code> | <code>duplicate</code></td></tr>
+      <tr><td><code>evaluation_status</code></td><td>str</td><td><code>pending</code> | <code>evaluating</code> | <code>evaluated</code> | <code>applied</code> | <code>rejected</code></td></tr>
+      <tr><td><code>recorded_at</code></td><td>datetime</td><td>Server-side timestamp. UTC.</td></tr>
+      <tr><td><code>quality_score</code></td><td>float [0–1]</td><td>Pre-classification score from NER + sentiment + intent heuristics. Drives evaluation routing.</td></tr>
+    </tbody>
+  </table>
+  <h2>DissatisfactionSignal — New Model</h2>
+  <div class="callout note"><span class="ci">💡</span><div class="cb">New model for the passive active path. Captures follow-up queries that read as dissatisfaction — "that's wrong", "that's not right" — without requiring the user to click a feedback button.</div></div>
+  <table class="tbl">
+    <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>session_id</code></td><td>str</td><td>Session where the dissatisfaction occurred.</td></tr>
+      <tr><td><code>turn_index</code></td><td>int</td><td>Which conversation turn triggered detection.</td></tr>
+      <tr><td><code>query</code></td><td>str</td><td>The follow-up query text that triggered detection.</td></tr>
+      <tr><td><code>original_response_id</code></td><td>str</td><td>The response being implicitly complained about.</td></tr>
+      <tr><td><code>similarity_to_prior</code></td><td>float</td><td>Cosine similarity between follow-up and prior response. ≥ 0.70 confirms same-referent.</td></tr>
+      <tr><td><code>frustration_score</code></td><td>float</td><td>Intent classifier output. ≥ 0.65 triggers conversion to feedback.</td></tr>
+      <tr><td><code>converted_to_feedback</code></td><td>bool</td><td>True if both thresholds met and a FeedbackRequest was created.</td></tr>
+    </tbody>
+  </table>
+  <h2>EvaluationRecord — The Unified Schema</h2>
+  <p>Both paths (HITL and Automatic) produce one <code>EvaluationRecord</code>. Same schema regardless of entry route. This is what makes the system auditable rather than just a feedback database.</p>
+  <table class="tbl">
+    <thead><tr><th>Field</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>interaction_id</code></td><td>UUID linking back to the original query interaction</td></tr>
+      <tr><td><code>response_id</code></td><td>UUID linking to the frozen evidence snapshot (D0–D3)</td></tr>
+      <tr><td><code>entry_route</code></td><td><code>hitl</code> | <code>automatic</code> | <code>dissatisfaction_converted</code></td></tr>
+      <tr><td><code>feedback_ref</code></td><td>Optional feedback_id if HITL entry</td></tr>
+      <tr><td><code>evidence_snapshot_ref</code></td><td>FK to <code>interaction_evidence</code> table — the frozen context used at response time</td></tr>
+      <tr><td><code>deterministic_results</code></td><td>JSONB — outputs from all 9 rule category evaluators</td></tr>
+      <tr><td><code>gnn_plausibility_score</code></td><td>Float from frozen GNN model (0.5 stub in Phase 2)</td></tr>
+      <tr><td><code>semantic_results</code></td><td>JSONB — NLI entailment/contradiction/neutral scores</td></tr>
+      <tr><td><code>llm_evaluation</code></td><td>Optional JSONB — only populated when Tier 3 was reached</td></tr>
+      <tr><td><code>adjudication_verdict</code></td><td><code>valid</code> | <code>partially_valid</code> | <code>invalid</code> | <code>subjective</code> | <code>insufficient_evidence</code></td></tr>
+      <tr><td><code>adjudication_confidence</code></td><td>Float — combined confidence from tiers that ran</td></tr>
+      <tr><td><code>root_cause</code></td><td>Enum: knowledge | retrieval | graph | context_engineering | model | guardrail | compliance | presentation | feedback_invalid</td></tr>
+      <tr><td><code>severity</code></td><td><code>critical</code> | <code>high</code> | <code>medium</code> | <code>low</code></td></tr>
+      <tr><td><code>lifecycle_status</code></td><td><code>open</code> | <code>diagnosing</code> | <code>resolved</code> | <code>monitoring</code></td></tr>
+    </tbody>
+  </table>
+  <div class="callout ok"><span class="ci">✅</span><div class="cb"><b>Design decision:</b> All enums are string-backed so they serialise cleanly to/from PostgreSQL <code>VARCHAR</code> columns without needing a PG ENUM type. This makes migrations simpler and avoids ALTER TYPE operations when adding new categories.</div></div>
+</section>
+
+<!-- ══ P2 POSTGRES CLIENT ══ -->
+<section id="p2pgclient" class="section">
+  <div class="pg-title">3.3 — app/engine/postgres_client.py <span class="badge b-red" style="font-size:13px;">❌ Missing — Most Critical</span></div>
+  <div class="pg-sub">The single PostgreSQL client used by all feedback/evaluation modules. Currently the most-blocking absent file. Every class in feedback_collector.py, feedback_processor.py, graph_corrector.py, and evaluation_orchestrator.py depends on it.</div>
+  <div class="callout danger"><span class="ci">🚨</span><div class="cb"><b>This file unblocks 4 existing modules simultaneously.</b> Once <code>postgres_client.py</code> exists and the 5 tables are created, FeedbackCollector, FeedbackProcessor, GraphCorrectionEngine, and EvaluationOrchestrator can all be wired and tested independently.</div></div>
+  <h2>Class: PostgreSQLFeedbackClient</h2>
+  <div class="grid2">
+    <div class="card purple"><div class="card-title">Initialisation Design</div>
+      <ul class="blist">
+        <li>Accepts connection string from <code>Settings.postgres_dsn</code></li>
+        <li>Uses <code>asyncpg</code> connection pool (min=2, max=20 connections)</li>
+        <li>Pool created lazily on first use — safe to construct before pool opens</li>
+        <li>All methods are <code>async def</code> — no blocking I/O</li>
+        <li>Uses asyncpg directly (not SQLAlchemy) — no ORM overhead in the hot path</li>
+      </ul>
+    </div>
+    <div class="card blue"><div class="card-title">Error Handling Design</div>
+      <ul class="blist">
+        <li><code>DuplicateFeedbackError</code> — same session_id + response_id within 5 min</li>
+        <li><code>FeedbackNotFoundError</code> — status lookup for unknown feedback_id</li>
+        <li>Connection pool exhaustion → <code>PoolTimeoutError</code> (asyncpg built-in)</li>
+        <li>All methods log errors and re-raise — no silent swallowing</li>
+        <li>Pool health check on startup: run <code>SELECT 1</code></li>
+      </ul>
+    </div>
+  </div>
+  <h2>Method Signatures</h2>
+  <div class="method-card">
+    <div class="method-name">store_feedback(feedback_id, response_id, session_id, user_id, query, response_text, rating, feedback_type, entity_name, entity_type, notes, corrections, device_type, timestamp, classifications) → str</div>
+    <div class="method-desc">Writes one row to <code>feedback_records</code> and one row to <code>feedback_classifications</code> in a single transaction. Returns <code>feedback_id</code> on success.</div>
+    <div class="method-note">Raises DuplicateFeedbackError if (session_id + response_id) already exists within 5 minutes.</div>
+  </div>
+  <div class="method-card">
+    <div class="method-name">fetch_pending_feedback(limit: int, hours_back: int) → list[dict]</div>
+    <div class="method-desc">SELECT from <code>feedback_records</code> WHERE <code>evaluation_status = 'pending'</code> AND <code>created_at ≥ NOW() - interval</code>. Joins with <code>feedback_classifications</code> for <code>quality_score</code>. Ordered by <code>quality_score DESC</code>. Returns at most <code>limit</code> rows.</div>
+    <div class="method-note">Called by EvaluationOrchestrator at the start of every cycle.</div>
+  </div>
+  <div class="method-card">
+    <div class="method-name">update_evaluation_status(feedback_ids: list[str], status: str) → int</div>
+    <div class="method-desc">Batch UPDATE <code>feedback_records SET evaluation_status = $1 WHERE id = ANY($2)</code>. Returns row count updated.</div>
+  </div>
+  <div class="method-card">
+    <div class="method-name">store_evaluation_record(record: EvaluationRecord) → str</div>
+    <div class="method-desc">Writes one row to <code>evaluation_records</code>. Returns <code>evaluation_record_id</code>.</div>
+  </div>
+  <div class="method-card">
+    <div class="method-name">store_recommendation(recommendation: dict) → str</div>
+    <div class="method-desc">Writes one row to <code>correction_recommendations</code>. Returns <code>recommendation_id</code>.</div>
+  </div>
+  <div class="method-card">
+    <div class="method-name">fetch_recommendations(confidence_threshold: float, status: str) → list[dict]</div>
+    <div class="method-desc">SELECT WHERE <code>confidence_score ≥ threshold AND status = $status</code>. Called by <code>GraphCorrectionEngine</code> to fetch corrections ready to apply.</div>
+  </div>
+  <div class="method-card">
+    <div class="method-name">update_recommendation_status(id: str, status: str, applied_at, applied_by) → bool</div>
+    <div class="method-desc">Updates a correction recommendation's lifecycle state. Called after applying or rejecting.</div>
+  </div>
+  <div class="method-card">
+    <div class="method-name">record_audit_entry(correction_id, action, cypher_executed, entities_affected, before_state, after_state, operator) → str</div>
+    <div class="method-desc">Writes to <code>correction_execution_history</code>. Called inside <code>GraphCorrectionEngine</code>'s Neo4j transaction handler. This row is <b>never deleted</b> — 365-day retention.</div>
+  </div>
+  <div class="method-card">
+    <div class="method-name">get_daily_stats(date: date) → dict</div>
+    <div class="method-desc">Returns aggregated metrics for <code>feedback_metrics</code> table. Called by the daily rollup job.</div>
+  </div>
+  <div class="method-card">
+    <div class="method-name">archive_old_feedback(retention_days: int) → int</div>
+    <div class="method-desc">Deletes rows from <code>feedback_records</code> where <code>created_at &lt; NOW() - retention_days * interval '1 day'</code>. Preserves <code>correction_execution_history</code> regardless (separate 365-day retention). Returns deleted row count.</div>
+  </div>
+</section>
+
+<!-- ══ P2 DB SCHEMA ══ -->
+<section id="p2db" class="section">
+  <div class="pg-title">3.4 — PostgreSQL Schema <span class="badge b-red" style="font-size:13px;">❌ Missing</span></div>
+  <div class="pg-sub">Five core tables for the feedback buffer, evaluation records, correction recommendations, audit trail, and daily metrics. One additional evidence snapshot table. Lives in <code>backend/app/engine/migrations/</code>.</div>
+  <h2>Table: feedback_records</h2>
+  <div class="schema-blk">
+<span class="sk">id</span>                  <span class="st">UUID</span>           <span class="sc">PRIMARY KEY</span>
+<span class="sk">response_id</span>         <span class="st">UUID</span>           <span class="sc">NOT NULL  — FK to interaction_evidence</span>
+<span class="sk">session_id</span>          <span class="st">UUID</span>           <span class="sc">NOT NULL  — duplicate detection</span>
+<span class="sk">user_id</span>             <span class="st">VARCHAR(255)</span>   <span class="sc">NULLABLE</span>
+<span class="sk">query</span>               <span class="st">TEXT</span>           <span class="sc">NOT NULL</span>
+<span class="sk">response_text</span>       <span class="st">TEXT</span>           <span class="sc">NOT NULL</span>
+<span class="sk">rating</span>              <span class="st">VARCHAR(20)</span>    <span class="sc">— positive | negative | neutral</span>
+<span class="sk">feedback_type</span>       <span class="st">VARCHAR(50)</span>    <span class="sc">— entity_incorrect | hallucination | …</span>
+<span class="sk">entity_name</span>         <span class="st">VARCHAR(255)</span>
+<span class="sk">entity_type</span>         <span class="st">VARCHAR(50)</span>
+<span class="sk">notes</span>               <span class="st">TEXT</span>           <span class="sc">max 2000 chars</span>
+<span class="sk">corrections</span>         <span class="st">JSONB</span>          <span class="sc">{proposed_entity, proposed_value, proposed_relationship}</span>
+<span class="sk">evaluation_status</span>   <span class="st">VARCHAR(20)</span>    <span class="sc">DEFAULT 'pending'</span>
+<span class="sk">created_at</span>          <span class="st">TIMESTAMP</span>      <span class="sc">DEFAULT NOW()</span>
+
+<span class="sc">INDEX: (evaluation_status, created_at)   — batch fetch by orchestrator</span>
+<span class="sc">INDEX: (response_id)                     — link to evidence snapshot</span>
+<span class="sc">INDEX: (session_id, response_id, created_at) — duplicate detection</span>
+<span class="sc">RETENTION: 90 days (configurable)</span></div>
+
+  <h2>Table: feedback_classifications</h2>
+  <div class="schema-blk">
+<span class="sk">id</span>                          <span class="st">UUID</span>      <span class="sc">PRIMARY KEY</span>
+<span class="sk">feedback_id</span>                 <span class="st">UUID</span>      <span class="sc">REFERENCES feedback_records(id)</span>
+<span class="sk">extracted_entities</span>          <span class="st">JSONB</span>     <span class="sc">[{name, type, confidence}] from NER</span>
+<span class="sk">sentiment</span>                   <span class="st">VARCHAR(20)</span> <span class="sc">VADER: positive | negative | neutral</span>
+<span class="sk">intent_score</span>                <span class="st">FLOAT</span>
+<span class="sk">feedback_quality_score</span>      <span class="st">FLOAT</span>     <span class="sc">0.0–1.0 routing gate</span>
+<span class="sk">should_evaluate</span>             <span class="st">BOOLEAN</span>   <span class="sc">quality_score >= 0.20</span>
+<span class="sk">classification_timestamp</span>    <span class="st">TIMESTAMP</span></div>
+
+  <h2>Table: evaluation_records</h2>
+  <div class="schema-blk">
+<span class="sk">id</span>                          <span class="st">UUID</span>         <span class="sc">PRIMARY KEY</span>
+<span class="sk">response_id</span>                 <span class="st">UUID</span>         <span class="sc">NOT NULL</span>
+<span class="sk">feedback_id</span>                 <span class="st">UUID</span>         <span class="sc">REFERENCES feedback_records(id) NULLABLE</span>
+<span class="sk">entry_route</span>                 <span class="st">VARCHAR(30)</span>  <span class="sc">hitl | automatic | dissatisfaction_converted</span>
+<span class="sk">deterministic_results</span>       <span class="st">JSONB</span>        <span class="sc">9 rule category outputs</span>
+<span class="sk">gnn_plausibility_score</span>      <span class="st">FLOAT</span>
+<span class="sk">semantic_results</span>            <span class="st">JSONB</span>        <span class="sc">{entailment, contradiction, neutral}</span>
+<span class="sk">llm_evaluation</span>              <span class="st">JSONB</span>        <span class="sc">NULLABLE — only when Tier 3 reached</span>
+<span class="sk">adjudication_verdict</span>        <span class="st">VARCHAR(30)</span>
+<span class="sk">adjudication_confidence</span>     <span class="st">FLOAT</span>
+<span class="sk">root_cause</span>                  <span class="st">VARCHAR(100)</span>
+<span class="sk">severity</span>                    <span class="st">VARCHAR(20)</span>
+<span class="sk">lifecycle_status</span>            <span class="st">VARCHAR(20)</span>  <span class="sc">DEFAULT 'open'</span>
+<span class="sk">created_at</span>                  <span class="st">TIMESTAMP</span>    <span class="sc">DEFAULT NOW()</span></div>
+
+  <h2>Table: correction_recommendations</h2>
+  <div class="schema-blk">
+<span class="sk">id</span>               <span class="st">UUID</span>          <span class="sc">PRIMARY KEY</span>
+<span class="sk">feedback_id</span>      <span class="st">UUID</span>          <span class="sc">REFERENCES feedback_records(id)</span>
+<span class="sk">evaluation_id</span>    <span class="st">UUID</span>          <span class="sc">REFERENCES evaluation_records(id)</span>
+<span class="sk">correction_type</span>  <span class="st">VARCHAR(50)</span>   <span class="sc">add_entity | update_property | add_relationship | remove_relationship</span>
+<span class="sk">target_entity</span>    <span class="st">VARCHAR(255)</span>
+<span class="sk">target_type</span>      <span class="st">VARCHAR(50)</span>
+<span class="sk">cypher_mutation</span>  <span class="st">TEXT</span>          <span class="sc">NOT NULL — validated before storage</span>
+<span class="sk">confidence_score</span> <span class="st">FLOAT</span>         <span class="sc">NOT NULL — 0.85 threshold for auto-apply</span>
+<span class="sk">reasoning</span>        <span class="st">TEXT</span>          <span class="sc">one-sentence from LLM — for human review only</span>
+<span class="sk">status</span>           <span class="st">VARCHAR(20)</span>   <span class="sc">DEFAULT 'pending'</span>
+<span class="sk">applied_at</span>       <span class="st">TIMESTAMP</span>     <span class="sc">NULLABLE</span>
+<span class="sk">applied_by</span>       <span class="st">VARCHAR(255)</span>  <span class="sc">NULLABLE — 'system' or user_id</span>
+<span class="sk">created_at</span>       <span class="st">TIMESTAMP</span>     <span class="sc">DEFAULT NOW()</span>
+
+<span class="sc">INDEX: (status, confidence_score DESC)  — batch apply by orchestrator</span>
+<span class="sc">INDEX: (target_entity)                  — idempotency check</span>
+<span class="sc">UNIQUE: (target_entity, correction_type, cypher_mutation) — prevents duplicate corrections</span></div>
+
+  <h2>Table: correction_execution_history <span class="badge b-orange" style="font-size:11px;">AUDIT TRAIL — NEVER DELETED</span></h2>
+  <div class="schema-blk">
+<span class="sk">id</span>                   <span class="st">UUID</span>     <span class="sc">PRIMARY KEY</span>
+<span class="sk">correction_id</span>        <span class="st">UUID</span>     <span class="sc">REFERENCES correction_recommendations(id)</span>
+<span class="sk">action</span>               <span class="st">VARCHAR(30)</span> <span class="sc">applied | rolled_back | canonical_applied</span>
+<span class="sk">cypher_executed</span>      <span class="st">TEXT</span>     <span class="sc">exact Cypher that ran</span>
+<span class="sk">before_state</span>         <span class="st">JSONB</span>    <span class="sc">Neo4j node/edge state before change</span>
+<span class="sk">after_state</span>          <span class="st">JSONB</span>    <span class="sc">Neo4j node/edge state after change</span>
+<span class="sk">entities_affected</span>    <span class="st">JSONB</span>    <span class="sc">list of node IDs modified</span>
+<span class="sk">operator</span>             <span class="st">VARCHAR(255)</span> <span class="sc">'system' or user_id</span>
+<span class="sk">timestamp</span>            <span class="st">TIMESTAMP</span>  <span class="sc">DEFAULT NOW()</span>
+
+<span class="sc">RETENTION: 365 days (compliance requirement) — never archived</span></div>
+
+  <h2>Retention Policy</h2>
+  <table class="tbl">
+    <thead><tr><th>Table</th><th>Operational Retention</th><th>Compliance Retention</th><th>Archival?</th></tr></thead>
+    <tbody>
+      <tr><td>feedback_records</td><td>90 days (configurable)</td><td>—</td><td>Yes — deleted after TTL</td></tr>
+      <tr><td>feedback_classifications</td><td>90 days (follows parent)</td><td>—</td><td>Yes — cascade delete</td></tr>
+      <tr><td>evaluation_records</td><td>90 days</td><td>—</td><td>Yes — deleted after TTL</td></tr>
+      <tr><td>correction_recommendations</td><td>90 days</td><td>—</td><td>Yes — deleted after TTL</td></tr>
+      <tr><td><b>correction_execution_history</b></td><td>Permanent</td><td>365 days minimum</td><td><b>Never deleted</b></td></tr>
+      <tr><td>feedback_metrics</td><td>Indefinite (aggregated)</td><td>Indefinite</td><td>No — small footprint</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══ P2 EVIDENCE CAPTURE ══ -->
+<section id="p2evidence" class="section">
+  <div class="pg-title">3.5 — Response Metadata &amp; Evidence Capture</div>
+  <div class="pg-sub">Every response must produce an immutable evidence snapshot the moment it is generated — before any feedback exists. This is the "Capture Interaction Evidence" node in the architecture diagram. Without it, feedback has nothing stable to point at.</div>
+  <div class="callout info"><span class="ci">🔒</span><div class="cb"><b>Immutability guarantee:</b> The <code>interaction_evidence</code> record is written once and never modified. All later evaluation — whether it arrives 5 seconds or 5 months after delivery — references the same frozen snapshot. This prevents evaluators from retroactively judging a response using knowledge that didn't exist at response time.</div></div>
+  <h2>ResponseMetadata Record — Fields Written on Every Delivery</h2>
+  <div class="grid2">
+    <div class="card purple"><div class="card-title">Identity &amp; Content</div>
+      <ul class="blist">
+        <li><b>response_id</b> — UUID v4, already generated in routes/query.py</li>
+        <li><b>query</b> — original user query text</li>
+        <li><b>response_text</b> — full LLM answer delivered</li>
+        <li><b>mode</b> — traditional | contextgraph</li>
+        <li><b>session_id, turn_index</b> — conversation position</li>
+        <li><b>created_at</b> — UTC timestamp</li>
+      </ul>
+    </div>
+    <div class="card blue"><div class="card-title">Evidence Used</div>
+      <ul class="blist">
+        <li><b>retrieved_evidence</b> — list of {source, page, score, snippet} from FAISS</li>
+        <li><b>graph_paths</b> — top Neo4j edges used in context building</li>
+        <li><b>taxonomy_nodes</b> — matched taxonomy path from query classifier</li>
+        <li><b>citations</b> — citation markers present in response text</li>
+        <li><b>guardrail_state</b> — whether any compliance guardrail triggered</li>
+      </ul>
+    </div>
+    <div class="card green"><div class="card-title">System &amp; Cost Metadata</div>
+      <ul class="blist">
+        <li><b>model_id, prompt_version</b> — from engine/config.py (for version correlation)</li>
+        <li><b>input_tokens, output_tokens, total_tokens</b></li>
+        <li><b>query_type</b> — from query_classifier.classify_query()</li>
+      </ul>
+    </div>
+    <div class="card cyan"><div class="card-title">Latency Breakdown</div>
+      <ul class="blist">
+        <li><b>latency_ms_total</b></li>
+        <li><b>latency_ms_graph</b> — Neo4j traversal time</li>
+        <li><b>latency_ms_vector</b> — FAISS retrieval + rerank time</li>
+        <li><b>latency_ms_llm</b> — LLM generation time</li>
+      </ul>
+    </div>
+  </div>
+  <h2>Where the Snapshot Lives</h2>
+  <div class="grid2">
+    <div class="card yellow"><div class="card-title">In-Memory Cache (ResponseMetadataCache)</div>
+      <ul class="blist">
+        <li>Already exists in feedback_collector.py with in-memory fallback</li>
+        <li>TTL: 24 hours — for immediate feedback validation</li>
+        <li>Key: response_id → metadata dict</li>
+        <li>Redis-swappable for multi-instance deployments</li>
+        <li>Purpose: fast validation that response_id is real before accepting feedback</li>
+      </ul>
+    </div>
+    <div class="card orange"><div class="card-title">PostgreSQL interaction_evidence (permanent)</div>
+      <ul class="blist">
+        <li>New table (migration 002)</li>
+        <li>Full record persisted for retroactive analysis</li>
+        <li>Enables: "how many responses in the last 7 days used source version v17?"</li>
+        <li>Enables: post-change measurement — did corrections improve retrieval confidence?</li>
+        <li>Never deleted (compliance record)</li>
+      </ul>
+    </div>
+  </div>
+  <h2>Dissatisfaction Follow-up Detection</h2>
+  <p>A passive extension of the Active path. When a user sends a follow-up in chat that reads as dissatisfaction, the system converts it to structured feedback without requiring a thumbs-down click.</p>
+  <div class="card purple">
+    <div class="card-title">Detection Logic — 6 Steps</div>
+    <ol style="list-style:none;counter-reset:steps;display:flex;flex-direction:column;gap:7px;margin-top:6px;">
+      <li style="counter-increment:steps;padding:7px 10px 7px 28px;position:relative;background:var(--surf2);border-radius:6px;font-size:12.5px;color:var(--muted);">
+        <span style="position:absolute;left:8px;top:8px;font-size:10px;font-weight:800;color:var(--purple);">1</span>
+        <b style="color:var(--txt);">User sends follow-up in chat</b> — any message after a response has been delivered
+      </li>
+      <li style="counter-increment:steps;padding:7px 10px 7px 28px;position:relative;background:var(--surf2);border-radius:6px;font-size:12.5px;color:var(--muted);">
+        <span style="position:absolute;left:8px;top:8px;font-size:10px;font-weight:800;color:var(--purple);">2</span>
+        <b style="color:var(--txt);">Intent classifier scores for frustration</b> — keyword patterns: "that's wrong", "incorrect", "outdated", "not what I asked", repeated rephrasing (≤15 words, &lt;3 turns)
+      </li>
+      <li style="counter-increment:steps;padding:7px 10px 7px 28px;position:relative;background:var(--surf2);border-radius:6px;font-size:12.5px;color:var(--muted);">
+        <span style="position:absolute;left:8px;top:8px;font-size:10px;font-weight:800;color:var(--purple);">3</span>
+        <b style="color:var(--txt);">If frustration_score ≥ 0.65 → run same-referent check</b>
+      </li>
+      <li style="counter-increment:steps;padding:7px 10px 7px 28px;position:relative;background:var(--surf2);border-radius:6px;font-size:12.5px;color:var(--muted);">
+        <span style="position:absolute;left:8px;top:8px;font-size:10px;font-weight:800;color:var(--purple);">4</span>
+        <b style="color:var(--txt);">Embed follow-up query AND prior response</b> — using existing fastembed model in entity_resolver.py (no new model needed)
+      </li>
+      <li style="counter-increment:steps;padding:7px 10px 7px 28px;position:relative;background:var(--surf2);border-radius:6px;font-size:12.5px;color:var(--muted);">
+        <span style="position:absolute;left:8px;top:8px;font-size:10px;font-weight:800;color:var(--purple);">5</span>
+        <b style="color:var(--txt);">If cosine_similarity ≥ 0.70 → same topic confirmed</b> — both thresholds met
+      </li>
+      <li style="counter-increment:steps;padding:7px 10px 7px 28px;position:relative;background:var(--surf2);border-radius:6px;font-size:12.5px;color:var(--muted);">
+        <span style="position:absolute;left:8px;top:8px;font-size:10px;font-weight:800;color:var(--purple);">6</span>
+        <b style="color:var(--txt);">Create DissatisfactionSignal → enter evaluation queue</b> with <code>entry_route = 'dissatisfaction_converted'</code>. Treated identically to explicit feedback from this point forward.
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- ══ P2 BATCH EVALUATION ══ -->
+<section id="p2batch" class="section">
+  <div class="pg-title">3.6 — app/engine/batch_evaluation.py <span class="badge b-red" style="font-size:13px;">❌ New — Zero Existing Code</span></div>
+  <div class="pg-sub">The LLM evaluation step. The only component in the entire Phase 2 pipeline with no existing code. Assigns confidence scores to feedback items and generates Cypher correction recommendations. Designed around 7 compounding token optimisation strategies.</div>
+  <div class="callout orange"><span class="ci">⚡</span><div class="cb"><b>This is the only truly new component in Phase 2.</b> Everything else is either an existing module that needs wiring, a schema/migration to create, or a configuration change. This class needs to be designed and written from scratch — but it is also the most clearly specified piece.</div></div>
+  <h2>Token Optimisation — 7 Layers</h2>
+  <div class="grid2">
+    <div class="card green"><div class="card-title">Layer 1 — Batch Processing <span class="badge b-green">−70% tokens</span></div><p style="font-size:12px;">One LLM call for 25 items. System prompt, schema, and evaluation instructions paid once and amortised across all 25. The single biggest saving.</p></div>
+    <div class="card green"><div class="card-title">Layer 2 — Shared Graph Context <span class="badge b-green">−50% context tokens</span></div><p style="font-size:12px;">Neo4j subgraph fetched once for all affected entities in the batch. Only 1-hop neighbours, not the full graph. Cached in Redis: key <code>graph_ctx:{hash(entity_names)}</code> TTL 1h.</p></div>
+    <div class="card green"><div class="card-title">Layer 3 — Cached Few-Shot Examples <span class="badge b-green">−15% prompt tokens</span></div><p style="font-size:12px;">Pre-computed correction examples per FeedbackType. Redis key: <code>few_shot:{feedback_type}</code> TTL 24h. Retrieved once per cycle, not per batch call.</p></div>
+    <div class="card green"><div class="card-title">Layer 4 — Structured JSON Output <span class="badge b-green">−30% output tokens</span></div><p style="font-size:12px;">Uses <code>LLMClient.complete_structured()</code> with JSON schema. No markdown, no explanation prose, no filler in response. Compact array of objects only.</p></div>
+    <div class="card blue"><div class="card-title">Layer 5 — Conditional Routing <span class="badge b-blue">60% skip LLM</span></div><p style="font-size:12px;">Items with quality_score ≥ 0.95 AND inter-annotator agreement ≥ 0.90 are auto-applied before reaching this engine. Items with quality_score &lt; 0.20 are auto-rejected. ~60% of items bypass the LLM entirely.</p></div>
+    <div class="card blue"><div class="card-title">Layer 6 — Semantic Deduplication <span class="badge b-blue">−40% item count</span></div><p style="font-size:12px;">Done upstream by FeedbackProcessor before batches are formed. Cluster representatives carry vote weights. Reduces batch count by ~40% before any LLM is called.</p></div>
+    <div class="card blue"><div class="card-title">Layer 7 — Graph Snapshot Reuse <span class="badge b-blue">Within-cycle saving</span></div><p style="font-size:12px;">Same graph snapshot reused across all batches in one evaluation cycle. The 1h Redis TTL means the snapshot is built once per hour regardless of how many batches run.</p></div>
+  </div>
+  <h2>Token Budget Bands</h2>
+  <table class="tbl">
+    <thead><tr><th>Band</th><th>Tokens/item (after amortisation)</th><th>When Used</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge b-green">B0</span></td><td>0</td><td>Auto-apply or auto-reject lane — never reach BatchEvaluationEngine</td></tr>
+      <tr><td><span class="badge b-blue">B1</span></td><td>≤ 250</td><td>Standard correction request (entity update, simple relationship)</td></tr>
+      <tr><td><span class="badge b-blue">B2</span></td><td>≤ 500</td><td>Complex multi-entity correction</td></tr>
+      <tr><td><span class="badge b-yellow">B3</span></td><td>≤ 800</td><td>Extended graph context needed (ambiguous entity, cross-source conflict)</td></tr>
+      <tr><td><span class="badge b-orange">B4/B5</span></td><td>Human-escalation</td><td>Reserved for human review — not handled by this engine</td></tr>
+    </tbody>
+  </table>
+  <h2>LLM Prompt Structure</h2>
+  <div class="codeblock"><pre>
+<span class="cc">// SYSTEM (paid once for all 25 items)</span>
+<span class="ck">You are an expert knowledge graph curator for an AMC (Asset Management Company) chatbot.</span>
+<span class="ck">Evaluate the feedback items below and determine whether each represents a genuine</span>
+<span class="ck">knowledge graph correction. For items that do, generate a safe targeted Cypher mutation.</span>
+
+<span class="cc">// OUTPUT FORMAT: JSON array, one object per feedback_id</span>
+{
+  <span class="cs">"feedback_id"</span>:      <span class="ct">string</span>,
+  <span class="cs">"verdict"</span>:         <span class="cs">"correction_needed | no_action | insufficient_evidence"</span>,
+  <span class="cs">"confidence"</span>:      <span class="ct">float  // 0.0–1.0</span>,
+  <span class="cs">"correction_type"</span>: <span class="cs">"add_entity | update_property | add_relationship | remove_relationship | null"</span>,
+  <span class="cs">"target_entity"</span>:   <span class="ct">string</span>,
+  <span class="cs">"cypher_mutation"</span>: <span class="ct">string  // MATCH ... SET/MERGE — no DROP, no schema changes</span>,
+  <span class="cs">"reasoning"</span>:       <span class="ct">string  // one sentence — stored but never used for routing decisions</span>
+}
+
+<span class="cc">// GRAPH CONTEXT (1-hop subgraph for all affected entities — shared across 25 items)</span>
+{graph_snapshot}
+
+<span class="cc">// FEW-SHOT EXAMPLES (pre-cached per feedback_type)</span>
+{few_shot_examples}
+
+<span class="cc">// FEEDBACK ITEMS (JSON array of up to 25 items)</span>
+{batch_as_json_array}
+</pre></div>
+  <h2>Output Validation</h2>
+  <ul class="blist">
+    <li><b>Parse JSON response</b> — if malformed, retry once with temperature=0</li>
+    <li><b>Cypher safety check</b> — reject any mutation containing: DROP, CREATE INDEX, CREATE CONSTRAINT, DELETE without MATCH, REMOVE property on compliance-sensitive nodes</li>
+    <li><b>Final confidence</b> = LLM confidence × inter-annotator agreement (from FeedbackProcessor)</li>
+    <li><b>Store each item</b> as a row in <code>correction_recommendations</code> regardless of confidence (pending status, confidence gate applied at application time)</li>
+  </ul>
+</section>
+
+<!-- ══ P2 TIERED EVALUATION ══ -->
+<section id="p2tiered" class="section">
+  <div class="pg-title">3.7 — Tiered Evaluation Engine (HITL Path)</div>
+  <div class="pg-sub">Routes a feedback claim to the cheapest evaluation tier that can resolve it. Stops as soon as a confident verdict is available. 9 deterministic rule categories run first — only unresolved cases escalate to semantic models and only truly ambiguous cases reach the LLM.</div>
+  <h2>Evaluation Tier Ladder</h2>
+  <div class="tier t0">
+    <div class="tier-hdr"><span class="tier-lbl">TIER 1A — Rule Categories</span><span class="tier-cost">0 LLM tokens · Runs first on every feedback item</span></div>
+    <p style="font-size:12.5px;margin-bottom:10px;">Nine deterministic evaluators, each emitting: <code>{category, rule_id, verdict: pass|fail|score, threshold, evidence_ref}</code>. All use existing <code>graph_store.py</code> and <code>entity_resolver.py</code> — no new infrastructure needed.</p>
+    <table class="tbl">
+      <thead><tr><th>Category</th><th>What It Checks</th><th>Key Check</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge b-blue">Schema/Type</span></td><td>Entity type in feedback matches taxonomy</td><td><code>entity_type in taxonomy.valid_types</code></td></tr>
+        <tr><td><span class="badge b-blue">Cardinality</span></td><td>Relationship arity is valid</td><td>No fund has &gt;1 active benchmark of same type</td></tr>
+        <tr><td><span class="badge b-blue">Referential</span></td><td>Target entity exists in Neo4j</td><td><code>MATCH (n) WHERE n.name = $entity_name RETURN n</code></td></tr>
+        <tr><td><span class="badge b-blue">Temporal</span></td><td>Date claims are consistent</td><td><code>valid_from &lt; valid_to</code>, no future-dated facts</td></tr>
+        <tr><td><span class="badge b-blue">Numeric</span></td><td>Numbers are in plausible range</td><td>NAV &gt; 0, TER 0–10%, AUM &gt; 0</td></tr>
+        <tr><td><span class="badge b-blue">Cross-Source</span></td><td>Same fact from two sources agrees</td><td>Compare AMFI vs SID values</td></tr>
+        <tr><td><span class="badge b-blue">Duplicate</span></td><td>Entity not a duplicate of existing node</td><td><code>entity_resolver.resolve_entities_for_query()</code></td></tr>
+        <tr><td><span class="badge b-blue">Hierarchy</span></td><td>Taxonomy path is valid</td><td>Fund category within allowed parent category</td></tr>
+        <tr><td><span class="badge b-blue">Jurisdiction</span></td><td>Entity applies in correct regulatory scope</td><td>SEBI vs SEC scope check</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="tier t1">
+    <div class="tier-hdr"><span class="tier-lbl">TIER 1B — GNN Structural Plausibility</span><span class="tier-cost">0 LLM tokens · Frozen model · Deterministic at inference</span></div>
+    <div class="grid2">
+      <div>
+        <h4>Architecture</h4>
+        <ul class="blist">
+          <li>R-GCN (Relational Graph Convolutional Network) or CompGCN</li>
+          <li>Input: candidate triple (subject, predicate, object) + 2-hop neighbourhood subgraph</li>
+          <li>Output: plausibility score 0.0–1.0 + anomaly flags for neighbourhood patterns</li>
+          <li>Interface: <code>GNNPlausibilityScorer.score(subject, predicate, object, subgraph) → float</code></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Key Constraints</h4>
+        <ul class="blist">
+          <li><b>Frozen at inference time</b> — fixed weights file, fixed threshold, zero non-determinism</li>
+          <li><b>Zero LLM tokens</b> — graph traversal + matrix ops only</li>
+          <li><b>Separate training cadence</b> — retrained as a governed batch job (Phase 3 §4.6), never per-interaction</li>
+          <li><b>Phase 2 plan:</b> starts as stub returning 0.5 (neutral) until GNN training pipeline is ready in Phase 3</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="tier t2">
+    <div class="tier-hdr"><span class="tier-lbl">TIER 2 — Semantic / NLI Evaluation</span><span class="tier-cost">~0 generative tokens · Local model · Only if Tier 1 unresolved</span></div>
+    <div class="grid2">
+      <div>
+        <h4>Model</h4>
+        <p style="font-size:12.5px;"><code>cross-encoder/nli-deberta-v3-small</code> (local, no API cost). Already in sentence-transformers which is being added to requirements.</p>
+        <h4>Input</h4>
+        <ul class="blist">
+          <li><b>Premise:</b> text of relevant source chunks from the frozen interaction_evidence snapshot</li>
+          <li><b>Hypothesis:</b> user's feedback claim converted to a declarative statement</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Output &amp; Routing</h4>
+        <ul class="blist">
+          <li><code>{entailment: float, contradiction: float, neutral: float}</code></li>
+          <li>entailment &gt; 0.7 → claim is supported by evidence → PARTIALLY_VALID</li>
+          <li>contradiction &gt; 0.7 → claim conflicts → escalate to Tier 3</li>
+          <li>neutral &gt; 0.7 → evidence doesn't address claim → escalate to Tier 3</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="tier t3">
+    <div class="tier-hdr"><span class="tier-lbl">TIER 3 — LLM / Agent Evaluator</span><span class="tier-cost">Controlled tokens · Last resort · Only when Tier 1 + 2 can't resolve</span></div>
+    <p style="font-size:12.5px;">Uses <code>LLMClient.complete_structured()</code> with a minimal EvaluationPacket — NOT the full conversation, NOT the full evidence. Only: the disputed claim, the 2 most relevant evidence chunks, the inconclusive rule findings, and the NLI score with the reason it didn't resolve.</p>
+    <div class="callout ok"><span class="ci">✅</span><div class="cb">The same LLM call structure as <code>batch_evaluation.py</code> but single-item with extended context. Escalation to a human reviewer when: all three tiers return confidence &lt; 0.60, the attribute is compliance-sensitive (risk category, jurisdiction, regulatory text), or two genuinely authoritative sources conflict.</div></div>
+  </div>
+</section>
+
+<!-- ══ P2 PASSIVE ══ -->
+<section id="p2passive" class="section">
+  <div class="pg-title">3.8 — Passive Evaluation Path</div>
+  <div class="pg-sub">Runs on 100% of responses. Zero user action required. Invisible to users. Complements the Active path by catching failures that users never noticed or chose not to report.</div>
+  <div class="callout note"><span class="ci">📡</span><div class="cb"><b>Key principle:</b> The absence of user feedback is not a signal that the response was correct. The passive path monitors structural signals on every response to detect failures the active path would miss. Together they provide complete coverage: 5–15% of interactions surface via active feedback; 100% are monitored via passive signals.</div></div>
+  <h2>8 Auto-Signals — Computed on Every Response Delivery</h2>
+  <div class="sig-grid">
+    <div class="sig high"><div class="sig-name">numeric_mismatch</div><div class="sig-desc">Extract all numbers from response; check each against FAISS chunk numerics. Number in response not in any retrieved chunk → fabricated value.</div><div class="sig-sev">● HIGH</div></div>
+    <div class="sig med"><div class="sig-name">citation_coverage</div><div class="sig-desc">Count citation markers in response vs number of source chunks used. Low ratio → unsupported claims.</div><div class="sig-sev">● MEDIUM</div></div>
+    <div class="sig high"><div class="sig-name">source_version_mismatch</div><div class="sig-desc">Compare source version in evidence snapshot against current source registry. Stale source used → potential inaccuracy.</div><div class="sig-sev">● HIGH</div></div>
+    <div class="sig med"><div class="sig-name">retrieval_confidence_low</div><div class="sig-desc">Min FAISS similarity score in retrieved hits. Low floor → weak evidence grounding.</div><div class="sig-sev">● MEDIUM</div></div>
+    <div class="sig high"><div class="sig-name">guardrail_triggered</div><div class="sig-desc">Any compliance guardrail (SEBI, RBAC scope) fired during generation. Always warrants evaluation.</div><div class="sig-sev">● HIGH</div></div>
+    <div class="sig med"><div class="sig-name">context_truncated</div><div class="sig-desc">Token budget hit — context window was cut short. Response may be incomplete.</div><div class="sig-sev">● MEDIUM</div></div>
+    <div class="sig med"><div class="sig-name">schema_violation</div><div class="sig-desc">Response doesn't follow expected format for the detected query type (e.g. aggregation result missing structured data).</div><div class="sig-sev">● MEDIUM</div></div>
+    <div class="sig low"><div class="sig-name">cost_anomaly</div><div class="sig-desc">Token usage &gt; 2× expected for this query type baseline. May indicate prompt injection or runaway generation.</div><div class="sig-sev">● LOW</div></div>
+  </div>
+  <h2>Routing Decision — After Signal Computation</h2>
+  <table class="tbl">
+    <thead><tr><th>Condition</th><th>Action</th><th>Evaluation Level</th></tr></thead>
+    <tbody>
+      <tr><td>Any signal is <span class="badge b-red">HIGH</span></td><td>Immediate evaluation queued</td><td>E1 deterministic</td></tr>
+      <tr><td>Multiple <span class="badge b-yellow">MEDIUM</span> signals</td><td>Queued for semantic evaluation</td><td>E2 semantic</td></tr>
+      <tr><td>Sampled (5% of responses by query type, configurable)</td><td>Queued for deterministic check</td><td>E1 deterministic</td></tr>
+      <tr><td>HIGH-VALUE query (compliance-sensitive intent detected)</td><td>Always queued regardless of signals</td><td>E1 deterministic</td></tr>
+      <tr><td>None of the above</td><td>Store metrics only</td><td>E0 telemetry only</td></tr>
+    </tbody>
+  </table>
+  <h2>Cohort Health Monitor (Daily Background Job)</h2>
+  <p>A separate daily job that aggregates passive signals across cohorts and generates alerts for systemic degradation — not just individual response anomalies.</p>
+  <div class="grid3">
+    <div class="card blue"><div class="card-title">Cohort: Query type × feedback_type</div><p style="font-size:12px;">e.g. all <code>direct_lookup × entity_incorrect</code> feedback this week vs the 30-day baseline. Catches systematic entity resolution failures.</p></div>
+    <div class="card blue"><div class="card-title">Cohort: Entity × date</div><p style="font-size:12px;">Correction frequency per entity over time. An entity that generates 3× its historical correction rate is flagged for proactive review.</p></div>
+    <div class="card blue"><div class="card-title">Cohort: Source version × response count</div><p style="font-size:12px;">How many responses used a source version that has since been superseded. Catches ingestion lag before users report stale data.</p></div>
+  </div>
+  <h3>Alert Thresholds</h3>
+  <ul class="blist">
+    <li>Correction rate for an entity <b>&gt; 3× the 30-day baseline</b> → proactive correction candidate created</li>
+    <li>Source version in active use is <b>&gt; 7 days older</b> than current registry version → source refresh alert</li>
+    <li>Average retrieval confidence for a query cohort drops <b>&gt; 15% week-over-week</b> → retrieval degradation alert</li>
+  </ul>
+</section>
+
+<!-- ══ P2 ORCHESTRATOR ══ -->
+<section id="p2orch" class="section">
+  <div class="pg-title">3.9 &amp; 3.10 — Evaluation Orchestrator &amp; Dependency Wiring</div>
+  <div class="pg-sub">The EvaluationOrchestrator class is already fully coded in tasks/evaluation_orchestrator.py. It just needs its dependencies wired and the APScheduler started. The Container class in deps.py needs 8 new attributes.</div>
+  <h2>Updated 7-Step Orchestration Cycle</h2>
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    <div style="display:flex;align-items:flex-start;gap:14px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:12px 16px;">
+      <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--indigo));color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+      <div><b style="color:var(--txt);">FETCH</b> <code style="font-size:11px;">PostgreSQLFeedbackClient.fetch_pending_feedback(limit=500, hours_back=24)</code><br/><span style="font-size:12px;color:var(--muted);">Both HITL and auto-triggered items, ordered by quality_score DESC. Max 500/cycle (configurable).</span></div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:14px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:12px 16px;">
+      <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--indigo));color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+      <div><b style="color:var(--txt);">AGGREGATE</b> <code style="font-size:11px;">FeedbackProcessor.prepare_evaluation_batches()</code><br/><span style="font-size:12px;color:var(--muted);">Group by entity+type, consensus scoring, semantic deduplication (−40% items), create 25-item batches.</span></div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:14px;background:#faf5ff;border:1px solid #c4b5fd;border-radius:8px;padding:12px 16px;">
+      <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--indigo));color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
+      <div><b style="color:var(--purple);">ROUTE — Three Lanes (no LLM in this step)</b><br/><span style="font-size:12px;color:var(--muted);"><span class="badge b-green" style="font-size:10px;">auto_apply lane</span> quality ≥ 0.95 AND agreement ≥ 0.90 → skip LLM entirely &nbsp;|&nbsp; <span class="badge b-red" style="font-size:10px;">auto_reject lane</span> quality &lt; 0.20 → close &nbsp;|&nbsp; <span class="badge b-blue" style="font-size:10px;">evaluate lane</span> everything else → Tier 1→2→3</span></div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:14px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:12px 16px;">
+      <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--indigo));color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
+      <div><b style="color:var(--txt);">EVALUATE</b> — Tiered engine (§3.7) for HITL items · BatchEvaluationEngine (§3.6) for automatic items<br/><span style="font-size:12px;color:var(--muted);">Rule → GNN → NLI → LLM cascade. Stops at first confident verdict.</span></div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:14px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:12px 16px;">
+      <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--indigo));color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">5</div>
+      <div><b style="color:var(--txt);">STORE</b> — All verdicts written to <code>evaluation_records</code> and <code>correction_recommendations</code><br/><span style="font-size:12px;color:var(--muted);">Regardless of confidence level. Confidence gate applied at application time, not storage time.</span></div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:14px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px 16px;">
+      <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--teal));color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">6</div>
+      <div><b style="color:var(--green);">APPLY</b> <code style="font-size:11px;">GraphCorrectionEngine.apply_high_confidence_corrections()</code><br/><span style="font-size:12px;color:var(--muted);">Already written. Applies corrections where confidence_score ≥ 0.85 in atomic Neo4j transactions with full audit trail.</span></div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:14px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:12px 16px;">
+      <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--indigo));color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">7</div>
+      <div><b style="color:var(--txt);">INVALIDATE CACHES</b> <code style="font-size:11px;">CacheManager.invalidate_entity_caches()</code><br/><span style="font-size:12px;color:var(--muted);">Already written. FAISS + entity resolver + Redis graph context + Neo4j traversal cache for all corrected entities.</span></div>
+    </div>
+  </div>
+  <h2>Dependency Wiring — Container Additions (deps.py)</h2>
+  <table class="tbl">
+    <thead><tr><th>Attribute</th><th>Type</th><th>Constructor Arguments</th></tr></thead>
+    <tbody>
+      <tr><td><code>feedback_db</code></td><td>PostgreSQLFeedbackClient</td><td><code>dsn=settings.postgres_dsn</code></td></tr>
+      <tr><td><code>response_cache</code></td><td>ResponseMetadataCache</td><td>Redis client or in-memory fallback</td></tr>
+      <tr><td><code>feedback_collector</code></td><td>FeedbackCollector</td><td><code>feedback_db, ner_pipeline, response_cache</code></td></tr>
+      <tr><td><code>feedback_processor</code></td><td>FeedbackProcessor</td><td><code>feedback_db</code></td></tr>
+      <tr><td><code>batch_evaluator</code></td><td>BatchEvaluationEngine</td><td><code>llm, feedback_db, graph, redis_client</code></td></tr>
+      <tr><td><code>graph_corrector</code></td><td>GraphCorrectionEngine</td><td><code>graph, feedback_db</code></td></tr>
+      <tr><td><code>cache_manager</code></td><td>CacheManager</td><td><code>vector_store, graph, redis_client</code></td></tr>
+      <tr><td><code>eval_orchestrator</code></td><td>EvaluationOrchestrator</td><td>All of the above + config dict</td></tr>
+    </tbody>
+  </table>
+  <h2>main.py Lifespan Additions</h2>
+  <ul class="blist">
+    <li>On startup: <code>SchedulerManager(container.eval_orchestrator).start()</code></li>
+    <li>On shutdown: <code>SchedulerManager.shutdown()</code></li>
+    <li>Register feedback router: <code>app.include_router(feedback_router, prefix="/api/feedback")</code></li>
+    <li>Scheduler config: cron <code>0 * * * *</code> (hourly, configurable via <code>Settings.evaluation_cron_schedule</code>)</li>
+  </ul>
+</section>
+
+</section>
+
+<!-- ══════════════════════════════ P3 OVERVIEW ══════════════════════════════ -->
+<section id="p3ov" class="section">
+  <div class="pg-title">Phase 3 — Self-Correcting Knowledge Graph &amp; Governed Deployment</div>
+  <div class="pg-sub">Three deliberately separated stages: Detection (localise), Evaluation (judge), Resolution (act). Detection cannot cause damage. Evaluation can produce wrong verdicts but cannot change the graph. Resolution is the only stage that writes to production.</div>
+  <div class="stages">
+    <div class="stage s1"><div class="stage-ico">🔍</div><div class="stage-title">1 — DETECTION</div><div class="stage-sub">Localise · 3 entry points · Cannot damage anything</div></div>
+    <div class="stg-arr">→</div>
+    <div class="stage s2"><div class="stage-ico">⚖️</div><div class="stage-title">2 — EVALUATION</div><div class="stage-sub">Judge · Cheapest signal first · Cannot write to graph</div></div>
+    <div class="stg-arr">→</div>
+    <div class="stage s3"><div class="stage-ico">🩹</div><div class="stage-title">3 — RESOLUTION</div><div class="stage-sub">Act · Confirmed verdicts only · Only stage that writes</div></div>
+  </div>
+  <div class="callout info"><span class="ci">🔗</span><div class="cb"><b>Phase 2 → Phase 3 handoff:</b> Phase 2 generates <code>CorrectionRecommendation</code> records with confidence scores. Records ≥ 0.85 confidence are auto-applied to Neo4j by the existing <code>GraphCorrectionEngine</code>. Records needing deeper verification feed Phase 3 from three entry points: HITL-confirmed feedback, the daily GNN structural sweep, and ingestion-time source conflicts. Phase 3 does not run independently — it is triggered by Phase 2 output.</div></div>
+  <h2>Why Three Separate Stages?</h2>
+  <div class="grid3">
+    <div class="card blue"><div class="card-title">Detection is safely decoupled</div><p style="font-size:12px;">Three very different sources (user feedback, automated sweep, ingestion conflict) all produce the same <code>CorrectionCandidate</code> shape. Detection doesn't judge anything — it just hands off a precisely localised node/edge/triple to evaluation.</p></div>
+    <div class="card purple"><div class="card-title">Evaluation is safely read-only</div><p style="font-size:12px;">Rules, GNN, NLI, and optionally LLM all produce verdicts. Incorrect verdicts are possible — but they cannot modify the graph. Only a Confirmed verdict exits this stage and proceeds to Resolution.</p></div>
+    <div class="card green"><div class="card-title">Resolution is safely gated</div><p style="font-size:12px;">Confirmed corrections go through offline regression testing, then human governance approval before writing to the canonical graph. The Correction Patch Layer provides immediate reversible improvement while the permanent change awaits governance.</p></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════ P3 DETECTION ══════════════════════════════ -->
+<section id="p3detect" class="section">
+  <div class="pg-title">4.2 — Stage 1: Detection</div>
+  <div class="pg-sub">Localise the exact disputed node/edge/triple. Three entry points all produce the same <code>CorrectionCandidate</code> schema. Detection does not judge. It does not modify. It only identifies what needs evaluation.</div>
+  <h2>Three Entry Points</h2>
+  <div class="ep-card ep1">
+    <div class="ep-title">Entry Point 1 — HITL-Confirmed Feedback (from Phase 2)</div>
+    <ul class="blist">
+      <li>Source: a feedback item that passed Phase 2 evaluation with a <code>correction_needed</code> verdict</li>
+      <li><code>target_entity</code> and <code>correction_type</code> from <code>correction_recommendations</code> identify the candidate</li>
+      <li>Localisation query: <code>MATCH (n) WHERE n.name = $entity_name RETURN n, [(n)-[r]-(m) | [r, m]]</code></li>
+      <li>Sets <code>entry_point = 'hitl'</code> on the CorrectionCandidate record</li>
+    </ul>
+  </div>
+  <div class="ep-card ep2">
+    <div class="ep-title">Entry Point 2 — Scheduled GNN Structural Sweep (catches drift with ZERO user complaints)</div>
+    <ul class="blist">
+      <li>New class: <code>StructuralSweepJob</code> in <code>app/tasks/structural_sweep.py</code></li>
+      <li>Runs daily as background job — sweeps all nodes added or modified in the last 7 days</li>
+      <li>For each node, asks the GNN: is this triple structurally plausible given its neighbourhood?</li>
+      <li>Triples with GNN score &lt; 0.40 (configurable) are flagged as <code>structural_anomaly</code> candidates</li>
+      <li>This is the mechanism that catches graph drift from ingestion issues — no user needs to notice or report</li>
+    </ul>
+  </div>
+  <div class="ep-card ep3">
+    <div class="ep-title">Entry Point 3 — Ingestion-time Source Conflict</div>
+    <ul class="blist">
+      <li>During document ingestion (<code>app/ingestion/pipeline.py</code>): when a new entity is extracted, compare against existing nodes with the same canonical identity</li>
+      <li>Example: new source says <code>EntityA.TER = 0.82%</code> but existing graph says <code>EntityA.TER = 0.79%</code></li>
+      <li>The conflict record includes both versions plus their source provenance</li>
+      <li>No auto-resolution — goes into the same evaluation queue as all other candidates</li>
+      <li>Sets <code>entry_point = 'source_conflict'</code></li>
+    </ul>
+  </div>
+  <h2>CorrectionCandidate Schema</h2>
+  <table class="tbl">
+    <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>candidate_id</code></td><td>UUID</td><td>Primary key</td></tr>
+      <tr><td><code>entry_point</code></td><td>enum</td><td><code>hitl</code> | <code>structural_sweep</code> | <code>source_conflict</code></td></tr>
+      <tr><td><code>source_ref</code></td><td>str</td><td>feedback_id | sweep_run_id | ingestion_job_id</td></tr>
+      <tr><td><code>disputed_node_id</code></td><td>str</td><td>Neo4j internal ID of the disputed node</td></tr>
+      <tr><td><code>disputed_node_name</code></td><td>str</td><td>Human-readable entity name</td></tr>
+      <tr><td><code>disputed_edge_type</code></td><td>Optional[str]</td><td>Relationship type if the dispute is about an edge</td></tr>
+      <tr><td><code>disputed_object</code></td><td>Optional[str]</td><td>Target node name if edge dispute</td></tr>
+      <tr><td><code>proposed_new_value</code></td><td>Optional[str|dict]</td><td>The proposed correction value</td></tr>
+      <tr><td><code>localised_at</code></td><td>datetime</td><td>When detection ran</td></tr>
+      <tr><td><code>status</code></td><td>str</td><td><code>pending_evaluation</code> (initial state)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════════════════════ P3 EVALUATION ══════════════════════════════ -->
+<section id="p3eval" class="section">
+  <div class="pg-title">4.3 — Stage 2: Evaluation</div>
+  <div class="pg-sub">Determine whether the candidate correction is confirmed, rejected, or ambiguous. Runs three evaluators in order of cost and stops as soon as a confident verdict is available. No graph writes happen in this stage.</div>
+  <h2>Signal Merge Strategy</h2>
+  <div style="display:flex;flex-direction:column;gap:8px;margin:14px 0;">
+    <div style="display:flex;align-items:center;gap:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;">
+      <span style="font-size:18px;">1️⃣</span>
+      <div><b style="color:var(--blue);">Rule Categories + GNN (Tier 1)</b> → <span class="badge b-green">if confident → STOP</span><br/><span style="font-size:12px;color:var(--muted);">0 LLM tokens. Cheapest. Most cases resolve here.</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;background:#f5f3ff;border:1px solid #c4b5fd;border-radius:8px;padding:12px 16px;">
+      <span style="font-size:18px;">2️⃣</span>
+      <div><b style="color:var(--purple);">Semantic NLI (Tier 2)</b> → <span class="badge b-green">if confident → STOP</span><br/><span style="font-size:12px;color:var(--muted);">~0 generative tokens. Local NLI model. Runs only if Tier 1 unresolved.</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;background:#fff7f0;border:1px solid #fed7aa;border-radius:8px;padding:12px 16px;">
+      <span style="font-size:18px;">3️⃣</span>
+      <div><b style="color:var(--orange);">LLM / Agent (Tier 3) or Human</b> → <span class="badge b-blue">verdict always</span><br/><span style="font-size:12px;color:var(--muted);">Controlled tokens. Last resort. Escalates to human for compliance-sensitive cases.</span></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card yellow">
+      <div class="card-title">Confidence Threshold</div>
+      <p style="font-size:12px;"><b>combined_confidence ≥ 0.80</b> = "confident verdict" — stops the cascade.</p>
+      <p style="font-size:12px;margin-top:6px;"><b>Formula:</b> <code>max(rule_confidence, gnn_score) × semantic_weight + semantic_confidence × (1 - semantic_weight)</code><br/>where <code>semantic_weight = 0.6</code> if semantic ran, else <code>0.0</code></p>
+    </div>
+    <div class="card red">
+      <div class="card-title">Escalation to Human — When</div>
+      <ul class="blist">
+        <li>All three tiers return confidence &lt; 0.60</li>
+        <li>Attribute is compliance-sensitive (risk category, jurisdiction, regulatory text)</li>
+        <li>Two genuinely authoritative sources conflict (not just old vs new — same authority level)</li>
+      </ul>
+    </div>
+  </div>
+  <h2>Human Review API Routes</h2>
+  <div class="grid3">
+    <div class="card blue"><div class="card-title">GET /api/corrections/pending-review</div><p style="font-size:12px;">Returns all candidates awaiting human decision, with full evidence summary for the reviewer.</p></div>
+    <div class="card green"><div class="card-title">POST /api/corrections/{id}/approve</div><p style="font-size:12px;">Human approves the correction verdict. Moves candidate to Resolution stage.</p></div>
+    <div class="card red"><div class="card-title">POST /api/corrections/{id}/reject</div><p style="font-size:12px;">Human rejects. Candidate is closed with rejection reason. No graph change.</p></div>
+  </div>
+  <h2>EvaluationVerdict Schema</h2>
+  <table class="tbl">
+    <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>verdict_id</code></td><td>UUID</td><td>Primary key</td></tr>
+      <tr><td><code>candidate_id</code></td><td>UUID</td><td>FK to CorrectionCandidate</td></tr>
+      <tr><td><code>verdict</code></td><td>enum</td><td><code>confirmed</code> | <code>rejected</code> | <code>ambiguous</code> | <code>escalated_to_human</code></td></tr>
+      <tr><td><code>confidence</code></td><td>float</td><td>Combined confidence from all tiers that ran</td></tr>
+      <tr><td><code>tier_that_resolved</code></td><td>enum</td><td><code>tier1</code> | <code>tier2</code> | <code>tier3</code> | <code>human</code></td></tr>
+      <tr><td><code>rule_findings</code></td><td>list[dict]</td><td>Outputs from all 9 rule category evaluators</td></tr>
+      <tr><td><code>gnn_score</code></td><td>float</td><td>GNN structural plausibility score (0.5 in Phase 2 stub)</td></tr>
+      <tr><td><code>semantic_result</code></td><td>dict</td><td><code>{entailment, contradiction, neutral}</code></td></tr>
+      <tr><td><code>llm_evaluation</code></td><td>Optional[dict]</td><td>Populated only when Tier 3 was invoked</td></tr>
+      <tr><td><code>human_decision</code></td><td>Optional[str]</td><td>Reviewer note if escalated</td></tr>
+      <tr><td><code>decided_by</code></td><td>str</td><td><code>'system'</code> or reviewer user_id</td></tr>
+      <tr><td><code>decided_at</code></td><td>datetime</td><td>When verdict was issued</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════════════════════ P3 RESOLUTION ══════════════════════════════ -->
+<section id="p3resolve" class="section">
+  <div class="pg-title">4.4 &amp; 4.5 — Stage 3: Resolution &amp; Governance</div>
+  <div class="pg-sub">Act only on a confirmed verdict. Two paths: Confirmed → Correction Patch Layer (immediate, reversible). Rejected → close with no graph change. Governance is the only path that writes to the canonical knowledge graph.</div>
+  <h2>Path A — Confirmed → Correction Patch Layer</h2>
+  <div class="grid2">
+    <div class="card green">
+      <div class="card-title">:CorrectionPatch Node (Neo4j)</div>
+      <p style="font-size:12px;">A separate label on the modified node/edge. Stores the corrected value alongside the original — the patch is an <b>overlay</b>, not a replacement.</p>
+      <ul class="blist" style="margin-top:8px;">
+        <li><b>patch_id</b> — UUID</li>
+        <li><b>original_value</b> — what the graph says now</li>
+        <li><b>patched_value</b> — the corrected value</li>
+        <li><b>confidence</b> — from the verdict</li>
+        <li><b>provenance</b> — candidate_id + verdict_id</li>
+        <li><b>TTL</b> — days until patch expires if never ratified</li>
+        <li><b>status</b> — <code>active</code> | <code>ratified</code> | <code>reverted</code></li>
+      </ul>
+    </div>
+    <div class="card purple">
+      <div class="card-title">LLM Context Override</div>
+      <p style="font-size:12px;">When <code>hybrid_graphrag()</code> encounters an entity with active <code>:CorrectionPatch</code> nodes, it injects the patched value <b>ahead</b> of raw graph facts, tagged:</p>
+      <div style="background:#1e1e2e;border-radius:6px;padding:10px;margin-top:8px;font-family:'Cascadia Code',monospace;font-size:11.5px;color:#a6e3a1;">[PATCHED - PENDING RATIFICATION]</div>
+      <p style="font-size:12px;margin-top:8px;">This is the <b>"LLM learns from feedback"</b> mechanism — it is a context override, <b>NOT</b> a weight update, <b>NOT</b> a permanent graph change. Fully logged and reversible.</p>
+    </div>
+  </div>
+  <div class="callout ok"><span class="ci">✅</span><div class="cb"><b>Improvement Queue:</b> Confirmed but not-yet-ratified corrections are queued for the weekly governance batch. A <code>CorrectionQueueEntry</code> record links the verdict to the batch. The LLM immediately serves better answers via the patch; the permanent graph change waits for governance sign-off.</div></div>
+  <h2>Path B — Rejected → Close</h2>
+  <p>The candidate is marked <code>rejected</code> with the rejection reason. No graph change. The candidate remains linked to the original feedback_id — useful for pattern analysis (e.g. an entity that is frequently complained about but corrections are always invalid signals a UI or explanation problem, not a data problem).</p>
+  <h2>4.5 — Governance &amp; Controlled Deployment</h2>
+  <p>The only path that writes to the canonical knowledge graph. Weekly batch. Human approval required. No shortcuts.</p>
+  <h3>3 Regression Gates (all must pass before governance)</h3>
+  <div class="grid3">
+    <div class="card blue"><div class="card-title">1. Golden Set Test</div><p style="font-size:12px;">Run known correct Q&amp;A pairs for the affected entity against the graph with the correction applied. All must still answer correctly.</p></div>
+    <div class="card blue"><div class="card-title">2. Blast-Radius Check</div><p style="font-size:12px;">Identify all query types that traverse the affected entity. Run them on a staging copy with the correction applied. Verify no regressions in unrelated entities.</p></div>
+    <div class="card blue"><div class="card-title">3. Compliance Routing Test</div><p style="font-size:12px;">Verify the correction does not change which compliance guardrails fire for the affected entity. A correction that changes SEBI guardrail behaviour is not safe to auto-deploy.</p></div>
+  </div>
+  <h3>Governance API Routes</h3>
+  <div class="grid3">
+    <div class="card yellow"><div class="card-title">GET /api/governance/pending-batch</div><p style="font-size:12px;">Returns all corrections that passed regression, grouped by entity type and correction type, ready for human review.</p></div>
+    <div class="card green"><div class="card-title">POST /api/governance/batch/{id}/approve</div><p style="font-size:12px;">Approves entire batch or individual corrections. Triggers canonical KG update sequence.</p></div>
+    <div class="card red"><div class="card-title">POST /api/governance/batch/{id}/reject-item/{correction_id}</div><p style="font-size:12px;">Rejects one item, sends remainder to apply.</p></div>
+  </div>
+  <h3>Canonical KG Update Sequence (on approval)</h3>
+  <ol style="list-style:none;counter-reset:kgu;display:flex;flex-direction:column;gap:6px;margin:12px 0;">
+    <li style="counter-increment:kgu;padding:8px 14px 8px 30px;position:relative;background:var(--surf2);border-radius:7px;font-size:12.5px;"><span style="position:absolute;left:10px;top:9px;font-size:10px;font-weight:800;color:var(--purple);">1</span><b>Execute Cypher mutation</b> atomically in Neo4j</li>
+    <li style="counter-increment:kgu;padding:8px 14px 8px 30px;position:relative;background:var(--surf2);border-radius:7px;font-size:12.5px;"><span style="position:absolute;left:10px;top:9px;font-size:10px;font-weight:800;color:var(--purple);">2</span><b>Remove :CorrectionPatch overlay</b> — the graph now has the canonical value. The <code>[PATCHED]</code> tag disappears automatically from future responses.</li>
+    <li style="counter-increment:kgu;padding:8px 14px 8px 30px;position:relative;background:var(--surf2);border-radius:7px;font-size:12.5px;"><span style="position:absolute;left:10px;top:9px;font-size:10px;font-weight:800;color:var(--purple);">3</span><b>Mark CorrectionQueueEntry as ratified</b></li>
+    <li style="counter-increment:kgu;padding:8px 14px 8px 30px;position:relative;background:var(--surf2);border-radius:7px;font-size:12.5px;"><span style="position:absolute;left:10px;top:9px;font-size:10px;font-weight:800;color:var(--purple);">4</span><b>Write to correction_execution_history</b> with <code>action = 'canonical_applied'</code></li>
+    <li style="counter-increment:kgu;padding:8px 14px 8px 30px;position:relative;background:var(--surf2);border-radius:7px;font-size:12.5px;"><span style="position:absolute;left:10px;top:9px;font-size:10px;font-weight:800;color:var(--purple);">5</span><b>Trigger FAISS reindex</b> of affected entities (delete stale embeddings, queue re-embedding)</li>
+    <li style="counter-increment:kgu;padding:8px 14px 8px 30px;position:relative;background:var(--surf2);border-radius:7px;font-size:12.5px;"><span style="position:absolute;left:10px;top:9px;font-size:10px;font-weight:800;color:var(--purple);">6</span><b>Fire GNNRefreshJob event</b> → schedules GNN retrain for next batch window</li>
+  </ol>
+  <div class="callout note"><span class="ci">↩️</span><div class="cb"><b>Rollback:</b> <code>GraphCorrectionEngine.rollback_correction()</code> already exists in <code>engine/graph_corrector.py</code>. It reads the <code>before_state</code> snapshot from <code>correction_execution_history</code> and generates the reverse Cypher. Rollback also restores the <code>:CorrectionPatch</code> overlay if there was one — so users continue to get the patched value while the rollback is investigated.</div></div>
+</section>
+
+<!-- ══════════════════════════════ P3 GNN ══════════════════════════════ -->
+<section id="p3gnn" class="section">
+  <div class="pg-title">4.6 &amp; 4.7 — GNN Training Pipeline &amp; Post-Change Measurement</div>
+  <div class="pg-sub">The GNN structural plausibility scorer must stay in sync with the knowledge graph. It is refreshed on the same governed cadence as canonical updates. Post-change measurement closes the loop — verifying that corrections actually improved outcomes.</div>
+  <h2>4.6 — GNN Architecture &amp; Training</h2>
+  <div class="grid2">
+    <div class="card blue">
+      <div class="card-title">Model Architecture</div>
+      <ul class="blist">
+        <li><b>R-GCN</b> (Relational Graph Convolutional Network) or <b>CompGCN</b></li>
+        <li>Input: candidate triple (subject, predicate, object) + 2-hop neighbourhood subgraph</li>
+        <li>Output: plausibility score 0.0–1.0</li>
+        <li>Interface: <code>GNNPlausibilityScorer.score(subject, predicate, object, subgraph) → float</code></li>
+        <li>Anomaly flags: neighbourhood patterns that deviate from training distribution</li>
+      </ul>
+    </div>
+    <div class="card purple">
+      <div class="card-title">Training Data</div>
+      <ul class="blist">
+        <li><b>Positive examples:</b> existing edges in the canonical graph (labelled plausible)</li>
+        <li><b>Negative examples:</b> randomly corrupted triples (head/tail entity swapped) + confirmed-rejected corrections from Phase 3 evaluation</li>
+        <li>Cold start (Phase 3 initial): random corruptions only. Improves as rejected corrections accumulate.</li>
+      </ul>
+    </div>
+    <div class="card green">
+      <div class="card-title">Training Schedule</div>
+      <ul class="blist">
+        <li><b>Full retrain:</b> weekly, after governance batch deploys</li>
+        <li><b>Incremental update:</b> daily, new positive examples since last full train</li>
+        <li><b>A/B gating:</b> new version compared against current on held-out eval set before promotion</li>
+        <li><b>Trigger:</b> canonical KG update fires <code>GNNRefreshJob</code> event → schedules training for next batch window</li>
+      </ul>
+    </div>
+    <div class="card yellow">
+      <div class="card-title">Inference Guarantee</div>
+      <ul class="blist">
+        <li>After training, model serialised to disk as a frozen weights file</li>
+        <li><code>GNNPlausibilityScorer</code> loads the frozen file at startup</li>
+        <li><b>Never updated mid-run</b> — guarantees determinism at inference time</li>
+        <li><b>Phase 2 stub:</b> returns 0.5 (neutral) until Phase 3 training pipeline is ready. Interface contract is fixed so downstream tiers work regardless.</li>
+      </ul>
+    </div>
+  </div>
+  <h2>4.7 — Post-Change Measurement &amp; Loop Closure</h2>
+  <p>After each correction deployment, a 7-day monitoring window measures whether the change actually improved outcomes. This closes the loop back to evidence capture.</p>
+  <div class="grid3">
+    <div class="card teal"><div class="card-title">📉 Correction Rate</div><p style="font-size:12px;">Did the correction rate for this entity decrease over the next 7 days? If yes — the fix addressed the root cause. If no — the issue may be presentation or UX, not data.</p></div>
+    <div class="card teal"><div class="card-title">📈 Retrieval Confidence</div><p style="font-size:12px;">Did FAISS similarity scores for queries involving this entity improve? Better graph data → better embedding alignment → higher retrieval confidence.</p></div>
+    <div class="card teal"><div class="card-title">⚠️ Side Effect Detection</div><p style="font-size:12px;">Did any new negative feedback appear for the same entity after the correction? New complaints about a corrected entity = the correction had unintended side effects.</p></div>
+  </div>
+  <div class="callout ok"><span class="ci">♻️</span><div class="cb"><b>Loop closure:</b> The <code>outcome_record</code> is written to <code>correction_execution_history</code> and feeds back into the cohort health monitor's baseline. If correction rate did not decrease → flagged for human review. The system learns which types of corrections work and which ones need different approaches.</div></div>
+</section>
+
+<!-- ══════════════════════════════ INTEGRATION MAP ══════════════════════════════ -->
+<section id="integration" class="section">
+  <div class="pg-title">5 — Integration Map: Changes to Existing Files</div>
+  <div class="pg-sub">Every existing file that needs to change, what specifically changes, and which phase it belongs to. No new logic in most cases — just wiring existing components together.</div>
+  <h2>Existing Files — Required Changes</h2>
+  <table class="tbl">
+    <thead><tr><th>File</th><th>Current State</th><th>Required Change</th><th>Phase</th></tr></thead>
+    <tbody>
+      <tr><td><code>api/routes/query.py</code></td><td>Returns response, no evidence snapshot</td><td>1. Call <code>ResponseMetadataCache.store()</code> with full evidence snapshot after LLM synthesis<br/>2. Launch <code>BackgroundTask</code> to emit 8 auto-signals</td><td><span class="badge b-blue">Phase 2</span></td></tr>
+      <tr><td><code>api/routes/feedback.py</code></td><td>4 endpoints written, deps not wired</td><td>1. Import <code>FeedbackRequest</code>, <code>FeedbackResponse</code> from <code>schemas/feedback.py</code><br/>2. Use <code>Container.feedback_collector</code><br/>3. Add <code>POST /dissatisfaction</code> endpoint</td><td><span class="badge b-blue">Phase 2</span></td></tr>
+      <tr><td><code>api/deps.py</code></td><td>Container has no feedback attributes</td><td>Add 8 new Container attributes listed in §3.10</td><td><span class="badge b-blue">Phase 2</span></td></tr>
+      <tr><td><code>app/main.py</code></td><td>Lifespan starts ingest queue, not scheduler</td><td>1. Add <code>SchedulerManager.start()</code> in lifespan startup<br/>2. Add <code>SchedulerManager.shutdown()</code> in lifespan teardown<br/>3. Register feedback router with prefix <code>/api/feedback</code></td><td><span class="badge b-blue">Phase 2</span></td></tr>
+      <tr><td><code>engine/retrieval.py</code> — <code>hybrid_graphrag()</code></td><td>Does not check for active correction patches</td><td>Before building graph context section: check for active <code>:CorrectionPatch</code> nodes on matched entities. If found, inject patched values ahead of raw graph facts tagged <code>[PATCHED - PENDING RATIFICATION]</code></td><td><span class="badge b-purple">Phase 3</span></td></tr>
+      <tr><td><code>ingestion/pipeline.py</code></td><td>Does not detect source conflicts</td><td>After writing new entities/relationships to Neo4j: compare against existing nodes with same canonical identity. If value conflict found, create <code>CorrectionCandidate</code> with <code>entry_point = 'source_conflict'</code></td><td><span class="badge b-purple">Phase 3</span></td></tr>
+    </tbody>
+  </table>
+  <div class="callout ok"><span class="ci">✅</span><div class="cb"><b>The most important observation:</b> Of the 6 existing files that need changes, 4 of them (query.py, feedback.py, deps.py, main.py) only need wiring — importing classes that already exist and calling methods that are already written. The actual logic in those classes does not need to change.</div></div>
+</section>
+
+<!-- ══════════════════════════════ NEW FILES ══════════════════════════════ -->
+<section id="newfiles" class="section">
+  <div class="pg-title">6 — New Files Required</div>
+  <div class="pg-sub">10 new files across Phase 2 and Phase 3. Phase 2 files are the critical path — Phase 3 files depend on Phase 2 being operational.</div>
+  <table class="tbl">
+    <thead><tr><th>File</th><th>Type</th><th>Purpose</th><th>Phase</th></tr></thead>
+    <tbody>
+      <tr><td><code>app/schemas/feedback.py</code></td><td>Pydantic models</td><td>6 models — FeedbackRequest, FeedbackResponse, DissatisfactionSignal, EvaluationRecord + enums. Unblocks all imports.</td><td><span class="badge b-blue">Phase 2</span></td></tr>
+      <tr><td><code>app/engine/postgres_client.py</code></td><td>Async service class</td><td>PostgreSQLFeedbackClient — all 10 database operations. Unblocks 4 existing modules.</td><td><span class="badge b-blue">Phase 2</span></td></tr>
+      <tr><td><code>app/engine/batch_evaluation.py</code></td><td>Async service class</td><td>BatchEvaluationEngine — LLM batch evaluation with 7 token optimisation strategies.</td><td><span class="badge b-blue">Phase 2</span></td></tr>
+      <tr><td><code>app/engine/migrations/001_feedback_schema.sql</code></td><td>SQL migration</td><td>5 tables: feedback_records, feedback_classifications, evaluation_records, correction_recommendations, correction_execution_history, feedback_metrics.</td><td><span class="badge b-blue">Phase 2</span></td></tr>
+      <tr><td><code>app/engine/migrations/002_evidence_snapshot.sql</code></td><td>SQL migration</td><td>interaction_evidence table — permanent immutable evidence snapshots.</td><td><span class="badge b-blue">Phase 2</span></td></tr>
+      <tr><td><code>app/engine/gnn_plausibility.py</code></td><td>ML model wrapper</td><td>GNNPlausibilityScorer — frozen model at inference. Stub returns 0.5 in Phase 2.</td><td><span class="badge b-purple">Phase 3</span></td></tr>
+      <tr><td><code>app/tasks/structural_sweep.py</code></td><td>Background job</td><td>StructuralSweepJob — daily GNN sweep of recently modified graph nodes.</td><td><span class="badge b-purple">Phase 3</span></td></tr>
+      <tr><td><code>app/tasks/gnn_refresh.py</code></td><td>Background job</td><td>GNNRefreshJob — weekly GNN retrain triggered after canonical KG update.</td><td><span class="badge b-purple">Phase 3</span></td></tr>
+      <tr><td><code>app/tasks/regression_test.py</code></td><td>Test runner</td><td>3-gate regression: golden set + blast-radius + compliance routing — before governance approval.</td><td><span class="badge b-purple">Phase 3</span></td></tr>
+      <tr><td><code>app/engine/migrations/003_correction_candidates.sql</code></td><td>SQL migration</td><td>CorrectionCandidate, correction_queue, governance_batches tables for Phase 3 pipeline.</td><td><span class="badge b-purple">Phase 3</span></td></tr>
+    </tbody>
+  </table>
+  <h2>New Python Dependencies (backend/requirements.txt)</h2>
+  <table class="tbl">
+    <thead><tr><th>Package</th><th>Version</th><th>Purpose</th><th>Required?</th></tr></thead>
+    <tbody>
+      <tr><td><code>asyncpg</code></td><td>≥ 0.29</td><td>Async PostgreSQL client for PostgreSQLFeedbackClient</td><td><span class="badge b-red">Required Phase 2</span></td></tr>
+      <tr><td><code>apscheduler</code></td><td>≥ 3.10</td><td>Already referenced in evaluation_orchestrator.py — just add to requirements</td><td><span class="badge b-red">Required Phase 2</span></td></tr>
+      <tr><td><code>sentence-transformers</code></td><td>≥ 2.7</td><td>NLI model for Tier 2 evaluation: cross-encoder/nli-deberta-v3-small</td><td><span class="badge b-red">Required Phase 2</span></td></tr>
+      <tr><td><code>redis[asyncio]</code></td><td>≥ 5.0</td><td>Redis client for response cache + graph context caching. Degrades gracefully to in-memory if absent.</td><td><span class="badge b-yellow">Optional Phase 2</span></td></tr>
+      <tr><td><code>torch</code> / <code>torch-geometric</code></td><td>current stable</td><td>GNN training + inference (PyG for R-GCN/CompGCN)</td><td><span class="badge b-purple">Phase 3 only</span></td></tr>
+    </tbody>
+  </table>
+  <h2>New Configuration Settings (app/config.py)</h2>
+  <table class="tbl">
+    <thead><tr><th>Setting</th><th>Default</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>postgres_dsn</code></td><td><code>""</code></td><td>PostgreSQL connection string. e.g. <code>postgresql://user:pass@localhost:5432/amc_feedback</code></td></tr>
+      <tr><td><code>redis_url</code></td><td><code>""</code></td><td>Redis URL. Falls back to in-memory if empty.</td></tr>
+      <tr><td><code>evaluation_cron_schedule</code></td><td><code>"0 * * * *"</code></td><td>APScheduler cron for hourly evaluation cycle</td></tr>
+      <tr><td><code>max_feedback_per_cycle</code></td><td><code>500</code></td><td>Maximum feedback items processed per orchestration cycle</td></tr>
+      <tr><td><code>evaluation_batch_size</code></td><td><code>25</code></td><td>Items per LLM batch call in BatchEvaluationEngine</td></tr>
+      <tr><td><code>auto_apply_threshold</code></td><td><code>0.85</code></td><td>Confidence threshold for automatic correction application</td></tr>
+      <tr><td><code>auto_reject_threshold</code></td><td><code>0.20</code></td><td>Quality score below which feedback is auto-rejected</td></tr>
+      <tr><td><code>human_review_threshold</code></td><td><code>0.60</code></td><td>Confidence band (0.60–0.84) routed to human review queue</td></tr>
+      <tr><td><code>gnn_anomaly_threshold</code></td><td><code>0.40</code></td><td>GNN score below which a triple is flagged in the structural sweep</td></tr>
+      <tr><td><code>feedback_retention_days</code></td><td><code>90</code></td><td>Retention for feedback_records table</td></tr>
+      <tr><td><code>audit_retention_days</code></td><td><code>365</code></td><td>Retention for correction_execution_history (compliance requirement)</td></tr>
+      <tr><td><code>gnn_model_path</code></td><td><code>"./data/models/gnn_plausibility.pt"</code></td><td>Path to frozen GNN weights file</td></tr>
+      <tr><td><code>gnn_frozen</code></td><td><code>True</code></td><td>Always True in production — never update weights at inference time</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════════════════════ RISKS ══════════════════════════════ -->
+<section id="risks" class="section">
+  <div class="pg-title">9 — Risks &amp; Constraints</div>
+  <div class="pg-sub">Six identified risks with severity ratings and concrete mitigations. All are manageable with the design choices already made.</div>
+  <table class="tbl">
+    <thead><tr><th>Risk</th><th>Severity</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr class="risk-high">
+        <td><b>Feedback poisoning — adversarial corrections</b><br/><span style="font-size:11px;color:var(--muted);">Malicious user submits false corrections at scale to corrupt the knowledge graph</span></td>
+        <td><span class="badge b-red">HIGH</span></td>
+        <td>Confidence gating (0.85) + inter-annotator agreement requirement + human governance as the only canonical write path + full immutable audit trail + idempotency constraints on recommendations table</td>
+      </tr>
+      <tr class="risk-high">
+        <td><b>GNN training requires labelled negative examples</b><br/><span style="font-size:11px;color:var(--muted);">Cold start problem — no rejected corrections exist when Phase 3 first starts</span></td>
+        <td><span class="badge b-red">HIGH</span></td>
+        <td>Phase 2 stub returns 0.5 (neutral) — all evaluation still works without GNN. Phase 3 GNN training uses randomly corrupted triples as negatives for cold start. Confirmed-rejected corrections accumulate over time to improve quality.</td>
+      </tr>
+      <tr class="risk-med">
+        <td><b>PostgreSQL adds a new infrastructure dependency</b><br/><span style="font-size:11px;color:var(--muted);">Ops team needs to provision and manage a new database</span></td>
+        <td><span class="badge b-yellow">MEDIUM</span></td>
+        <td>Can use an existing PG instance if available. For development: swap <code>asyncpg</code> → <code>aiosqlite</code> with the same interface contract. SQLite dev + PostgreSQL prod is a well-understood pattern.</td>
+      </tr>
+      <tr class="risk-med">
+        <td><b>Duplicate evaluation of same correction candidate</b><br/><span style="font-size:11px;color:var(--muted);">Multiple feedback items about the same entity correction creating redundant work</span></td>
+        <td><span class="badge b-yellow">MEDIUM</span></td>
+        <td>Idempotency key on <code>correction_recommendations</code> using composite UNIQUE constraint: <code>(target_entity, correction_type, cypher_mutation)</code>. Semantic deduplication in FeedbackProcessor reduces item count before evaluation runs.</td>
+      </tr>
+      <tr class="risk-low">
+        <td><b>:CorrectionPatch Layer adds latency to hybrid_graphrag()</b><br/><span style="font-size:11px;color:var(--muted);">Every query now needs to check for active patches</span></td>
+        <td><span class="badge b-green">LOW</span></td>
+        <td>Patch lookup is a single indexed Neo4j query (&lt;5ms). Patch results cached per session in Redis. Patches are rare — most queries will never encounter one. The latency impact is negligible at &lt;1% of total query latency.</td>
+      </tr>
+      <tr class="risk-low">
+        <td><b>APScheduler and asyncpg conflict in FastAPI async lifespan</b><br/><span style="font-size:11px;color:var(--muted);">Potential event loop conflicts at startup/shutdown</span></td>
+        <td><span class="badge b-green">LOW</span></td>
+        <td>asyncpg uses asyncio natively. APScheduler with <code>AsyncIOScheduler</code> is fully compatible with FastAPI's async lifespan. Existing <code>SchedulerManager</code> class in evaluation_orchestrator.py already handles this correctly.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════════════════════ BUILD SEQUENCE ══════════════════════════════ -->
+<section id="buildseq" class="section">
+  <div class="pg-title">10 — Build Sequence</div>
+  <div class="pg-sub">Six sprints. Each step can be reviewed and approved independently. Each sprint is independently testable before the next begins.</div>
+  <div class="sprint">
+    <div class="sprint-hdr">
+      <div class="sprint-num" style="background:linear-gradient(135deg,#6c63ff,#4f46e5);">1</div>
+      <div><div class="sprint-title">Sprint 1 — Foundation (unblocks everything)</div><div class="sprint-sub">Create the 5 missing pieces. After this sprint, all 6 blocked modules can be imported and tested in isolation.</div></div>
+    </div>
+    <ol class="stask-list">
+      <li>Create <code>schemas/feedback.py</code> — no dependencies, unblocks all module imports immediately</li>
+      <li>Create PostgreSQL schema + migrations 001 + 002 — tables must exist before client is testable</li>
+      <li>Create <code>postgres_client.py</code> — can be integration-tested against PG directly</li>
+      <li>Wire <code>deps.py</code> + <code>main.py</code> — scheduler starts, feedback router registers, all 6 modules now initialize</li>
+    </ol>
+  </div>
+  <div class="sprint">
+    <div class="sprint-hdr">
+      <div class="sprint-num" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">2</div>
+      <div><div class="sprint-title">Sprint 2 — Active HITL Path End-to-End</div><div class="sprint-sub">User can submit feedback via the API and it reaches PostgreSQL. Full path from click to database.</div></div>
+    </div>
+    <ol class="stask-list">
+      <li>Evidence snapshot emission in <code>routes/query.py</code> — every response now writes to interaction_evidence</li>
+      <li>ResponseMetadataCache integration in <code>feedback_collector.py</code> — 24h TTL validation working</li>
+      <li>Feedback API fully functional end-to-end — POST /api/feedback → PostgreSQL → status polling works</li>
+      <li>Tier 1 rule evaluators wired — 9 rule categories callable on a feedback item</li>
+    </ol>
+  </div>
+  <div class="sprint">
+    <div class="sprint-hdr">
+      <div class="sprint-num" style="background:linear-gradient(135deg,#10b981,#059669);">3</div>
+      <div><div class="sprint-title">Sprint 3 — Passive Path + Batch Evaluation</div><div class="sprint-sub">The full evaluation cycle runs end-to-end. Auto-signals fire on every response. LLM evaluates batches.</div></div>
+    </div>
+    <ol class="stask-list">
+      <li>Auto-signal emission as BackgroundTask in <code>routes/query.py</code> — 8 signals computed on every delivery</li>
+      <li>Cohort health monitor daily job — drift detection across entity/query-type cohorts</li>
+      <li>Create <code>batch_evaluation.py</code> — LLM evaluation with 7 token optimisation layers</li>
+      <li>Full hourly orchestration cycle runs end-to-end — fetch → aggregate → route → evaluate → apply → invalidate</li>
+    </ol>
+  </div>
+  <div class="sprint">
+    <div class="sprint-hdr">
+      <div class="sprint-num" style="background:linear-gradient(135deg,#f59e0b,#d97706);">4</div>
+      <div><div class="sprint-title">Sprint 4 — Phase 3: KG Correction Detection + Evaluation</div><div class="sprint-sub">Three entry points feed the evaluation stage. GNN stub wired. Source conflict detection active.</div></div>
+    </div>
+    <ol class="stask-list">
+      <li>Create migration 003 — correction_candidates, correction_queue, governance_batches tables</li>
+      <li>Create <code>structural_sweep.py</code> — daily sweep with GNN stub scorer (returns 0.5)</li>
+      <li>Add source conflict detection to <code>ingestion/pipeline.py</code> — generates source_conflict candidates</li>
+      <li>Stage 2 evaluation merge logic — Rule + GNN + NLI signals combined with confidence formula</li>
+    </ol>
+  </div>
+  <div class="sprint">
+    <div class="sprint-hdr">
+      <div class="sprint-num" style="background:linear-gradient(135deg,#ef4444,#dc2626);">5</div>
+      <div><div class="sprint-title">Sprint 5 — Resolution &amp; Governance</div><div class="sprint-sub">Correction Patch Layer active. Governance API routes live. Regression tests gate deployment.</div></div>
+    </div>
+    <ol class="stask-list">
+      <li>:CorrectionPatch overlay in Neo4j + patch injection in <code>retrieval.py hybrid_graphrag()</code></li>
+      <li>Improvement Queue + governance batch endpoints — GET /api/governance/pending-batch etc.</li>
+      <li>Create <code>regression_test.py</code> — golden set + blast-radius + compliance routing gates</li>
+      <li>Canonical KG update sequence + GNN refresh trigger on governance approval</li>
+    </ol>
+  </div>
+  <div class="sprint">
+    <div class="sprint-hdr">
+      <div class="sprint-num" style="background:linear-gradient(135deg,#8b5cf6,#6c63ff);">6</div>
+      <div><div class="sprint-title">Sprint 6 — GNN Training Pipeline (Phase 3 Complete)</div><div class="sprint-sub">Real GNN replaces stub scorer. A/B gated. Post-change measurement closes the loop.</div></div>
+    </div>
+    <ol class="stask-list">
+      <li>R-GCN/CompGCN training pipeline — positive + negative example generation, training loop</li>
+      <li>GNN model versioning + A/B gating before promotion to production</li>
+      <li>Replace stub scorer with trained model in <code>gnn_plausibility.py</code></li>
+      <li>Post-change measurement — 7-day outcome_record, loop closure to cohort health monitor baseline</li>
+    </ol>
+  </div>
+  <div class="callout info"><span class="ci">📋</span><div class="cb"><b>Approval checkpoint after each sprint.</b> Sprint 1 is the minimum viable delivery — it unblocks all existing blocked code. Sprints 2–3 complete Phase 2. Sprints 4–6 complete Phase 3. The system is useful and functional after Sprint 3; Sprints 4–6 add autonomous self-healing capability.</div></div>
+</section>
+
+</main><!-- /main -->
+
+<!-- ══════════════════════════════ SIDEBAR ══════════════════════════════ -->
+</main>
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.section').forEach(function(s){ s.style.display='none'; });
+  document.querySelectorAll('.nav-item').forEach(function(b){ b.classList.remove('active'); });
+  var sec = document.getElementById(id);
+  if (sec) sec.style.display = 'block';
+  if (btn) btn.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Hide all sections first
+  document.querySelectorAll('.section').forEach(function(s){ s.style.display='none'; });
+  // Show cover on load
+  var coverId = 'cover';
+  var coverSec = document.getElementById(coverId);
+  if (coverSec) coverSec.style.display = 'block';
+  var firstBtn = document.querySelector('.nav-item');
+  if (firstBtn) firstBtn.classList.add('active');
+});
+
+// Keyboard navigation: left/right arrow keys
+var TABS = ['cover','phase1','p2ov','p2schemas','p2pgclient','p2db','p2evidence',
+            'p2batch','p2tiered','p2passive','p2orch',
+            'p3ov','p3detect','p3eval','p3resolve','p3gnn',
+            'integration','newfiles','risks','buildseq'];
+
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  var active = document.querySelector('.section[style*="block"]');
+  if (!active) return;
+  var idx = TABS.indexOf(active.id);
+  var next = e.key === 'ArrowRight' ? idx + 1 : idx - 1;
+  if (next < 0 || next >= TABS.length) return;
+  var btn = document.querySelector('button[onclick*="' + TABS[next] + '"]');
+  show(TABS[next], btn);
+});
+</script>
+</body>
+</html>

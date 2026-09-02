@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AMC Feedback Loop — In-Depth Component Architecture</title>
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --purple:#667eea; --violet:#764ba2; --pink:#f093fb; --red:#f5576c;
+      --blue:#4facfe; --cyan:#00f2fe; --green:#43e97b; --teal:#38f9d7;
+      --orange:#fa709a; --yellow:#fee140; --amber:#f6ad55;
+      --gray-bg:#f4f6fb; --gray-border:#dde3f0;
+      --text:#2d3748; --muted:#718096;
+      --radius:10px; --shadow:0 4px 20px rgba(102,126,234,.18);
+    }
+    body { font-family:'Segoe UI',system-ui,sans-serif; background:linear-gradient(135deg,var(--purple),var(--violet)); min-height:100vh; padding:24px; color:var(--text); }
+    .shell { max-width:1400px; margin:0 auto; background:#fff; border-radius:16px; box-shadow:0 30px 80px rgba(0,0,0,.30); overflow:hidden; }
+    .site-header { background:linear-gradient(135deg,var(--purple) 0%,var(--violet) 100%); padding:52px 48px 44px; text-align:center; position:relative; overflow:hidden; }
+    .site-header::before { content:''; position:absolute; inset:0; background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
+    .site-header h1 { font-size:clamp(26px,3.5vw,42px); font-weight:800; color:#fff; letter-spacing:-.5px; position:relative; }
+    .site-header .subtitle { margin-top:10px; font-size:16px; color:rgba(255,255,255,.85); position:relative; }
+    .header-badges { display:flex; gap:12px; justify-content:center; margin-top:20px; flex-wrap:wrap; position:relative; }
+    .badge { background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.35); color:#fff; padding:5px 14px; border-radius:20px; font-size:13px; font-weight:600; }
+    .site-nav { background:#fff; border-bottom:2px solid var(--gray-border); padding:0 32px; display:flex; gap:4px; overflow-x:auto; scrollbar-width:thin; position:sticky; top:0; z-index:100; }
+    .nav-btn { padding:14px 18px; border:none; background:transparent; color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; border-bottom:3px solid transparent; margin-bottom:-2px; transition:color .2s,border-color .2s; }
+    .nav-btn:hover { color:var(--purple); }
+    .nav-btn.active { color:var(--purple); border-bottom-color:var(--purple); }
+    .progress-bar { height:3px; background:linear-gradient(90deg,var(--purple),var(--pink)); width:0%; transition:width .4s ease; }
+    .content { padding:40px 48px; }
+    .section { display:none; }
+    .section.active { display:block; animation:slideIn .35s ease; }
+    @keyframes slideIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+    .section-title { font-size:28px; font-weight:800; color:var(--purple); margin-bottom:6px; }
+    .section-lead { color:var(--muted); font-size:15px; margin-bottom:32px; border-bottom:2px solid var(--gray-border); padding-bottom:16px; }
+    h3.sub { font-size:17px; font-weight:700; color:var(--violet); margin:32px 0 14px; display:flex; align-items:center; gap:8px; }
+    h3.sub::after { content:''; flex:1; height:2px; background:linear-gradient(90deg,var(--gray-border),transparent); }
+
+    /* ── Phase Flow ── */
+    .phase-flow { margin:24px 0; }
+    .phase-header { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
+    .phase-badge { background:linear-gradient(135deg,var(--purple),var(--violet)); color:#fff; padding:6px 16px; border-radius:20px; font-size:12px; font-weight:700; white-space:nowrap; }
+    .phase-title-text { font-size:20px; font-weight:800; color:var(--text); }
+    .phase-lead { color:var(--muted); font-size:14px; margin-bottom:20px; }
+
+    /* ── Component Cards ── */
+    .comp-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:18px; margin:16px 0 24px; }
+    .comp-card { background:#fff; border:2px solid var(--gray-border); border-radius:12px; padding:20px; transition:all .25s; cursor:default; }
+    .comp-card:hover { border-color:var(--purple); box-shadow:var(--shadow); transform:translateY(-4px); }
+    .comp-card .cc-icon { font-size:32px; margin-bottom:8px; }
+    .comp-card .cc-name { font-size:14px; font-weight:700; color:var(--purple); margin-bottom:4px; }
+    .comp-card .cc-file { font-size:11px; color:var(--muted); background:var(--gray-bg); padding:2px 8px; border-radius:10px; display:inline-block; margin-bottom:8px; }
+    .comp-card .cc-desc { font-size:13px; color:var(--muted); line-height:1.55; }
+    .comp-card .cc-props { margin-top:10px; display:flex; flex-wrap:wrap; gap:5px; }
+    .cc-tag { font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; background:var(--gray-bg); color:var(--violet); }
+    .cc-tag.perf { background:#ecfdf5; color:#065f46; }
+    .cc-tag.warn { background:#fffbeb; color:#92400e; }
+    .cc-tag.info { background:#eef2ff; color:#3730a3; }
+
+    /* ── Flow Pipeline (horizontal) ── */
+    .flow-pipeline { display:flex; align-items:stretch; flex-wrap:wrap; gap:0; margin:18px 0 28px; }
+    .pipe-node { background:var(--gray-bg); border:2px solid var(--gray-border); border-radius:8px; padding:12px 14px; font-size:12px; font-weight:600; color:var(--text); text-align:center; min-width:110px; flex:1; transition:all .2s; position:relative; }
+    .pipe-node:hover { background:var(--purple); color:#fff; border-color:var(--purple); }
+    .pipe-node .pn-sub { font-size:10px; font-weight:400; color:var(--muted); margin-top:3px; }
+    .pipe-node:hover .pn-sub { color:rgba(255,255,255,.8); }
+    .pipe-sep { display:flex; align-items:center; padding:0 4px; color:var(--purple); font-size:18px; font-weight:700; flex-shrink:0; }
+
+    /* ── Sub-component expand ── */
+    .subcomp-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:10px 0 20px; }
+    @media(max-width:700px){ .subcomp-grid{grid-template-columns:1fr;} }
+    .subcomp-card { background:var(--gray-bg); border-left:4px solid var(--purple); border-radius:8px; padding:14px 16px; }
+    .subcomp-card:nth-child(2){ border-color:var(--red); }
+    .subcomp-card:nth-child(3){ border-color:var(--blue); }
+    .subcomp-card:nth-child(4){ border-color:var(--green); }
+    .subcomp-card:nth-child(5){ border-color:var(--orange); }
+    .subcomp-card:nth-child(6){ border-color:var(--violet); }
+    .subcomp-card:nth-child(7){ border-color:var(--teal); }
+    .subcomp-card:nth-child(8){ border-color:var(--amber); }
+    .subcomp-card h4 { font-size:13px; font-weight:700; color:var(--text); margin-bottom:6px; }
+    .subcomp-card ul { list-style:none; }
+    .subcomp-card ul li { font-size:12px; color:var(--muted); padding:3px 0 3px 16px; position:relative; line-height:1.45; }
+    .subcomp-card ul li::before { content:'→'; position:absolute; left:0; color:var(--purple); font-size:10px; top:4px; }
+
+    /* ── Data model table ── */
+    .data-table { width:100%; border-collapse:collapse; margin:14px 0; font-size:13px; box-shadow:0 2px 10px rgba(0,0,0,.07); border-radius:8px; overflow:hidden; }
+    .data-table th { background:linear-gradient(135deg,var(--purple),var(--violet)); color:#fff; padding:12px 16px; text-align:left; font-weight:700; }
+    .data-table td { padding:10px 16px; border-bottom:1px solid var(--gray-border); }
+    .data-table tr:last-child td { border:none; }
+    .data-table tr:hover td { background:var(--gray-bg); }
+
+    /* ── Callout ── */
+    .callout { border-radius:10px; padding:16px 20px; margin:18px 0; display:flex; gap:12px; align-items:flex-start; }
+    .callout.info  { background:#eef2ff; border-left:4px solid var(--purple); }
+    .callout.warn  { background:#fffbeb; border-left:4px solid var(--yellow); }
+    .callout.success{ background:#ecfdf5; border-left:4px solid var(--green); }
+    .callout.danger { background:#fff1f2; border-left:4px solid var(--red); }
+    .callout-icon  { font-size:20px; flex-shrink:0; }
+    .callout-body  { font-size:13px; color:var(--text); line-height:1.6; }
+    .callout-body strong { display:block; margin-bottom:4px; font-size:14px; }
+
+    /* ── Vertical connector ── */
+    .v-connector { text-align:center; padding:8px 0; font-size:22px; color:var(--purple); font-weight:700; }
+    .v-connector span { font-size:13px; color:var(--muted); display:block; font-weight:400; }
+
+    /* ── KPI row ── */
+    .kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin:16px 0 28px; }
+    .kpi { background:linear-gradient(135deg,var(--purple),var(--violet)); color:#fff; border-radius:var(--radius); padding:22px 16px; text-align:center; box-shadow:var(--shadow); }
+    .kpi .val { font-size:32px; font-weight:800; line-height:1; }
+    .kpi .lbl { font-size:12px; opacity:.85; margin-top:5px; }
+    .kpi.alt  { background:linear-gradient(135deg,var(--pink),var(--red)); }
+    .kpi.alt2 { background:linear-gradient(135deg,var(--blue),var(--cyan)); }
+    .kpi.alt3 { background:linear-gradient(135deg,var(--green),var(--teal)); }
+    .kpi.alt4 { background:linear-gradient(135deg,var(--orange),var(--yellow)); }
+
+    /* ── Repair recipe table ── */
+    .recipe-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; margin:16px 0; }
+    .recipe-card { background:#fff; border:2px solid var(--gray-border); border-radius:10px; padding:16px; transition:all .2s; }
+    .recipe-card:hover { border-color:var(--blue); box-shadow:var(--shadow); }
+    .recipe-card .recipe-id { font-size:11px; font-weight:700; color:var(--blue); background:#eef2ff; padding:2px 8px; border-radius:10px; display:inline-block; margin-bottom:6px; }
+    .recipe-card h4 { font-size:13px; font-weight:700; color:var(--text); margin-bottom:5px; }
+    .recipe-card p { font-size:12px; color:var(--muted); line-height:1.5; }
+    .recipe-card .llm-tag { margin-top:8px; font-size:11px; padding:2px 8px; border-radius:10px; font-weight:600; display:inline-block; }
+    .llm-no  { background:#ecfdf5; color:#065f46; }
+    .llm-opt { background:#fffbeb; color:#92400e; }
+    .llm-yes { background:#fff1f2; color:#991b1b; }
+
+    .site-footer { background:var(--gray-bg); border-top:2px solid var(--gray-border); padding:22px 48px; text-align:center; color:var(--muted); font-size:13px; }
+    ::-webkit-scrollbar { width:6px; height:6px; }
+    ::-webkit-scrollbar-track { background:var(--gray-bg); }
+    ::-webkit-scrollbar-thumb { background:var(--purple); border-radius:3px; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <header class="site-header">
+    <h1>AMC Feedback Loop — In-Depth Component Architecture</h1>
+    <p class="subtitle">Complete internals for every component in the 8-phase flow · Grounded in LLD-01 through LLD-08</p>
+    <div class="header-badges">
+      <span class="badge">🏗️ 8 Phases · 40+ Sub-Components</span>
+      <span class="badge">📐 LLD-01–08 Aligned</span>
+      <span class="badge">⚡ 4 Control Planes</span>
+      <span class="badge">🔬 E0–E5 Evaluation Ladder</span>
+      <span class="badge">🛠️ R001–R012 Repair Recipes</span>
+    </div>
+  </header>
+  <div class="progress-bar" id="progressBar"></div>
+  <nav class="site-nav" id="siteNav">
+    <button class="nav-btn active" onclick="show('overview',this)">Overview</button>
+    <button class="nav-btn" onclick="show('phase1',this)">① Query Path</button>
+    <button class="nav-btn" onclick="show('phase2',this)">② Feedback Capture</button>
+    <button class="nav-btn" onclick="show('phase3',this)">③ PG Buffer</button>
+    <button class="nav-btn" onclick="show('phase4',this)">④ Orchestration</button>
+    <button class="nav-btn" onclick="show('phase5',this)">⑤ LLM Evaluation</button>
+    <button class="nav-btn" onclick="show('phase6',this)">⑥ Graph Correction</button>
+    <button class="nav-btn" onclick="show('phase7',this)">⑦ Cache Invalidation</button>
+    <button class="nav-btn" onclick="show('phase8',this)">⑧ Loop Closure</button>
+    <button class="nav-btn" onclick="show('router',this)">Eval Router</button>
+    <button class="nav-btn" onclick="show('taxonomy',this)">Failure Taxonomy</button>
+    <button class="nav-btn" onclick="show('healing',this)">Self-Healing RAG</button>
+    <button class="nav-btn" onclick="show('compliance',this)">Compliance Plane</button>
+  </nav>
+  <main class="content">
+
+<!-- ═══════════════════════════════════════ OVERVIEW -->
+<section id="overview" class="section active">
+  <p class="section-title">🗺️ Architecture Overview</p>
+  <p class="section-lead">The AMC Feedback Loop is structured as four cooperating control planes and eight sequential phases. This document provides the full internal component breakdown for every node in that flow — not just what each phase does, but every sub-component, data contract, token cost, and failure mode.</p>
+
+  <h3 class="sub">The 8-Phase Flow at a Glance</h3>
+  <div class="flow-pipeline">
+    <div class="pipe-node">① User Query<div class="pn-sub">FAISS + Neo4j + LLM</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">② Feedback Capture<div class="pn-sub">&lt;100ms sync</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">③ PG Buffer<div class="pn-sub">18 tables</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">④ Orchestration<div class="pn-sub">Hourly cron</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">⑤ LLM Eval<div class="pn-sub">25 items/call</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">⑥ Graph Correction<div class="pn-sub">Neo4j atomic</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">⑦ Cache Invalidation<div class="pn-sub">FAISS+Redis</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">⑧ Loop Closes<div class="pn-sub">Self-improving</div></div>
+  </div>
+
+  <h3 class="sub">Four Control Planes</h3>
+  <div class="comp-row">
+    <div class="comp-card">
+      <div class="cc-icon">🏷️</div>
+      <div class="cc-name">Plane 1 — Domain / Taxonomy Intelligence</div>
+      <div class="cc-file">LLD-01, LLD-05</div>
+      <div class="cc-desc">AMC Taxonomy layers T1–T10 covering entity, product, attribute, intent, claim, evidence, interaction-risk, compliance-control-mapping, failure, and repair. Answers: what does this interaction mean?</div>
+      <div class="cc-props"><span class="cc-tag">T1–T10 layers</span><span class="cc-tag info">No LLM</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">⚖️</div>
+      <div class="cc-name">Plane 2 — Compliance Control Plane</div>
+      <div class="cc-file">LLD-07</div>
+      <div class="cc-desc">Jurisdiction Rule Packs (INDIA_SEBI, US_SEC, EU_ESMA, UK_FCA), 14 control families C01–C14, Applicability Resolver. Answers: which approved controls apply?</div>
+      <div class="cc-props"><span class="cc-tag">C01–C14</span><span class="cc-tag warn">Compliance-gated</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🔍</div>
+      <div class="cc-name">Plane 3 — Evaluation Control Plane</div>
+      <div class="cc-file">LLD-04, LLD-02</div>
+      <div class="cc-desc">Adaptive Evaluation Router (9 stages), EvidencePack D0–D3 (frozen at response time), Evaluator Capability Registry, Failure-Attribution Graph. Answers: how deeply do we evaluate, at what cost?</div>
+      <div class="cc-props"><span class="cc-tag">E0–E5 ladder</span><span class="cc-tag info">B0–B5 budget</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🛠️</div>
+      <div class="cc-name">Plane 4 — RAG Health / Repair Plane</div>
+      <div class="cc-file">LLD-06</div>
+      <div class="cc-desc">RAG Health Engine, Vector Health, Graph Health, Repair Recipe Registry (R001–R012), Shadow Environment, Promotion Gate. Answers: is there a defect? can it be safely repaired?</div>
+      <div class="cc-props"><span class="cc-tag">R001–R012</span><span class="cc-tag perf">Shadow-first</span></div>
+    </div>
+  </div>
+
+  <h3 class="sub">Key Architecture Decisions</h3>
+  <div class="subcomp-grid">
+    <div class="subcomp-card"><h4>ADR-001 — Freeze EvidencePack at response time</h4><ul><li>Immutable D0–D3 snapshot created immediately on response generation</li><li>All evaluators reference the frozen object — never re-fetch independently</li><li>Enables reproducible audit trails even as sources evolve</li></ul></div>
+    <div class="subcomp-card"><h4>ADR-002 — Deterministic-first, LLM as last resort</h4><ul><li>E0–E5 cascade: stop as soon as decisive result is available</li><li>LLM invoked for only 2–5% of evaluated interactions</li><li>70–80% token savings vs naive approach</li></ul></div>
+    <div class="subcomp-card"><h4>ADR-003 — Feedback is a claim, not ground truth</h4><ul><li>Raw feedback → FailureObservation only after adjudication</li><li>Confidence gate ≥ 0.85 before any auto-apply</li><li>Feedback poisoning structurally prevented</li></ul></div>
+    <div class="subcomp-card"><h4>ADR-005 — Failure-Attribution Graph is separate</h4><ul><li>Two separate Neo4j instances sharing only canonical IDs</li><li>Zero risk of failure data contaminating answer retrieval</li><li>Independent access policies and retention rules</li></ul></div>
+    <div class="subcomp-card"><h4>ADR-006 — Shadow repair before production</h4><ul><li>All repairs execute in quarantined shadow environment first</li><li>Regression + compliance + blast-radius tests must pass</li><li>Atomic promotion or rollback — never direct production write</li></ul></div>
+    <div class="subcomp-card"><h4>ADR-008 — Batch LLM evaluation (25 items/call)</h4><ul><li>System prompt amortised across 25 items</li><li>Semantic deduplication reduces item count by ~40% first</li><li>Up to 91% token reduction vs per-item evaluation</li></ul></div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="val">&lt;100ms</div><div class="lbl">Feedback HTTP latency p99</div></div>
+    <div class="kpi alt"><div class="val">91%</div><div class="lbl">Peak token reduction</div></div>
+    <div class="kpi alt2"><div class="val">2–5%</div><div class="lbl">Traffic requiring LLM eval</div></div>
+    <div class="kpi alt3"><div class="val">R001–R012</div><div class="lbl">Deterministic repair recipes</div></div>
+    <div class="kpi alt4"><div class="val">14</div><div class="lbl">Compliance control families</div></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ PHASE 1 -->
+<section id="phase1" class="section">
+  <div class="phase-header">
+    <span class="phase-badge">PHASE 1</span>
+    <span class="phase-title-text">👤 User Query → LLM Response + Response ID</span>
+  </div>
+  <p class="phase-lead">The existing query pipeline, extended with EvidencePack creation (D0–D3) and a response_id that anchors all downstream feedback. Every component in this phase is synchronous and must complete in under the user-facing latency budget.</p>
+
+  <h3 class="sub">Phase 1 Internal Flow</h3>
+  <div class="flow-pipeline">
+    <div class="pipe-node">👤 User Query<div class="pn-sub">Raw input</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">🔤 Intent Resolver<div class="pn-sub">Taxonomy T4</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">🔍 FAISS Retrieval<div class="pn-sub">Vector + BM25</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">📊 Neo4j Graph<div class="pn-sub">Entity paths</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">🏗️ Context Assembly<div class="pn-sub">Rerank + select</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">🧠 LLM Synthesis<div class="pn-sub">Claude</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">📦 EvidencePack D0–D3<div class="pn-sub">~8ms, no LLM</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">🚦 Critical Intercept<div class="pn-sub">&lt;40ms</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">📝 Response + ID<div class="pn-sub">Delivered</div></div>
+  </div>
+
+  <h3 class="sub">Sub-Components</h3>
+  <div class="comp-row">
+    <div class="comp-card">
+      <div class="cc-icon">🔤</div>
+      <div class="cc-name">Intent Resolver</div>
+      <div class="cc-file">app/engine/context_engineering.py</div>
+      <div class="cc-desc">Maps raw user query to AMC Taxonomy intent node (T4). Detects primary + secondary intents, sets ambiguity flag, identifies AMC entities by canonical ID (ISIN, scheme code). Outputs D1 InteractionSnapshot.</div>
+      <div class="cc-props"><span class="cc-tag">spaCy NER</span><span class="cc-tag info">Rule + classifier</span><span class="cc-tag perf">~2ms</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🔍</div>
+      <div class="cc-name">FAISS Retrieval Engine</div>
+      <div class="cc-file">app/engine/faiss_store.py</div>
+      <div class="cc-desc">Hybrid retrieval: dense vector search (Sentence Transformers) + BM25 lexical search. Returns top-K chunks with similarity scores, ranks, document IDs, and source versions. Feeds D2 vector_retrieval and bm25_retrieval fields.</div>
+      <div class="cc-props"><span class="cc-tag">Cosine similarity</span><span class="cc-tag info">Local model</span><span class="cc-tag perf">Top-K tunable</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">📊</div>
+      <div class="cc-name">Neo4j Graph Context</div>
+      <div class="cc-file">app/engine/entity_resolver.py</div>
+      <div class="cc-desc">Traverses the Context Graph to extract entity nodes, relationship paths, and structured facts (NAV, TER, AUM, fund manager, benchmark). Path scoring and relationship type filtering applied. Feeds D2 graph_retrieval fields.</div>
+      <div class="cc-props"><span class="cc-tag">Cypher traversal</span><span class="cc-tag warn">Max depth 1–2</span><span class="cc-tag info">Provenance edges</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🏗️</div>
+      <div class="cc-name">Context Assembly / Reranker</div>
+      <div class="cc-file">app/engine/context_engineering.py</div>
+      <div class="cc-desc">Merges vector, graph, and BM25 results. Cross-encoder reranking. Selects final evidence set within token budget. Applies disclosure template injection for compliance-sensitive intents. Records evidence_selected, evidence_rejected.</div>
+      <div class="cc-props"><span class="cc-tag">Cross-encoder</span><span class="cc-tag warn">Token-budget aware</span><span class="cc-tag info">Disclosure injection</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🧠</div>
+      <div class="cc-name">LLM Synthesis</div>
+      <div class="cc-file">app/core/llm.py</div>
+      <div class="cc-desc">Claude invocation with structured context. Prompt template versioned (UUID). Outputs response text, citations, and tool call log. Truncation detection on stop reason. All generation metadata captured for D0.</div>
+      <div class="cc-props"><span class="cc-tag">claude-3-5-sonnet</span><span class="cc-tag info">Versioned prompt</span><span class="cc-tag warn">Guardrail check</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">📦</div>
+      <div class="cc-name">EvidencePack Creator (D0–D3)</div>
+      <div class="cc-file">app/engine/evidence_pack.py (Phase 2)</div>
+      <div class="cc-desc">Creates four frozen objects immediately after response generation. D0: response metadata + SHA-256 hash. D1: query snapshot + entities. D2: all retrieval evidence + 13 derived metrics. D3: jurisdiction + policy pack + applicable controls. Persisted async, cached in Redis 1h.</div>
+      <div class="cc-props"><span class="cc-tag perf">&lt;10ms sync</span><span class="cc-tag info">Zero LLM</span><span class="cc-tag">SHA-256 tamper-proof</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🚦</div>
+      <div class="cc-name">Critical Deterministic Intercept</div>
+      <div class="cc-file">Inline in query route</div>
+      <div class="cc-desc">Runs hard compliance controls synchronously before delivery. Checks: hard product eligibility (C08), PII rule (C11), mandatory disclosure presence (C07), prohibited phrases (C01). Actions: PASS, BLOCK, SAFE_FALLBACK, REFUSE, ALLOW_WITH_DISCLOSURE.</div>
+      <div class="cc-props"><span class="cc-tag warn">&lt;40ms budget</span><span class="cc-tag info">Zero LLM</span><span class="cc-tag">C01/C07/C08/C11</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🆔</div>
+      <div class="cc-name">Response ID Anchor</div>
+      <div class="cc-file">UUID v4 in D0.response_id</div>
+      <div class="cc-desc">UUID v4 generated at D0 creation time. Stored in Redis (short TTL) and PostgreSQL evidence_packs. Embedded in response payload so the UI can include it in feedback submissions, linking user signals to the exact retrieval context.</div>
+      <div class="cc-props"><span class="cc-tag">UUID v4</span><span class="cc-tag info">Redis 1h cache</span><span class="cc-tag perf">PG permanent</span></div>
+    </div>
+  </div>
+
+  <h3 class="sub">EvidencePack D0–D3 Breakdown</h3>
+  <div class="subcomp-grid">
+    <div class="subcomp-card"><h4>D0 — Response Finalization (~1ms)</h4><ul><li>response_id (UUID v4 — immutable key for everything downstream)</li><li>response_hash SHA-256 for tamper detection</li><li>model_id, model_version, generation_config_version, prompt_template_version</li><li>citations_shown[], disclosures_shown[], guardrail_state</li><li>input_tokens, output_tokens, tool_calls[], fallback_used, truncation_flag</li></ul></div>
+    <div class="subcomp-card"><h4>D1 — Interaction Snapshot (~1ms)</h4><ul><li>user_query (raw), normalized_query, detected_intent (taxonomy node ID)</li><li>intent_confidence, intent_detection_method, secondary_intents[]</li><li>extracted_entities[] with canonical IDs (no raw PII stored)</li><li>retrieval_configuration, taxonomy_version, guardrail_version</li><li>session_metadata: user_role, channel, jurisdiction, product_context, client_segment</li></ul></div>
+    <div class="subcomp-card"><h4>D2 — Evidence / Provenance Pack (~5ms)</h4><ul><li>Vector: chunk_ids[], similarity_scores[], ranks[], rerank_scores[], document_versions[]</li><li>Graph: nodes_traversed[], edges_traversed[], paths[], graph_scores[]</li><li>BM25: bm25_chunk_ids[], bm25_scores[]</li><li>Context: evidence_selected[], evidence_rejected[], context_token_count</li><li>13 pre-computed derived metrics (source_age_days, citation_coverage, source_version_mismatch, etc.)</li></ul></div>
+    <div class="subcomp-card"><h4>D3 — Applicability Context (~1ms)</h4><ul><li>jurisdiction + regulated_entity_role + product_type + channel + customer_segment</li><li>interaction_mode, advice_flag, execution_flag</li><li>policy_pack_id, policy_pack_version, policy_pack_effective_from</li><li>applicable_control_set_id, mandatory_controls[], hard_block_controls[]</li><li>resolution_method: rule | semantic_classifier | ambiguous</li></ul></div>
+  </div>
+  <div class="callout info"><span class="callout-icon">🔒</span><div class="callout-body"><strong>Immutability guarantee</strong> Once D0–D3 are created, they are never modified. All evaluators downstream reference the frozen pack. This ensures evaluation is reproducible and audit trails are reliable even after sources, graph edges, or policy packs are updated.</div></div>
+</section>
+
+<!-- ═══════════════════════════════════════ PHASE 2 -->
+<section id="phase2" class="section">
+  <div class="phase-header">
+    <span class="phase-badge">PHASE 2</span>
+    <span class="phase-title-text">👍 Synchronous Feedback Capture (&lt;100ms)</span>
+  </div>
+  <p class="phase-lead">The user submits a rating and optional comment. The HTTP response must return in under 100ms. All NLP classification runs as a background task after the response fires — the user never waits for it.</p>
+
+  <h3 class="sub">Phase 2 Internal Flow</h3>
+  <div class="flow-pipeline">
+    <div class="pipe-node">👍 Rating + Comment<div class="pn-sub">UI click</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">POST /api/feedback<div class="pn-sub">FastAPI</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">✅ Validate<div class="pn-sub">~1ms</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">💾 Async INSERT<div class="pn-sub">PostgreSQL</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">📤 HTTP 202<div class="pn-sub">feedback_id</div></div>
+    <div class="pipe-sep">||</div>
+    <div class="pipe-node">🏷️ NER + Sentiment<div class="pn-sub">BackgroundTask</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">🎯 Intent + Quality<div class="pn-sub">Rule-based</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">💾 UPDATE PG<div class="pn-sub">classification</div></div>
+  </div>
+
+  <h3 class="sub">Sub-Components</h3>
+  <div class="comp-row">
+    <div class="comp-card">
+      <div class="cc-icon">🌐</div>
+      <div class="cc-name">Feedback API Endpoint</div>
+      <div class="cc-file">app/api/routes/feedback.py</div>
+      <div class="cc-desc">FastAPI POST /api/feedback. Accepts response_id (required), rating 1–5, feedback_type enum, entity_name, comment (max 2000 chars), highlighted_span, correction text. OpenAPI documented. Returns 202 with feedback_id immediately.</div>
+      <div class="cc-props"><span class="cc-tag">FastAPI</span><span class="cc-tag perf">202 Accepted</span><span class="cc-tag info">Pydantic validation</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">✅</div>
+      <div class="cc-name">Input Validator</div>
+      <div class="cc-file">app/api/routes/feedback.py</div>
+      <div class="cc-desc">Checks: response_id exists in evidence_packs (single SELECT ~1ms). Rating in [1,5]. Comment length ≤ 2000. feedback_type is known enum. Duplicate detection (same user + same response within 5 min). Returns 400 or 404 on failure.</div>
+      <div class="cc-props"><span class="cc-tag">SELECT evidence_packs</span><span class="cc-tag warn">~1ms sync</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🏷️</div>
+      <div class="cc-name">NER Tagger</div>
+      <div class="cc-file">app/engine/feedback_collector.py</div>
+      <div class="cc-desc">Extracts named entities from comment text using spaCy. Identifies AMC entity mentions (fund names, fund house names, scheme codes) with confidence scores. Attempts canonical ID resolution via entity resolver. Zero LLM tokens.</div>
+      <div class="cc-props"><span class="cc-tag">spaCy NER</span><span class="cc-tag info">~20ms background</span><span class="cc-tag perf">No API cost</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">😊</div>
+      <div class="cc-name">Sentiment Scorer</div>
+      <div class="cc-file">app/engine/feedback_collector.py</div>
+      <div class="cc-desc">VADER polarity analysis on comment text. Returns compound score (−1 to +1), neg, pos, neu components. Used in quality score computation and as a signal for intent classification. ~5ms, runs locally, no API.</div>
+      <div class="cc-props"><span class="cc-tag">VADER</span><span class="cc-tag info">~5ms background</span><span class="cc-tag perf">compound: [-1, +1]</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🎯</div>
+      <div class="cc-name">Intent Classifier</div>
+      <div class="cc-file">app/engine/feedback_collector.py</div>
+      <div class="cc-desc">Rule-based first (feedback_type enum + rating + entity presence), classifier fallback. Outputs: correction | confirmation | complaint | noise | abuse. Low-rating + entity mention + correction text → high-value correction intent.</div>
+      <div class="cc-props"><span class="cc-tag">Rule + classifier</span><span class="cc-tag info">~2ms</span><span class="cc-tag">5 intent classes</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">⭐</div>
+      <div class="cc-name">Quality Score Engine</div>
+      <div class="cc-file">app/engine/feedback_collector.py</div>
+      <div class="cc-desc">Heuristic pre-filter scoring [0,1]. Base 0.5. +0.2 if comment &gt;20 chars. +0.15 if entity extracted. +0.1 if correction text present. +0.1 if highlighted span. −0.3 if extreme rating with no comment. −0.4 sentiment conflict. −0.5 if duplicate.</div>
+      <div class="cc-props"><span class="cc-tag">Heuristic [0,1]</span><span class="cc-tag warn">Routing gate</span><span class="cc-tag info">No LLM</span></div>
+    </div>
+  </div>
+
+  <h3 class="sub">Quality Score Routing Gates</h3>
+  <div class="subcomp-grid">
+    <div class="subcomp-card"><h4>Score &lt; 0.20 → Auto-Reject</h4><ul><li>Set status = 'rejected' immediately</li><li>Skip evaluation queue entirely</li><li>Typical: extreme ratings with no comment, duplicate submissions, abuse patterns</li><li>LLM tokens consumed: 0</li></ul></div>
+    <div class="subcomp-card"><h4>Score ≥ 0.95 + cluster ≥ 3 → Auto-Apply</h4><ul><li>High-confidence cluster with strong agreement</li><li>Bypass LLM evaluation — apply directly in graph correction phase</li><li>Typical: many users reporting same clear entity correction</li><li>LLM tokens consumed: 0</li></ul></div>
+    <div class="subcomp-card"><h4>Score 0.20–0.94 → Evaluation Queue</h4><ul><li>Set status = 'pending' in PostgreSQL</li><li>Enters hourly evaluation cycle</li><li>Will be processed through semantic deduplication → routing → batch LLM eval</li><li>Accounts for ~60% of all feedback</li></ul></div>
+    <div class="subcomp-card"><h4>Background Task Isolation</h4><ul><li>FastAPI BackgroundTasks fires NER + sentiment + intent AFTER HTTP response sent</li><li>Failure in classification updates classification_status='failed' — does not block feedback record</li><li>PG UPDATE is a second write — feedback_record exists before classification completes</li></ul></div>
+  </div>
+
+  <h3 class="sub">Stored Fields in feedback_records</h3>
+  <table class="data-table">
+    <tr><th>Field</th><th>Type</th><th>Set By</th><th>Purpose</th></tr>
+    <tr><td>id</td><td>UUID</td><td>Endpoint</td><td>Primary key, returned to client</td></tr>
+    <tr><td>response_id</td><td>UUID FK</td><td>Client</td><td>Links to evidence_packs (D0–D3 frozen state)</td></tr>
+    <tr><td>rating</td><td>SMALLINT 1–5</td><td>Client</td><td>Core satisfaction signal</td></tr>
+    <tr><td>comment</td><td>TEXT ≤2000</td><td>Client</td><td>Free-text correction / note</td></tr>
+    <tr><td>ner_tags</td><td>JSONB</td><td>BackgroundTask</td><td>Extracted entities with canonical IDs</td></tr>
+    <tr><td>sentiment</td><td>JSONB</td><td>BackgroundTask</td><td>VADER compound, neg, pos, neu</td></tr>
+    <tr><td>intent</td><td>VARCHAR</td><td>BackgroundTask</td><td>correction | confirmation | noise | abuse</td></tr>
+    <tr><td>quality_score</td><td>FLOAT [0,1]</td><td>BackgroundTask</td><td>Routing gate for evaluation pipeline</td></tr>
+    <tr><td>status</td><td>VARCHAR</td><td>Lifecycle</td><td>pending → evaluating → applied / rejected / archived</td></tr>
+  </table>
+  <div class="callout success"><span class="callout-icon">⚡</span><div class="callout-body"><strong>Zero LLM in synchronous path</strong> Steps 1–5 of feedback capture use only rule-based validation, a single database SELECT, and an async UUID generation. The background NLP (NER + VADER + rule classifier) fires after the HTTP response is sent. Total synchronous latency is under 10ms excluding network.</div></div>
+</section>
+
+<!-- ═══════════════════════════════════════ PHASE 3 -->
+<section id="phase3" class="section">
+  <div class="phase-header">
+    <span class="phase-badge">PHASE 3</span>
+    <span class="phase-title-text">💾 Temporary Feedback Buffer (PostgreSQL)</span>
+  </div>
+  <p class="phase-lead">PostgreSQL acts as the durable hand-off point between the synchronous capture path and the asynchronous evaluation pipeline. 18 tables across two functional groups: core pipeline tables and cache/metrics tables.</p>
+
+  <h3 class="sub">Database Layer Architecture</h3>
+  <div class="flow-pipeline">
+    <div class="pipe-node">Feedback API<div class="pn-sub">writes</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">feedback_records<div class="pn-sub">raw input</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">evidence_packs<div class="pn-sub">D0–D3 frozen</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">evaluation_jobs<div class="pn-sub">cycle tracking</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">correction_recommendations<div class="pn-sub">proposed fixes</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">correction_audit_trail<div class="pn-sub">7-yr immutable</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">router_decisions<div class="pn-sub">audit log</div></div>
+  </div>
+
+  <h3 class="sub">Core Pipeline Tables</h3>
+  <div class="comp-row">
+    <div class="comp-card">
+      <div class="cc-icon">📋</div>
+      <div class="cc-name">evidence_packs</div>
+      <div class="cc-file">LLD-08 §1.1</div>
+      <div class="cc-desc">Stores the complete frozen D0–D3 EvidencePack for every response. JSONB columns for D2 vector/graph/BM25 retrieval and derived metrics. Indexed on response_id, interaction_id, jurisdiction, and intent. Primary audit anchor for all evaluation.</div>
+      <div class="cc-props"><span class="cc-tag">90d operational</span><span class="cc-tag warn">7yr compliance</span><span class="cc-tag info">Immutable</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">💬</div>
+      <div class="cc-name">feedback_records</div>
+      <div class="cc-file">LLD-08 §1.2</div>
+      <div class="cc-desc">Raw user feedback. FK to evidence_packs via response_id. Contains rating, comment, NER tags, sentiment, intent, quality_score, status lifecycle. Indexes on (status, created_at), quality_score WHERE pending, entity_name. 90-day retention.</div>
+      <div class="cc-props"><span class="cc-tag">FK → evidence_packs</span><span class="cc-tag info">4 status states</span><span class="cc-tag perf">90d TTL</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">⚙️</div>
+      <div class="cc-name">evaluation_jobs</div>
+      <div class="cc-file">LLD-08 §1.3</div>
+      <div class="cc-desc">Tracks every hourly batch evaluation cycle. Records: items_fetched, items_deduplicated, items_auto_applied, items_auto_rejected, items_llm_evaluated, corrections_generated, corrections_applied, llm_tokens_used, llm_tokens_saved, llm_calls_made.</div>
+      <div class="cc-props"><span class="cc-tag">Cycle economics</span><span class="cc-tag info">Token tracking</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🔧</div>
+      <div class="cc-name">correction_recommendations</div>
+      <div class="cc-file">LLD-08 §1.4</div>
+      <div class="cc-desc">Proposed Neo4j Cypher mutations generated by LLM evaluation or auto-routing. Stores correction_type, target_entity_id, cypher_mutation TEXT, confidence_score, reasoning, repair_class (R0–R5), status lifecycle.</div>
+      <div class="cc-props"><span class="cc-tag">R0–R5 class</span><span class="cc-tag warn">confidence ≥ 0.85 gate</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">📜</div>
+      <div class="cc-name">correction_audit_trail</div>
+      <div class="cc-file">LLD-08 §1.5</div>
+      <div class="cc-desc">Immutable record of every graph change. Stores before_state and after_state as JSONB, cypher_executed, operator (system or user_id), entities_affected. Never deleted — 7-year compliance retention. Enables full rollback capability.</div>
+      <div class="cc-props"><span class="cc-tag warn">7yr retention</span><span class="cc-tag">Before/after state</span><span class="cc-tag info">Rollback-ready</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🗺️</div>
+      <div class="cc-name">router_decisions</div>
+      <div class="cc-file">LLD-08 §1.6</div>
+      <div class="cc-desc">Every Adaptive Router execution emits one record. Stores: applicable_controls, mandatory_controls, 10 signal_dimensions, selected_evaluators, skipped_evaluators, stop_reason (STOP-1 to STOP-5), token_budget_band, actual tokens and latency.</div>
+      <div class="cc-props"><span class="cc-tag">Full audit trail</span><span class="cc-tag info">B0–B5 budget</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">📖</div>
+      <div class="cc-name">source_manifests</div>
+      <div class="cc-file">LLD-08 §1.7</div>
+      <div class="cc-desc">Health ledger for every source document in the RAG pipeline. Expected_chunk_count, chunk_hashes[], embedding model version, expected_node/edge_count, health_status. Used by the RAG Health Engine to compute diffs without LLM.</div>
+      <div class="cc-props"><span class="cc-tag">SHA-256 hashes</span><span class="cc-tag info">Health diffing</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">📊</div>
+      <div class="cc-name">feedback_metrics (aggregated)</div>
+      <div class="cc-file">LLD-03</div>
+      <div class="cc-desc">Daily rollup table: total_feedback, positive, negative, entity_corrections, relationship_corrections, avg_confidence_score. Powers dashboards and alerting thresholds. Unique constraint on date.</div>
+      <div class="cc-props"><span class="cc-tag">Daily rollup</span><span class="cc-tag info">Dashboard source</span></div>
+    </div>
+  </div>
+
+  <h3 class="sub">Redis Cache Layer (alongside PG)</h3>
+  <div class="subcomp-grid">
+    <div class="subcomp-card"><h4>evidence:{response_id} — TTL 3600s</h4><ul><li>D2 EvidencePack JSON payload for fast evaluator access</li><li>Invalidated immediately if any referenced source is updated</li><li>Evaluators read from Redis first, fall back to PostgreSQL</li></ul></div>
+    <div class="subcomp-card"><h4>graph_ctx:{hash(entity_ids)} — TTL 3600s</h4><ul><li>Neo4j subgraph snapshot for batch evaluation context</li><li>Shared across all 25 items in a batch — amortises graph traversal cost</li><li>Invalidated on any correction applied to affected entities</li></ul></div>
+    <div class="subcomp-card"><h4>few_shot:{feedback_type} — TTL 86400s</h4><ul><li>Pre-computed few-shot examples per feedback type</li><li>Fetched once per evaluation cycle — not per batch</li><li>Manually invalidated on example update</li></ul></div>
+    <div class="subcomp-card"><h4>incident_active — No TTL</h4><ul><li>Set of active incident IDs from Failure-Attribution Graph</li><li>Used by Router Stage R4 for short-circuit matching</li><li>Cleared on incident resolution event</li></ul></div>
+  </div>
+
+  <h3 class="sub">Retention Policy Summary</h3>
+  <table class="data-table">
+    <tr><th>Store</th><th>Table / Key</th><th>Operational TTL</th><th>Compliance TTL</th></tr>
+    <tr><td>PostgreSQL</td><td>evidence_packs, feedback_records</td><td>90 days</td><td>7 years</td></tr>
+    <tr><td>PostgreSQL</td><td>correction_audit_trail</td><td>Permanent</td><td>7 years</td></tr>
+    <tr><td>PostgreSQL</td><td>router_decisions, evaluation_jobs</td><td>90 days</td><td>7 years</td></tr>
+    <tr><td>PostgreSQL</td><td>D1 (user_query PII)</td><td>Redacted at 30 days</td><td>Anonymised 7 years</td></tr>
+    <tr><td>Redis</td><td>evidence:{id}</td><td>1 hour (TTL)</td><td>—</td></tr>
+    <tr><td>Redis</td><td>graph_ctx:{hash}</td><td>1 hour (TTL)</td><td>—</td></tr>
+    <tr><td>Neo4j (Context)</td><td>Entities, relationships</td><td>Permanent (versioned)</td><td>Permanent</td></tr>
+    <tr><td>Neo4j (Failure)</td><td>FailureObservation, RootCause</td><td>2 years</td><td>2 years</td></tr>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════ PHASE 4 -->
+<section id="phase4" class="section">
+  <div class="phase-header">
+    <span class="phase-badge">PHASE 4</span>
+    <span class="phase-title-text">⏰ Hourly Orchestration (APScheduler — 8-Step Cycle)</span>
+  </div>
+  <p class="phase-lead">The APScheduler cron fires at the top of every hour. The orchestrator runs an 8-step cycle that takes ~3 minutes for 500 feedback items. All steps are async and invisible to users.</p>
+
+  <h3 class="sub">8-Step Orchestration Cycle</h3>
+  <div class="flow-pipeline">
+    <div class="pipe-node">1 Fetch Pending<div class="pn-sub">≤500 items</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">2 Enrich + Evidence<div class="pn-sub">D2 join</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">3 Aggregate<div class="pn-sub">by entity</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">4 Deduplicate<div class="pn-sub">−40% items</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">5 Route<div class="pn-sub">60% skip LLM</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">6 Batch LLM Eval<div class="pn-sub">25/call</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">7 Apply Corrections<div class="pn-sub">≥0.85 conf</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">8 Record + Clean<div class="pn-sub">Mark processed</div></div>
+  </div>
+
+  <h3 class="sub">Sub-Components</h3>
+  <div class="comp-row">
+    <div class="comp-card">
+      <div class="cc-icon">⏰</div>
+      <div class="cc-name">APScheduler Trigger</div>
+      <div class="cc-file">app/engine/feedback_processor.py</div>
+      <div class="cc-desc">Cron expression: minute=0 (top of every hour). In-process async scheduler — no separate queue infrastructure required. Creates evaluation_job record, monitors health, retries on transient failure, emits Prometheus metrics on completion.</div>
+      <div class="cc-props"><span class="cc-tag">cron minute=0</span><span class="cc-tag info">In-process</span><span class="cc-tag perf">No queue infra</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">📥</div>
+      <div class="cc-name">Pending Feedback Fetcher</div>
+      <div class="cc-file">app/engine/feedback_processor.py</div>
+      <div class="cc-desc">Fetches up to 500 feedback_records WHERE status='pending' AND classification_status='complete'. Joins with evidence_packs to attach frozen D2 context to each item. Ordered by quality_score DESC to prioritise high-value corrections.</div>
+      <div class="cc-props"><span class="cc-tag">≤500 items/cycle</span><span class="cc-tag info">Quality-priority ordering</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🧩</div>
+      <div class="cc-name">Aggregation Engine</div>
+      <div class="cc-file">app/engine/feedback_processor.py</div>
+      <div class="cc-desc">Groups feedback items by target entity + correction type + attribute. Sums quality scores as vote weight. Calculates inter-annotator agreement (Kappa). Identifies consensus clusters for auto-routing decisions.</div>
+      <div class="cc-props"><span class="cc-tag">Group by entity+type</span><span class="cc-tag info">Kappa agreement</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🔗</div>
+      <div class="cc-name">Semantic Deduplicator</div>
+      <div class="cc-file">app/engine/feedback_processor.py</div>
+      <div class="cc-desc">Embeds comment text using local Sentence Transformers (no API cost). Clusters by cosine similarity ≥ 0.85. Keeps highest quality_score item as cluster representative. Aggregates vote counts and supporting feedback IDs. ~40% item reduction.</div>
+      <div class="cc-props"><span class="cc-tag">Sentence Transformers</span><span class="cc-tag perf">−40% items</span><span class="cc-tag info">cosine ≥ 0.85</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🚦</div>
+      <div class="cc-name">Conditional Router</div>
+      <div class="cc-file">app/engine/feedback_processor.py</div>
+      <div class="cc-desc">Routes items to three lanes without any LLM: auto_apply (quality ≥ 0.95 + cluster ≥ 3), auto_reject (quality &lt; 0.20), to_evaluate (everything else). Also checks active incident list from Redis — incident matches skip to Phase 8 directly.</div>
+      <div class="cc-props"><span class="cc-tag warn">60% skip LLM</span><span class="cc-tag">3 routing lanes</span><span class="cc-tag info">Incident short-circuit</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">📦</div>
+      <div class="cc-name">Batch Builder</div>
+      <div class="cc-file">app/engine/feedback_processor.py</div>
+      <div class="cc-desc">Chunks the to_evaluate list into groups of 25. For each batch, fetches: graph context snapshot (from Redis or Neo4j), few-shot examples (from Redis). Assembles the structured prompt payload with output JSON schema.</div>
+      <div class="cc-props"><span class="cc-tag">25 items/batch</span><span class="cc-tag info">Graph ctx cached</span><span class="cc-tag perf">Few-shot Redis</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">📊</div>
+      <div class="cc-name">Cycle Metrics Recorder</div>
+      <div class="cc-file">app/engine/feedback_processor.py</div>
+      <div class="cc-desc">Updates evaluation_jobs record with final counts: items_fetched, deduplicated, auto_applied, auto_rejected, llm_evaluated, corrections_generated, corrections_applied, llm_tokens_used, llm_tokens_saved. Emits Prometheus counters and gauges.</div>
+      <div class="cc-props"><span class="cc-tag">Prometheus metrics</span><span class="cc-tag info">Token economics</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🧹</div>
+      <div class="cc-name">Cleanup + Archival</div>
+      <div class="cc-file">app/engine/feedback_processor.py</div>
+      <div class="cc-desc">Marks all processed feedback_records with status='archived' and archived_at timestamp. Deletes records older than 90 days (operational TTL). Preserves correction_audit_trail entries permanently regardless of feedback archival.</div>
+      <div class="cc-props"><span class="cc-tag">90d rolling window</span><span class="cc-tag warn">Audit trail permanent</span></div>
+    </div>
+  </div>
+
+  <h3 class="sub">Orchestration State Machine</h3>
+  <div class="subcomp-grid">
+    <div class="subcomp-card"><h4>Job Status: pending → running</h4><ul><li>evaluation_jobs record created with status='pending'</li><li>Set to 'running' when Step 1 begins</li><li>Lock prevents concurrent cycle execution</li><li>Timeout guard: kill job if &gt;10 min elapsed</li></ul></div>
+    <div class="subcomp-card"><h4>Job Status: running → completed</h4><ul><li>All 8 steps complete without unhandled exception</li><li>Final counts written to evaluation_jobs</li><li>completed_at timestamp set</li><li>Prometheus metrics emitted</li></ul></div>
+    <div class="subcomp-card"><h4>Job Status: running → failed</h4><ul><li>Unhandled exception caught at orchestrator top level</li><li>error_message recorded in evaluation_jobs</li><li>Affected feedback_records remain in 'pending' state for next cycle</li><li>Alert fired to monitoring system</li></ul></div>
+    <div class="subcomp-card"><h4>Incident Short-Circuit (ADR-010)</h4><ul><li>Before routing, check Redis 'incident_active' set</li><li>Match new feedback observations against active incident signatures</li><li>Matched items: attach to incident → skip diagnosis → mark processed</li><li>Prevents duplicate LLM diagnosis during systemic failures</li></ul></div>
+  </div>
+
+  <div class="callout warn"><span class="callout-icon">⚠️</span><div class="callout-body"><strong>Monitoring thresholds</strong> pending_feedback_count &gt; 2000 → alert (cycle falling behind). evaluation_cycle_duration &gt; 10 min → alert (batch size or LLM throughput). llm_tokens_per_cycle &gt; 200k → alert (deduplication or routing not working). quality_score_mean &lt; 0.30 trending → possible feedback abuse.</div></div>
+</section>
+
+<!-- ═══════════════════════════════════════ PHASE 5 -->
+<section id="phase5" class="section">
+  <div class="phase-header">
+    <span class="phase-badge">PHASE 5</span>
+    <span class="phase-title-text">🤖 LLM Batch Evaluation (Token-Optimised)</span>
+  </div>
+  <p class="phase-lead">One LLM call evaluates 25 feedback items simultaneously. System prompt, graph context, and few-shot examples are paid once and amortised across all 25. Only items that survive the quality/routing gates reach this phase (~40% of feedback).</p>
+
+  <h3 class="sub">Batch Evaluation Internal Flow</h3>
+  <div class="flow-pipeline">
+    <div class="pipe-node">📋 System Prompt<div class="pn-sub">amortised ×25</div></div>
+    <div class="pipe-sep">+</div>
+    <div class="pipe-node">🗂️ Graph Snapshot<div class="pn-sub">Redis 1h cache</div></div>
+    <div class="pipe-sep">+</div>
+    <div class="pipe-node">📚 Few-Shot<div class="pn-sub">Redis 24h cache</div></div>
+    <div class="pipe-sep">+</div>
+    <div class="pipe-node">📝 25 Items<div class="pn-sub">JSON array</div></div>
+    <div class="pipe-sep">=</div>
+    <div class="pipe-node">⚡ 1 LLM Call<div class="pn-sub">JSON output</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">✅ Parse + Gate<div class="pn-sub">conf ≥ 0.85</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">💾 Store Recs<div class="pn-sub">PG table</div></div>
+  </div>
+
+  <h3 class="sub">Sub-Components</h3>
+  <div class="comp-row">
+    <div class="comp-card">
+      <div class="cc-icon">🧠</div>
+      <div class="cc-name">Batch Evaluator</div>
+      <div class="cc-file">app/engine/batch_evaluation.py (Phase 1 implemented)</div>
+      <div class="cc-desc">Core component. Receives deduplicated batches of 25 items. Constructs the multi-part prompt, calls Claude with response_format=json_object, parses structured output, assigns confidence gates. Handles retries on API failures.</div>
+      <div class="cc-props"><span class="cc-tag">Claude API</span><span class="cc-tag warn">25 items/call</span><span class="cc-tag info">JSON schema output</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🗂️</div>
+      <div class="cc-name">Graph Context Fetcher</div>
+      <div class="cc-file">app/engine/cache_manager.py</div>
+      <div class="cc-desc">Extracts entity IDs from the batch. Checks Redis for cached subgraph snapshot (key: graph_ctx:{hash}). On cache miss, executes Neo4j Cypher to fetch entity neighbourhood (1-hop, affected entities only). Caches result for 1 hour. ~200–500 tokens vs 2000+ for full graph.</div>
+      <div class="cc-props"><span class="cc-tag">1-hop subgraph</span><span class="cc-tag perf">Redis 1h cache</span><span class="cc-tag info">Entity-scoped only</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">📚</div>
+      <div class="cc-name">Few-Shot Cache</div>
+      <div class="cc-file">app/engine/cache_manager.py</div>
+      <div class="cc-desc">Pre-computed correction examples per feedback_type (entity_correction, relationship_correction, taxonomy_update, etc.). Stored in Redis with 24h TTL. Retrieved once per batch call. Reduces prompt overhead by ~15% vs inline example construction.</div>
+      <div class="cc-props"><span class="cc-tag">Redis 24h TTL</span><span class="cc-tag info">Per feedback_type</span><span class="cc-tag perf">−15% prompt tokens</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">📋</div>
+      <div class="cc-name">Prompt Builder</div>
+      <div class="cc-file">app/engine/batch_evaluation.py</div>
+      <div class="cc-desc">Assembles the 4-part prompt: SYSTEM (domain rules, output schema, evaluation criteria), FEW-SHOT (from Redis), GRAPH_CONTEXT (subgraph snapshot), BATCH (25 items as JSON array). Uses constrained JSON output mode — no markdown, no explanations in response.</div>
+      <div class="cc-props"><span class="cc-tag">4-part prompt</span><span class="cc-tag warn">temperature=0.2</span><span class="cc-tag info">Constrained JSON</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🔍</div>
+      <div class="cc-name">Response Parser + Confidence Gate</div>
+      <div class="cc-file">app/engine/batch_evaluation.py</div>
+      <div class="cc-desc">Parses the structured JSON array response. Validates each correction object: required fields present, cypher_mutation is syntactically valid, confidence in [0,1], correction_type is known enum. Routes by confidence: ≥0.85 → approved, 0.5–0.84 → human review queue, &lt;0.5 → rejected.</div>
+      <div class="cc-props"><span class="cc-tag">0.85 auto-apply gate</span><span class="cc-tag warn">0.5 human review</span><span class="cc-tag info">Cypher validation</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">💾</div>
+      <div class="cc-name">Correction Recommendation Store</div>
+      <div class="cc-file">postgres_client.py</div>
+      <div class="cc-desc">Persists each parsed correction to correction_recommendations table. Links to source feedback_id and evaluation_job_id. Sets repair_class based on correction_type (add_entity=R2, update_property=R1, relationship change=R2). Reasoning text stored but never used for execution decisions.</div>
+      <div class="cc-props"><span class="cc-tag">FK → feedback_id</span><span class="cc-tag info">Reasoning stored</span><span class="cc-tag perf">Repair class assigned</span></div>
+    </div>
+  </div>
+
+  <h3 class="sub">Token Optimisation — All 7 Strategies</h3>
+  <table class="data-table">
+    <tr><th>Strategy</th><th>Mechanism</th><th>Token Impact</th><th>Tokens/Item (cumulative)</th></tr>
+    <tr><td>Baseline (naive)</td><td>1 LLM call per feedback item</td><td>—</td><td>~2,100</td></tr>
+    <tr><td>1. Batch processing</td><td>25 items per LLM call, system prompt amortised</td><td>−70%</td><td>~630</td></tr>
+    <tr><td>2. Semantic deduplication</td><td>Cluster similar items, evaluate representative only</td><td>−40% items</td><td>~378</td></tr>
+    <tr><td>3. Shared graph context</td><td>One Neo4j snapshot per batch, cached 1h</td><td>−50% context tokens</td><td>~189</td></tr>
+    <tr><td>4. Structured JSON output</td><td>No markdown/explanations in LLM response</td><td>−30% output tokens</td><td>~188</td></tr>
+    <tr><td>5. Quality pre-filter (routing)</td><td>60% of items skip LLM entirely</td><td>−60% items reach LLM</td><td>Effective ~75</td></tr>
+    <tr><td>6. Few-shot caching</td><td>Examples retrieved from Redis, not rebuilt per call</td><td>−15% prompt tokens</td><td>~64</td></tr>
+    <tr><td>7. Incident short-circuit</td><td>Known incident matches skip diagnosis entirely</td><td>−100% for matched</td><td>~0 for incident cohort</td></tr>
+  </table>
+
+  <h3 class="sub">Prompt Structure</h3>
+  <div class="subcomp-grid">
+    <div class="subcomp-card"><h4>SYSTEM (amortised across 25 items)</h4><ul><li>Domain context: AMC chatbot, mutual funds, India/US/EU/UK</li><li>Output JSON schema (correction_type enum, confidence range, cypher format)</li><li>Evaluation criteria: what constitutes a genuine graph correction</li><li>Confidence calibration guidelines</li></ul></div>
+    <div class="subcomp-card"><h4>FEW-SHOT (Redis cache, 24h TTL)</h4><ul><li>2–3 examples per feedback_type</li><li>Each: input feedback + expected output JSON</li><li>Covers: entity correction, property update, relationship add/remove</li><li>Pre-computed, not dynamically generated per call</li></ul></div>
+    <div class="subcomp-card"><h4>GRAPH_CONTEXT (Redis 1h / Neo4j)</h4><ul><li>Lightweight subgraph: affected entities + 1-hop neighbours</li><li>Current property values for relevant entities</li><li>Existing relationships between affected nodes</li><li>200–500 tokens vs 2000+ for full context graph</li></ul></div>
+    <div class="subcomp-card"><h4>BATCH (25 items as JSON array)</h4><ul><li>feedback_id, comment, entity_name, rating, quality_score</li><li>current_graph_state for the specific entity mentioned</li><li>cluster_size (vote weight from deduplication step)</li><li>LLM output: [{feedback_id, action, confidence, cypher, correction_type}]</li></ul></div>
+  </div>
+
+  <div class="callout info"><span class="callout-icon">🔑</span><div class="callout-body"><strong>Confidence threshold (0.85) is a safety gate, not a quality heuristic</strong> Items below 0.85 confidence are not discarded — they enter the human review queue (0.50–0.84) or are marked rejected (&lt;0.50). The 0.85 threshold gates automated application only. A human reviewer can still approve lower-confidence corrections through the governance workflow.</div></div>
+</section>
+
+<!-- ═══════════════════════════════════════ PHASE 6 -->
+<section id="phase6" class="section">
+  <div class="phase-header">
+    <span class="phase-badge">PHASE 6</span>
+    <span class="phase-title-text">📈 Graph Correction &amp; Validation (Neo4j Atomic)</span>
+  </div>
+  <p class="phase-lead">Approved corrections (confidence ≥ 0.85) are applied to the Neo4j Context Graph in atomic transactions. Every change is validated before execution and recorded with a full before/after audit trail enabling rollback at any time.</p>
+
+  <h3 class="sub">Correction Execution Flow</h3>
+  <div class="flow-pipeline">
+    <div class="pipe-node">📝 Correction Plan<div class="pn-sub">approved recs</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">✅ Schema Validate<div class="pn-sub">Cypher lint</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">📸 Capture Before<div class="pn-sub">state snapshot</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">🔒 Neo4j Txn<div class="pn-sub">atomic</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">➕/✏️/🔗/🗑️<div class="pn-sub">4 op types</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">📸 Capture After<div class="pn-sub">state snapshot</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">📝 Audit Trail<div class="pn-sub">immutable</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">✅ Mark Applied<div class="pn-sub">PG update</div></div>
+  </div>
+
+  <h3 class="sub">Sub-Components</h3>
+  <div class="comp-row">
+    <div class="comp-card">
+      <div class="cc-icon">✅</div>
+      <div class="cc-name">Cypher Validator</div>
+      <div class="cc-file">app/engine/graph_corrector.py</div>
+      <div class="cc-desc">Parses and validates the Cypher mutation before execution. Checks: valid Cypher syntax, operation type is permitted (no DROP, no schema changes without R3 approval), target entity/relationship types are in taxonomy, no orphan creation, no circular self-relationships of prohibited types.</div>
+      <div class="cc-props"><span class="cc-tag">Syntax check</span><span class="cc-tag warn">Schema constraints</span><span class="cc-tag info">No DROP allowed</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🔒</div>
+      <div class="cc-name">Neo4j Transaction Manager</div>
+      <div class="cc-file">app/engine/graph_corrector.py</div>
+      <div class="cc-desc">Opens an atomic Neo4j transaction. Captures before-state with a read query. Executes the Cypher mutation. Captures after-state. Writes audit record. Commits. On any exception, transaction rolls back automatically — no partial state is persisted.</div>
+      <div class="cc-props"><span class="cc-tag">ACID transaction</span><span class="cc-tag perf">Auto-rollback</span><span class="cc-tag info">Before+after state</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">➕</div>
+      <div class="cc-name">Add Entity Operation</div>
+      <div class="cc-file">app/engine/graph_corrector.py</div>
+      <div class="cc-desc">CREATE new node with full property set. Mandatory properties: canonical_id, name, entity_type, source_id, source_version, effective_from, ingestion_timestamp. Confidence threshold: 0.85. Creates mandatory relationships (e.g. MANAGED_BY AMC) atomically.</div>
+      <div class="cc-props"><span class="cc-tag">conf ≥ 0.85</span><span class="cc-tag info">Full provenance</span><span class="cc-tag">R2 class</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">✏️</div>
+      <div class="cc-name">Update Property Operation</div>
+      <div class="cc-file">app/engine/graph_corrector.py</div>
+      <div class="cc-desc">MATCH existing node, SET property. For time-sensitive attributes (NAV, TER): also sets valid_from, valid_to on the HAS_FACT edge. Source provenance fields updated: source_id, source_version, effective_from. Confidence threshold: 0.80.</div>
+      <div class="cc-props"><span class="cc-tag">conf ≥ 0.80</span><span class="cc-tag warn">Temporal validity</span><span class="cc-tag info">R1 class</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🔗</div>
+      <div class="cc-name">Add Relationship Operation</div>
+      <div class="cc-file">app/engine/graph_corrector.py</div>
+      <div class="cc-desc">MATCH source and target nodes, CREATE relationship. Mandatory edge properties: source_id, source_version, effective_from, extraction_method='correction', ingestion_timestamp. Checks existing relationship not already active before creating. Confidence threshold: 0.75.</div>
+      <div class="cc-props"><span class="cc-tag">conf ≥ 0.75</span><span class="cc-tag info">Provenance edge props</span><span class="cc-tag">R2 class</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🗑️</div>
+      <div class="cc-name">Remove Relationship Operation</div>
+      <div class="cc-file">app/engine/graph_corrector.py</div>
+      <div class="cc-desc">Does NOT DELETE the relationship — sets effective_to to current date on the edge (soft expiry). This preserves historical accuracy. Physical DELETE only for clearly erroneous relationships with no historical value. Confidence threshold: 0.85.</div>
+      <div class="cc-props"><span class="cc-tag">conf ≥ 0.85</span><span class="cc-tag warn">Soft expiry first</span><span class="cc-tag info">R2 class</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">📜</div>
+      <div class="cc-name">Audit Trail Writer</div>
+      <div class="cc-file">app/engine/graph_corrector.py</div>
+      <div class="cc-desc">Writes to correction_audit_trail inside the same Neo4j transaction. Records: correction_id, action, cypher_executed (exact string), before_state (JSONB), after_state (JSONB), entities_affected (list), operator ('system' or user_id), performed_at. This record cannot be deleted.</div>
+      <div class="cc-props"><span class="cc-tag warn">Immutable</span><span class="cc-tag">7-year retention</span><span class="cc-tag info">Same transaction</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">↩️</div>
+      <div class="cc-name">Rollback Engine</div>
+      <div class="cc-file">app/engine/graph_corrector.py</div>
+      <div class="cc-desc">POST /api/corrections/{id}/rollback. Reads before_state from audit trail. Generates a reverse Cypher mutation. Executes in a new atomic transaction. Writes a second audit trail record (action='rolled_back'). Updates correction status to 'rolled_back'.</div>
+      <div class="cc-props"><span class="cc-tag">POST rollback</span><span class="cc-tag info">Reverse Cypher gen</span><span class="cc-tag perf">Audit-traced</span></div>
+    </div>
+  </div>
+
+  <h3 class="sub">Four Correction Types and Business Rules</h3>
+  <table class="data-table">
+    <tr><th>Type</th><th>Neo4j Operation</th><th>Confidence Threshold</th><th>Repair Class</th><th>AMC Example</th></tr>
+    <tr><td>add_entity</td><td>CREATE node + mandatory relationships</td><td>0.85</td><td>R2</td><td>New fund "Axis Equity Direct Plan" missing from graph</td></tr>
+    <tr><td>update_property</td><td>SET property + update provenance edge</td><td>0.80</td><td>R1</td><td>TER changed from 0.79% to 0.82%</td></tr>
+    <tr><td>add_relationship</td><td>CREATE edge with full provenance props</td><td>0.75</td><td>R2</td><td>Missing MANAGED_BY link between fund and AMC</td></tr>
+    <tr><td>remove_relationship</td><td>SET effective_to on edge (soft expiry)</td><td>0.85</td><td>R2</td><td>Fund manager left 2 years ago but still linked</td></tr>
+    <tr><td>update_taxonomy</td><td>SET risk_category or scheme_category</td><td>0.80</td><td>R2 / R3</td><td>Reclassify from Aggressive to Moderate risk</td></tr>
+    <tr><td>merge_duplicate</td><td>Merge nodes, transfer relationships</td><td>0.90</td><td>R2</td><td>Two nodes for same fund house detected</td></tr>
+  </table>
+  <div class="callout danger"><span class="callout-icon">🚫</span><div class="callout-body"><strong>What graph_corrector.py never does</strong> It does not execute DROP operations, schema changes, index rebuilds, or modifications to compliance control mappings without R3+ governance approval. It never writes to the Failure-Attribution Graph (separate instance). It never bypasses the confidence threshold check.</div></div>
+</section>
+
+<!-- ═══════════════════════════════════════ PHASE 7 -->
+<section id="phase7" class="section">
+  <div class="phase-header">
+    <span class="phase-badge">PHASE 7</span>
+    <span class="phase-title-text">🧹 Surgical Cache Invalidation</span>
+  </div>
+  <p class="phase-lead">After each graph correction, dependent caches must be cleared so the next query uses the updated data. Broad cache flush is prohibited — only caches for the affected entities are invalidated. This keeps unrelated queries running at full speed.</p>
+
+  <h3 class="sub">Cache Invalidation Flow</h3>
+  <div class="flow-pipeline">
+    <div class="pipe-node">Applied Corrections<div class="pn-sub">entity IDs</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">🗂️ FAISS Chunks<div class="pn-sub">re-embed affected</div></div>
+    <div class="pipe-sep">+</div>
+    <div class="pipe-node">⚡ Redis Keys<div class="pn-sub">evidence + graph_ctx</div></div>
+    <div class="pipe-sep">+</div>
+    <div class="pipe-node">🔍 Entity Resolver<div class="pn-sub">alias cache</div></div>
+    <div class="pipe-sep">+</div>
+    <div class="pipe-node">📊 Neo4j Traversal<div class="pn-sub">path cache</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">✅ System Updated<div class="pn-sub">next query fresh</div></div>
+  </div>
+
+  <h3 class="sub">Sub-Components</h3>
+  <div class="comp-row">
+    <div class="comp-card">
+      <div class="cc-icon">🗂️</div>
+      <div class="cc-name">FAISS Chunk Invalidator</div>
+      <div class="cc-file">app/engine/cache_manager.py</div>
+      <div class="cc-desc">For each affected entity_id, fetches the list of chunk_ids from FAISS metadata. Removes those chunks from the vector index. Marks them for re-embedding — chunks are re-embedded lazily on next retrieval request for that entity, not eagerly.</div>
+      <div class="cc-props"><span class="cc-tag">Surgical removal</span><span class="cc-tag info">Lazy re-embed</span><span class="cc-tag perf">Entity-scoped</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">⚡</div>
+      <div class="cc-name">Redis EvidencePack Invalidator</div>
+      <div class="cc-file">app/engine/cache_manager.py</div>
+      <div class="cc-desc">Queries PostgreSQL for response_ids that referenced the affected entities (via D2 source_provenance). Deletes those Redis keys (evidence:{response_id}). Also deletes graph context snapshots (graph_ctx:{entity_hash}). Next evaluator access hits PostgreSQL instead.</div>
+      <div class="cc-props"><span class="cc-tag">DEL evidence:{id}</span><span class="cc-tag warn">DEL graph_ctx:{hash}</span><span class="cc-tag info">Targeted DEL</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🔍</div>
+      <div class="cc-name">Entity Resolver Cache Invalidator</div>
+      <div class="cc-file">app/engine/entity_resolver.py</div>
+      <div class="cc-desc">Clears in-memory and Redis alias mappings for affected entity canonical IDs. This ensures next query that mentions the entity by name (e.g. "Axis Bluechip Fund") resolves to the corrected canonical node, not the old cached mapping.</div>
+      <div class="cc-props"><span class="cc-tag">Alias cache clear</span><span class="cc-tag info">Canonical ID refresh</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">📊</div>
+      <div class="cc-name">Neo4j Traversal Cache Invalidator</div>
+      <div class="cc-file">app/engine/cache_manager.py</div>
+      <div class="cc-desc">Invalidates cached graph traversal paths that pass through any affected node. Neo4j's built-in query cache is cleared for affected node IDs. Ensures next graph-context fetch produces paths reflecting the corrected relationships and properties.</div>
+      <div class="cc-props"><span class="cc-tag">Path cache clear</span><span class="cc-tag warn">Affected nodes only</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">📡</div>
+      <div class="cc-name">Invalidation Event Emitter</div>
+      <div class="cc-file">app/engine/cache_manager.py</div>
+      <div class="cc-desc">Emits CorrectionAppliedEvent to the internal event bus after all cache invalidations are complete. Downstream services (future webhook consumers, monitoring dashboards) can subscribe to this event for real-time notifications.</div>
+      <div class="cc-props"><span class="cc-tag">Event bus</span><span class="cc-tag info">CorrectionApplied</span><span class="cc-tag perf">After all DELs</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">📋</div>
+      <div class="cc-name">Invalidation Scope Calculator</div>
+      <div class="cc-file">app/engine/cache_manager.py</div>
+      <div class="cc-desc">Before invalidating, calculates blast radius: how many response_ids, chunk_ids, and traversal paths are affected. Logged in evaluation_jobs for operational monitoring. Prevents runaway invalidation (alert threshold: &gt;500 affected response_ids from a single correction cycle).</div>
+      <div class="cc-props"><span class="cc-tag">Blast radius check</span><span class="cc-tag warn">Alert if &gt;500 responses</span></div>
+    </div>
+  </div>
+
+  <h3 class="sub">Invalidation by Operation Type</h3>
+  <table class="data-table">
+    <tr><th>Correction Type</th><th>FAISS Chunks</th><th>Redis evidence:</th><th>Redis graph_ctx:</th><th>Entity Resolver</th><th>Neo4j Traversal</th></tr>
+    <tr><td>update_property</td><td>Affected entity chunks</td><td>Responses using entity</td><td>Entity hash keys</td><td>If alias changed</td><td>Paths through node</td></tr>
+    <tr><td>add_entity</td><td>None (new entity)</td><td>None</td><td>Related entity hashes</td><td>New alias added</td><td>None</td></tr>
+    <tr><td>add_relationship</td><td>Both endpoint chunks</td><td>Responses using either entity</td><td>Both endpoint hashes</td><td>Both entities</td><td>Paths through both</td></tr>
+    <tr><td>remove_relationship (soft)</td><td>Both endpoint chunks</td><td>Responses using either entity</td><td>Both endpoint hashes</td><td>Both entities</td><td>Paths through both</td></tr>
+    <tr><td>merge_duplicate</td><td>Both entity's chunks</td><td>Responses using either ID</td><td>All related hashes</td><td>All aliases for both</td><td>All paths through both</td></tr>
+  </table>
+
+  <div class="callout success"><span class="callout-icon">🎯</span><div class="callout-body"><strong>Why surgical invalidation matters</strong> A broad cache flush on every correction cycle would invalidate all in-flight queries and cause retrieval latency spikes. Surgical invalidation affects only entities touched by the correction, typically 1–5% of the active cache. Unrelated queries continue serving from cache at full speed.</div></div>
+</section>
+
+<!-- ═══════════════════════════════════════ PHASE 8 -->
+<section id="phase8" class="section">
+  <div class="phase-header">
+    <span class="phase-badge">PHASE 8</span>
+    <span class="phase-title-text">♻️ The Loop Closes — Compounding Improvement</span>
+  </div>
+  <p class="phase-lead">The virtuous cycle. Each correction raises the quality floor for all future queries referencing the affected entities. Better graph → better retrieval → better responses → higher-quality feedback → higher-confidence corrections → better graph.</p>
+
+  <h3 class="sub">The Virtuous Cycle</h3>
+  <div class="flow-pipeline">
+    <div class="pipe-node">🆕 Next Query<div class="pn-sub">any user</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">🔍 Improved Retrieval<div class="pn-sub">fresh embeddings</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">📊 Corrected Graph<div class="pn-sub">accurate entities</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">🧠 Richer Context<div class="pn-sub">LLM has truth</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">📝 Better Response<div class="pn-sub">accurate answer</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">👍 Better Feedback<div class="pn-sub">higher quality</div></div>
+    <div class="pipe-sep">→</div>
+    <div class="pipe-node">♻️ Repeat<div class="pn-sub">floor rises</div></div>
+  </div>
+
+  <h3 class="sub">Compound Improvement Mechanisms</h3>
+  <div class="comp-row">
+    <div class="comp-card">
+      <div class="cc-icon">📈</div>
+      <div class="cc-name">Graph Quality Compound</div>
+      <div class="cc-file">Neo4j Context Graph</div>
+      <div class="cc-desc">Each correction permanently improves entity data, relationship accuracy, and property freshness. Source version tracking ensures the graph reflects the latest authoritative values. As corrections accumulate, graph drift decreases and source freshness failures (F05) reduce over time.</div>
+      <div class="cc-props"><span class="cc-tag perf">Permanent improvement</span><span class="cc-tag">Versioned edges</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🔍</div>
+      <div class="cc-name">Retrieval Quality Compound</div>
+      <div class="cc-file">FAISS + Neo4j traversal</div>
+      <div class="cc-desc">Re-embedded chunks after corrections contain more accurate entity mentions, improving cosine similarity scores for relevant queries. Corrected graph paths improve hybrid retrieval overlap (vector_graph_overlap metric). Retrieval regression monitoring detects improvements in cohort baselines.</div>
+      <div class="cc-props"><span class="cc-tag perf">Cohort baseline rises</span><span class="cc-tag info">Drift detection</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🧠</div>
+      <div class="cc-name">LLM Context Quality Compound</div>
+      <div class="cc-file">Context Assembly</div>
+      <div class="cc-desc">As the graph and vector index improve, the context window presented to the LLM contains more accurate, current, and complete evidence. Fewer synthesis errors occur when the evidence is correct. Compliance-sensitive templates are injected more reliably as context rules improve.</div>
+      <div class="cc-props"><span class="cc-tag perf">Better context → fewer F07</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">🔬</div>
+      <div class="cc-name">Novel Failure → Rule Conversion</div>
+      <div class="cc-file">Failure Taxonomy Engine</div>
+      <div class="cc-desc">Each novel failure that is understood gets converted into a deterministic E1 rule or R001–R012 repair recipe. Future recurrences cost zero LLM tokens to diagnose. The deterministic_conversion_rate KPI tracks this — it must increase each quarter for the system to become cheaper over time.</div>
+      <div class="cc-props"><span class="cc-tag perf">LLM dependency decreases</span><span class="cc-tag">deterministic_conversion_rate</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">📊</div>
+      <div class="cc-name">Post-Heal Monitor</div>
+      <div class="cc-file">post_heal_monitor.py (Phase 3)</div>
+      <div class="cc-desc">24h / 7d monitoring window after each correction deployment. Detects: failure recurrence (repair was insufficient → escalate to R4), collateral damage (new failure type appeared → rollback), retrieval quality delta, compliance routing delta. Closes the self-assessment loop.</div>
+      <div class="cc-props"><span class="cc-tag warn">24h / 7d window</span><span class="cc-tag">Rollback trigger</span></div>
+    </div>
+    <div class="comp-card">
+      <div class="cc-icon">📉</div>
+      <div class="cc-name">Graph Drift Monitor</div>
+      <div class="cc-file">Metrics dashboard</div>
+      <div class="cc-desc">Tracks corrections per entity per week — a proxy for data quality at ingestion time. Entities with high correction frequency are flagged for ingestion pipeline review. As ingestion quality improves, correction volume decreases and cycle duration shortens.</div>
+      <div class="cc-props"><span class="cc-tag info">Leading indicator</span><span class="cc-tag">Ingestion quality proxy</span></div>
+    </div>
+  </div>
+
+  <h3 class="sub">System Health KPIs (Phase 8 Outcomes)</h3>
+  <div class="kpi-row">
+    <div class="kpi"><div class="val">&gt;90%</div><div class="lbl">Correction success rate sustained 30d</div></div>
+    <div class="kpi alt"><div class="val">&lt;5%</div><div class="lbl">Repair recurrence rate (same failure within 30d)</div></div>
+    <div class="kpi alt2"><div class="val">&gt;70%</div><div class="lbl">Confirmed root cause rate (not hypothetical)</div></div>
+    <div class="kpi alt3"><div class="val">100%</div><div class="lbl">Mandatory control execution rate</div></div>
+    <div class="kpi alt4"><div class="val">0</div><div class="lbl">Mandatory control bypasses (hard target)</div></div>
+  </div>
+
+  <div class="callout success"><span class="callout-icon">🏆</span><div class="callout-body"><strong>Definition of a mature loop</strong> The system is considered mature when: (1) deterministic_conversion_rate is growing each quarter, (2) LLM escalation rate is trending down from 2–5% toward 1%, (3) repair recurrence rate is under 5%, (4) novel failure families are being onboarded as recipes faster than they appear, and (5) token cost per evaluation cycle is decreasing despite growing feedback volume.</div></div>
+</section>
+
+<!-- ═══════════════════════════════════════ EVALUATION ROUTER -->
+<section id="router" class="section">
+  <p class="section-title">🔍 Adaptive Evaluation Router (LLD-04)</p>
+  <p class="section-lead">The deterministic policy engine that selects the minimum sufficient evaluator for every interaction. Nine stages. Five explicit stop rules. Fifteen standard evaluators. Every decision is auditable via RouterDecision records.</p>
+
+  <h3 class="sub">9 Router Stages</h3>
+  <div class="comp-row">
+    <div class="comp-card"><div class="cc-icon">🌍</div><div class="cc-name">R0 — Resolve Applicability</div><div class="cc-desc">Resolves the multidimensional applicability key: jurisdiction + regulated_entity_role + product_type + channel + customer_segment + interaction_mode + policy_pack_version. Outputs ApplicableControlSet with mandatory_controls[] and hard_block_controls[]. Deterministic lookup — never LLM.</div><div class="cc-props"><span class="cc-tag">Rule lookup</span><span class="cc-tag info">No LLM</span></div></div>
+    <div class="comp-card"><div class="cc-icon">🚨</div><div class="cc-name">R1 — Mandatory Controls</div><div class="cc-desc">Executes all controls from applicable_control_set mandatory_controls[]. These always run regardless of budget or sampling settings. Failure actions: BLOCK, SAFE_FALLBACK, REFUSE, HOLD_FOR_REVIEW, ALLOW_WITH_DISCLOSURE. Mandatory bypass count must be 0 (hard target).</div><div class="cc-props"><span class="cc-tag warn">Always executes</span><span class="cc-tag">C01–C14 mapped</span></div></div>
+    <div class="comp-card"><div class="cc-icon">📡</div><div class="cc-name">R2 — Signal Dimensions</div><div class="cc-desc">Computes 10 independent risk dimensions: intent_risk, regulatory_risk, factual_risk, evidence_risk, temporal_risk, citation_risk, response_risk, system_risk, feedback_signal, incident_signal. Each HIGH/MEDIUM/LOW/UNKNOWN. Never collapse into a single score — dimensions must remain explicit.</div><div class="cc-props"><span class="cc-tag">10 dimensions</span><span class="cc-tag info">Rule-based signals</span></div></div>
+    <div class="comp-card"><div class="cc-icon">📊</div><div class="cc-name">R3 — Evidence Sufficiency</div><div class="cc-desc">Checks evidence_status from D2: SUFFICIENT (proceed), PARTIAL (attempt bounded recovery), MISSING (deterministic recovery or UNVERIFIABLE), CONFLICTING (conflict workflow), TEMPORALLY_UNCERTAIN (source version resolution). Critical rule: UNVERIFIABLE is a valid and correct verdict.</div><div class="cc-props"><span class="cc-tag warn">UNVERIFIABLE allowed</span><span class="cc-tag">No LLM for missing evidence</span></div></div>
+    <div class="comp-card"><div class="cc-icon">🎯</div><div class="cc-name">R4 — Active Incident Match</div><div class="cc-desc">Checks new failure observation against active incidents in the Failure-Attribution Graph (via Redis set). Correlation keys: source_id, source_version, scheme_id, model_version, taxonomy_node_id, time window. Match → attach to incident → skip all remaining stages. Prevents duplicate diagnosis.</div><div class="cc-props"><span class="cc-tag perf">Short-circuit on match</span><span class="cc-tag">ADR-010</span></div></div>
+    <div class="comp-card"><div class="cc-icon">📏</div><div class="cc-name">R5 — Select Minimum Eval Depth</div><div class="cc-desc">Selects the cheapest evaluator capable of resolving the question from the Evaluator Capability Registry. Maps failure families to evaluator IDs. E0 for infrastructure, E1 for deterministic rules, E2/E3 for semantic, E4 for bounded LLM, E5 for agent/human. Never select a more expensive evaluator than needed.</div><div class="cc-props"><span class="cc-tag">E0–E5 ladder</span><span class="cc-tag info">Registry-based</span></div></div>
+    <div class="comp-card"><div class="cc-icon">💰</div><div class="cc-name">R6 — Token/Latency Budget</div><div class="cc-desc">Assigns token budget band B0–B5: B0=0 (rules), B1=250, B2=500, B3=800, B4=1500, B5=human-approved exception. Enforces hard latency constraints: critical intercept &lt;40ms sync; LLM evaluation is always async. Budget overrun is a first-class failure (F14).</div><div class="cc-props"><span class="cc-tag">B0–B5 bands</span><span class="cc-tag warn">Hard latency limits</span></div></div>
+    <div class="comp-card"><div class="cc-icon">▶️</div><div class="cc-name">R7–R8 — Execute + Stop Rules</div><div class="cc-desc">Fires selected evaluators. After each result, checks 5 stop rules: STOP-1 (deterministic proof), STOP-2 (evidence absent → UNVERIFIABLE), STOP-3 (known incident), STOP-4 (semantic model resolves), STOP-5 (compliance requires human). Terminates as soon as any stop rule fires.</div><div class="cc-props"><span class="cc-tag">5 stop rules</span><span class="cc-tag info">Stop-early pattern</span></div></div>
+    <div class="comp-card"><div class="cc-icon">📋</div><div class="cc-name">R9 — RouterDecision Audit Log</div><div class="cc-desc">Emits one RouterDecision record per execution. Stores: selected/skipped evaluators with reasons, stop_reason, token_budget_band, actual tokens and latency, active_incident_matches, signal_dimensions. This is the primary audit artifact answering "why was X evaluated at depth Y?"</div><div class="cc-props"><span class="cc-tag">Full audit trail</span><span class="cc-tag info">PG router_decisions</span></div></div>
+  </div>
+
+  <h3 class="sub">Evaluation Depth Ladder (E0–E5)</h3>
+  <table class="data-table">
+    <tr><th>Level</th><th>Mechanism</th><th>Generative Tokens</th><th>% Traffic</th><th>AMC Examples</th></tr>
+    <tr><td><strong>E0</strong></td><td>Telemetry only</td><td>0</td><td>~100%</td><td>Infrastructure health, tool failures, latency anomalies, schema violations</td></tr>
+    <tr><td><strong>E1</strong></td><td>Deterministic rules</td><td>0</td><td>~100%</td><td>NAV/TER numeric reconciliation, citation integrity, source versions, disclosure presence</td></tr>
+    <tr><td><strong>E2</strong></td><td>Statistical / cohort</td><td>0</td><td>Broad</td><td>Retrieval drift, BM25/vector/graph disagreement, inter-annotator agreement, feedback clustering</td></tr>
+    <tr><td><strong>E3</strong></td><td>Semantic / NLI / classifier</td><td>~0 generative</td><td>10–20%</td><td>Intent classification, claim-evidence entailment, advice boundary detection, context completeness</td></tr>
+    <tr><td><strong>E4</strong></td><td>Bounded LLM judge</td><td>Controlled (B1–B4)</td><td>2–5%</td><td>Nuanced factual ambiguity, implicit claims, complex multi-document synthesis</td></tr>
+    <tr><td><strong>E5</strong></td><td>Agent / Human</td><td>Highest</td><td>0.1–0.8%</td><td>Multi-step evidence acquisition, regulatory ambiguity requiring compliance sign-off</td></tr>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════ FAILURE TAXONOMY -->
+<section id="taxonomy" class="section">
+  <p class="section-title">🔬 Failure Taxonomy &amp; Root-Cause Attribution (LLD-05)</p>
+  <p class="section-lead">"Hallucination" is a symptom, not a root cause. The taxonomy classifies every failure across 4 axes and 14 families so the right repair is applied — not the most expensive one.</p>
+
+  <h3 class="sub">4 Classification Axes</h3>
+  <div class="subcomp-grid">
+    <div class="subcomp-card"><h4>Axis A — What Failed?</h4><ul><li>Intent · Entity · Context · Retrieval · Source · Citation</li><li>Grounding · Accuracy · Completeness · Reasoning</li><li>Communication · Governance · Infrastructure · Evaluation</li></ul></div>
+    <div class="subcomp-card"><h4>Axis B — How Was It Detected?</h4><ul><li>RULE — deterministic, 0 LLM tokens</li><li>STATISTICAL — cohort analysis, 0 LLM tokens</li><li>SEMANTIC — NLI/classifier, ~0 generative tokens</li><li>LLM / AGENT / HUMAN — escalation path</li></ul></div>
+    <div class="subcomp-card"><h4>Axis C — Where Did It Originate?</h4><ul><li>Query Understanding · Taxonomy · Source Ingestion</li><li>Vector DB · Context Graph · Retrieval Pipeline</li><li>Reranking · Context Engineering · Generation</li><li>Guardrail · UI · User Feedback Interpretation</li></ul></div>
+    <div class="subcomp-card"><h4>Axis D — What Should Heal It?</h4><ul><li>NO_ACTION · RULE_FIX · SOURCE_REFRESH</li><li>REINDEX · REEMBED · GRAPH_REPAIR</li><li>TAXONOMY_UPDATE · CONTEXT_RULE</li><li>PROMPT_CHANGE · MODEL_CHANGE · HUMAN_REVIEW</li></ul></div>
+  </div>
+
+  <h3 class="sub">14 Failure Families — Detection Cost</h3>
+  <table class="data-table">
+    <tr><th>Family</th><th>Name</th><th>Deterministic?</th><th>LLM Required?</th><th>Key Repair</th></tr>
+    <tr><td>F01</td><td>Intent / Understanding</td><td>Explicit: Yes · Implicit: No</td><td>Ambiguous only</td><td>RULE_FIX / TAXONOMY_UPDATE</td></tr>
+    <tr><td>F02</td><td>Entity Resolution</td><td>High (alias lookup)</td><td>Rarely</td><td>GRAPH_REPAIR (R010 EntityDuplicate)</td></tr>
+    <tr><td>F03</td><td>Context / Conversation State</td><td>Context ID presence check</td><td>For implicit refs</td><td>CONTEXT_RULE</td></tr>
+    <tr><td>F04</td><td>Retrieval Miss</td><td>High (source registry diff)</td><td>Never</td><td>R001 MissingVector / REINDEX</td></tr>
+    <tr><td>F05</td><td>Stale Source / Freshness</td><td>Very High (version diff)</td><td>Never</td><td>R002 StaleEmbedding / SOURCE_REFRESH</td></tr>
+    <tr><td>F06</td><td>Citation / Attribution</td><td>Integrity: High · Entailment: Semantic</td><td>If NLI ambiguous</td><td>CONTEXT_RULE</td></tr>
+    <tr><td>F07</td><td>Grounding / Unsupported Generation</td><td>Low — needs E3/E4</td><td>Yes (E3/E4)</td><td>PROMPT_CHANGE / MODEL_CHANGE</td></tr>
+    <tr><td>F08</td><td>Factual / Numerical Accuracy</td><td>High (structured comparison)</td><td>Never for numeric</td><td>R002 / SOURCE_REFRESH</td></tr>
+    <tr><td>F09</td><td>Completeness / Relevance</td><td>Template check: Medium</td><td>Semantic completeness</td><td>CONTEXT_RULE</td></tr>
+    <tr><td>F10</td><td>Reasoning / Consistency</td><td>Arithmetic: Yes · Inference: No</td><td>For inference validity</td><td>PROMPT_CHANGE</td></tr>
+    <tr><td>F11</td><td>Communication / Tone</td><td>Phrase rules: Medium</td><td>Nuanced language</td><td>CONTEXT_RULE / PROMPT_CHANGE</td></tr>
+    <tr><td>F12</td><td>Governance / Compliance / Safety</td><td>Disclosure/eligibility: High</td><td>Advice boundary</td><td>CONTEXT_RULE / HUMAN_REVIEW</td></tr>
+    <tr><td>F13</td><td>System / Infrastructure</td><td>Very High (telemetry)</td><td>Never</td><td>Retry / fallback / restore</td></tr>
+    <tr><td>F14</td><td>Evaluation / Feedback Integrity</td><td>High (golden set)</td><td>Never for detection</td><td>Evaluator rollback</td></tr>
+  </table>
+
+  <h3 class="sub">Repair Eligibility Classes (R0–R5)</h3>
+  <div class="comp-row">
+    <div class="comp-card"><div class="cc-icon">⛔</div><div class="cc-name">R0 — No Repair</div><div class="cc-desc">Defect is invalid, noisy, or user error. Feedback abuse, unsupported complaint. Action: close and monitor. No graph changes. Zero cost.</div><div class="cc-props"><span class="cc-tag perf">Close + monitor</span></div></div>
+    <div class="comp-card"><div class="cc-icon">🔧</div><div class="cc-name">R1 — Auto-Safe Mechanical</div><div class="cc-desc">Mechanical fix with bounded impact. Deterministic input → output. Example: missing embedding, broken index chunk, stale metadata. Automatic repair + verify. No governance approval needed.</div><div class="cc-props"><span class="cc-tag perf">Automatic</span><span class="cc-tag info">No approval</span></div></div>
+    <div class="comp-card"><div class="cc-icon">🔬</div><div class="cc-name">R2 — Auto + Shadow</div><div class="cc-desc">Source-provable fix requiring shadow environment validation. Example: stale graph edge with canonical replacement, entity property update. Shadow → regression → promote if pass.</div><div class="cc-props"><span class="cc-tag warn">Shadow required</span><span class="cc-tag">Regression gate</span></div></div>
+    <div class="comp-card"><div class="cc-icon">📋</div><div class="cc-name">R3 — Approval Required</div><div class="cc-desc">Structural change requiring governance. Example: taxonomy node change, policy update, new disclosure obligation. Governance approval gate before any execution.</div><div class="cc-props"><span class="cc-tag warn">Human approval</span><span class="cc-tag">Governance gate</span></div></div>
+    <div class="comp-card"><div class="cc-icon">🔭</div><div class="cc-name">R4 — Investigative</div><div class="cc-desc">Ambiguous or conflicting evidence. Example: conflicting authoritative sources, novel failure type. Agent / SME investigation required to establish root cause before repair.</div><div class="cc-props"><span class="cc-tag warn">SME investigation</span></div></div>
+    <div class="comp-card"><div class="cc-icon">🚫</div><div class="cc-name">R5 — Prohibited Auto-Repair</div><div class="cc-desc">Regulatory or legal ambiguity. Example: regulatory interpretation, advice boundary decision. Human and compliance team only. Never automated under any circumstances.</div><div class="cc-props"><span class="cc-tag warn">Human + Compliance only</span><span class="cc-tag">Never automated</span></div></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ SELF-HEALING RAG -->
+<section id="healing" class="section">
+  <p class="section-title">🛠️ Self-Healing RAG — 3 Levels + 12 Recipes (LLD-06)</p>
+  <p class="section-lead">Self-healing is a state-reconciliation problem, not an agentic reasoning problem. Source manifest → actual index/graph diff → recipe selection → shadow execution → atomic promotion. Level 1 and 2 repairs target &gt;90% of cases with zero LLM tokens.</p>
+
+  <h3 class="sub">3 Healing Levels</h3>
+  <div class="subcomp-grid">
+    <div class="subcomp-card"><h4>Level 1 — Mechanical Healing (LLM = 0)</h4><ul><li>Retry failed ingestion on non-zero exit code</li><li>Restore from backup snapshot if index corrupt</li><li>Re-embed missing chunks (manifest vs index diff)</li><li>Re-index missing documents from source registry</li><li>Deduplicate chunks (duplicate_source_ratio &gt; threshold)</li><li>Repair metadata fields (manifest vs index metadata diff)</li><li>Expire stale embeddings (source_hash ≠ embedded_hash)</li></ul></div>
+    <div class="subcomp-card"><h4>Level 2 — Knowledge-Structure Healing (Mostly deterministic)</h4><ul><li>Entity canonicalization (duplicate canonical ID detected)</li><li>Graph constraint repair (missing mandatory relationship)</li><li>Source version reconciliation (vector v17, graph v18 mismatch)</li><li>Temporal relationship management (two active edges same attribute)</li><li>Expire superseded graph edges (new source version ingested)</li><li>Recreate known derived relationships (orphan node detected)</li></ul></div>
+    <div class="subcomp-card"><h4>Level 3 — Semantic Healing (Escalation cascade)</h4><ul><li>Rules → semantic classifier → bounded LLM → agent → human SME</li><li>Used only when deterministic resolution is not possible</li><li>Ambiguous relationship type between two entities</li><li>Conflicting narratives from two authoritative sources</li><li>Entity that doesn't map to any existing taxonomy node</li></ul></div>
+    <div class="subcomp-card"><h4>Shadow Environment (ADR-006)</h4><ul><li>All repairs execute in isolated shadow env first</li><li>Shadow Vector Index + Shadow Context Graph (production copy)</li><li>Regression query set: golden, cohort, blast-radius, compliance routing</li><li>Before ↔ after comparison: retrieval quality, citation, numeric, compliance</li><li>Fail → rollback, Pass → atomic promotion to production</li></ul></div>
+  </div>
+
+  <h3 class="sub">12 Repair Recipes (R001–R012)</h3>
+  <div class="recipe-grid">
+    <div class="recipe-card"><span class="recipe-id">R001</span><h4>MissingVector</h4><p>Trigger: source_chunk_count ≠ vector_chunk_count. Re-parse missing chunks from source, re-embed, insert with provenance.</p><span class="llm-tag llm-no">LLM: No · R1</span></div>
+    <div class="recipe-card"><span class="recipe-id">R002</span><h4>StaleEmbedding</h4><p>Trigger: source_content_hash ≠ embedded_content_hash. Diff source versions, rechunk changed sections only, re-embed affected chunks.</p><span class="llm-tag llm-no">LLM: No · R2</span></div>
+    <div class="recipe-card"><span class="recipe-id">R003</span><h4>DuplicateChunk</h4><p>Trigger: Duplicate content_hash in vector index. Keep highest-authority version, remove others, update metadata.</p><span class="llm-tag llm-no">LLM: No · R1</span></div>
+    <div class="recipe-card"><span class="recipe-id">R004</span><h4>MetadataMismatch</h4><p>Trigger: Manifest metadata ≠ index metadata. Rebuild metadata fields from source manifest, update in-place.</p><span class="llm-tag llm-no">LLM: No · R1</span></div>
+    <div class="recipe-card"><span class="recipe-id">R005</span><h4>MissingSource</h4><p>Trigger: Known authoritative source absent from index. Full re-ingest: parse → chunk → embed → index from source registry.</p><span class="llm-tag llm-no">LLM: No · R2</span></div>
+    <div class="recipe-card"><span class="recipe-id">R006</span><h4>RetrievalRegression</h4><p>Trigger: BM25/Graph finds source but Vector consistently misses (≥3 queries). Investigate embedding model drift, selective re-embed document family.</p><span class="llm-tag llm-no">LLM: No · R2</span></div>
+    <div class="recipe-card"><span class="recipe-id">R007</span><h4>BrokenGraphEdge</h4><p>Trigger: Source field changed (benchmark, fund manager, risk level). Expire old edge (effective_to), create new edge with updated value + source_version + effective_date.</p><span class="llm-tag llm-no">LLM: No · R2</span></div>
+    <div class="recipe-card"><span class="recipe-id">R008</span><h4>OrphanGraphNode</h4><p>Trigger: Entity node exists with no relationships. Re-run entity extraction for source document, recreate relationships.</p><span class="llm-tag llm-opt">LLM: Optional classifier · R2</span></div>
+    <div class="recipe-card"><span class="recipe-id">R009</span><h4>SourceVersionMismatch</h4><p>Trigger: Vector index at source v17, Graph at source v18. Re-process lagging structure from source registry to align versions.</p><span class="llm-tag llm-no">LLM: No · R2</span></div>
+    <div class="recipe-card"><span class="recipe-id">R010</span><h4>EntityDuplicate</h4><p>Trigger: Two nodes share ISIN, canonical scheme code, or AMC master ID. Merge nodes, transfer all relationships, update provenance, remove duplicate.</p><span class="llm-tag llm-opt">LLM: Classifier only · R2</span></div>
+    <div class="recipe-card"><span class="recipe-id">R011</span><h4>MissingProvenance</h4><p>Trigger: Graph edge missing source_id, source_version, or effective_date. Trace from extraction logs, backfill from manifest.</p><span class="llm-tag llm-no">LLM: No · R1</span></div>
+    <div class="recipe-card"><span class="recipe-id">R012</span><h4>TemporalConflict</h4><p>Trigger: Two active edges for the same (entity, attribute) pair. Compare effective_from, expire older, validate newer has source provenance.</p><span class="llm-tag llm-no">LLM: No · R1</span></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ COMPLIANCE PLANE -->
+<section id="compliance" class="section">
+  <p class="section-title">⚖️ Compliance Control Plane (LLD-07)</p>
+  <p class="section-lead">14 compliance control families mapped to evaluators, token costs, and router behaviours. Jurisdiction is never sufficient alone — applicability is multidimensional. Mandatory control bypass count = 0 is a hard contractual target.</p>
+
+  <h3 class="sub">14 Control Families — Architecture Behaviour</h3>
+  <table class="data-table">
+    <tr><th>Control</th><th>Name</th><th>Evaluator Type</th><th>LLM?</th><th>Router Stage</th><th>On Fail</th></tr>
+    <tr><td>C01</td><td>Communication Fairness</td><td>Prohibited-phrase rules + semantic classifier</td><td>Only ambiguous wording</td><td>R1 + E1/E3</td><td>BLOCK / SAFE_FALLBACK</td></tr>
+    <tr><td>C02</td><td>Source / Disclosure Currency</td><td>Temporal rule: source_effective_date vs response ts</td><td>Never</td><td>R1 + E1</td><td>BLOCK</td></tr>
+    <tr><td>C03</td><td>Factual / Numerical Accuracy</td><td>Structured canonical comparison (response vs source)</td><td>Never</td><td>R1 + E1</td><td>BLOCK</td></tr>
+    <tr><td>C04</td><td>Performance Comparison</td><td>Period/basis normalisation + template completeness</td><td>Only unsupported inference</td><td>R1 + E1/E3</td><td>ALLOW_WITH_DISCLOSURE</td></tr>
+    <tr><td>C05</td><td>Advice / Recommendation Boundary</td><td>Intent taxonomy + semantic advice-boundary classifier</td><td>Genuinely ambiguous only</td><td>R1 + E3/E4</td><td>SAFE_FALLBACK</td></tr>
+    <tr><td>C06</td><td>Suitability / Best-Interest</td><td>Mandatory policy path — human required where specified</td><td>Evidence summary only</td><td>R1 + E5</td><td>HOLD_FOR_REVIEW</td></tr>
+    <tr><td>C07</td><td>Required Disclosure / Risk Communication</td><td>Deterministic presence + placement rule (D0.disclosures_shown)</td><td>Never</td><td>R1 + E1</td><td>ALLOW_WITH_DISCLOSURE / BLOCK</td></tr>
+    <tr><td>C08</td><td>Product / Client / Jurisdiction Eligibility</td><td>Hard deterministic applicability rules from policy pack</td><td>Never</td><td>R1 + E1</td><td>BLOCK / REFUSE</td></tr>
+    <tr><td>C09</td><td>Supervision / Approval / Human Escalation</td><td>Explicit HITL routing rules from policy pack</td><td>Evidence summary only</td><td>R1 + E5</td><td>HOLD_FOR_REVIEW</td></tr>
+    <tr><td>C10</td><td>Recordkeeping / Audit Trail</td><td>Mandatory completeness check: D0–D3 captured + RouterDecision logged</td><td>Never</td><td>R1 + E0</td><td>HOLD (do not deliver without record)</td></tr>
+    <tr><td>C11</td><td>Privacy / Data Protection / PII</td><td>Deterministic PII detection rules — runs before any LLM path</td><td>Never</td><td>R1 + E1</td><td>BLOCK / REDACT</td></tr>
+    <tr><td>C12</td><td>Conflict / Promotion / Bias</td><td>Deterministic phrase/pattern rules + semantic promotional classifier</td><td>Nuanced promotional language</td><td>R1 + E1/E3</td><td>BLOCK / SAFE_FALLBACK</td></tr>
+    <tr><td>C13</td><td>Model / Evaluator Governance</td><td>EV_GOLDEN_015 (version cohort monitoring + golden regression)</td><td>Sampled on new version</td><td>R1 + E2</td><td>ROLLBACK evaluator</td></tr>
+    <tr><td>C14</td><td>Operational Resilience</td><td>Deterministic telemetry and health-state inspection</td><td>Never</td><td>R1 + E0</td><td>Fallback routing / incident</td></tr>
+  </table>
+
+  <h3 class="sub">Hard Contractual Targets</h3>
+  <div class="kpi-row">
+    <div class="kpi"><div class="val">100%</div><div class="lbl">Mandatory control coverage</div></div>
+    <div class="kpi alt"><div class="val">0</div><div class="lbl">Mandatory control bypass count</div></div>
+    <div class="kpi alt2"><div class="val">0</div><div class="lbl">Human-required bypass rate</div></div>
+    <div class="kpi alt3"><div class="val">100%</div><div class="lbl">Record reconstruction success rate</div></div>
+    <div class="kpi alt4"><div class="val">0</div><div class="lbl">Autonomous legal rule changes</div></div>
+  </div>
+
+  <h3 class="sub">Jurisdiction Pack Governance Pipeline</h3>
+  <div class="subcomp-grid">
+    <div class="subcomp-card"><h4>Pack Creation (must never be LLM-autonomous)</h4><ul><li>Official regulatory/legal source → source registry</li><li>Approved legal/compliance interpretation → control mapping</li><li>Machine-executable rules (DSL or code)</li><li>Static validation + test cases</li><li>Compliance team approval signature</li><li>Versioned policy pack artefact deployed</li></ul></div>
+    <div class="subcomp-card"><h4>Pack Update Workflow</h4><ul><li>Regulatory source update detected (new circular, amendment)</li><li>Automated source diff (LLM may assist offline only)</li><li>Compliance team review → candidate rule pack vNext (draft)</li><li>Historical replay against 30 days of interactions</li><li>AMC scenario regression (15 standard + domain-specific)</li><li>Canary 5% traffic → 24h → full activation</li></ul></div>
+    <div class="subcomp-card"><h4>Change Classification (P0–P5)</h4><ul><li>P0: Metadata only — most permissive</li><li>P1: New deterministic rule — shadow + regression</li><li>P2: Disclosure/text template — compliance review</li><li>P3: Applicability scope change — human required</li><li>P4: Advice/suitability boundary change — human required</li><li>P5: Regulatory interpretation — prohibited autonomous</li></ul></div>
+    <div class="subcomp-card"><h4>Regulatory Anchors (Aug 2026)</h4><ul><li>India: SEBI (MF) Regulations 2026 + Master Circular 20 Mar 2026</li><li>US: SEC 2026 Exam Priorities + FINRA GenAI 2026 Report</li><li>EU: ESMA AI guidance for investment services (MiFID II)</li><li>UK: FCA AI Approach 13 Feb 2026 (Consumer Duty based)</li></ul></div>
+  </div>
+
+  <div class="callout danger"><span class="callout-icon">🚫</span><div class="callout-body"><strong>Explicitly prohibited</strong> Regulatory PDF → LLM → production rule (no human in loop). LLMs may assist offline with diff summarisation and candidate control extraction. They must not autonomously publish binding runtime compliance controls.</div></div>
+</section>
+
+  </main>
+  <footer class="site-footer">
+    <strong>AMC Component Architecture — In-Depth Reference</strong><br/>
+    Grounded in LLD-01 through LLD-08 · 8 Phases · 4 Control Planes · E0–E5 Evaluation Ladder · R001–R012 Repair Recipes · C01–C14 Compliance Controls<br/>
+    Version 1.0 · August 2026
+  </footer>
+</div>
+
+<script>
+  const sections = ['overview','phase1','phase2','phase3','phase4','phase5','phase6','phase7','phase8','router','taxonomy','healing','compliance'];
+
+  function show(id, btn) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if (btn) btn.classList.add('active');
+    const idx = sections.indexOf(id);
+    document.getElementById('progressBar').style.width = ((idx+1)/sections.length*100)+'%';
+    document.querySelector('.content').scrollTo({ top:0, behavior:'smooth' });
+    window.scrollTo({ top: document.querySelector('.site-nav').offsetTop - 10, behavior:'smooth' });
+  }
+
+  document.addEventListener('keydown', e => {
+    const active = document.querySelector('.section.active');
+    const idx = sections.indexOf(active.id);
+    if (e.key === 'ArrowRight' && idx < sections.length - 1) show(sections[idx+1], document.querySelectorAll('.nav-btn')[idx+1]);
+    if (e.key === 'ArrowLeft' && idx > 0) show(sections[idx-1], document.querySelectorAll('.nav-btn')[idx-1]);
+  });
+
+  document.getElementById('progressBar').style.width = (1/sections.length*100)+'%';
+</script>
+</body>
+</html>
