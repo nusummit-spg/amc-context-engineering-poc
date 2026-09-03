@@ -34,8 +34,6 @@ const STORAGE_KEYS = {
   USERS: "ns_cg_users_v1",
   ACTIVE_USER: "ns_cg_active_user_v1",
   AUTH_SESSION: "ns_cg_auth_session_v1",
-  REMEMBERED_USER: "ns_cg_remembered_user_v1",
-  REMEMBER_ME: "ns_cg_remember_me_v1",
   CHAT_SESSIONS: "ns_cg_chat_sessions_v1",
   ACTIVE_SESSION_ID: "ns_cg_active_session_id_v1",
   COMPARE_SESSIONS: "ns_cg_compare_sessions_v1",
@@ -130,31 +128,15 @@ export function AppStateProvider({ children }) {
   // response — the frontend never mints or validates its own credentials,
   // it just stores what the server issued and re-checks the expiry locally.
   const [authSession, setAuthSessionState] = useState(() => {
-    // 1. Check sessionStorage first (active tab/window session)
-    let saved = null;
-    try {
-      const raw = sessionStorage.getItem(STORAGE_KEYS.AUTH_SESSION);
-      if (raw) saved = JSON.parse(raw);
-    } catch {}
-
-    // 2. Fall back to localStorage (persisted session when "Remember me" was chosen)
-    if (!saved) {
-      saved = safeStorageGet(STORAGE_KEYS.AUTH_SESSION, {
-        isAuthenticated: false,
-        authedUsername: null,
-        token: null,
-        expiresAt: null,
-        rememberMe: false,
-      });
-    }
-
+    const saved = safeStorageGet(STORAGE_KEYS.AUTH_SESSION, {
+      isAuthenticated: false,
+      authedUsername: null,
+      token: null,
+      expiresAt: null,
+    });
     // Defend against a stale/expired session surviving a page reload.
     if (saved?.isAuthenticated && saved?.expiresAt && saved.expiresAt * 1000 <= Date.now()) {
-      try {
-        sessionStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
-        localStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
-      } catch {}
-      return { isAuthenticated: false, authedUsername: null, token: null, expiresAt: null, rememberMe: false };
+      return { isAuthenticated: false, authedUsername: null, token: null, expiresAt: null };
     }
     return saved;
   });
@@ -163,12 +145,9 @@ export function AppStateProvider({ children }) {
   const authToken = authSession?.token || null;
 
   const clearAuthSession = useCallback(() => {
-    const sessionData = { isAuthenticated: false, authedUsername: null, token: null, expiresAt: null, rememberMe: false };
+    const sessionData = { isAuthenticated: false, authedUsername: null, token: null, expiresAt: null };
     setAuthSessionState(sessionData);
-    try {
-      sessionStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
-      localStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
-    } catch {}
+    safeStorageSet(STORAGE_KEYS.AUTH_SESSION, sessionData);
   }, []);
 
   // Passive expiry watch: if the session outlives its TTL while the tab is
@@ -228,25 +207,9 @@ export function AppStateProvider({ children }) {
           authedUsername: backendUser.username,
           token: response.token,
           expiresAt: response.expires_at,
-          rememberMe: Boolean(rememberMe),
         };
         setAuthSessionState(sessionData);
-
-        // Always store in sessionStorage for current tab/window lifecycle
-        try {
-          sessionStorage.setItem(STORAGE_KEYS.AUTH_SESSION, JSON.stringify(sessionData));
-        } catch {}
-
-        // If rememberMe is checked, also persist in localStorage across browser restarts.
-        // If not checked, purge from localStorage so closing browser clears session.
-        try {
-          if (rememberMe) {
-            localStorage.setItem(STORAGE_KEYS.AUTH_SESSION, JSON.stringify(sessionData));
-          } else {
-            localStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
-          }
-        } catch {}
-
+        safeStorageSet(STORAGE_KEYS.AUTH_SESSION, sessionData);
         setActiveUsername(backendUser.username);
 
         setUsersState((prev) => {

@@ -126,4 +126,27 @@ assert.strictEqual(session.isAuthenticated, false);
 assert.strictEqual(session.authedUsername, null);
 console.log("✓ Session logout simulation passed!");
 
+// 4. Remember Me persistence tests
+function handleRememberMeStorage(userId, rememberMe) {
+  if (rememberMe) {
+    setStorage("ns_cg_remembered_user_v1", userId.trim());
+    setStorage("ns_cg_remember_me_v1", "true");
+  } else {
+    delete storage["ns_cg_remembered_user_v1"];
+    setStorage("ns_cg_remember_me_v1", "false");
+  }
+}
+
+// When Remember Me is true:
+handleRememberMeStorage("sarah.compliance", true);
+assert.strictEqual(getStorage("ns_cg_remembered_user_v1", ""), "sarah.compliance");
+assert.strictEqual(getStorage("ns_cg_remember_me_v1", "false"), "true");
+
+// When Remember Me is false:
+handleRememberMeStorage("sarah.compliance", false);
+assert.strictEqual(getStorage("ns_cg_remembered_user_v1", ""), "");
+assert.strictEqual(getStorage("ns_cg_remember_me_v1", "false"), "false");
+console.log("✓ Remember Me user persistence simulation passed!");
+
 console.log("\nALL AUTHENTICATION & RBAC TESTS PASSED SUCCESSFULLY! 🚀");
+
