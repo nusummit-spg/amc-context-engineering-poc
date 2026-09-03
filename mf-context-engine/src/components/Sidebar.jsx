@@ -1,10 +1,8 @@
-import Selectbox from "./widgets/Selectbox";
 import Button from "./widgets/Button";
 import Alert from "./widgets/Alert";
 import Progress from "./widgets/Progress";
 import { useAppState } from "../state/AppState";
 import { useToast } from "./widgets/Toast";
-import { clearIntentCache } from "../services/api";
 
 const PAGES = [
   { id: "app", label: "app", icon: "💬" },
@@ -17,14 +15,13 @@ const PAGES = [
 
 export default function Sidebar() {
   const {
-    users, activeUsername, setActiveUsername, activeUser,
+    activeUser,
     chatSessions, chatSessionId, loadChatSession, deleteChatSession, startNewChatSession,
     indexingTasks, clearCache, isCacheClearing,
     activePage, setActivePage, isSidebarOpen, toggleSidebar,
+    logout,
   } = useAppState();
   const pushToast = useToast();
-
-  const usernames = users.map((u) => u.username);
 
   const handleClearCache = async () => {
     const ok = await clearCache();
@@ -85,15 +82,30 @@ export default function Sidebar() {
 
       <hr />
 
-      <Selectbox
-        label="👤 Active User Profile (RBAC)"
-        help="Switch user roles to test Role-Based Access Control and data boundaries."
-        options={usernames}
-        value={activeUsername}
-        onChange={setActiveUsername}
-      />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "0.5rem" }}>
+        <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "#6e6e6e", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          Current Session
+        </span>
+        <button
+          type="button"
+          onClick={logout}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#b08d57",
+            fontSize: "0.8rem",
+            cursor: "pointer",
+            fontWeight: 600,
+            padding: "2px 4px",
+            textDecoration: "underline",
+          }}
+          title="Sign out and return to authentication screen"
+        >
+          Sign out
+        </button>
+      </div>
 
-      <blockquote className="stMarkdownBlockquote" style={{ marginTop: "0.9rem" }}>
+      <blockquote className="stMarkdownBlockquote" style={{ marginTop: "0.4rem" }}>
         <b>User</b>: <code>{activeUser.full_name}</code>
         <br />
         <b>Role</b>: <code>{activeUser.role}</code>

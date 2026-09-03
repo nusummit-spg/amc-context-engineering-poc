@@ -12,6 +12,7 @@ import ViolationsPage from "./views/pages/ViolationsPage";
 import FundsPage from "./views/pages/FundsPage";
 import RemediationPage from "./views/pages/RemediationPage";
 import MultiRegionPage from "./views/pages/MultiRegionPage";
+import LoginScreen from "./components/auth/LoginScreen";
 import { useAppState } from "./state/AppState";
 import { ROLE_PERMISSIONS } from "./data/rbac";
 import { API_BASE } from "./services/api";
@@ -42,7 +43,12 @@ function AdminView() {
 }
 
 export default function App() {
-  const { activeUser, activeTab, setActiveTab, activePage, isSidebarOpen, toggleSidebar } = useAppState();
+  const { isAuthenticated, activeUser, activeTab, setActiveTab, activePage, isSidebarOpen, toggleSidebar } = useAppState();
+
+  if (!isAuthenticated) {
+    return <LoginScreen />;
+  }
+
   const role = activeUser?.role || "Compliance & Regulatory Officer";
   const perms = ROLE_PERMISSIONS[role] || {};
 

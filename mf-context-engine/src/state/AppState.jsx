@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { DEFAULT_USER_PROFILES, ROLE_PERMISSIONS } from "../data/rbac";
+import USERS from "../data/users.json";
 import {
   fetchUsers,
   fetchAuditLogs,
@@ -24,6 +25,7 @@ const AppStateContext = createContext(null);
 const STORAGE_KEYS = {
   USERS: "ns_cg_users_v1",
   ACTIVE_USER: "ns_cg_active_user_v1",
+  AUTH_SESSION: "ns_cg_auth_session_v1",
   CHAT_SESSIONS: "ns_cg_chat_sessions_v1",
   ACTIVE_SESSION_ID: "ns_cg_active_session_id_v1",
   COMPARE_SESSIONS: "ns_cg_compare_sessions_v1",
@@ -99,12 +101,35 @@ const INITIAL_AUDIT_LINES = [
   `{"ts": "2026-08-29T09:04:55Z", "user": "rahul_sales", "role": "Sales & Distribution Manager", "query": "SID KIM update timelines", "mode": "traditional", "latency_ms": 1330}`,
 ];
 
+const INITIAL_USERS = [
+  ...USERS.map((u) => ({
+    username: u.username,
+    full_name: u.display_name,
+    role: u.role,
+    department: u.department,
+    email: u.email,
+    avatar_initials: u.avatar_initials,
+    status: "Active",
+  })),
+  ...DEFAULT_USER_PROFILES.filter((dp) => !USERS.some((u) => u.username === dp.username)),
+];
+
 export function AppStateProvider({ children }) {
-  // ── 1. Users & RBAC State ──────────────────────────────────────────────────
-  const [users, setUsersState] = useState(() => safeStorageGet(STORAGE_KEYS.USERS, DEFAULT_USER_PROFILES));
-  const [activeUsername, setActiveUsernameState] = useState(() =>
-    safeStorageGet(STORAGE_KEYS.ACTIVE_USER, DEFAULT_USER_PROFILES[0].username)
+  // ── 0. Auth Gate State ─────────────────────────────────────────────────────
+  const [authSession, setAuthSessionState] = useState(() =>
+    safeStorageGet(STORAGE_KEYS.AUTH_SESSION, { isAuthenticated: false, authedUsername: null })
   );
+  const isAuthenticated = Boolean(authSession?.isAuthenticated);
+  const authedUsername = authSession?.authedUsername || null;
+
+  // ── 1. Users & RBAC State ──────────────────────────────────────────────────
+  const [users, setUsersState] = useState(() => safeStorageGet(STORAGE_KEYS.USERS, INITIAL_USERS));
+  const [activeUsername, setActiveUsernameState] = useState(() => {
+    const saved = safeStorageGet(STORAGE_KEYS.ACTIVE_USER, null);
+    if (saved) return saved;
+    const initialSession = safeStorageGet(STORAGE_KEYS.AUTH_SESSION, null);
+    return initialSession?.authedUsername || INITIAL_USERS[0].username;
+  });
 
   const setUsers = useCallback((updater) => {
     setUsersState((prev) => {
@@ -119,9 +144,68 @@ export function AppStateProvider({ children }) {
     safeStorageSet(STORAGE_KEYS.ACTIVE_USER, username);
   }, []);
 
+  const login = useCallback(
+    (inputUserId, inputPassword, autoCommit = false) => {
+      const clean = (inputUserId || "").trim().toLowerCase();
+      const matched = USERS.find((u) => u.username.toLowerCase() === clean);
+      if (!matched || matched.password !== inputPassword) {
+        return { success: false, error: "That User ID or password doesn't match our records." };
+      }
+
+      const commit = () => {
+        const sessionData = { isAuthenticated: true, authedUsername: matched.username };
+        setAuthSessionState(sessionData);
+        safeStorageSet(STORAGE_KEYS.AUTH_SESSION, sessionData);
+        setActiveUsername(matched.username);
+
+        setUsersState((prev) => {
+          if (prev.some((u) => u.username === matched.username)) return prev;
+          const newProfile = {
+            username: matched.username,
+            full_name: matched.display_name,
+            role: matched.role,
+            department: matched.department,
+            email: matched.email,
+            avatar_initials: matched.avatar_initials,
+            status: "Active",
+          };
+          const next = [newProfile, ...prev];
+          safeStorageSet(STORAGE_KEYS.USERS, next);
+          return next;
+        });
+      };
+
+      if (autoCommit) {
+        commit();
+      }
+
+      return { success: true, user: matched, commit };
+    },
+    [setActiveUsername]
+  );
+
+  const logout = useCallback(() => {
+    const sessionData = { isAuthenticated: false, authedUsername: null };
+    setAuthSessionState(sessionData);
+    safeStorageSet(STORAGE_KEYS.AUTH_SESSION, sessionData);
+  }, []);
+
   const activeUser = useMemo(() => {
     const found = users.find((u) => u.username === activeUsername);
-    return found || users[0] || DEFAULT_USER_PROFILES[0];
+    if (found) return found;
+    const foundAuth = USERS.find((u) => u.username === activeUsername);
+    if (foundAuth) {
+      return {
+        username: foundAuth.username,
+        full_name: foundAuth.display_name,
+        role: foundAuth.role,
+        department: foundAuth.department,
+        email: foundAuth.email,
+        avatar_initials: foundAuth.avatar_initials,
+        status: "Active",
+      };
+    }
+    return users[0] || INITIAL_USERS[0] || DEFAULT_USER_PROFILES[0];
   }, [users, activeUsername]);
 
   const activePermissions = useMemo(() => {
@@ -839,6 +923,12 @@ export function AppStateProvider({ children }) {
   }, [setUsers, setActiveUsername]);
 
   const value = {
+    // Auth & Gate
+    isAuthenticated,
+    authedUsername,
+    login,
+    logout,
+
     // Users & RBAC
     users, setUsers,
     activeUsername, setActiveUsername,
@@ -903,8 +993,32 @@ export function useAppState() {
 }
 
 export function useUser() {
-  const { users, activeUser, activeUsername, setActiveUsername, activePermissions, saveUserProfile, deleteUserProfile } = useAppState();
-  return { users, activeUser, activeUsername, setActiveUsername, permissions: activePermissions, saveUserProfile, deleteUserProfile };
+  const {
+    users,
+    activeUser,
+    activeUsername,
+    setActiveUsername,
+    activePermissions,
+    saveUserProfile,
+    deleteUserProfile,
+    isAuthenticated,
+    authedUsername,
+    login,
+    logout,
+  } = useAppState();
+  return {
+    users,
+    activeUser,
+    activeUsername,
+    setActiveUsername,
+    permissions: activePermissions,
+    saveUserProfile,
+    deleteUserProfile,
+    isAuthenticated,
+    authedUsername,
+    login,
+    logout,
+  };
 }
 
 export function useChat() {
