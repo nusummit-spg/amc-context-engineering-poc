@@ -31,5 +31,8 @@ class AuditTrailAccessMetrics(BaseModel):
     access_approval_id: Optional[str] = Field(default=None, description="Ticket or workflow ID granting access approval")
     previous_log_hash: Optional[str] = Field(default=None, description="Cryptographic SHA-256 hash of previous audit log for tamper-evident blockchain/chaining")
     current_log_hash: str = Field(default="", description="Cryptographic SHA-256 hash of this entry combined with previous entry")
+    digital_signature_rsa: Optional[str] = Field(default=None, description="Bank-grade RSA-2048 digital signature of current_log_hash for non-repudiation")
+    public_key_fingerprint: Optional[str] = Field(default=None, description="SHA-256 fingerprint of RSA signing public key")
     accessed_at: str = Field(..., description="ISO 8601 timestamp of access event")
+
 

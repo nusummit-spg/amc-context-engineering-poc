@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AMC Feedback Loop — Consolidated HLD &amp; LLD</title>
+<style>
+:root{
+  --bg:#ffffff; --text:#171717; --muted:#666; --line:#e0e0e0; --soft:#f7f7f7; --soft2:#fafafa;
+  --accent:#1b4dbb; --accent-soft:#eef2fc; --good:#1c7d3f; --warn:#a6660b; --bad:#b3261e;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Arial,Helvetica,sans-serif;line-height:1.6;}
+.layout{display:flex;max-width:1440px;margin:0 auto;}
+nav.toc{
+  position:sticky; top:0; align-self:flex-start; height:100vh; overflow-y:auto;
+  width:270px; flex:0 0 270px; padding:22px 16px 40px; border-right:1px solid var(--line); background:var(--soft2);
+  font-size:.82rem;
+}
+nav.toc h2{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 6px;}
+nav.toc h2:first-child{margin-top:0;}
+nav.toc a{display:block;color:#333;text-decoration:none;padding:3px 0 3px 8px;border-left:2px solid transparent;}
+nav.toc a:hover{color:var(--accent);border-left-color:var(--accent);}
+main{flex:1;min-width:0;padding:34px 44px 90px;}
+h1{font-size:1.9rem;line-height:1.25;margin:0 0 6px;}
+h1.doc-title{font-size:2.1rem;}
+h2{font-size:1.45rem;border-bottom:1px solid var(--line);padding-bottom:8px;margin:44px 0 16px;}
+h3{font-size:1.15rem;margin:28px 0 10px;color:#111;}
+h4{font-size:1rem;margin:20px 0 8px;color:var(--accent);}
+p,li{font-size:.95rem;}
+.subtitle{color:var(--muted);margin:0 0 26px;font-size:.98rem;}
+.badge-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;}
+.badge{background:var(--accent-soft);color:var(--accent);border-radius:20px;padding:4px 12px;font-size:.75rem;font-weight:600;}
+.callout{border-left:4px solid var(--accent);background:var(--accent-soft);padding:12px 16px;margin:16px 0;border-radius:0 6px 6px 0;font-size:.92rem;}
+.callout.warn{border-color:var(--warn);background:#fbf3e6;}
+.callout.note{border-color:var(--muted);background:var(--soft2);}
+table{width:100%;border-collapse:collapse;font-size:.86rem;margin:14px 0 26px;}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;}
+th{background:#f3f3f3;}
+td.io-in{color:var(--good);}
+td.io-out{color:#1b4dbb;}
+code{font-family:Consolas,"Courier New",monospace;font-size:.87em;background:#f1f1f1;padding:.1em .35em;border-radius:4px;}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow:auto;font-size:.82rem;line-height:1.45;}
+pre code{background:transparent;padding:0;}
+hr{border:0;border-top:1px solid var(--line);margin:36px 0;}
+.flow{display:flex;flex-direction:column;gap:0;margin:20px 0 30px;}
+.flow-row{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;}
+.node{
+  border:1px solid var(--line); border-radius:8px; padding:10px 14px; background:#fff;
+  min-width:150px; flex:1 1 150px; font-size:.82rem; position:relative;
+}
+.node b{display:block;font-size:.85rem;margin-bottom:3px;}
+.node small{color:var(--muted);}
+.node.blue{border-color:#8fa8e6;background:#eef2fc;}
+.node.green{border-color:#8fcaa2;background:#eaf7ef;}
+.node.amber{border-color:#e0b568;background:#fbf3e2;}
+.node.red{border-color:#e39a92;background:#fbeceb;}
+.node.grey{border-color:#c9c9c9;background:#f4f4f4;}
+.arrow-down{text-align:center;color:var(--muted);font-size:1.1rem;margin:2px 0;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media (max-width:900px){.two-col{grid-template-columns:1fr;} .layout{flex-direction:column;} nav.toc{position:relative;width:100%;height:auto;}}
+.tag{display:inline-block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-radius:4px;padding:2px 7px;margin-right:6px;}
+.tag.hld{background:#e3ecff;color:#1b4dbb;}
+.tag.lld{background:#e3f5ea;color:#1c7d3f;}
+.tag.wb{background:#fbe8d6;color:#a6660b;}
+.foot{color:var(--muted);font-size:.8rem;margin-top:60px;border-top:1px solid var(--line);padding-top:16px;}
+.src-list li{margin-bottom:4px;}
+ol.steps > li{margin-bottom:10px;}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc">
+  <h2>Document</h2>
+  <a href="#overview">Overview</a>
+  <a href="#principle">Guiding Principle</a>
+  <h2>1 — HLD</h2>
+  <a href="#hld-flow">1.1 End-to-End Flow</a>
+  <a href="#hld-steps">1.2 Step Table (I/O)</a>
+  <a href="#hld-families">1.3 Two Evaluation Families</a>
+  <a href="#hld-patch">1.4 Patch Layer vs Canonical KG</a>
+  <a href="#hld-record">1.5 Unified Evaluation Record</a>
+  <h2>2 — LLD</h2>
+  <a href="#lld-systems">2.1 Three-System Architecture</a>
+  <a href="#lld-amc">2.2 AMC: Capture Layer</a>
+  <a href="#lld-trigger">2.3 Trigger Contract (Webhook)</a>
+  <a href="#lld-module">2.4 Human Feedback Loop Module</a>
+  <a href="#lld-eval">2.5 Evaluation Layer</a>
+  <a href="#lld-tiered">2.6 Tiered Engine (Active/HITL)</a>
+  <a href="#lld-objects">2.7 Reference Data Objects</a>
+  <a href="#lld-severity">2.8 Severity → Action Routing</a>
+  <h2>3 — Notes</h2>
+  <a href="#whiteboard">Whiteboard Capture</a>
+  <a href="#open">Open Decisions</a>
+  <a href="#sources">Source Documents</a>
+</nav>
+
+<main>
+<h1 class="doc-title">AMC Feedback Loop — Feedback, Evaluation &amp; Self-Correction</h1>
+<p class="subtitle">Consolidated architecture reference — High-Level Design, Low-Level Design and engineering notes, merged from the conceptual architecture, the v2 technical design, and whiteboard working notes.</p>
+<div class="badge-row">
+  <span class="badge">HLD — conceptual pipeline</span>
+  <span class="badge">LLD — three-system technical design</span>
+  <span class="badge">Every step: Input → Output</span>
+  <span class="badge">v2 draft, evaluation layer subject to change</span>
+</div>
+
+<h2 id="overview">Overview</h2>
+<p>HITL feedback and agentic (no-feedback) evaluation are <b>not two separate systems</b>. They are two entry
+routes into one pipeline: <b>Feedback → Evaluation → Diagnosis → Controlled Improvement.</b> Every response —
+whether a human ever reacts to it or not — ends up in the same evidence record, the same tiered evaluation,
+the same diagnosis step, and the same governed correction path.</p>
+<p>Three separate codebases implement this pipeline end to end:</p>
+<ul>
+  <li><b>AMC</b> — owns the query/response flow, the feedback UI panel, and the <code>feedback_records</code> table.</li>
+  <li><b>Human Feedback Loop module</b> — a separate codebase that turns one <code>feedback_records</code> row into one unified evaluation record.</li>
+  <li><b>Evaluation Layer</b> — a separate system again, triggered per record, that does the deep evaluation and repair proposal (batch engine for the passive/no-feedback path, a tiered ladder for the active/HITL path).</li>
+</ul>
+
+<div class="callout" id="principle">
+<b>Guiding principle:</b> Feedback ≠ Learning. Evaluation ≠ Learning. Diagnosis ≠ Learning. The chatbot never
+directly learns from one user's say-so — not the knowledge graph (governed, weekly, batch-approved) and not
+really the LLM either, since its "learning" is a logged, confidence-scored, TTL-bound context patch rather than
+a parameter update. That single decision protects the system against incorrect feedback, malicious feedback,
+feedback poisoning, and accidental corruption of the AMC taxonomy — while still letting visible behavior
+improve immediately.
+</div>
+
+<!-- ===================== SECTION 1: HLD ===================== -->
+<h2 id="hld-flow"><span class="tag hld">HLD</span>1.1 End-to-End Flow</h2>
+<p>The conceptual, system-agnostic view of the pipeline. Every response takes the top path (evidence capture)
+unconditionally; feedback (human) and no-feedback (automatic) are two entry routes that converge on the same
+unified record, diagnosis, and correction machinery.</p>
+
+<div class="flow">
+  <div class="flow-row">
+    <div class="node grey"><b>A — User Query</b><small>Input: raw user message<br>Output: query passed to pipeline</small></div>
+  </div>
+  <div class="arrow-down">↓</div>
+  <div class="flow-row">
+    <div class="node blue"><b>B/B1/B2/B3 — AMC Chatbot Pipeline</b><small>Retrieval → Context Engineering → Guardrails<br>Input: user query<br>Output: generated response + retrieval trace + guardrail verdicts</small></div>
+  </div>
+  <div class="arrow-down">↓</div>
+  <div class="flow-row">
+    <div class="node grey"><b>C — Response Generated</b><small>Input: model output<br>Output: response delivered to user</small></div>
+  </div>
+  <div class="arrow-down">↓</div>
+  <div class="flow-row">
+    <div class="node green"><b>D/D1 — Capture Interaction Evidence</b><small>Immutable, written before any feedback exists<br>Input: query+response, retrieved evidence, graph paths, citations, taxonomy nodes, guardrail decisions, model/prompt version, latency/token/system metrics<br>Output: InteractionSnapshot + EvidencePack (frozen)</small></div>
+    <div class="node amber"><b>E — Human Feedback or Follow-up?</b><small>Input: response delivery event<br>Output: branch decision (YES → HITL path, NO → automatic path)</small></div>
+  </div>
+
+  <div class="two-col" style="margin-top:14px;">
+    <div>
+      <h4>HITL path (E = YES)</h4>
+      <div class="node blue"><b>F — Structured HITL Feedback</b><small>Input: explicit UI selection OR a dissatisfaction follow-up<br>Output: raw feedback event</small></div>
+      <div class="arrow-down">↓</div>
+      <div class="node blue"><b>FD — Dissatisfaction Follow-up Handling</b><small>Frustration/intent classifier + same-referent check<br>Input: raw follow-up query + original answer<br>Output: structured claim (or discarded if not a correction attempt)</small></div>
+      <div class="arrow-down">↓</div>
+      <div class="node blue"><b>F1 — Category Tagging</b><small>Input: structured claim<br>Output: category ∈ {Hallucination, Accuracy, Missing Context, Incomplete, Outdated, Citation, Tone, Compliance, Other}</small></div>
+      <div class="arrow-down">↓</div>
+      <div class="node amber"><b>G — Feedback Validation Layer</b><small>Input: categorized claim<br>Output: routed to the cheapest tier that can resolve it</small></div>
+      <div class="arrow-down">↓</div>
+      <div class="node amber"><b>G1 — Tier 1: Rule Categories</b><small>Schema/Type, Cardinality, Referential, Temporal, Numeric, Cross-Source, Duplicate, Hierarchy, Jurisdiction<br>Input: claim + evidence<br>Output: {category, rule_id, pass/fail or score, threshold, evidence_ref}</small></div>
+      <div class="arrow-down">↓</div>
+      <div class="node amber"><b>G1b — Tier 1: GNN Structural Plausibility</b><small>Frozen model, fixed threshold<br>Input: candidate triple<br>Output: plausibility score (0 LLM tokens)</small></div>
+      <div class="arrow-down">↓</div>
+      <div class="node grey"><b>G2 — Resolved by rules+GNN alone?</b><small>Output: YES → H · NO → G3</small></div>
+      <div class="arrow-down">↓</div>
+      <div class="node amber"><b>G3 — Tier 2: Semantic (NLI)</b><small>Input: claim vs evidence<br>Output: entailment/contradiction/neutral + confidence</small></div>
+      <div class="arrow-down">↓</div>
+      <div class="node grey"><b>G4 — Enough confidence?</b><small>Output: YES → H · NO → G5</small></div>
+      <div class="arrow-down">↓</div>
+      <div class="node red"><b>G5 — Tier 3: LLM / Agent Evaluator</b><small>Last resort, most expensive<br>Input: claim + evidence + prior tier findings<br>Output: verdict + confidence</small></div>
+      <div class="arrow-down">↓</div>
+      <div class="node blue"><b>H/H1 — Feedback Adjudication</b><small>Input: verdict from whichever tier resolved it<br>Output: Valid / Partially Valid / Invalid / Subjective / Insufficient Evidence</small></div>
+    </div>
+    <div>
+      <h4>No-feedback path (E = NO)</h4>
+      <div class="node green"><b>I — Automatic Evaluation Trigger</b><small>Input: every response (100% coverage)<br>Output: evaluation job enqueued</small></div>
+      <div class="arrow-down">↓</div>
+      <div class="node green"><b>J/J1 — Tier 0/1: Cheap Deterministic + GNN Sweep</b><small>Input: response + evidence<br>Output: grounding, citation, source freshness, numeric consistency, retrieval confidence, guardrail events, schema/formatting, cost/latency checks</small></div>
+      <div class="arrow-down">↓</div>
+      <div class="node grey"><b>K — Suspicious / sampled / high-value?</b><small>Output: NO → L · YES → M</small></div>
+      <div class="arrow-down">↓</div>
+      <div class="node amber"><b>M — Tier 2: Semantic Evaluation</b><small>Input: response + evidence<br>Output: claim-evidence consistency, completeness, contradiction, relevance, factuality scores</small></div>
+      <div class="arrow-down">↓</div>
+      <div class="node grey"><b>N — Resolved with confidence?</b><small>Output: YES → O · NO → P</small></div>
+      <div class="arrow-down">↓</div>
+      <div class="node red"><b>P — Tier 3: LLM / Agent Evaluator</b><small>Input: response + evidence + M's findings<br>Output: evaluation finding</small></div>
+      <div class="arrow-down">↓</div>
+      <div class="node green"><b>L / O — Evaluation Finding</b><small>Output: stored finding (L = cheap-path store, O = escalated finding)</small></div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓ both paths converge ↓</div>
+  <div class="flow-row">
+    <div class="node blue"><b>Q — Unified Evaluation Record</b><small>Input: H1 (HITL) or O/L (automatic)<br>Output: one schema regardless of entry route (see §1.5)</small></div>
+  </div>
+  <div class="arrow-down">↓</div>
+  <div class="flow-row">
+    <div class="node amber"><b>R/R1 — Failure Diagnosis</b><small>Input: unified record<br>Output: root cause ∈ {Knowledge/Data, Retrieval, Graph, Context Engineering, Taxonomy, Reasoning/Model, Guardrail, Compliance, Presentation, User-feedback issue}</small></div>
+  </div>
+  <div class="arrow-down">↓</div>
+  <div class="flow-row">
+    <div class="node amber"><b>S — Severity + Confidence + Impact Scoring</b><small>Input: diagnosis<br>Output: scored record</small></div>
+    <div class="node grey"><b>T — Action Required?</b><small>Output: NO → Monitor/Analytics · YES → Detection</small></div>
+  </div>
+
+  <h4 style="margin-top:26px;">KG Correction — three explicit stages</h4>
+  <div class="flow-row">
+    <div class="node blue"><b>1 — DETECTION</b><small>Input: HITL-confirmed feedback, scheduled GNN structural sweep, or ingestion-time source conflict<br>Output: precisely localized disputed node/edge/triple</small></div>
+    <div class="node amber"><b>2 — EVALUATION</b><small>Input: localized candidate<br>Merge Rule Categories + GNN Plausibility + NLI first; escalate to HITL/LLM only if inconclusive<br>Output: verdict = Confirmed / Rejected / Ambiguous (never a write)</small></div>
+    <div class="node green"><b>3 — RESOLUTION</b><small>Input: confirmed verdict only<br>Output: Correction Patch Layer entry (immediate, reversible) + entry into the Improvement Queue (not direct self-learning)</small></div>
+  </div>
+  <div class="arrow-down">↓</div>
+  <div class="flow-row">
+    <div class="node grey"><b>X — Offline Test / Regression</b><small>Input: improvement candidate<br>Output: pass/fail</small></div>
+    <div class="node blue"><b>AA — Human Governance Approval</b><small>Weekly batch — the only path that can write to the canonical graph<br>Input: passing candidates<br>Output: approved change set</small></div>
+    <div class="node green"><b>AB/ABG — Controlled Deployment</b><small>Input: approved change set<br>Output: canonical KG update + reindex + scheduled GNN embedding refresh (same governed cadence, run after the graph write)</small></div>
+    <div class="node grey"><b>AC — Measure Post-Change Outcome</b><small>Input: deployed change<br>Output: metrics fed back into evidence capture (D), closing the loop</small></div>
+  </div>
+</div>
+
+<h2 id="hld-steps"><span class="tag hld">HLD</span>1.2 Full Step Table — Input / Output</h2>
+<table>
+<tr><th style="width:8%">Step</th><th style="width:20%">Name</th><th style="width:33%" class="io-in">Input</th><th style="width:33%" class="io-out">Output</th></tr>
+<tr><td>A</td><td>User Query</td><td class="io-in">Raw user message</td><td class="io-out">Query handed to AMC pipeline</td></tr>
+<tr><td>B/B1/B2/B3</td><td>AMC Chatbot Pipeline (retrieval, context engineering, guardrails)</td><td class="io-in">User query</td><td class="io-out">Generated response, retrieval trace, prompt context, guardrail decisions</td></tr>
+<tr><td>C</td><td>Response Generated</td><td class="io-in">Model output + guardrail pass</td><td class="io-out">Response delivered to user</td></tr>
+<tr><td>D/D1</td><td>Capture Interaction Evidence</td><td class="io-in">Response event (fires before any feedback exists)</td><td class="io-out">Immutable InteractionSnapshot + EvidencePack: query+response, retrieved evidence, graph paths, citations, taxonomy nodes, guardrail state, model/prompt version, latency/token/system metrics</td></tr>
+<tr><td>E</td><td>Human Feedback or Follow-up?</td><td class="io-in">Response delivery event</td><td class="io-out">Branch: HITL path (F) or automatic path (I)</td></tr>
+<tr><td>F</td><td>Structured HITL Feedback</td><td class="io-in">Explicit UI feedback action, or a dissatisfaction follow-up query</td><td class="io-out">Raw feedback event, un-normalized</td></tr>
+<tr><td>FD</td><td>Dissatisfaction Follow-up Handling</td><td class="io-in">Raw follow-up query + original answer + frustration/intent classifier + same-referent check (embedding similarity + coreference)</td><td class="io-out">Structured claim (or dropped if not a genuine correction attempt)</td></tr>
+<tr><td>F1</td><td>Category Tagging</td><td class="io-in">Structured claim / explicit selection</td><td class="io-out">Category: Hallucination / Accuracy / Missing Context / Incomplete / Outdated / Citation / Tone / Compliance / Other</td></tr>
+<tr><td>G</td><td>Feedback Validation Layer</td><td class="io-in">Categorized claim</td><td class="io-out">Routing decision to the cheapest tier that can resolve the claim</td></tr>
+<tr><td>G1</td><td>Tier 1 — Rule Categories</td><td class="io-in">Claim + evidence pack</td><td class="io-out">Per-category result: <code>{category, rule_id, pass/fail or score, threshold, evidence_ref}</code></td></tr>
+<tr><td>G1b</td><td>Tier 1 — GNN Structural Plausibility</td><td class="io-in">Candidate triple</td><td class="io-out">Plausibility score from a frozen model, fixed threshold, 0 LLM tokens</td></tr>
+<tr><td>G2</td><td>Resolved by rules+GNN alone?</td><td class="io-in">G1 + G1b results</td><td class="io-out">YES → H · NO → G3</td></tr>
+<tr><td>G3</td><td>Tier 2 — Semantic Evaluation (NLI)</td><td class="io-in">Claim vs evidence text</td><td class="io-out">Entailment / contradiction / neutral label + confidence</td></tr>
+<tr><td>G4</td><td>Enough confidence?</td><td class="io-in">G3 confidence score</td><td class="io-out">YES → H · NO → G5</td></tr>
+<tr><td>G5</td><td>Tier 3 — LLM / Agent Evaluator</td><td class="io-in">Claim + evidence + prior tier findings</td><td class="io-out">Verdict + confidence (last resort, most expensive)</td></tr>
+<tr><td>H/H1</td><td>Feedback Adjudication</td><td class="io-in">Verdict from whichever tier resolved the claim</td><td class="io-out">Valid / Partially Valid / Invalid / Subjective / Insufficient Evidence</td></tr>
+<tr><td>I</td><td>Automatic Evaluation Trigger</td><td class="io-in">Every response, unconditionally</td><td class="io-out">Evaluation job enqueued (100% coverage)</td></tr>
+<tr><td>J/J1</td><td>Tier 0/1 — Cheap Deterministic + GNN Sweep</td><td class="io-in">Response + evidence pack</td><td class="io-out">Grounding, citation, source freshness, numeric consistency, retrieval confidence, guardrail events, schema/formatting, cost/latency signals</td></tr>
+<tr><td>K</td><td>Suspicious / sampled / high-value?</td><td class="io-in">J1 signals</td><td class="io-out">NO → L (store) · YES → M (escalate)</td></tr>
+<tr><td>M</td><td>Tier 2 — Semantic Evaluation</td><td class="io-in">Response + evidence pack</td><td class="io-out">Claim-evidence consistency, completeness, contradiction, relevance, factuality scores</td></tr>
+<tr><td>N</td><td>Resolved with confidence?</td><td class="io-in">M's scores</td><td class="io-out">YES → O · NO → P</td></tr>
+<tr><td>P</td><td>Tier 3 — LLM / Agent Evaluator</td><td class="io-in">Response + evidence + M findings</td><td class="io-out">Evaluation finding</td></tr>
+<tr><td>L / O</td><td>Store Evaluation / Evaluation Finding</td><td class="io-in">K's cheap-path result, or P/M's resolved result</td><td class="io-out">Finding persisted, forwarded to Q</td></tr>
+<tr><td>Q</td><td>Unified Evaluation Record</td><td class="io-in">H1 (HITL path) or O/L (automatic path)</td><td class="io-out">One schema regardless of entry route (§1.5)</td></tr>
+<tr><td>R/R1</td><td>Failure Diagnosis</td><td class="io-in">Unified evaluation record</td><td class="io-out">Root cause: Knowledge/Data, Retrieval, Graph, Context Engineering, Taxonomy, Reasoning/Model, Guardrail, Compliance, Presentation, or User-feedback issue</td></tr>
+<tr><td>S</td><td>Severity + Confidence + Impact Scoring</td><td class="io-in">Diagnosed record</td><td class="io-out">Scored record with severity/confidence/impact</td></tr>
+<tr><td>T</td><td>Action Required?</td><td class="io-in">Scored record</td><td class="io-out">NO → Monitor/Analytics (U) · YES → Detection</td></tr>
+<tr><td>DET</td><td>1 — Detection</td><td class="io-in">HITL-confirmed feedback, scheduled GNN structural sweep, or ingestion-time source conflict</td><td class="io-out">Precisely localized disputed node / edge / triple</td></tr>
+<tr><td>EVAL</td><td>2 — Evaluation</td><td class="io-in">Localized candidate</td><td class="io-out">Verdict: Confirmed / Rejected / Ambiguous (merges rules+GNN+NLI first; escalates to HITL/LLM only if inconclusive; never writes anything)</td></tr>
+<tr><td>RES</td><td>3 — Resolution</td><td class="io-in">Confirmed verdict only</td><td class="io-out">Correction Patch Layer entry (immediate, reversible) + Improvement Queue entry (not direct self-learning)</td></tr>
+<tr><td>X</td><td>Offline Test / Regression</td><td class="io-in">Improvement candidate</td><td class="io-out">Pass → Governance (AA) · Fail → Reject/Refine (Z)</td></tr>
+<tr><td>AA</td><td>Human Governance Approval</td><td class="io-in">Passing candidates, weekly batch</td><td class="io-out">Approved change set (only path allowed to write the canonical graph)</td></tr>
+<tr><td>AB/ABG</td><td>Controlled Deployment</td><td class="io-in">Approved change set</td><td class="io-out">Canonical KG update + reindex, then a scheduled GNN embedding refresh (run after the graph write, same governed cadence)</td></tr>
+<tr><td>AC</td><td>Measure Post-Change Outcome</td><td class="io-in">Deployed change</td><td class="io-out">Metrics fed back into evidence capture (D), closing the loop</td></tr>
+</table>
+
+<h2 id="hld-families"><span class="tag hld">HLD</span>1.3 Two Evaluation Families</h2>
+<div class="two-col">
+  <div class="node grey"><b>Response Evaluation</b><small>Is a single answer grounded, accurate, complete, current, consistent, relevant, compliant, safe, and clearly communicated?</small></div>
+  <div class="node grey"><b>System Evaluation</b><small>Root-cause question across three subsystems: Retrieval (recall, precision, graph path correctness, freshness), Generation (groundedness, citation use, context use, tokens), Guardrails (triggered correctly, false positive/negative rate) — a bad answer doesn't necessarily mean a bad model.</small></div>
+</div>
+<pre><code>Incorrect response
+   → Was correct information retrieved?      NO  → Retrieval / knowledge problem
+   → Was correct evidence given to model?     NO  → Context engineering problem
+   → Did model contradict the evidence?       YES → Reasoning / generation problem</code></pre>
+
+<h2 id="hld-patch"><span class="tag hld">HLD</span>1.4 Correction Patch Layer vs. Canonical Knowledge Graph</h2>
+<table>
+<tr><th></th><th>Correction Patch Layer</th><th>Canonical Knowledge Graph</th></tr>
+<tr><td>What it is</td><td>Keyed override store: <code>disputed_node/edge → corrected_claim</code>, with confidence, provenance, TTL</td><td>The shared ground-truth graph every user's retrieval depends on</td></tr>
+<tr><td>Who writes</td><td>Either resolution pathway, immediately, at a confidence tier matching how it was adjudicated</td><td>Only the weekly Human Governance batch, after approval</td></tr>
+<tr><td>Effect</td><td>Fast, reversible, auto-expires if never ratified</td><td>Global, permanent, versioned</td></tr>
+</table>
+<p>The LLM consults the patch layer at generation time — a context-level override, not a weight update — so the
+next user asking about the same disputed fact gets the corrected answer immediately, while the change stays
+fully logged and reversible until governance signs off on making it permanent.</p>
+
+<h2 id="hld-record"><span class="tag hld">HLD</span>1.5 Unified Evaluation Record — Conceptual Shape</h2>
+<pre><code>EvaluationRecord
+├── interaction_id
+├── feedback (raw_feedback, categories, free_text)
+├── evidence (retrieved_sources, graph_paths, taxonomy_nodes, citations)
+├── deterministic_results (by rule category)
+├── gnn_plausibility_score
+├── semantic_results
+├── llm_evaluation
+├── adjudication (verdict, confidence, supporting_evidence)
+├── root_cause
+├── severity
+├── improvement_candidate
+└── lifecycle_status</code></pre>
+
+<hr>
+
+<!-- ===================== SECTION 2: LLD ===================== -->
+<h2 id="lld-systems"><span class="tag lld">LLD</span>2.1 Three-System Technical Architecture</h2>
+<p>v2 draft. Everything downstream of AMC is decoupled by an explicit contract, not shared state:</p>
+<div class="flow-row">
+  <div class="node blue"><b>AMC codebase</b><small>Owns query/response flow, feedback UI panel, <code>feedback_records</code> table<br>Output: identifiers only, via webhook</small></div>
+  <div class="node amber"><b>Human Feedback Loop module</b><small>Separate codebase. Input: webhook identifiers. Runs its own EvidenceAdapter to fetch the rest. Output: one <code>unified_evaluation_records</code> row per response</small></div>
+  <div class="node red"><b>Evaluation Layer (external)</b><small>Separate system, triggered per record where <code>repair=true</code>. Input: unified record. Output: scored/repaired findings + proposed graph mutations. Design covered in §2.5–2.6, explicitly expected to change</small></div>
+</div>
+
+<h2 id="lld-amc"><span class="tag lld">LLD</span>2.2 AMC Codebase — Capture Layer</h2>
+<h3>2.2.1 UI Panel</h3>
+<ul>
+  <li>Rendered alongside every delivered response.</li>
+  <li>Issue-type checkboxes (multi-select) — Inaccurate, Incomplete, Irrelevant, Outdated, Other.</li>
+  <li>A feedback text box for free-form detail.</li>
+  <li>One Submit button — clicking it is the active-path trigger; the panel also arms the passive-path timer/blur listener the moment the response renders, regardless of whether the user ever touches it.</li>
+</ul>
+
+<h3>2.2.2 Active vs. Passive Capture — Input/Output</h3>
+<table>
+<tr><th>Path</th><th class="io-in">Input</th><th class="io-out">Output</th></tr>
+<tr><td><b>Active</b></td><td class="io-in">User checks one or more issue types, optionally adds free text, clicks Submit</td><td class="io-out"><code>feedback_records</code> row inserted immediately via the feedback API, <code>source='active'</code></td></tr>
+<tr><td><b>Passive</b></td><td class="io-in">2–4 minute window given for the user to react; window elapses with no submit, or a blur/click-away fires on the feedback box first</td><td class="io-out"><code>feedback_records</code> row inserted with whatever partial state exists (often nothing — response accepted silently), <code>source='passive'</code></td></tr>
+</table>
+
+<h3>2.2.3 <code>feedback_records</code> Schema</h3>
+<table>
+<tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+<tr><td><code>session_id</code></td><td>text</td><td>Existing session identifier</td></tr>
+<tr><td><code>response_id</code></td><td>text</td><td>Existing response identifier, FK to the delivered response</td></tr>
+<tr><td><code>issue_types</code></td><td>text[]</td><td>Null on passive-timeout rows with no interaction</td></tr>
+<tr><td><code>feedback_text</code></td><td>text</td><td>Null on passive-timeout rows with no interaction</td></tr>
+<tr><td><code>source</code></td><td>text</td><td><code>'active' | 'passive'</code></td></tr>
+<tr><td><code>created_at</code></td><td>timestamptz</td><td>When this row was written</td></tr>
+<tr><td><code>ingestion_status</code></td><td>text</td><td><code>'pending' | 'sent' | 'failed'</code> — tracks the trigger call in §2.3</td></tr>
+</table>
+
+<h2 id="lld-trigger"><span class="tag lld">LLD</span>2.3 Trigger to the Human Feedback Loop Module</h2>
+<p>Immediately after the <code>feedback_records</code> insert (either path), AMC calls the module's ingestion
+endpoint with just the identifiers — the module fetches the rest itself via its own read-only EvidenceAdapter,
+keeping AMC's payload minimal and avoiding a second source of truth for feedback content.</p>
+<table>
+<tr><th></th><th class="io-in">Input</th><th class="io-out">Output</th></tr>
+<tr><td><code>POST https://feedback-loop.internal/ingest</code></td>
+<td class="io-in"><pre><code>{
+  "session_id": "...",
+  "response_id": "...",
+  "source": "active" | "passive"
+}</code></pre></td>
+<td class="io-out">2xx → AMC flips <code>ingestion_status</code> to <code>'sent'</code>; non-2xx/timeout → stays/reverts to <code>'failed'</code></td></tr>
+</table>
+<div class="callout warn"><b>Decision to confirm:</b> a webhook call can fail, or the module can be briefly down.
+Recommendation: AMC sets <code>ingestion_status='pending'</code> on insert, flips to <code>'sent'</code> on a 2xx
+response, and a lightweight retry sweep (e.g. every 5 minutes) re-sends anything still <code>'pending'</code> or
+<code>'failed'</code> after N minutes — so a dropped webhook call doesn't silently lose a feedback row.</div>
+
+<h2 id="lld-module"><span class="tag lld">LLD</span>2.4 Human Feedback Loop Module — Building the Unified Record</h2>
+<p>The module's only job: turn one <code>feedback_records</code> row into one <code>unified_evaluation_records</code>
+row. Six steps run in sequence, each adding to the same JSON object; nothing is persisted until the last
+applicable step finishes.</p>
+
+<h3>2.4.1 Six-Step Build — Input / Output</h3>
+<table>
+<tr><th style="width:6%">#</th><th style="width:16%">Step</th><th style="width:10%">Runs on</th><th style="width:34%" class="io-in">Input</th><th style="width:34%" class="io-out">Output</th></tr>
+<tr><td>1</td><td>Classification (NER)</td><td>Active only</td><td class="io-in">Feedback free text + issue-type checkboxes</td><td class="io-out"><code>FeedbackClassification</code> — extracted entities / issue type</td></tr>
+<tr><td>2</td><td>Sentiment + Intent</td><td>Active only</td><td class="io-in">Same feedback free text</td><td class="io-out"><code>SentimentIntent</code> — tone and intent scores</td></tr>
+<tr><td>3</td><td>Fetch the Evidence Pack</td><td>Both</td><td class="io-in"><code>response_id</code></td><td class="io-out"><code>EvidencePack</code> — frozen D0–D3 evidence from AMC's own store, via read-only EvidenceAdapter</td></tr>
+<tr><td>4</td><td>Enrich + Deduplicate</td><td>Both</td><td class="io-in">Row + evidence pack + open-feedback DB state</td><td class="io-out"><code>EnrichmentContext</code>; a duplicate match short-circuits the remaining steps (returns <code>None</code>)</td></tr>
+<tr><td>5</td><td>Failure Diagnosis</td><td>Both (degrades gracefully)</td><td class="io-in">Evidence pack alone (passive) or evidence pack + classification (active)</td><td class="io-out"><code>FailureDiagnosis</code> — whether and where the response failed</td></tr>
+<tr><td>6</td><td>Repair Analysis</td><td>Both</td><td class="io-in">Diagnosis</td><td class="io-out">Boolean <code>repair</code> flag + <code>repair_target</code> ∈ {vector, graph, null} — flags only, applies nothing</td></tr>
+</table>
+
+<h3>2.4.2 Active vs. Passive — What Actually Runs</h3>
+<table>
+<tr><th>Step</th><th>Active</th><th>Passive</th></tr>
+<tr><td>1. Classification (NER)</td><td>Runs</td><td>Skipped — no text</td></tr>
+<tr><td>2. Sentiment + Intent</td><td>Runs</td><td>Skipped — no text</td></tr>
+<tr><td>3. Fetch Evidence Pack</td><td>Runs</td><td>Runs</td></tr>
+<tr><td>4. Enrich + Deduplicate</td><td>Runs</td><td>Runs</td></tr>
+<tr><td>5. Failure Diagnosis</td><td>Runs</td><td>Runs (evidence-only)</td></tr>
+<tr><td>6. Repair Analysis</td><td>Runs</td><td>Runs</td></tr>
+</table>
+
+<h3>2.4.3 Record Model &amp; Build Function</h3>
+<pre><code>class UnifiedEvaluationRecord(BaseModel):
+    session_id: str
+    response_id: str
+    created_at: datetime
+    source: Literal["active", "passive"]
+    status: Literal["pending", "in_progress", "resolved"] = "pending"
+    classification: FeedbackClassification | None = None   # step 1, active only
+    sentiment_intent: SentimentIntent | None = None         # step 2, active only
+    evidence_pack: EvidencePack | None = None                # step 3
+    enrichment: EnrichmentContext | None = None               # step 4
+    diagnosis: FailureDiagnosis | None = None                  # step 5
+    repair: bool = False                                        # step 6
+    repair_target: Literal["vector", "graph", None] = None       # step 6
+
+def build_unified_record(row, adapters, db) -> UnifiedEvaluationRecord | None:
+    record = UnifiedEvaluationRecord(session_id=row.session_id, response_id=row.response_id,
+                                      created_at=now(), source=row.source)
+    # Steps 1-2 — active path only
+    if row.source == "active" and row.feedback_text:
+        record.classification = classify_feedback_ner(row.feedback_text, row.issue_types)
+        record.sentiment_intent = score_sentiment_intent(row.feedback_text)
+    # Step 3 — both paths
+    record.evidence_pack = adapters.evidence.get_evidence_pack(row.response_id)
+    # Step 4 — both paths
+    record.enrichment = enrich_and_deduplicate(row, record.evidence_pack, db)
+    if record.enrichment.is_duplicate:
+        return None  # already covered by an existing cluster
+    # Step 5 — both paths, degrades gracefully without classification
+    record.diagnosis = diagnose_failure(record.evidence_pack, record.classification)
+    # Step 6 — both paths
+    repair_needed, target = analyze_repair(record.diagnosis)
+    record.repair = repair_needed
+    record.repair_target = target
+    return record
+
+def on_ingest(session_id, response_id, source, adapters, db):
+    """Called by AMC's webhook, or by the retry sweep for a failed delivery."""
+    row = db.fetch_feedback_record(session_id, response_id)
+    record = build_unified_record(row, adapters, db)
+    if record:
+        db.write_unified_record(record)   # single write, one row per response</code></pre>
+<div class="callout note"><b>Trigger through to Evaluation Layer:</b> Input — <code>unified_evaluation_records</code>
+row, <code>status='pending'</code>. Output — picked up independently by the external Evaluation Layer.</div>
+
+<h2 id="lld-eval"><span class="tag lld">LLD</span>2.5 Evaluation Layer — Batch Evaluation Engine (Passive Path)</h2>
+<p>Managed outside the Human Feedback Loop module's codebase. Triggered independently for each
+<code>unified_evaluation_records</code> row where <code>repair = true</code>. Scores feedback in batches of 25
+under seven token-optimisation layers, and proposes graph corrections as a validated Cypher mutation rather
+than applying anything directly.</p>
+<table>
+<tr><th style="width:16%">Stage</th><th style="width:34%" class="io-in">Input</th><th style="width:50%" class="io-out">Output</th></tr>
+<tr><td><b>Route</b></td><td class="io-in">Quality score + inter-annotator agreement per item</td><td class="io-out">quality ≥ 0.85 &amp; agreement ≥ 0.90 → auto-apply (no LLM call) · &lt; 0.20 → auto-reject · else → queued for batching</td></tr>
+<tr><td><b>Dedupe + Batch</b></td><td class="io-in">Queued claims</td><td class="io-out">Embedded + clustered claims (cosine ≥ 0.88); deduplicated queue split into groups of 25</td></tr>
+<tr><td><b>Shared Context Fetch</b></td><td class="io-in">Batch of 25 claims</td><td class="io-out">One Neo4j round-trip per batch (1-hop subgraph, Redis-cached 1h TTL) + a few-shot example cache (24h TTL), amortised across the batch</td></tr>
+<tr><td><b>Assemble Prompt + LLM Call</b></td><td class="io-in">Batch + shared context</td><td class="io-out">Structured output, one LLM call per batch of 25</td></tr>
+<tr><td><b>Cypher Safety Validator</b></td><td class="io-in">Proposed Cypher mutation</td><td class="io-out">Deny-lists <code>DROP</code>/<code>CREATE INDEX</code>/<code>CREATE CONSTRAINT</code>, rejects unguarded <code>DELETE</code>, rejects <code>REMOVE</code> on compliance-sensitive fields. A rejection is marked <code>insufficient_evidence</code> and logged — never silently dropped</td></tr>
+<tr><td><b>Confidence Merge + Persist</b></td><td class="io-in">LLM confidence + inter-annotator agreement</td><td class="io-out"><code>final_confidence = llm_confidence × inter_annotator_agreement</code>, stored on every item regardless of score, <code>status='pending'</code>. The apply-time gate is a separate later decision</td></tr>
+</table>
+
+<h2 id="lld-tiered"><span class="tag lld">LLD</span>2.6 Evaluation Layer — Tiered Evaluation Engine (Active / HITL Path)</h2>
+<p>A four-tier ladder, cheapest first. Execution stops at the first tier that resolves the claim — a more
+expensive tier never runs once a cheaper one is confident.</p>
+<table>
+<tr><th style="width:16%">Tier</th><th style="width:12%">Cost</th><th style="width:36%" class="io-in">Input</th><th style="width:36%" class="io-out">Output</th></tr>
+<tr><td><b>1A — Rule Registry</b></td><td>0 tokens</td><td class="io-in">Claim + evidence</td><td class="io-out">Result across 9 deterministic categories: schema, cardinality, referential, temporal, numeric, cross-source, duplicate, hierarchy, jurisdiction</td></tr>
+<tr><td><b>1B — GNN Plausibility</b></td><td>0 tokens</td><td class="io-in">Candidate triple</td><td class="io-out">Structural plausibility score from a frozen model; ships as a 0.5 stub until trained</td></tr>
+<tr><td><b>2 — NLI Evaluator</b></td><td>~0 generative tokens</td><td class="io-in">Claim vs evidence (local cross-encoder)</td><td class="io-out">Entailment &gt; 0.7 → resolves · contradiction/neutral &gt; 0.7 → escalates</td></tr>
+<tr><td><b>3 — LLM / Agent Evaluator</b></td><td>Controlled tokens</td><td class="io-in">Minimal evidence packet: claim + top-2 chunks + prior tier findings</td><td class="io-out">Final verdict + confidence (last resort)</td></tr>
+</table>
+<div class="callout">Escalates to human review when all three scored tiers return confidence below 0.60, the
+attribute is compliance-sensitive, or two authoritative sources conflict.</div>
+
+<h3>2.6.1 Tier 1B Build Options</h3>
+<table>
+<tr><th></th><th>Option 1 — Python R-GCN</th><th>Option 2 — Neo4j GDS <span style="color:var(--good);font-weight:600;">(recommended start)</span></th></tr>
+<tr><td>Cost</td><td>Free (open-source)</td><td>Free (GDS Community Edition)</td></tr>
+<tr><td>New infra</td><td>New PyTorch dependency + offline training job</td><td>None — runs inside existing Neo4j</td></tr>
+<tr><td>Control</td><td>Full — custom architecture, features, loss</td><td>Bounded to the GDS pipeline API</td></tr>
+<tr><td>Team lift</td><td>Requires PyTorch/PyG familiarity</td><td>Requires Cypher + GDS familiarity</td></tr>
+</table>
+<p>Both share the same <code>GNNPlausibilityScorer.score()</code> interface, so the choice is an internal swap —
+start with GDS (zero new runtime dependencies), swap to R-GCN later if finer architectural control is needed.</p>
+
+<h2 id="lld-objects"><span class="tag lld">LLD</span>2.7 Reference Data Objects</h2>
+<div class="two-col">
+<div>
+<h4>InteractionSnapshot</h4>
+<pre><code>interaction_id
+conversation_id
+timestamp
+user_query
+normalized_query
+intent
+entities
+context_id
+retrieval_config
+graph_config
+taxonomy_version
+guardrail_version
+prompt_version
+model_version</code></pre>
+<h4>EvidencePack</h4>
+<pre><code>interaction_id
+source_ids[]
+source_versions[]
+chunk_ids[]
+vector_scores[]
+graph_paths[]
+taxonomy_nodes[]
+selected_context[]
+rejected_context[]
+citations[]
+source_authority[]
+effective_dates[]
+content_hashes[]</code></pre>
+<h4>FeedbackRecord</h4>
+<pre><code>feedback_id
+interaction_id
+actor_role
+selected_categories[]
+highlighted_span
+free_text
+timestamp
+raw_feedback
+normalized_feedback</code></pre>
+<h4>EvaluationRecord</h4>
+<pre><code>evaluation_id
+interaction_id
+rule_results[]
+semantic_results[]
+llm_results[]
+adjudicated_dimensions[]
+confidence
+severity
+impact
+root_cause
+cost
+lifecycle_state</code></pre>
+</div>
+<div>
+<h4>RepairCandidate</h4>
+<pre><code>repair_id
+failure_family
+root_cause
+repair_recipe_id
+affected_objects[]
+proposed_changes[]
+risk_class
+validation_plan
+rollback_plan
+approval_required
+status</code></pre>
+<h4>IncidentRecord</h4>
+<pre><code>incident_id
+failure_observation_ids[]
+correlation_keys[]
+first_seen
+last_seen
+affected_products[]
+affected_sources[]
+affected_versions[]
+affected_jurisdictions[]
+frequency
+exposure
+severity
+root_cause
+status
+owner</code></pre>
+<h4>ApplicableControlSet</h4>
+<pre><code>control_set_id
+jurisdiction
+regulated_entity_role
+product_type
+customer_segment
+channel
+interaction_mode
+policy_pack_version
+applicable_controls[]
+required_disclosures[]
+hard_blocks[]
+semantic_checks[]
+approval_rules[]
+retention_rules[]</code></pre>
+<h4>RepairEligibility</h4>
+<pre><code>repair_id
+source_provable
+deterministic
+reversible
+blast_radius_bounded
+validation_available
+provenance_preserved
+compliance_impact
+auto_change_permitted
+repair_class
+approval_required</code></pre>
+</div>
+</div>
+
+<h4>Temporal Claim Model</h4>
+<p>AMC facts are modeled with temporal validity rather than a bare current value, so a claim is fully
+attributable and time-boxed:</p>
+<pre><code>Claim
+├── entity_id
+├── product/plan/option
+├── attribute
+├── value
+├── valid_from
+├── valid_to
+├── observed_at
+├── source_id
+└── source_version</code></pre>
+<p>e.g. a TER value is stored as <code>TER + Scheme A + Direct Growth + value + effective period + source
+version</code> — more defensible than storing only <code>TER = X</code>.</p>
+
+<h4>Data Lineage — Full Trace Shape</h4>
+<pre><code>Interaction I
+  ↓
+Taxonomy v42 → Intent T4.7 → ApplicableControlSet ACS-22 → PolicyPack UK-17 / Control C11
+  ↓
+Evaluator EV-004 → Finding F-201 → FailureObservation FO-91 → RootCause RC-12
+  ↓
+RepairCandidate RP-31 → ValidationRun VR-88 → DeploymentChange DC-09</code></pre>
+<p>Every link is versioned — substantially more auditable than "an agent decided to update the RAG."</p>
+
+<h2 id="lld-severity"><span class="tag lld">LLD</span>2.8 Severity → Action Routing</h2>
+<p>Output of the verdict/graph stage is a severity-based issue type; the severity value determines how the
+Evaluation Layer's work queue (<code>WQ</code>) handles the item:</p>
+<table>
+<tr><th style="width:16%">Severity</th><th style="width:42%" class="io-in">Trigger condition</th><th style="width:42%" class="io-out">Routing / action</th></tr>
+<tr><td><b>Critical</b></td><td class="io-in">High-confidence, high-impact diagnosed failure</td><td class="io-out">Immediate fix — bypasses the batch queue</td></tr>
+<tr><td><b>High</b></td><td class="io-in">Confirmed but not urgent</td><td class="io-out">Kept in the work queue (<code>WQ</code>), processed as part of the next batch</td></tr>
+<tr><td><b>Low</b></td><td class="io-in">Low confidence / low impact</td><td class="io-out">Logged for monitoring; not auto-escalated</td></tr>
+</table>
+
+<hr>
+
+<!-- ===================== SECTION 3: NOTES ===================== -->
+<h2 id="whiteboard"><span class="tag wb">Notes</span>Whiteboard Engineering Capture</h2>
+<p>Raw working notes captured on a whiteboard during design, reconciled against the formal designs above.
+This is an earlier-stage sketch of the same classification → verdict → severity pipeline; several details here
+(e.g. a fixed "based on number of weeks at a time" cadence) were superseded by the batches-of-25 design in
+§2.5, and are kept here for traceability.</p>
+<ul>
+  <li><b>Step A — classifier:</b> <code>regex + GNN</code> hybrid classifier; if <code>confidence score &lt; 0.8</code>, the item is routed onward to step B rather than accepted at face value.</li>
+  <li><b>Step B — field mapping:</b> specific version/field references noted — <code>V-17 → response</code>, <code>V-18 → API</code> — feeding an NL + claim extraction step.</li>
+  <li><b>Step C — LLM verdict:</b> <code>C = LLM</code> produces a <b>Verdict</b>, which feeds a <b>graph</b> step.</li>
+  <li><b>Output:</b> "output: severity based I.T." — i.e. the graph step's output is a severity-based issue type, matching §2.8.</li>
+  <li><b>Work queue:</b> a <code>WQ</code> box (eval) receives High/Low severity items; annotated "based on no. of weeks at a time" — an early idea for time-boxed batch cadence, later formalised as fixed batch size (25) plus routing thresholds in §2.5.</li>
+  <li><b>Session/user identifiers:</b> sketch references to <code>session_id</code> values and a set of <code>UFR</code> (user feedback record?) rows numbered 1–4, alongside a <code>DB</code> table sketch with columns mapping user identifiers (A, B, C) to numbered rows — an early draft of the <code>feedback_records</code> table in §2.2.3.</li>
+  <li>A note "issue type(?)" next to the DB sketch matches the <code>issue_types</code> column formalised in §2.2.3.</li>
+</ul>
+
+<h2 id="open"><span class="tag lld">LLD</span>Appendix — Open Decisions &amp; Edge Cases</h2>
+<ul>
+  <li><b>Repair locking (TBD):</b> if the same underlying issue is flagged by multiple concurrent records while a fix
+  is already in progress, later repair attempts need to be locked or merged against the in-flight one rather than
+  racing it. Locking key, scope (entity-level? recipe-level?), and timeout are not yet designed.</li>
+  <li><b>Trigger delivery guarantee:</b> the webhook-plus-retry-sweep approach in §2.3 is a recommendation, not
+  yet confirmed — an alternative is a message queue between AMC and the module for at-least-once delivery
+  without a custom retry sweep.</li>
+  <li><b>Evaluation Layer contract stability:</b> §2.5–2.6 are explicitly subject to change; the one contract §2.4
+  depends on is the shape of a <code>unified_evaluation_records</code> row with <code>repair=true</code> and a
+  <code>repair_target</code> — worth keeping stable even as the engine internals evolve.</li>
+</ul>
+
+<h2 id="sources">Source Documents</h2>
+<ul class="src-list">
+  <li><b>amc_feedback_loop_architecture.md</b> — conceptual HLD (mermaid flow + layer-by-layer explanation, appendix diagrams).</li>
+  <li><b>AMC_Feedback_Loop_Technical_Design_8.pdf</b> — v2 technical design (three-system contract, schemas, six-step build, batch + tiered evaluation layer).</li>
+  <li><b>AMC_Feedback_loop_Architecture_v1_2.html</b> — full tabbed reference architecture (reference data objects, failure taxonomy, adaptive router, taxonomy intelligence, failure-attribution graph, self-healing) — data objects and lineage model reused in §2.7.</li>
+  <li><b>Whiteboard photo</b> — early working sketch of the classification → verdict → severity pipeline, reconciled in §3.</li>
+</ul>
+
+<div class="foot">Consolidated reference document. Sections marked <span class="tag hld">HLD</span> reflect the conceptual pipeline; sections marked <span class="tag lld">LLD</span> reflect the concrete v2 technical design. The Evaluation Layer design is explicitly noted upstream as subject to change.</div>
+
+</main>
+</div>
+</body>
+</html>

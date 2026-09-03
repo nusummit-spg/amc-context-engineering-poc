@@ -18,6 +18,7 @@ Service layer and in-memory/graph backing store for Phase 1 Foundation Metrics:
 """
 
 import asyncio
+import base64
 from contextlib import contextmanager
 import csv
 from datetime import datetime, timedelta
@@ -28,11 +29,14 @@ import json
 from pathlib import Path
 import re
 import threading
-
 from typing import Any, Dict, List, Optional
 import uuid
 
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import hashes, serialization
+
 from app.schemas.compliance_alert import ComplianceAlert, AlertSeverity, AlertStatus, EscalationTier
+
 
 
 from app.schemas.regulatory_metadata import RegulatoryMetadata
@@ -90,6 +94,21 @@ class MetricsStore:
         self._alerts: Dict[str, ComplianceAlert] = {}
         self._last_alert_time_by_violation: Dict[str, datetime] = {}
 
+        # Dead Letter Queue (Gap 2)
+        self._dlq: List[Dict[str, Any]] = []
+
+        # Bank-Grade RSA-2048 Digital Signing (Priority 8)
+        self._rsa_private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
+        )
+        self._rsa_public_key = self._rsa_private_key.public_key()
+        pub_bytes = self._rsa_public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        self._public_key_fingerprint = hashlib.sha256(pub_bytes).hexdigest()
+
         self._seed_initial_data()
 
     @contextmanager
@@ -114,6 +133,7 @@ class MetricsStore:
                 "audit_access_logs": list(self._audit_access_logs),
                 "last_audit_hash": self._last_audit_hash,
                 "alerts": dict(self._alerts),
+                "dlq": list(self._dlq),
             }
         try:
             yield
@@ -132,7 +152,9 @@ class MetricsStore:
                 self._audit_access_logs = snapshot["audit_access_logs"]
                 self._last_audit_hash = snapshot["last_audit_hash"]
                 self._alerts = snapshot["alerts"]
+                self._dlq = snapshot["dlq"]
             raise
+
 
 
 
@@ -505,7 +527,21 @@ class MetricsStore:
             seed.current_log_hash = hashlib.sha256(payload_str.encode("utf-8")).hexdigest()
             self._last_audit_hash = seed.current_log_hash
             seed.is_integrity_verified = True
+            try:
+                sig_bytes = self._rsa_private_key.sign(
+                    seed.current_log_hash.encode("utf-8"),
+                    padding.PSS(
+                        mgf=padding.MGF1(hashes.SHA256()),
+                        salt_length=padding.PSS.MAX_LENGTH
+                    ),
+                    hashes.SHA256()
+                )
+                seed.digital_signature_rsa = base64.b64encode(sig_bytes).decode("utf-8")
+                seed.public_key_fingerprint = self._public_key_fingerprint
+            except Exception:
+                pass
         self._audit_access_logs.extend(access_seeds)
+
 
 
         # 10. Seed Phase 3 Real-Time Monitoring Metrics
@@ -636,84 +672,92 @@ class MetricsStore:
     # 1. Regulatory Metadata Accessors
     # =========================================================================
     def get_regulatory_metadata(self, rule_or_meta_id: str) -> Optional[RegulatoryMetadata]:
-        return self._regulatory_meta.get(rule_or_meta_id)
+        with self._lock:
+            return self._regulatory_meta.get(rule_or_meta_id)
 
     def register_regulatory_metadata(self, meta: RegulatoryMetadata) -> RegulatoryMetadata:
-        self._regulatory_meta[meta.rule_id] = meta
-        self._regulatory_meta[meta.metadata_id] = meta
-        return meta
+        with self._lock:
+            self._regulatory_meta[meta.rule_id] = meta
+            self._regulatory_meta[meta.metadata_id] = meta
+            return meta
 
     # =========================================================================
     # 2. Fund Audit Metadata Accessors
     # =========================================================================
     def get_fund_audit_metadata(self, fund_id: str) -> Optional[FundAuditMetadata]:
-        return self._fund_meta.get(fund_id)
+        with self._lock:
+            return self._fund_meta.get(fund_id)
 
     def register_fund_audit_metadata(self, meta: FundAuditMetadata) -> FundAuditMetadata:
-        self._fund_meta[meta.fund_id] = meta
-        return meta
+        with self._lock:
+            self._fund_meta[meta.fund_id] = meta
+            return meta
 
     # =========================================================================
     # 3. Remediation Metrics & SLA Analysis
     # =========================================================================
     def get_remediation_metrics(self, violation_or_rem_id: str) -> Optional[RemediationMetrics]:
-        return self._remediations.get(violation_or_rem_id)
+        with self._lock:
+            return self._remediations.get(violation_or_rem_id)
 
     def record_remediation(self, metrics: RemediationMetrics) -> RemediationMetrics:
-        # Calculate SLA variance if completed
-        if metrics.remediation_actual_completion_at and metrics.detected_at:
-            try:
-                t_start = datetime.fromisoformat(metrics.detected_at.replace("Z", ""))
-                t_end = datetime.fromisoformat(metrics.remediation_actual_completion_at.replace("Z", ""))
-                resolution_hours = (t_end - t_start).total_seconds() / 3600.0
-                metrics.resolution_time_hours = round(resolution_hours, 2)
-                variance = resolution_hours - metrics.sla_target_hours
-                metrics.sla_variance_hours = round(variance, 2)
-                metrics.sla_adherence = "BREACHED" if variance > 0 else "WITHIN_SLA"
-            except Exception:
-                pass
-        
-        self._remediations[metrics.violation_id] = metrics
-        self._remediations[metrics.remediation_id] = metrics
-        return metrics
+        with self._lock:
+            # Calculate SLA variance if completed
+            if metrics.remediation_actual_completion_at and metrics.detected_at:
+                try:
+                    t_start = datetime.fromisoformat(metrics.detected_at.replace("Z", ""))
+                    t_end = datetime.fromisoformat(metrics.remediation_actual_completion_at.replace("Z", ""))
+                    resolution_hours = (t_end - t_start).total_seconds() / 3600.0
+                    metrics.resolution_time_hours = round(resolution_hours, 2)
+                    variance = resolution_hours - metrics.sla_target_hours
+                    metrics.sla_variance_hours = round(variance, 2)
+                    metrics.sla_adherence = "BREACHED" if variance > 0 else "WITHIN_SLA"
+                except Exception:
+                    pass
+            
+            self._remediations[metrics.violation_id] = metrics
+            self._remediations[metrics.remediation_id] = metrics
+            return metrics
 
     def generate_sla_report(self, period: str = "2024-09") -> Dict[str, Any]:
         """Generate comprehensive SLA adherence report across all tracked violations."""
-        unique_rems = {r.remediation_id: r for r in self._remediations.values()}
-        all_rems = list(unique_rems.values())
-        total = len(all_rems)
+        with self._lock:
+            unique_rems = {r.remediation_id: r for r in list(self._remediations.values())}
+            all_rems = list(unique_rems.values())
+            total = len(all_rems)
 
-        if total == 0:
+            if total == 0:
+                return {
+                    "period": period,
+                    "total_remediations": 0,
+                    "within_sla_count": 0,
+                    "breached_sla_count": 0,
+                    "pending_count": 0,
+                    "sla_adherence_pct": 100.0,
+                    "avg_resolution_hours": 0.0,
+                    "remediations": [],
+                }
+
+            within_sla = sum(1 for r in all_rems if r.sla_adherence == "WITHIN_SLA")
+            breached = sum(1 for r in all_rems if r.sla_adherence == "BREACHED")
+            pending = sum(1 for r in all_rems if r.sla_adherence == "PENDING")
+
+            completed_resolutions = [r.resolution_time_hours for r in all_rems if r.resolution_time_hours is not None]
+            avg_res = round(sum(completed_resolutions) / len(completed_resolutions), 2) if completed_resolutions else 0.0
+
+            adherence_pct = round((within_sla / (within_sla + breached) * 100.0), 1) if (within_sla + breached) > 0 else 100.0
+
             return {
                 "period": period,
-                "total_remediations": 0,
-                "within_sla_count": 0,
-                "breached_sla_count": 0,
-                "pending_count": 0,
-                "sla_adherence_pct": 100.0,
-                "avg_resolution_hours": 0.0,
-                "remediations": [],
+                "total_remediations": total,
+                "within_sla_count": within_sla,
+                "breached_sla_count": breached,
+                "pending_count": pending,
+                "sla_adherence_pct": adherence_pct,
+                "avg_resolution_hours": avg_res,
+                "remediations": [r.model_dump() for r in all_rems],
             }
 
-        within_sla = sum(1 for r in all_rems if r.sla_adherence == "WITHIN_SLA")
-        breached = sum(1 for r in all_rems if r.sla_adherence == "BREACHED")
-        pending = sum(1 for r in all_rems if r.sla_adherence == "PENDING")
-
-        completed_resolutions = [r.resolution_time_hours for r in all_rems if r.resolution_time_hours is not None]
-        avg_res = round(sum(completed_resolutions) / len(completed_resolutions), 2) if completed_resolutions else 0.0
-
-        adherence_pct = round((within_sla / (within_sla + breached) * 100.0), 1) if (within_sla + breached) > 0 else 100.0
-
-        return {
-            "period": period,
-            "total_remediations": total,
-            "within_sla_count": within_sla,
-            "breached_sla_count": breached,
-            "pending_count": pending,
-            "sla_adherence_pct": adherence_pct,
-            "avg_resolution_hours": avg_res,
-            "remediations": [r.model_dump() for r in all_rems],
-        }
 
     # =========================================================================
     # 4. Feedback Quality Metrics & Priority Tiering
@@ -789,23 +833,27 @@ class MetricsStore:
 
     def get_high_priority_feedback(self, limit: int = 20) -> List[FeedbackQualityMetrics]:
         """Fetch feedback items ranked P0 and P1."""
-        items = [q for q in self._feedback_quality.values() if q.priority_tier in ("P0", "P1")]
-        # Sort P0 first, then by signal quality descending
-        items.sort(key=lambda x: (0 if x.priority_tier == "P0" else 1, -x.signal_quality_score))
-        return items[:limit]
+        with self._lock:
+            items = [q for q in list(self._feedback_quality.values()) if q.priority_tier in ("P0", "P1")]
+            # Sort P0 first, then by signal quality descending
+            items.sort(key=lambda x: (0 if x.priority_tier == "P0" else 1, -x.signal_quality_score))
+            return items[:limit]
 
     # =========================================================================
     # 5. Feedback Category Analytics
     # =========================================================================
     def get_category_analytics(self, period: str = "2024-09") -> List[FeedbackCategoryAnalytics]:
-        if period not in self._category_analytics:
-            self._seed_category_analytics(period)
-        return self._category_analytics.get(period, [])
+        with self._lock:
+            if period not in self._category_analytics:
+                self._seed_category_analytics(period)
+            return list(self._category_analytics.get(period, []))
 
     def refresh_category_analytics(self, period: str = "2024-09") -> List[FeedbackCategoryAnalytics]:
         """Recalculate analytics for period based on all stored feedback."""
-        self._seed_category_analytics(period)
-        return self._category_analytics[period]
+        with self._lock:
+            self._seed_category_analytics(period)
+            return list(self._category_analytics[period])
+
 
     # =========================================================================
     # 6. Response Quality Scoring
@@ -868,24 +916,28 @@ class MetricsStore:
             mode_performance_delta=delta,
             top_k_used=5,
         )
-        self._response_quality[response_id] = metrics
-        return metrics
+        with self._lock:
+            self._response_quality[response_id] = metrics
+            return metrics
 
     def get_response_quality(self, response_id: str) -> ResponseQualityMetrics:
-        if response_id not in self._response_quality:
-            return self.compute_response_quality(response_id)
-        return self._response_quality[response_id]
+        with self._lock:
+            if response_id not in self._response_quality:
+                return self.compute_response_quality(response_id)
+            return self._response_quality[response_id]
 
     # =========================================================================
     # 7. Phase 2 Root Cause Analysis
     # =========================================================================
     def get_root_cause_analysis(self, violation_or_rca_id: str) -> Optional[RootCauseAnalysis]:
-        return self._root_cause_analyses.get(violation_or_rca_id)
+        with self._lock:
+            return self._root_cause_analyses.get(violation_or_rca_id)
 
     def record_root_cause_analysis(self, rca: RootCauseAnalysis) -> RootCauseAnalysis:
-        self._root_cause_analyses[rca.violation_id] = rca
-        self._root_cause_analyses[rca.rca_id] = rca
-        return rca
+        with self._lock:
+            self._root_cause_analyses[rca.violation_id] = rca
+            self._root_cause_analyses[rca.rca_id] = rca
+            return rca
 
     # =========================================================================
     # 8. Phase 2 Violation Clusters
@@ -895,72 +947,81 @@ class MetricsStore:
         amc_id: Optional[str] = None,
         severity: Optional[str] = None
     ) -> List[ViolationCluster]:
-        clusters = list(self._violation_clusters.values())
-        if amc_id:
-            clusters = [c for c in clusters if c.affected_amc_id == amc_id]
-        if severity:
-            clusters = [c for c in clusters if c.severity.upper() == severity.upper()]
-        return clusters
+        with self._lock:
+            clusters = list(self._violation_clusters.values())
+            if amc_id:
+                clusters = [c for c in clusters if c.affected_amc_id == amc_id]
+            if severity:
+                clusters = [c for c in clusters if c.severity.upper() == severity.upper()]
+            return clusters
 
     def get_violation_cluster(self, cluster_id: str) -> Optional[ViolationCluster]:
-        return self._violation_clusters.get(cluster_id)
+        with self._lock:
+            return self._violation_clusters.get(cluster_id)
 
     def record_violation_cluster(self, cluster: ViolationCluster) -> ViolationCluster:
-        self._violation_clusters[cluster.cluster_id] = cluster
-        return cluster
+        with self._lock:
+            self._violation_clusters[cluster.cluster_id] = cluster
+            return cluster
 
     # =========================================================================
     # 9. Phase 2 Evidence Metadata & Chain of Custody
     # =========================================================================
     def get_evidence_metadata(self, evidence_or_doc_id: str) -> Optional[EvidenceMetadata]:
-        return self._evidence_metadata.get(evidence_or_doc_id)
+        with self._lock:
+            return self._evidence_metadata.get(evidence_or_doc_id)
 
     def record_evidence_metadata(self, meta: EvidenceMetadata) -> EvidenceMetadata:
-        self._evidence_metadata[meta.evidence_id] = meta
-        self._evidence_metadata[meta.document_id] = meta
-        return meta
+        with self._lock:
+            self._evidence_metadata[meta.evidence_id] = meta
+            self._evidence_metadata[meta.document_id] = meta
+            return meta
 
     # =========================================================================
     # 10. Phase 2 Fund Family Systemic Risk Analysis
     # =========================================================================
     def get_fund_family_analysis(self, amc_id: str) -> Optional[FundFamilyAnalysis]:
-        return self._fund_family_analyses.get(amc_id)
+        with self._lock:
+            return self._fund_family_analyses.get(amc_id)
 
     def run_fund_family_analysis(self, amc_id: str) -> FundFamilyAnalysis:
         """Run cross-fund correlation and systemic risk analysis across all funds for AMC."""
         now_iso = datetime.utcnow().isoformat()
         
-        # Aggregate funds belonging to amc_id from _fund_meta
-        matching_funds = [f for f in self._fund_meta.values() if f.amc_id == amc_id]
-        total_funds = len(matching_funds) if matching_funds else 1
-        
-        # Calculate manager accountability scores
-        mgr_scores: Dict[str, float] = {}
-        for f in matching_funds:
-            # Score based on Sharpe ratio & low turnover
-            score = min(1.0, max(0.5, round((f.sharpe_ratio / 2.0) * 0.9, 2)))
-            mgr_scores[f.fund_manager_id] = score
+        with self._lock:
+            # Aggregate funds belonging to amc_id from _fund_meta
+            matching_funds = [f for f in list(self._fund_meta.values()) if f.amc_id == amc_id]
+            total_funds = len(matching_funds) if matching_funds else 1
+            
+            # Calculate manager accountability scores
+            mgr_scores: Dict[str, float] = {}
+            for f in matching_funds:
+                # Score based on Sharpe ratio & low turnover
+                score = min(1.0, max(0.5, round((f.sharpe_ratio / 2.0) * 0.9, 2)))
+                mgr_scores[f.fund_manager_id] = score
 
-        # Check clusters for AMC
-        amc_clusters = [c for c in self._violation_clusters.values() if c.affected_amc_id == amc_id]
-        has_critical_cluster = any(c.severity == "CRITICAL" for c in amc_clusters)
-        correlation_score = round(min(1.0, len(amc_clusters) * 0.25 + 0.15), 2)
+            # Check clusters for AMC
+            amc_clusters = [c for c in list(self._violation_clusters.values()) if c.affected_amc_id == amc_id]
+            has_critical_cluster = any(c.severity == "CRITICAL" for c in amc_clusters)
+            correlation_score = round(min(1.0, len(amc_clusters) * 0.25 + 0.15), 2)
 
-        analysis = FundFamilyAnalysis(
-            analysis_id=f"FFA_{amc_id}_{uuid.uuid4().hex[:6]}",
-            amc_id=amc_id,
-            fund_family_name=f"{amc_id.replace('AMC_', '').replace('_', ' ').title()} Fund Family",
-            total_funds_analyzed=total_funds,
-            cross_fund_correlation_score=correlation_score,
-            portfolio_manager_accountability_scores=mgr_scores or {"DEFAULT_MGR": 0.90},
-            systemic_risk_flag=has_critical_cluster,
-            dominant_violation_category="F08" if amc_clusters else None,
-            highest_risk_fund_id=matching_funds[0].fund_id if matching_funds else None,
-            analyzed_at=now_iso,
-        )
-        self._fund_family_analyses[amc_id] = analysis
-        self._fund_family_analyses[analysis.analysis_id] = analysis
-        return analysis
+            analysis = FundFamilyAnalysis(
+                analysis_id=f"FFA_{amc_id}_{uuid.uuid4().hex[:6]}",
+                amc_id=amc_id,
+                fund_family_name=f"{amc_id.replace('AMC_', '').replace('_', ' ').title()} Fund Family",
+                total_funds_analyzed=total_funds,
+                cross_fund_correlation_score=correlation_score,
+                portfolio_manager_accountability_scores=mgr_scores or {"DEFAULT_MGR": 0.90},
+                systemic_risk_flag=has_critical_cluster,
+                dominant_violation_category="F08" if amc_clusters else None,
+                highest_risk_fund_id=matching_funds[0].fund_id if matching_funds else None,
+                fund_count_by_category={"EQUITY": len(matching_funds)},
+                analyzed_at=now_iso,
+            )
+            self._fund_family_analyses[amc_id] = analysis
+            self._fund_family_analyses[analysis.analysis_id] = analysis
+            return analysis
+
 
 
     # =========================================================================
@@ -981,7 +1042,21 @@ class MetricsStore:
             log_in.current_log_hash = hashlib.sha256(payload_str.encode("utf-8")).hexdigest()
             self._last_audit_hash = log_in.current_log_hash
             log_in.is_integrity_verified = True
+            try:
+                sig_bytes = self._rsa_private_key.sign(
+                    log_in.current_log_hash.encode("utf-8"),
+                    padding.PSS(
+                        mgf=padding.MGF1(hashes.SHA256()),
+                        salt_length=padding.PSS.MAX_LENGTH
+                    ),
+                    hashes.SHA256()
+                )
+                log_in.digital_signature_rsa = base64.b64encode(sig_bytes).decode("utf-8")
+                log_in.public_key_fingerprint = self._public_key_fingerprint
+            except Exception:
+                pass
             self._audit_access_logs.append(log_in)
+
 
             # Append to persistent immutable logs
             try:
@@ -1048,6 +1123,57 @@ class MetricsStore:
                 "verified_at": datetime.utcnow().isoformat(),
             }
 
+    def verify_audit_trail_signatures(self) -> Dict[str, Any]:
+        """
+        Verify bank-grade RSA-2048 digital signatures across all audit trail access logs.
+        Guarantees statutory non-repudiation for SEBI/RBI inspections.
+        """
+        with self._lock:
+            if not self._audit_access_logs:
+                return {
+                    "is_valid": True,
+                    "total_verified": 0,
+                    "status": "NO_RECORDS",
+                    "verified_at": datetime.utcnow().isoformat(),
+                }
+
+            for idx, log in enumerate(self._audit_access_logs):
+                if not log.digital_signature_rsa:
+                    return {
+                        "is_valid": False,
+                        "reason": f"Missing RSA signature at record {idx} ({log.access_log_id})",
+                        "failed_record_index": idx,
+                        "verified_at": datetime.utcnow().isoformat(),
+                    }
+                try:
+                    sig_bytes = base64.b64decode(log.digital_signature_rsa)
+                    self._rsa_public_key.verify(
+                        sig_bytes,
+                        log.current_log_hash.encode("utf-8"),
+                        padding.PSS(
+                            mgf=padding.MGF1(hashes.SHA256()),
+                            salt_length=padding.PSS.MAX_LENGTH
+                        ),
+                        hashes.SHA256()
+                    )
+                except Exception as e:
+                    return {
+                        "is_valid": False,
+                        "reason": f"Invalid RSA signature at record {idx} ({log.access_log_id}): {str(e)}",
+                        "failed_record_index": idx,
+                        "verified_at": datetime.utcnow().isoformat(),
+                    }
+
+            return {
+                "is_valid": True,
+                "total_verified": len(self._audit_access_logs),
+                "algorithm": "SHA256withRSA-PSS-2048",
+                "public_key_fingerprint": self._public_key_fingerprint,
+                "status": "RSA-SIGNATURES-VERIFIED",
+                "verified_at": datetime.utcnow().isoformat(),
+            }
+
+
     # =========================================================================
     # 12. Phase 3 Real-Time Monitoring Telemetry
     # =========================================================================
@@ -1097,11 +1223,13 @@ class MetricsStore:
             sla_pct = sla_rep.get("sla_adherence_pct", 95.0)
             open_count = sla_rep.get("pending_count", 1)
             
-            crit_count = sum(1 for r in self._remediations.values() if r.severity_level == "CRITICAL")
-            resolved_count = sum(1 for r in self._remediations.values() if r.sla_adherence in {"WITHIN_SLA", "BREACHED"})
+            rems_snapshot = list(self._remediations.values())
+            crit_count = sum(1 for r in rems_snapshot if r.severity_level == "CRITICAL")
+            resolved_count = sum(1 for r in rems_snapshot if r.sla_adherence in {"WITHIN_SLA", "BREACHED"})
             
-            systemic_clusters = [c for c in self._violation_clusters.values() if c.is_systemic_risk]
+            systemic_clusters = [c for c in list(self._violation_clusters.values()) if c.is_systemic_risk]
             systemic_exp_pct = min(25.0, round(len(systemic_clusters) * 3.5, 1))
+
 
             compliance_index = round(min(100.0, max(50.0, (sla_pct * 0.6) + ((100.0 - systemic_exp_pct) * 0.4))), 1)
 
@@ -1518,19 +1646,38 @@ class MetricsStore:
                 neo4j_connected = False
 
             if neo4j_connected:
+                async def persist_with_retry(persist_fn, item, item_type: str, item_id: str) -> bool:
+                    max_retries = 3
+                    for attempt in range(max_retries):
+                        try:
+                            ok = await persist_fn(item, graph_client=client)
+                            if ok:
+                                return True
+                        except Exception:
+                            pass
+                        await asyncio.sleep(0.05 * (2 ** attempt))
+
+                    # If exhausted retries, capture to Dead Letter Queue
+                    with self._lock:
+                        self._dlq.append({
+                            "item_type": item_type,
+                            "item_id": item_id,
+                            "payload": item.model_dump() if hasattr(item, "model_dump") else str(item),
+                            "failed_at": datetime.utcnow().isoformat(),
+                            "retry_attempts": max_retries,
+                        })
+                    return False
+
                 for r in rems:
-                    ok = await self.persist_remediation_to_neo4j(r, graph_client=client)
-                    if ok:
+                    if await persist_with_retry(self.persist_remediation_to_neo4j, r, "RemediationMetrics", r.remediation_id):
                         rems_count += 1
 
                 for f in fqs:
-                    ok = await self.persist_feedback_quality_to_neo4j(f, graph_client=client)
-                    if ok:
+                    if await persist_with_retry(self.persist_feedback_quality_to_neo4j, f, "FeedbackQualityMetrics", f.feedback_id):
                         fqs_count += 1
 
                 for rca in rcas:
-                    ok = await self.persist_root_cause_to_neo4j(rca, graph_client=client)
-                    if ok:
+                    if await persist_with_retry(self.persist_root_cause_to_neo4j, rca, "RootCauseAnalysis", rca.rca_id):
                         rcas_count += 1
 
         return {
@@ -1541,8 +1688,82 @@ class MetricsStore:
             "root_causes_synced": rcas_count,
             "total_nodes_synced": rems_count + fqs_count + rcas_count,
             "total_in_memory_records": len(rems) + len(fqs) + len(rcas),
+            "dlq_pending": len(self._dlq),
             "timestamp": datetime.utcnow().isoformat(),
         }
+
+    def get_dlq(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Retrieve dead letter queue of failed persist operations."""
+        with self._lock:
+            return list(self._dlq[:limit])
+
+    async def replay_dlq(self, graph_client: Optional[Any] = None) -> Dict[str, Any]:
+        """
+        Attempt to replay failed operations from Dead Letter Queue to Neo4j.
+        Successfully replayed items are evicted from DLQ.
+        """
+        with self._lock:
+            items_to_replay = list(self._dlq)
+
+        if not items_to_replay:
+            return {"status": "DLQ_EMPTY", "replayed": 0, "remaining": 0}
+
+        if graph_client is None:
+            try:
+                from app.graph.client import GraphClient
+                client = GraphClient()
+            except Exception:
+                client = None
+        else:
+            client = graph_client
+
+        if not client:
+            return {"status": "NO_CLIENT", "replayed": 0, "remaining": len(items_to_replay)}
+
+        try:
+            connected = await asyncio.wait_for(client.ping(), timeout=0.2)
+        except Exception:
+            connected = False
+
+        if not connected:
+            return {"status": "NEO4J_OFFLINE", "replayed": 0, "remaining": len(items_to_replay)}
+
+        replayed_count = 0
+        remaining_items = []
+
+        for item in items_to_replay:
+            item_type = item.get("item_type")
+            item_id = item.get("item_id")
+            success = False
+
+            if item_type == "RemediationMetrics":
+                r = self.get_remediation_metrics(item_id)
+                if r:
+                    success = await self.persist_remediation_to_neo4j(r, graph_client=client)
+            elif item_type == "FeedbackQualityMetrics":
+                f = self.get_feedback_quality_metrics(item_id)
+                if f:
+                    success = await self.persist_feedback_quality_to_neo4j(f, graph_client=client)
+            elif item_type == "RootCauseAnalysis":
+                rca = self.get_root_cause_analysis(item_id)
+                if rca:
+                    success = await self.persist_root_cause_to_neo4j(rca, graph_client=client)
+
+            if success:
+                replayed_count += 1
+            else:
+                remaining_items.append(item)
+
+        with self._lock:
+            self._dlq = remaining_items
+
+        return {
+            "status": "REPLAY_COMPLETE",
+            "replayed": replayed_count,
+            "remaining": len(remaining_items),
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
 
     # =========================================================================
     # 18. Real-Time Alerting, SLA Breach & Escalation Engine (Gap 6)
@@ -1662,6 +1883,51 @@ class MetricsStore:
                 alerts = [a for a in alerts if a.severity.value.upper() == severity.upper()]
             alerts.sort(key=lambda a: a.triggered_at, reverse=True)
             return alerts[:limit]
+
+    # =========================================================================
+    # 19. Prometheus Metrics Exporter (Priority 7)
+    # =========================================================================
+    def export_prometheus_metrics(self) -> str:
+        """
+        Generate OpenMetrics / Prometheus exposition format text for Prometheus scraping.
+        Covers SLA rate, active alerts, violation counts, and system throughput.
+        """
+        with self._lock:
+            kpis = self.get_dashboard_kpis()
+            sla_pct = kpis.sla_adherence_rate_pct if kpis else 100.0
+            open_vios = kpis.open_violations_count if kpis else 0
+
+            compliance_idx = kpis.overall_compliance_index if kpis else 100.0
+            audit_events = len(self._audit_access_logs)
+            active_alerts = len([a for a in self._alerts.values() if a.status.value == "ACTIVE"])
+            dlq_size = len(self._dlq)
+            rems_total = len(self._remediations)
+
+            lines = [
+                "# HELP amc_compliance_index Overall compliance health index (0-100)",
+                "# TYPE amc_compliance_index gauge",
+                f"amc_compliance_index {compliance_idx:.2f}",
+                "# HELP amc_sla_adherence_percent Remediation SLA adherence percentage",
+                "# TYPE amc_sla_adherence_percent gauge",
+                f"amc_sla_adherence_percent {sla_pct:.2f}",
+                "# HELP amc_open_violations_total Total active unclosed regulatory violations",
+                "# TYPE amc_open_violations_total gauge",
+                f"amc_open_violations_total {open_vios}",
+                "# HELP amc_active_alerts_total Real-time SLA breach and risk alerts pending resolution",
+                "# TYPE amc_active_alerts_total gauge",
+                f"amc_active_alerts_total {active_alerts}",
+                "# HELP amc_audit_access_logs_total Total immutable cryptographic audit trail entries",
+                "# TYPE amc_audit_access_logs_total counter",
+                f"amc_audit_access_logs_total {audit_events}",
+                "# HELP amc_dead_letter_queue_total Unpersisted failed graph mutations in DLQ",
+                "# TYPE amc_dead_letter_queue_total gauge",
+                f"amc_dead_letter_queue_total {dlq_size}",
+                "# HELP amc_remediations_total Total registered remediation workflows",
+                "# TYPE amc_remediations_total counter",
+                f"amc_remediations_total {rems_total}",
+            ]
+            return "\n".join(lines) + "\n"
+
 
 
 

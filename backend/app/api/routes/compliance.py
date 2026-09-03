@@ -403,7 +403,11 @@ async def get_prometheus_metrics(
         f"amc_compliance_uptime_seconds {round(time.time() - _SERVICE_START_TIME, 2)}",
     ])
 
+    store = get_metrics_store()
+    lines.append(store.export_prometheus_metrics())
+
     return "\n".join(lines) + "\n"
+
 
 
 @router.get("/audit-report", response_model=AuditReportResponse)
@@ -1156,6 +1160,49 @@ async def resolve_compliance_alert(
     if not alert:
         raise HTTPException(status_code=404, detail=f"Alert '{alert_id}' not found")
     return alert
+
+
+@router.get("/audit-trail/verify-signature")
+async def verify_audit_trail_rsa_signatures():
+    """
+    Verify bank-grade RSA-2048 digital signatures across all audit log blocks.
+    Confirms statutory non-repudiation and detects tampering.
+    """
+    store = get_metrics_store()
+    return store.verify_audit_trail_signatures()
+
+
+@router.get("/dlq")
+async def get_dead_letter_queue(
+    limit: int = Query(default=50, ge=1, le=100)
+):
+    """
+    Retrieve failed persistence records captured in the Dead Letter Queue (DLQ).
+    """
+    store = get_metrics_store()
+    return store.get_dlq(limit=limit)
+
+
+@router.post("/dlq/replay")
+async def replay_dead_letter_queue():
+    """
+    Trigger retry replay of failed persistence records in DLQ to Neo4j.
+    """
+    store = get_metrics_store()
+    return await store.replay_dlq()
+
+@router.post("/alerts/dispatch")
+
+async def dispatch_active_alerts():
+    """
+    Trigger multi-channel dispatch (webhook, Slack, audit log) for active alerts.
+    """
+    from app.compliance.alerting_service import get_alerting_service
+    store = get_metrics_store()
+    service = get_alerting_service()
+    active_alerts = store.get_alerts(status="ACTIVE")
+    return await service.dispatch_all_active_alerts(active_alerts)
+
 
 
 
