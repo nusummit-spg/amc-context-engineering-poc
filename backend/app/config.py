@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     canary_percentage: int = 0                       # 0 to 100 for canary traffic routing
     active_corpus_version: str = "v2_baseline_20260814"
 
+    # --- Streaming (Phase 1 / stream.md) ---
+    enable_streaming: bool = True                    # Master switch; set ENABLE_STREAMING=false to disable
+    streaming_rollout_percentage: int = 100          # % of sessions to enable streaming (canary rollout)
+
     # --- AWS (prod deployment) ---
     aws_region: str = "ap-south-1"
     groq_secret_id: str = ""

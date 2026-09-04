@@ -7,7 +7,7 @@
 
 import logging
 import time
-from typing import Optional
+from typing import AsyncGenerator, Optional
 from uuid import uuid4
 
 from app.config import get_settings
@@ -357,3 +357,254 @@ class RetrievalOrchestrator:
         the 'traditional RAG' comparison baseline."""
         hits = await self._vector.search(query, top_k=top_k or self._top_k)
         return hits
+
+    async def answer_stream(
+        self,
+        query: str,
+        top_k: int | None = None,
+        history: list[dict] | None = None,
+        session_id: str | None = None,
+    ) -> AsyncGenerator[dict, None]:
+        """Stream the answer pipeline as SSE-shaped dicts.
+
+        Event shapes:
+            {"type": "metadata",  "intent": ..., "entities": ...}
+            {"type": "sources",   "sources": [...]}
+            {"type": "answer_chunk", "text": "...", "index": N}
+            {"type": "complete",  "response_id": "...", "trace": {...}}
+            {"type": "error",     "message": "...", "recoverable": True/False}
+
+        Edge cases handled:
+        - Cache hit: yields complete answer immediately in chunks (simulated stream)
+        - Step failure: yields error chunk with recoverable=True, continues degraded
+        - Multi-turn: rewrites query via coreference resolution before streaming
+        """
+        t0 = time.perf_counter()
+        req_id = str(uuid4())
+        response_id = f"resp_{req_id[:12]}"
+
+        # ── Step 0: Multi-turn query rewrite ─────────────────────────────
+        effective_query = query
+        if history:
+            user_msgs = []
+            for msg in history:
+                role = msg.get("role") or msg.get("sender") or ""
+                content = msg.get("content") or msg.get("text") or msg.get("query") or ""
+                if (role.lower() in ("user", "human") or not role) and content:
+                    user_msgs.append(content)
+            if user_msgs:
+                pronoun_triggers = {"those", "these", "them", "it", "they", "that", "theirs", "this"}
+                words_in_query = set(query.lower().replace("?", "").replace(".", "").split())
+                if pronoun_triggers & words_in_query:
+                    effective_query = f"{user_msgs[-1]} — {query}"
+
+        # ── Step 0.5: Pre-retrieval safety guardrail ──────────────────────
+        if self._settings.enable_pre_retrieval_guardrails:
+            q_clean = query.lower().strip()
+            if any(w in q_clean for w in ["guarantee", "assured return", "promise return", "guaranteed profit",
+                                           "15% annual return", "fixed return"]):
+                safe_answer = (
+                    "Under SEBI regulations, mutual fund schemes cannot guarantee returns "
+                    "and are subject to market risks. Past performance is no guarantee of future returns."
+                )
+                for idx, word in enumerate(safe_answer.split()):
+                    yield {"type": "answer_chunk", "text": (word + " "), "index": idx}
+                yield {"type": "complete", "response_id": response_id, "trace": {}}
+                return
+
+        # ── Step 1: Semantic cache lookup ─────────────────────────────────
+        from app.retrieval.cache import get_semantic_cache
+        cache = get_semantic_cache()
+        cached_entry = None
+        try:
+            cached_entry = cache.lookup(effective_query, corpus_version=self._corpus_version)
+        except Exception as exc:
+            logger.debug("Cache lookup notice: %s", exc)
+
+        if cached_entry and cached_entry.get("cache_hit"):
+            logger.info("Streaming from semantic cache: %s", query)
+            # Stream cached intent as metadata
+            cached_intent = cached_entry.get("intent", {})
+            yield {
+                "type": "metadata",
+                "intent": cached_intent.get("query_type", "general"),
+                "entities": cached_intent.get("entities_mentioned", []),
+                "confidence": cached_entry.get("confidence", "high"),
+            }
+            # Stream cached sources
+            cached_sources = cached_entry.get("sources", [])
+            if cached_sources:
+                yield {"type": "sources", "sources": cached_sources}
+            # Stream cached answer word-by-word
+            cached_answer = cached_entry.get("answer", "")
+            words = cached_answer.split()
+            for idx, word in enumerate(words):
+                yield {"type": "answer_chunk", "text": (word + " "), "index": idx}
+            yield {
+                "type": "complete",
+                "response_id": response_id,
+                "trace": {"cache_hit": True, "request_total_ms": round((time.perf_counter() - t0) * 1000, 2)},
+            }
+            return
+
+        # ── Step 2: Intent classification ────────────────────────────────
+        intent = None
+        try:
+            intent = await self._intent.classify(effective_query)
+            yield {
+                "type": "metadata",
+                "intent": intent.query_type.value if intent else "general",
+                "entities": intent.entities_mentioned if intent else [],
+                "confidence": "high",
+            }
+        except Exception as exc:
+            logger.warning("Intent classification failed during streaming: %s", exc)
+            yield {"type": "error", "message": f"Intent classification error: {exc}", "recoverable": True}
+
+        # ── Step 3: Entity resolution ─────────────────────────────────────
+        resolved_entities = []
+        resolved_map: dict[str, str] = {}
+        if intent:
+            try:
+                for surface in intent.entities_mentioned:
+                    res = self._resolver.resolve_surface_form(surface)
+                    if res and res.entity:
+                        resolved_entities.append(res.entity)
+                        resolved_map[surface] = res.entity.name
+            except Exception as exc:
+                logger.warning("Entity resolution failed during streaming: %s", exc)
+                yield {"type": "error", "message": f"Entity resolution error: {exc}", "recoverable": True}
+
+        # ── Step 4: Graph traversal ───────────────────────────────────────
+        facts, traversal_paths, cyphers = [], [], []
+        if intent and intent.requires_graph and resolved_entities:
+            try:
+                facts, traversal_paths, cyphers = await self._traversal.traverse(intent, resolved_entities)
+            except Exception as exc:
+                logger.warning("Graph traversal failed during streaming: %s", exc)
+                yield {"type": "error", "message": f"Graph traversal error: {exc}", "recoverable": True}
+
+        # ── Steps 5-6: Vector search ──────────────────────────────────────
+        from app.schemas.query import RetrievedChunk
+        chunks: list[RetrievedChunk] = []
+        if intent and intent.requires_vector:
+            try:
+                hits = await self._vector.search(
+                    effective_query,
+                    top_k=top_k or self._top_k,
+                    taxonomy_paths=intent.taxonomy_paths or None,
+                    entity_names=[e.name for e in resolved_entities] or None,
+                )
+                chunks = [
+                    RetrievedChunk(
+                        chunk_id=h["chunk_id"],
+                        document_id=h.get("document_id", ""),
+                        document_title=h.get("document_title"),
+                        text=h.get("text", ""),
+                        score=h.get("score", 0.0),
+                        taxonomy_paths=h.get("taxonomy_paths", []),
+                    )
+                    for h in hits
+                ]
+                # Stream sources immediately so frontend can render them
+                sources_payload = [
+                    {
+                        "document_title": c.document_title or c.document_id,
+                        "document_id": c.document_id,
+                        "snippet": c.text[:200] if c.text else "",
+                        "score": c.score,
+                    }
+                    for c in chunks
+                ]
+                yield {"type": "sources", "sources": sources_payload}
+            except Exception as exc:
+                logger.warning("Vector search failed during streaming: %s", exc)
+                yield {"type": "error", "message": f"Vector search error: {exc}", "recoverable": True}
+
+        # ── Step 7: Context assembly ──────────────────────────────────────
+        from app.schemas.query import RetrievalResult
+        retrieval = RetrievalResult(
+            intent=intent,
+            resolved_entities=resolved_map,
+            graph_facts=facts,
+            chunks=chunks,
+            traversal_paths=traversal_paths,
+            cypher_queries_run=cyphers,
+        )
+
+        context = None
+        try:
+            context = self._assembler.assemble(retrieval)
+        except Exception as exc:
+            logger.warning("Context assembly failed during streaming: %s", exc)
+            yield {"type": "error", "message": f"Context assembly error: {exc}", "recoverable": True}
+
+        # ── Step 8: LLM streaming synthesis ──────────────────────────────
+        chunk_index = 0
+        full_answer = ""
+        try:
+            from app.prompts import get_prompt
+            try:
+                system_prompt = get_prompt("synthesis_system").text if context else None
+            except Exception:
+                system_prompt = None
+            ctx_text = context.context_text if context else ""
+
+            async for text_chunk in self._synthesizer._llm.complete_stream(
+                prompt=f"Query: {effective_query}\n\nContext:\n{ctx_text}",
+                system=system_prompt,
+            ):
+                full_answer += text_chunk
+                yield {"type": "answer_chunk", "text": text_chunk, "index": chunk_index}
+                chunk_index += 1
+        except Exception as exc:
+            logger.warning("LLM streaming synthesis failed: %s", exc)
+            # Fallback: attempt non-streaming synthesis
+            yield {"type": "error", "message": f"Streaming synthesis error, attempting fallback: {exc}", "recoverable": True}
+            try:
+                if context:
+                    synth = await self._synthesizer.synthesize(effective_query, context)
+                    fallback_text = synth.answer or ""
+                    for idx, word in enumerate(fallback_text.split()):
+                        full_answer += word + " "
+                        yield {"type": "answer_chunk", "text": word + " ", "index": chunk_index + idx}
+                    full_answer = fallback_text
+            except Exception as fallback_exc:
+                logger.error("Fallback synthesis also failed: %s", fallback_exc)
+                yield {"type": "error", "message": "Unable to generate answer", "recoverable": False}
+
+        total_ms = round((time.perf_counter() - t0) * 1000, 2)
+
+        # ── Cache the streamed answer ─────────────────────────────────────
+        if full_answer and context:
+            try:
+                cache.store(
+                    effective_query,
+                    {
+                        "answer": full_answer.strip(),
+                        "confidence": "high",
+                        "compliance_note": None,
+                        "citations": [],
+                        "provenance": [],
+                        "quality_score": context.quality_score,
+                        "output_tokens": len(full_answer.split()) * 2,
+                        "intent": intent.model_dump() if intent else {},
+                        "traversal_paths": traversal_paths,
+                        "graph_facts": [f.model_dump() for f in facts],
+                        "sources": [s.model_dump() for s in context.sources],
+                    },
+                    corpus_version=self._corpus_version,
+                )
+            except Exception as exc:
+                logger.debug("Stream cache store notice: %s", exc)
+
+        yield {
+            "type": "complete",
+            "response_id": response_id,
+            "trace": {
+                "cache_hit": False,
+                "request_total_ms": total_ms,
+                "chunks_streamed": chunk_index,
+            },
+        }
+

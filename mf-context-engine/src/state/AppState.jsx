@@ -312,7 +312,11 @@ export function AppStateProvider({ children }) {
   const [activeTab, setActiveTabState] = useState(() => safeStorageGet(STORAGE_KEYS.ACTIVE_TAB, 0));
   const [adminSubTab, setAdminSubTabState] = useState(() => safeStorageGet(STORAGE_KEYS.ADMIN_SUB_TAB, 0));
   const [activePage, setActivePageState] = useState(() => safeStorageGet(STORAGE_KEYS.ACTIVE_PAGE, "app"));
-  const [isSidebarOpen, setIsSidebarOpenState] = useState(() => safeStorageGet(STORAGE_KEYS.SIDEBAR_OPEN, true));
+  const [isSidebarOpen, setIsSidebarOpenState] = useState(() => {
+    const saved = safeStorageGet(STORAGE_KEYS.SIDEBAR_OPEN, null);
+    if (saved !== null) return saved;
+    return typeof window !== "undefined" ? window.innerWidth > 1024 : true;
+  });
 
   const setActiveTab = useCallback((tab) => {
     setActiveTabState(tab);

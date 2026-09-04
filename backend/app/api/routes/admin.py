@@ -665,13 +665,61 @@ async def get_compliance_report() -> Dict[str, Any]:
     }
 
 
+@router.get("/intent-cache/stats")
+@router.get("/cache/stats")
+async def get_intent_cache_stats() -> Dict[str, Any]:
+    """Return real-time intent cache metrics, domain bucket allocations, and financial/carbon savings ledger."""
+    from app.engine import intent_cache
+    cache = intent_cache.get_cache()
+    ledger = intent_cache.get_savings_ledger()
+    return {
+        "cache": cache.stats(),
+        "savings": ledger.summary(),
+        "domains": list(intent_cache.DOMAIN_PATTERNS.keys()),
+        "thresholds": intent_cache.CACHE_THRESHOLD_BY_INTENT,
+        "ttls_seconds": intent_cache.DOMAIN_TTL,
+    }
+
+
+class InvalidateDomainRequest(BaseModel):
+    domain: str
+
+
+@router.post("/intent-cache/invalidate-domain")
+async def invalidate_domain_endpoint(payload: InvalidateDomainRequest) -> Dict[str, Any]:
+    """Selectively invalidate a single domain partition in the intent cache."""
+    from app.engine import intent_cache
+    cache = intent_cache.get_cache()
+    domain = payload.domain.strip().lower()
+    if domain not in intent_cache.DOMAIN_PATTERNS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid domain '{domain}'. Valid domains are: {list(intent_cache.DOMAIN_PATTERNS.keys())}",
+        )
+    cache.invalidate_domain(domain)
+    return {
+        "success": True,
+        "invalidated_domain": domain,
+        "message": f"⚡ Domain bucket '{domain}' invalidated cleanly from Intent Cache.",
+        "stats": cache.stats(),
+    }
+
+
 @router.post("/cache/clear")
 @router.post("/intent-cache/clear")
 async def clear_intent_cache_endpoint() -> Dict[str, Any]:
     """Clear all domain buckets in the intent cache, engine semantic cache, and retrieval cache."""
     cleared_layers = []
     
-    # 1. Clear app.engine.semantic_cache (used in retrieval.hybrid_graphrag)
+    # 1. Clear app.engine.intent_cache (native backend IntentAwareCache & SavingsLedger)
+    try:
+        from app.engine import intent_cache
+        intent_cache.clear_cache()
+        cleared_layers.append("backend_intent_aware_cache")
+    except Exception as exc:
+        pass
+
+    # 2. Clear app.engine.semantic_cache
     try:
         from app.engine import semantic_cache
         semantic_cache.get_cache().clear()
@@ -679,7 +727,7 @@ async def clear_intent_cache_endpoint() -> Dict[str, Any]:
     except Exception as exc:
         pass
 
-    # 2. Clear app.retrieval.cache (used in v2 retrieval)
+    # 3. Clear app.retrieval.cache
     try:
         from app.retrieval import cache as ret_cache
         ret_cache.get_semantic_cache().clear()
@@ -687,19 +735,11 @@ async def clear_intent_cache_endpoint() -> Dict[str, Any]:
     except Exception as exc:
         pass
 
-    # 3. Clear IntentAwareCache (streamlit_app/intent_cache.py)
+    # 4. Clear Streamlit intent_cache if present
     try:
-        try:
-            from streamlit_app import intent_cache
-        except ImportError:
-            import intent_cache
-        if hasattr(intent_cache, "get_cache"):
-            cache = intent_cache.get_cache()
-            if hasattr(cache, "clear_all"):
-                cache.clear_all()
-        elif hasattr(intent_cache, "clear_cache"):
-            intent_cache.clear_cache()
-        cleared_layers.append("intent_aware_cache")
+        from streamlit_app import intent_cache as st_cache
+        st_cache.clear_cache()
+        cleared_layers.append("streamlit_intent_cache")
     except Exception:
         pass
 

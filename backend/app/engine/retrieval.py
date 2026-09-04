@@ -111,7 +111,7 @@ def _format_cypher_rows(rows: list[dict]) -> str:
 
 def traditional_rag(query: str, store, chat_history: list[dict] | None = None,
                      session_id: str | None = None, turn_index: int | None = None,
-                     original_query: str | None = None) -> Dict[str, Any]:
+                     original_query: str | None = None, stream_callback=None) -> Dict[str, Any]:
     hits, retrieve_time = _time_call(store.retrieve, query, top_k_children=5, rerank=True)
     rerank_ms = faiss_store.get_last_rerank_ms()
     t_post = time.perf_counter()
@@ -133,11 +133,30 @@ QUESTION: {query}
 ANSWER:"""
     post_process_time = time.perf_counter() - t_post
     t_llm = time.perf_counter()
-    answer, usage = llm_text_client.call_llm_with_usage(
-        system_prompt=SYSTEM_SYNTHESIS_PROMPT,
-        user_prompt=prompt,
-        model_id=config.GROQ_MODEL_LIGHT,
-    )
+    if stream_callback is not None:
+        chunks = []
+        try:
+            for i, chunk in enumerate(llm_text_client.stream_llm(
+                system_prompt=SYSTEM_SYNTHESIS_PROMPT,
+                user_prompt=prompt,
+                model_id=config.GROQ_MODEL_LIGHT,
+            )):
+                chunks.append(chunk)
+                stream_callback(chunk, i)
+            answer = "".join(chunks)
+            usage = {"input_tokens": len(prompt.split()) * 2, "output_tokens": len(answer.split()) * 2}
+        except Exception:
+            answer, usage = llm_text_client.call_llm_with_usage(
+                system_prompt=SYSTEM_SYNTHESIS_PROMPT,
+                user_prompt=prompt,
+                model_id=config.GROQ_MODEL_LIGHT,
+            )
+    else:
+        answer, usage = llm_text_client.call_llm_with_usage(
+            system_prompt=SYSTEM_SYNTHESIS_PROMPT,
+            user_prompt=prompt,
+            model_id=config.GROQ_MODEL_LIGHT,
+        )
     llm_time = time.perf_counter() - t_llm
     total_tokens = usage["input_tokens"] + usage["output_tokens"]
 
@@ -228,18 +247,107 @@ def log_query_audit(audit_data: Dict[str, Any]):
 
 def hybrid_graphrag(query: str, store, chat_history: list[dict] | None = None,
                      session_id: str | None = None, turn_index: int | None = None,
-                     original_query: str | None = None) -> Dict[str, Any]:
-    from app.engine.semantic_cache import get_cache
-    
-    cache = get_cache()
-    cached_payload, cache_latency = cache.check(query)
-    
-    if cached_payload:
-        cached_payload["telemetry_breakdown"]["latency_total_pipeline_ms"] = round(cache_latency, 2)
-        cached_payload["telemetry_breakdown"]["pipeline_mode"] = "Semantic Cache HIT"
-        return cached_payload
-
+                     original_query: str | None = None,
+                     stream_callback=None, metadata_callback=None, sources_callback=None) -> Dict[str, Any]:
     t_start = time.perf_counter()
+    from app.engine import intent_cache
+    icache = intent_cache.get_cache()
+    domain_intent = intent_cache.classify_domain_intent(query)
+
+    # ── Stage 1: Fast O(1) Fingerprint probe ─────────────────────────────────
+    cached = icache.fingerprint_probe(query, "v2_dual_regime_taxonomy", domain_intent)
+    fingerprint_hit = (cached is not None)
+
+    # ── Stage 2: Vector Semantic lookup (only if fingerprint missed) ─────────
+    query_vec_np = None
+    if cached is None:
+        try:
+            query_vec_np = faiss_store._embed_texts([query])
+            cached = icache.lookup(query_vec_np[0:1], "v2_dual_regime_taxonomy", domain_intent, query)
+        except Exception:
+            pass
+
+    if cached is not None:
+        t_cache_hit = time.perf_counter()
+        cache_elapsed_ms = (t_cache_hit - t_start) * 1000.0
+        hit_type = "Fingerprint Cache Hit" if fingerprint_hit else "Semantic Cache Hit"
+        cold_equiv = cached.input_tokens_cold or cached.total_tokens or 1020
+        cache_probe_tokens = 0 if fingerprint_hit else 12
+        tokens_saved = max(0, cold_equiv - cache_probe_tokens)
+        intent_cache.get_savings_ledger().record_hit(tokens_saved)
+
+        ui_badges = [
+            {"label": hit_type, "desc": f"Served from cache — {len(cached.graph_nodes)} nodes ({tokens_saved} tokens saved)", "type": "success"},
+            {"label": f"Pillar: Intent Partition ({domain_intent.upper()})", "desc": f"Domain: {domain_intent}", "type": "primary"},
+        ]
+
+        triplet_table = [
+            {"s": e.get("s", ""), "rel": e.get("rel", ""), "o": e.get("o", ""), "conf": e.get("conf", 1.0)}
+            for e in (cached.graph_edges or [])
+        ]
+
+        telemetry_breakdown = {
+            "pipeline_mode": f"ContextGraph Hybrid RAG ({hit_type})",
+            "cache_hit": True,
+            "domain_intent": domain_intent,
+            "hit_type": hit_type,
+            "tokens_saved": tokens_saved,
+            "tokens_cold_equivalent": cold_equiv,
+            "latency_vector_db_ms": 0.0,
+            "latency_rerank_ms": 0.0,
+            "latency_graph_db_ms": 0.0,
+            "latency_ner_processing_ms": 0.0,
+            "latency_cypher_generation_ms": 0.0,
+            "latency_post_retrieval_processing_ms": 0.0,
+            "latency_llm_generation_ms": 0.0,
+            "latency_total_pipeline_ms": round(cache_elapsed_ms, 2),
+            "tokens_input": cache_probe_tokens,
+            "tokens_output": 0,
+            "tokens_total": cache_probe_tokens,
+            "db_candidates_surfaced": len(cached.graph_nodes),
+            "vector_bypassed": True,
+            "vector_pruned_to_top1": False,
+            "ui_badges": ui_badges,
+            "triplet_table": triplet_table,
+            "cross_validation_ledger": {
+                "cross_validation_badge": {"label": "Pillar 5: Verified Grounding (Cached)", "type": "success", "desc": "Pre-verified and cached."},
+                "evidence_status": "SUPPORTED",
+            },
+            "status": "SUCCESS",
+        }
+
+        if metadata_callback:
+            metadata_callback({
+                "type": "metadata",
+                "query_type": cached.query_type,
+                "entities": cached.graph_nodes or [domain_intent],
+                "confidence": f"{cached.confidence_label} ({hit_type})",
+            })
+
+        if sources_callback:
+            sources_callback(cached.provenance or [])
+
+        if stream_callback:
+            words = cached.answer.split(" ")
+            for i, word in enumerate(words):
+                stream_callback(word + (" " if i < len(words) - 1 else ""), i)
+
+        return {
+            "answer": cached.answer,
+            "query_type": cached.query_type,
+            "confidence_label": f"{cached.confidence_label} ({hit_type})",
+            "confidence_reason": cached.confidence_reason or "Served from Intent Cache.",
+            "docs": cached.provenance,
+            "graph_nodes": cached.graph_nodes,
+            "graph_edges": cached.graph_edges,
+            "matched_entity_texts": cached.graph_nodes,
+            "active_labels": ["Entity"] if cached.graph_nodes else [],
+            "graph_matched_by": f"intent_cache_{domain_intent}",
+            "entity_summary": [],
+            "total_tokens": cache_probe_tokens,
+            "total_time": round(cache_elapsed_ms / 1000.0, 3),
+            "telemetry_breakdown": telemetry_breakdown,
+        }
 
     t_ner_0 = time.perf_counter()
     query_entities = ner_pipeline.run_layers_ab(query)
@@ -247,6 +355,14 @@ def hybrid_graphrag(query: str, store, chat_history: list[dict] | None = None,
 
     entity_texts = [e["text"] for e in query_entities]
     query_type = query_classifier.classify_query(query)
+
+    if metadata_callback:
+        metadata_callback({
+            "type": "metadata",
+            "query_type": query_type,
+            "entities": entity_texts,
+            "confidence": "high",
+        })
 
     ner_layer_a = [e for e in query_entities if e.get("layer") == "A"]
     ner_layer_b = [e for e in query_entities if e.get("layer") == "B"]
@@ -430,12 +546,39 @@ QUESTION: {query}
 
 ANSWER:"""
 
+    docs = [{"name": h["source"], "score": round(h["score"], 2),
+         "page": h["page_num"],
+         "snippet": h["child_text"][:160].replace("\n", " "),
+         "full_text": h["parent_text"]} for h in effective_hits]
+
+    if sources_callback:
+        sources_callback(docs)
+
     t_llm = time.perf_counter()
-    answer, usage = llm_text_client.call_llm_with_usage(
-        system_prompt=SYSTEM_SYNTHESIS_PROMPT,
-        user_prompt=prompt,
-        model_id=config.GROQ_MODEL_LIGHT,
-    )
+    if stream_callback is not None:
+        chunks = []
+        try:
+            for i, chunk in enumerate(llm_text_client.stream_llm(
+                system_prompt=SYSTEM_SYNTHESIS_PROMPT,
+                user_prompt=prompt,
+                model_id=config.GROQ_MODEL_LIGHT,
+            )):
+                chunks.append(chunk)
+                stream_callback(chunk, i)
+            answer = "".join(chunks)
+            usage = {"input_tokens": len(prompt.split()) * 2, "output_tokens": len(answer.split()) * 2}
+        except Exception:
+            answer, usage = llm_text_client.call_llm_with_usage(
+                system_prompt=SYSTEM_SYNTHESIS_PROMPT,
+                user_prompt=prompt,
+                model_id=config.GROQ_MODEL_LIGHT,
+            )
+    else:
+        answer, usage = llm_text_client.call_llm_with_usage(
+            system_prompt=SYSTEM_SYNTHESIS_PROMPT,
+            user_prompt=prompt,
+            model_id=config.GROQ_MODEL_LIGHT,
+        )
     llm_time = time.perf_counter() - t_llm
     if not answer:
         if effective_hits:
@@ -455,11 +598,6 @@ ANSWER:"""
         "medium confidence" if avg_conf and avg_conf >= 0.4 else
         "low confidence"
     )
-
-    docs = [{"name": h["source"], "score": round(h["score"], 2),
-         "page": h["page_num"],
-         "snippet": h["child_text"][:160].replace("\n", " "),
-         "full_text": h["parent_text"]} for h in effective_hits]
 
     audit_record = {
         "query": query,
@@ -558,8 +696,28 @@ ANSWER:"""
         "total_time": retrieve_time + graph_time + enrichment_time + llm_time,
     }
     
-    # Store in semantic cache for future queries
-    cache.store(query, final_payload)
+    # Record miss in SavingsLedger and store in IntentAwareCache for future queries
+    intent_cache.get_savings_ledger().record_miss()
+    try:
+        if query_vec_np is None:
+            query_vec_np = faiss_store._embed_texts([query])
+        icache.store(
+            query_vec=query_vec_np[0:1],
+            query_type="v2_dual_regime_taxonomy",
+            domain_intent=domain_intent,
+            query_text=query,
+            answer=answer,
+            provenance=docs,
+            confidence_label=confidence_label,
+            confidence_reason="Indexed response stored in IntentCache.",
+            total_tokens=total_tokens,
+            input_tokens_cold=usage.get("input_tokens", 0),
+            output_tokens_cold=usage.get("output_tokens", 0),
+            graph_nodes=list(graph_result.get("nodes", [])),
+            graph_edges=list(graph_result.get("edges", [])),
+        )
+    except Exception as exc:
+        print(f"  [IntentCache Warning] Could not store to cache: {exc}", flush=True)
     
     return final_payload
 

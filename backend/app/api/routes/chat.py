@@ -14,9 +14,11 @@ This route is the only caller of those — engine functions themselves stay
 usable standalone (chat_history=None) for the existing /query endpoints.
 """
 import asyncio
+import json
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 
 from app.api.deps import Container, get_container
 from app.api.routes.files import get_pdf_url
@@ -223,3 +225,160 @@ async def run_chat(
         }
 
     return resp
+
+
+# ---------- Chat streaming endpoint ----------
+
+_STREAM_HEADERS = {
+    "Cache-Control": "no-cache",
+    "X-Accel-Buffering": "no",
+    "Connection": "keep-alive",
+}
+
+
+def _format_sse(event_type: str, data: dict) -> str:
+    """Format a single SSE message frame."""
+    return f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
+
+
+async def _chat_stream_generator(request: "ChatRequest", container: Container):
+    """Async generator for multi-turn chat streaming with full ContextGraph fidelity."""
+    engine = container.settings.query_engine.lower()
+    if engine == "v2":
+        try:
+            async for event in container.orchestrator.answer_stream(
+                query=request.query,
+                top_k=None,
+                history=request.history,
+                session_id=request.session_id,
+            ):
+                event_type = event.get("type", "chunk")
+                if event_type == "metadata":
+                    yield _format_sse("metadata", event)
+                elif event_type == "sources":
+                    yield _format_sse("sources", event)
+                elif event_type == "answer_chunk":
+                    yield _format_sse("chunk", event)
+                elif event_type == "complete":
+                    yield _format_sse("done", event)
+                elif event_type == "error":
+                    yield _format_sse("error", event)
+                else:
+                    yield _format_sse("chunk", event)
+        except Exception as exc:
+            yield _format_sse("error", {"type": "error", "message": str(exc), "recoverable": False})
+        return
+
+    # Default legacy engine streaming with full provenance, citations, graph triplets & telemetry
+    queue: asyncio.Queue[tuple[str, dict] | None] = asyncio.Queue()
+    loop = asyncio.get_running_loop()
+
+    store = _get_store()
+    resolved_query = request.query
+    if request.history:
+        try:
+            resolved_query = await asyncio.to_thread(
+                context_memory.resolve_coreferences, request.query, request.history
+            )
+        except Exception as exc:
+            yield _format_sse("error", {"type": "error", "message": f"Coreference resolution failed: {exc}", "recoverable": False})
+            return
+
+    turn_index = len(request.history) // 2 + 1
+    response_id = f"resp_{uuid.uuid4().hex[:12]}"
+    interaction_id = f"int_{uuid.uuid4().hex[:12]}"
+
+    def on_metadata(meta):
+        loop.call_soon_threadsafe(queue.put_nowait, ("metadata", meta))
+
+    def on_sources(docs_list):
+        formatted_sources = [
+            {
+                "name": d.get("name"),
+                "document_id": d.get("name"),
+                "document_title": d.get("name"),
+                "score": d.get("score"),
+                "page": d.get("page"),
+                "page_number": d.get("page"),
+                "page_label": f"p. {d.get('page')}" if d.get("page") is not None else "—",
+                "snippet": d.get("snippet"),
+                "url": get_pdf_url(d.get("name", ""), d.get("page")),
+            }
+            for d in docs_list
+        ]
+        loop.call_soon_threadsafe(queue.put_nowait, ("sources", {"type": "sources", "sources": formatted_sources}))
+
+    def on_chunk(text, idx):
+        loop.call_soon_threadsafe(queue.put_nowait, ("chunk", {"type": "answer_chunk", "text": text, "index": idx}))
+
+    def run_worker():
+        try:
+            ctx_result = retrieval.hybrid_graphrag(
+                resolved_query,
+                store,
+                chat_history=request.history,
+                session_id=request.session_id,
+                turn_index=turn_index,
+                original_query=request.query,
+                stream_callback=on_chunk,
+                metadata_callback=on_metadata,
+                sources_callback=on_sources,
+            )
+            summary = graph_store.get_entity_type_summary(ctx_result.get("active_labels"))
+            cg_resp = _contextgraph_response(resolved_query, ctx_result, summary)
+
+            hybrid_payload = {
+                "response_id": cg_resp.response_id or response_id,
+                "interaction_id": cg_resp.interaction_id or interaction_id,
+                "answer": cg_resp.answer.model_dump() if cg_resp.answer else None,
+                "sources": [s.model_dump() for s in cg_resp.sources],
+                "graph_highlight": cg_resp.graph_highlight,
+                "confidence_label": ctx_result.get("confidence_label", "✓ High confidence"),
+                "confidence_reason": ctx_result.get("confidence_reason", ""),
+                "telemetry_breakdown": ctx_result.get("telemetry_breakdown", {}),
+                "latency_ms": cg_resp.latency_ms,
+            }
+
+            loop.call_soon_threadsafe(queue.put_nowait, ("done", {
+                "type": "complete",
+                "response_id": response_id,
+                "interaction_id": interaction_id,
+                "hybrid": hybrid_payload,
+            }))
+        except Exception as exc:
+            loop.call_soon_threadsafe(queue.put_nowait, ("error", {
+                "type": "error", "message": str(exc), "recoverable": False
+            }))
+        finally:
+            loop.call_soon_threadsafe(queue.put_nowait, None)
+
+    worker_task = asyncio.create_task(asyncio.to_thread(run_worker))
+    try:
+        while True:
+            item = await queue.get()
+            if item is None:
+                break
+            event_type, event_data = item
+            yield _format_sse(event_type, event_data)
+    finally:
+        await worker_task
+
+
+@router.post("/stream", response_class=StreamingResponse)
+async def chat_stream(
+    request: ChatRequest,
+    container: Container = Depends(get_container),
+) -> StreamingResponse:
+    """Server-Sent Events streaming endpoint for /chat.
+
+    Multi-turn aware: passes history and session_id so the orchestrator
+    can perform coreference resolution before streaming.
+
+    Event types match /query/stream for frontend symmetry:
+      event: metadata, sources, chunk, done, error
+    """
+    return StreamingResponse(
+        _chat_stream_generator(request, container),
+        media_type="text/event-stream",
+        headers=_STREAM_HEADERS,
+    )

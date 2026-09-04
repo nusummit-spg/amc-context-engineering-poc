@@ -20,6 +20,7 @@ export default function BarChart({ categories, labels, series = [], height = 260
           borderBottom: "1px solid rgba(49,51,63,0.15)",
           padding: "0.5rem 0.75rem 0 0.75rem",
           overflowX: "auto",
+          WebkitOverflowScrolling: "touch",
         }}
       >
         {cats.map((cat, ci) => (
@@ -56,7 +57,7 @@ export default function BarChart({ categories, labels, series = [], height = 260
           </div>
         ))}
       </div>
-      <div style={{ display: "flex", gap: "1rem", marginTop: 8 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem 1rem", marginTop: 8 }}>
         {normalizedSeries.map((s, si) => (
           <div key={si} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#5C574C" }}>
             <span style={{ width: 10, height: 10, background: SERIES_COLORS[si % SERIES_COLORS.length], display: "inline-block", borderRadius: 2 }} />

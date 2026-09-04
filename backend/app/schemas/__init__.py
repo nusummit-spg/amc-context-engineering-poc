@@ -111,6 +111,7 @@ from app.schemas.response_quality import ResponseQualityMetrics
 from app.schemas.root_cause_analysis import RootCauseAnalysis
 from app.schemas.violation_cluster import ViolationCluster
 from app.schemas.evidence_metadata import EvidenceMetadata
+from app.schemas.evidence_pack import EvidenceChunk, EvidencePack
 from app.schemas.fund_family_analysis import FundFamilyAnalysis
 
 # phase 3 dashboard schemas
@@ -148,6 +149,7 @@ __all__ = [
     "FeedbackQualityMetrics", "FeedbackCategoryAnalytics", "ResponseQualityMetrics",
     # phase 2 analysis
     "RootCauseAnalysis", "ViolationCluster", "EvidenceMetadata", "FundFamilyAnalysis",
+    "EvidenceChunk", "EvidencePack",
     # phase 3 dashboard
     "AuditTrailAccessMetrics", "RealTimeMonitoringMetrics", "ComplianceDashboardKPIs",
     # alerts

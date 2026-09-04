@@ -8,7 +8,7 @@
 import asyncio
 import json
 import logging
-from typing import Any, Optional
+from typing import Any, AsyncGenerator, Optional
 import httpx
 
 import groq
@@ -18,6 +18,8 @@ from app.core.errors import UpstreamError
 
 logger = logging.getLogger("llm")
 
+_STREAM_STALL_TIMEOUT = 30.0    # seconds with no chunk before treating stream as stalled
+_BACKOFF_DELAYS = [1.0, 2.0, 4.0, 8.0]  # exponential backoff for rate-limit recovery
 
 class LLMClient:
     def __init__(self) -> None:
@@ -104,6 +106,90 @@ class LLMClient:
                     logger.warning("Local structured LLM fallback failed: %s", local_exc)
 
             raise primary_exc
+
+    async def complete_stream(
+        self,
+        prompt: str,
+        system: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+        fast: bool = False,
+    ) -> AsyncGenerator[str, None]:
+        """Stream plain text completion token-by-token via Groq.
+
+        Yields text chunks as they arrive. Handles:
+        - Rate limits: exponential backoff up to 4 retries before raising
+        - Stall detection: raises UpstreamError if no chunk for _STREAM_STALL_TIMEOUT seconds
+        - Fallback: if streaming not supported by provider, falls back to single-chunk yield
+        """
+        last_exc: Optional[Exception] = None
+        for attempt, delay in enumerate([0.0] + _BACKOFF_DELAYS):
+            if delay:
+                logger.info("Stream retry %d/%d after %.1fs backoff", attempt, len(_BACKOFF_DELAYS), delay)
+                await asyncio.sleep(delay)
+            try:
+                async for chunk in self._call_groq_stream(prompt, system, max_tokens, fast):
+                    yield chunk
+                return  # success — stop retrying
+            except groq.RateLimitError as exc:
+                last_exc = exc
+                logger.warning("Groq rate limit on stream attempt %d: %s", attempt + 1, exc)
+                if attempt >= len(_BACKOFF_DELAYS):
+                    break
+                continue
+            except UpstreamError:
+                raise
+            except Exception as exc:
+                raise UpstreamError(f"Groq stream failed: {exc}") from exc
+        raise UpstreamError("Groq stream rate limited after all retries") from last_exc
+
+    async def _call_groq_stream(
+        self,
+        prompt: str,
+        system: Optional[str],
+        max_tokens: Optional[int],
+        fast: bool,
+    ) -> AsyncGenerator[str, None]:
+        """Low-level Groq streaming call — yields delta text chunks."""
+        api_key = self._settings.groq_api_key
+        if not api_key:
+            raise UpstreamError("Groq API key not configured")
+
+        model = self._settings.llm_fast_model if fast else self._settings.llm_model
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        default_tokens = 1500 if fast else self._settings.llm_max_tokens
+        kwargs: dict[str, Any] = {
+            "model": model,
+            "messages": messages,
+            "max_tokens": max_tokens or default_tokens,
+            "temperature": 0.1,
+            "stream": True,
+        }
+
+        async with self._semaphore:
+            try:
+                stream = await self._groq_client.chat.completions.create(**kwargs)
+                last_chunk_time = asyncio.get_event_loop().time()
+                async for chunk in stream:
+                    # Stall detection: abort if no chunk for _STREAM_STALL_TIMEOUT seconds
+                    now = asyncio.get_event_loop().time()
+                    if now - last_chunk_time > _STREAM_STALL_TIMEOUT:
+                        logger.warning("Groq stream stalled — no chunk for %.0fs, aborting", _STREAM_STALL_TIMEOUT)
+                        raise UpstreamError("Stream stalled: no data received for 30 seconds")
+                    last_chunk_time = now
+
+                    delta = chunk.choices[0].delta if chunk.choices else None
+                    if delta and delta.content:
+                        yield delta.content
+            except groq.RateLimitError:
+                raise
+            except groq.APIStatusError as exc:
+                raise UpstreamError(f"Groq API error {exc.status_code}: {exc.message}") from exc
+            except groq.APIConnectionError as exc:
+                raise UpstreamError("Groq connection error") from exc
 
     async def _call_provider(
         self,

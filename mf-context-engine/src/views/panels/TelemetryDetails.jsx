@@ -49,10 +49,35 @@ export default function TelemetryDetails({ t }) {
             </td>
           </tr>
           {t.cache_hit && (
-            <tr className="savings">
-              <td><b>Token Savings (Vs Cold Run)</b></td>
-              <td><b>{(t.tokens_saved ?? 0).toLocaleString()} tokens saved</b> ({(t.tokens_cold_equivalent ?? 0).toLocaleString()} cold equiv)</td>
-            </tr>
+            <>
+              <tr className="savings">
+                <td><b>Cognitive Cache Probe</b></td>
+                <td>
+                  <span style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    padding: "2px 8px",
+                    borderRadius: "4px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    backgroundColor: t.hit_type === "Fingerprint" ? "rgba(46, 125, 50, 0.15)" : "rgba(2, 136, 209, 0.15)",
+                    color: t.hit_type === "Fingerprint" ? "#2e7d32" : "#0288d1"
+                  }}>
+                    ⚡ {t.hit_type || "Cached Hit"}
+                  </span>
+                  {t.domain_intent && (
+                    <span style={{ marginLeft: "8px", fontSize: "11px", color: "#666", textTransform: "uppercase", fontWeight: 600 }}>
+                      [{t.domain_intent.replace(/_/g, " ")}]
+                    </span>
+                  )}
+                </td>
+              </tr>
+              <tr className="savings">
+                <td><b>Token Savings (Vs Cold Run)</b></td>
+                <td><b>{(t.tokens_saved ?? 0).toLocaleString()} tokens saved</b> ({(t.tokens_cold_equivalent ?? 0).toLocaleString()} cold equiv)</td>
+              </tr>
+            </>
           )}
           <tr>
             <td><b>DB Candidates Surfaced</b></td>

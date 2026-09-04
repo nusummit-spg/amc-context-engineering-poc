@@ -70,7 +70,7 @@ export default function ScorecardPage() {
       <h1 className="stTitle">🎯 Regulatory Compliance Scorecard</h1>
       <div className="stCaption">Real-Time AMC Statutory Health Breakdown</div>
 
-      <div className="stRow" style={{ marginTop: "1rem", alignItems: "flex-end" }}>
+      <div className="stRow stRow--responsive" style={{ marginTop: "1rem", alignItems: "flex-end" }}>
         <div className="stCol" style={{ flex: 3 }}>
           <Selectbox
             label="Regulatory Jurisdiction"
@@ -97,19 +97,11 @@ export default function ScorecardPage() {
         Overall Posture: <b style={{ color: "#A8412C" }}>{score.toFixed(1)}% Compliant</b>
       </h3>
 
-      <div className="stRow" style={{ gap: "1rem", marginTop: "0.5rem" }}>
-        <div className="stCol" style={{ flex: 1 }}>
-          <Metric label="Total Rules Tested" value={sc.total_rules} />
-        </div>
-        <div className="stCol" style={{ flex: 1 }}>
-          <Metric label="Passing Rules" value={sc.rules_passing} delta={`${passingPct}%`} />
-        </div>
-        <div className="stCol" style={{ flex: 1 }}>
-          <Metric label="Breached Rules" value={sc.rules_with_violations} />
-        </div>
-        <div className="stCol" style={{ flex: 1 }}>
-          <Metric label="Critical Breaches" value={sc.violations?.critical ?? 0} />
-        </div>
+      <div className="stMetricsGrid">
+        <Metric label="Total Rules Tested" value={sc.total_rules} />
+        <Metric label="Passing Rules" value={sc.rules_passing} delta={`${passingPct}%`} />
+        <Metric label="Breached Rules" value={sc.rules_with_violations} />
+        <Metric label="Critical Breaches" value={sc.violations?.critical ?? 0} />
       </div>
 
       <Divider />

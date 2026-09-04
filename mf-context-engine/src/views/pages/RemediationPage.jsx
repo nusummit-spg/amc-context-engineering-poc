@@ -76,19 +76,11 @@ export default function RemediationPage() {
       <h1 className="stTitle">🛠️ Violation Remediation &amp; Escalation SLA Tracking</h1>
       <div className="stCaption">Workflow Automation, Remediation Audit Trail &amp; SLA Countdown</div>
 
-      <div className="stRow" style={{ marginTop: "1rem" }}>
-        <div className="stCol" style={{ flex: 1 }}>
-          <Metric label="Total Detected" value="18" delta="+2 today" />
-        </div>
-        <div className="stCol" style={{ flex: 1 }}>
-          <Metric label="Under Review" value="5 (28%)" delta="In SLA" />
-        </div>
-        <div className="stCol" style={{ flex: 1 }}>
-          <Metric label="Remediated" value="12 (67%)" delta="Verified" />
-        </div>
-        <div className="stCol" style={{ flex: 1 }}>
-          <Metric label="Overdue Escalations" value="0" delta="All within SLA" />
-        </div>
+      <div className="stMetricsGrid">
+        <Metric label="Total Detected" value="18" delta="+2 today" />
+        <Metric label="Under Review" value="5 (28%)" delta="In SLA" />
+        <Metric label="Remediated" value="12 (67%)" delta="Verified" />
+        <Metric label="Overdue Escalations" value="0" delta="All within SLA" />
       </div>
 
       <Divider />
@@ -102,8 +94,8 @@ export default function RemediationPage() {
       <Divider />
 
       <h3 className="stSubheader">✍️ Resolve Compliance Violation</h3>
-      <div className="stRow" style={{ gap: "1.5rem" }}>
-        <div className="stCol" style={{ flex: 1 }}>
+      <div className="stFormRow">
+        <div>
           <Selectbox
             label="Select Violation to Remediate"
             options={VIOLATIONS_OPTIONS}
@@ -120,7 +112,7 @@ export default function RemediationPage() {
           </div>
         </div>
 
-        <div className="stCol" style={{ flex: 1 }}>
+        <div>
           <div style={{ marginBottom: "0.5rem" }}>
             <label style={{ fontSize: "0.9rem", fontWeight: 600, color: "#31333F" }}>
               Documented Resolution Action Taken

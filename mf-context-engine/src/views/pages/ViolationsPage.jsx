@@ -144,24 +144,16 @@ export default function ViolationsPage() {
 
       <div style={{ marginTop: "1rem" }}>
         <Expander title="🔍 Filter Criteria" defaultOpen={true}>
-          <div className="stRow">
-            <div className="stCol" style={{ flex: 1 }}>
-              <Selectbox label="Region" options={["SEBI", "SEC", "ESMA"]} value={region} onChange={setRegion} />
-            </div>
-            <div className="stCol" style={{ flex: 1 }}>
-              <Selectbox label="Severity" options={["All", "Critical", "High", "Medium", "Low"]} value={severityFilter} onChange={setSeverityFilter} />
-            </div>
-            <div className="stCol" style={{ flex: 1 }}>
-              <Selectbox label="Status" options={["all", "detected", "reviewed", "remediated"]} value={statusFilter} onChange={setStatusFilter} />
-            </div>
-            <div className="stCol" style={{ flex: 1.5 }}>
-              <TextInput label="Keyword Search" value={searchKw} onChange={setSearchKw} placeholder="Search rule, fund, or keywords..." />
-            </div>
+          <div className="stFilterRow">
+            <Selectbox label="Region" options={["SEBI", "SEC", "ESMA"]} value={region} onChange={setRegion} />
+            <Selectbox label="Severity" options={["All", "Critical", "High", "Medium", "Low"]} value={severityFilter} onChange={setSeverityFilter} />
+            <Selectbox label="Status" options={["all", "detected", "reviewed", "remediated"]} value={statusFilter} onChange={setStatusFilter} />
+            <TextInput label="Keyword Search" value={searchKw} onChange={setSearchKw} placeholder="Search rule, fund, or keywords..." />
           </div>
         </Expander>
       </div>
 
-      <div className="stRow" style={{ marginTop: "1rem", gap: "1.5rem" }}>
+      <div className="stRow stRow--responsive" style={{ marginTop: "1rem", gap: "1.5rem" }}>
         <div className="stCol" style={{ flex: 1 }}>
           <h3 className="stSubheader">Severity Breakdown</h3>
           <BarChart
@@ -182,7 +174,7 @@ export default function ViolationsPage() {
 
       <Divider />
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.8rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.8rem" }}>
         <h3 className="stSubheader" style={{ margin: 0 }}>
           📋 Violations Register ({filteredViolations.length} records)
         </h3>

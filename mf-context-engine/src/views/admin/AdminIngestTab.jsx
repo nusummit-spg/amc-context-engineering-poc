@@ -176,7 +176,7 @@ export default function AdminIngestTab() {
     <div>
       <h3 className="stSubheader">[PRODUCTION] Data Acquisition &amp; Governance Controls</h3>
 
-      <div className="stRow">
+      <div className="stRow stRow--responsive">
         <div className="stCol" style={{ flex: 1 }}>
           <Button kind="primary" fullWidth onClick={runPipeline} disabled={pipelineRunning}>
             [RUN] Production Ingestion Pipeline
@@ -207,15 +207,15 @@ export default function AdminIngestTab() {
       <Divider />
       <h3 className="stSubheader">[FORM] Authorized Document Ingest (SEBI Reg 16C)</h3>
       <div className="stForm">
-        <div className="stRow">
-          <div className="stCol" style={{ flex: 1 }}>
+        <div className="stFormRow">
+          <div>
             <TextInput label="Source URL (optional)" value={sourceUrl} onChange={setSourceUrl} placeholder="https://sebi.gov.in/legal/circulars/..." />
             <div style={{ height: 10 }} />
             <FileUploader label="Upload PDF Document" types={["pdf", "docx", "txt"]} onChange={setUploadedFile} />
             <div style={{ height: 10 }} />
             <Selectbox label="Document Type" options={["circular", "master_circular", "faq", "nav_data"]} value={docType} onChange={setDocType} />
           </div>
-          <div className="stCol" style={{ flex: 1 }}>
+          <div>
             <Selectbox label="Department" options={["IMD", "MRD", "MIRSD", "HO", "CFD", "GENERAL"]} value={department} onChange={setDepartment} />
             <div style={{ height: 10 }} />
             <Selectbox label="Entity Type" options={["AMC", "Broker", "RA", "All"]} value={entityType} onChange={setEntityType} />
@@ -235,7 +235,7 @@ export default function AdminIngestTab() {
 
       <Divider />
       <h3 className="stSubheader">📋 Live Ingestion &amp; Background Indexing Tasks</h3>
-      <div className="stRow">
+      <div className="stRow stRow--responsive" style={{ alignItems: "center" }}>
         <div className="stCol" style={{ flex: 4 }}>
           <div className="stCaption">Real-time progress, completion stats, and acknowledgement status for background indexing jobs:</div>
         </div>
@@ -249,7 +249,7 @@ export default function AdminIngestTab() {
       ) : (
         indexingTasks.slice(0, 10).map((t) => (
           <div key={t.task_id}>
-            <div className="stRow">
+            <div className="stRow stRow--responsive">
               <div className="stCol" style={{ flex: 1.5 }}>
                 <div dangerouslySetInnerHTML={{ __html: statusBadge(t.status).replace(/^#### /, "<h4 style='margin:0;font-size:1.05rem;'>") + "</h4>" }} />
               </div>

@@ -71,20 +71,47 @@ export default function App() {
 
   return (
     <div className="stApp" data-sidebar-collapsed={!isSidebarOpen}>
-      {!isSidebarOpen && (
-        <button
-          className="stSidebarOpenButton"
+      {/* Backdrop overlay for mobile & tablet drawer */}
+      {isSidebarOpen && (
+        <div
+          className="stSidebarBackdrop"
           onClick={toggleSidebar}
-          title="Expand sidebar"
-          aria-label="Expand sidebar"
-        >
-          »
-        </button>
+          aria-label="Close sidebar backdrop"
+        />
       )}
 
       <Sidebar />
 
       <div className="stMain">
+        {/* Mobile & tablet top navigation bar */}
+        <header className="stMobileHeader">
+          <button
+            type="button"
+            className="stMobileNavToggle"
+            onClick={toggleSidebar}
+            title={isSidebarOpen ? "Close menu" : "Open navigation menu"}
+            aria-label="Toggle navigation menu"
+            aria-expanded={isSidebarOpen}
+          >
+            {isSidebarOpen ? "✕" : "☰"}
+          </button>
+          <div className="stMobileHeader-center">
+            <span className="stMobileHeader-brand">
+              AMC <span>Context</span>
+            </span>
+            <span className="stMobileHeader-badge">
+              {activePage && activePage !== "app"
+                ? activePage.replace(/^\d+_/, "")
+                : tabNames[clampedTab]?.replace(/^[^\s]+\s*/, "")}
+            </span>
+          </div>
+          <div className="stMobileHeader-right">
+            <span className="stMobileHeader-userRole" title={role}>
+              {activeUser?.full_name ? activeUser.full_name.split(" ")[0] : "User"}
+            </span>
+          </div>
+        </header>
+
         <header className="stHeader" />
         <div className="block-container stAppBottom">
           {activePage === "01_Scorecard" && <ScorecardPage />}

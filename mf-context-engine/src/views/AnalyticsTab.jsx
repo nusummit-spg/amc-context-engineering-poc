@@ -110,20 +110,14 @@ export default function AnalyticsTab() {
             rows={df}
             showIndex
           />
-          <div className="stRow" style={{ marginTop: "0.5rem" }}>
-            <div className="stCol" style={{ flex: 1 }}>
-              <Metric label="Avg traditional latency" value={`${avgTrad.toFixed(2)}s`} />
-            </div>
-            <div className="stCol" style={{ flex: 1 }}>
-              <Metric
-                label="Avg hybrid latency"
-                value={`${avgHybrid.toFixed(2)}s`}
-                delta={`${avgHybrid - avgTrad >= 0 ? "+" : ""}${(avgHybrid - avgTrad).toFixed(2)}s`}
-              />
-            </div>
-            <div className="stCol" style={{ flex: 1 }}>
-              <Metric label="Avg hybrid token delta" value={`${avgTokenDelta >= 0 ? "+" : ""}${avgTokenDelta.toFixed(0)}`} />
-            </div>
+          <div className="stMetricsGrid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", marginTop: "0.5rem" }}>
+            <Metric label="Avg traditional latency" value={`${avgTrad.toFixed(2)}s`} />
+            <Metric
+              label="Avg hybrid latency"
+              value={`${avgHybrid.toFixed(2)}s`}
+              delta={`${avgHybrid - avgTrad >= 0 ? "+" : ""}${(avgHybrid - avgTrad).toFixed(2)}s`}
+            />
+            <Metric label="Avg hybrid token delta" value={`${avgTokenDelta >= 0 ? "+" : ""}${avgTokenDelta.toFixed(0)}`} />
           </div>
 
           <div style={{ marginTop: "1rem" }}>

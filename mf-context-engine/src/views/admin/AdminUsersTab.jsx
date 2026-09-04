@@ -62,15 +62,15 @@ export default function AdminUsersTab() {
       <Divider />
       <h3 className="stSubheader">➕ Create / Update User Profile</h3>
       <div className="stForm">
-        <div className="stRow">
-          <div className="stCol" style={{ flex: 1 }}>
+        <div className="stFormRow">
+          <div>
             <TextInput label="Username" value={username} onChange={setUsername} placeholder="e.g. j_doe_compliance" />
             <div style={{ height: 10 }} />
             <TextInput label="Full Name" value={fullName} onChange={setFullName} placeholder="e.g. Jane Doe" />
             <div style={{ height: 10 }} />
             <TextInput label="Email Address" value={email} onChange={setEmail} placeholder="jane.doe@amc.com" />
           </div>
-          <div className="stCol" style={{ flex: 1 }}>
+          <div>
             <Selectbox
               label="Assign AMC Organizational Role"
               options={Object.values(AMCRole)}

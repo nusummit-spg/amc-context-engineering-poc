@@ -17,10 +17,12 @@ FAISS store + Neo4j via app.engine.config), so these routes don't use the old
 orchestrator/container.
 """
 import asyncio
+import json
 import uuid
 from functools import lru_cache
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 
 from app.api.deps import Container, get_container
 from app.api.routes.files import get_pdf_url
@@ -357,3 +359,114 @@ async def run_query(
             resp.latency_ms = cg.latency_ms
 
     return resp
+
+
+# ---------- SSE helpers ----------
+
+def _format_sse(event_type: str, data: dict) -> str:
+    """Format a single SSE message frame."""
+    return f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
+
+
+async def _query_stream_generator(request: QueryRequest, container: Container):
+    """Async generator that drives the orchestrator stream and formats SSE frames.
+
+    Handles:
+    - Per-event-type SSE framing
+    - Converts internal type names to SSE event types
+    - Catches top-level exceptions and emits error SSE frame
+    """
+    try:
+        async for event in container.orchestrator.answer_stream(
+            query=request.query,
+            top_k=request.top_k,
+        ):
+            event_type = event.get("type", "chunk")
+            # Map internal type names → SSE event types
+            if event_type == "metadata":
+                yield _format_sse("metadata", event)
+            elif event_type == "sources":
+                yield _format_sse("sources", event)
+            elif event_type == "answer_chunk":
+                yield _format_sse("chunk", event)
+            elif event_type == "complete":
+                yield _format_sse("done", event)
+            elif event_type == "error":
+                yield _format_sse("error", event)
+            else:
+                yield _format_sse("chunk", event)
+    except Exception as exc:
+        yield _format_sse("error", {"type": "error", "message": str(exc), "recoverable": False})
+
+
+async def _chat_stream_generator(request, container: "Container"):
+    """Async generator for chat streaming (multi-turn aware)."""
+    try:
+        async for event in container.orchestrator.answer_stream(
+            query=request.query,
+            top_k=getattr(request, "top_k", None),
+            history=getattr(request, "history", None),
+            session_id=getattr(request, "session_id", None),
+        ):
+            event_type = event.get("type", "chunk")
+            if event_type == "metadata":
+                yield _format_sse("metadata", event)
+            elif event_type == "sources":
+                yield _format_sse("sources", event)
+            elif event_type == "answer_chunk":
+                yield _format_sse("chunk", event)
+            elif event_type == "complete":
+                yield _format_sse("done", event)
+            elif event_type == "error":
+                yield _format_sse("error", event)
+            else:
+                yield _format_sse("chunk", event)
+    except Exception as exc:
+        yield _format_sse("error", {"type": "error", "message": str(exc), "recoverable": False})
+
+
+# ---------- Streaming endpoints ----------
+
+_STREAM_HEADERS = {
+    "Cache-Control": "no-cache",
+    "X-Accel-Buffering": "no",   # Disable nginx buffering for true streaming
+    "Connection": "keep-alive",
+}
+
+
+@router.post("/stream", response_class=StreamingResponse)
+async def query_stream(
+    request: QueryRequest,
+    container: Container = Depends(get_container),
+) -> StreamingResponse:
+    """Server-Sent Events streaming endpoint for /query.
+
+    Streams pipeline progress events in real-time:
+      event: metadata — intent + entities (immediately after classification)
+      event: sources  — retrieved documents (after vector search)
+      event: chunk    — LLM answer tokens as they arrive
+      event: done     — completion signal with response_id
+      event: error    — recoverable/non-recoverable error notification
+    """
+    return StreamingResponse(
+        _query_stream_generator(request, container),
+        media_type="text/event-stream",
+        headers=_STREAM_HEADERS,
+    )
+
+
+@router.get("/health/stream-test")
+async def stream_health_check() -> StreamingResponse:
+    """Lightweight streaming capability probe.
+
+    Returns a single SSE frame so the client can confirm SSE is supported
+    end-to-end (not blocked by a proxy, firewall, or CORS policy).
+    """
+    async def _gen():
+        yield _format_sse("ping", {"type": "ping", "status": "streaming_supported"})
+
+    return StreamingResponse(
+        _gen(),
+        media_type="text/event-stream",
+        headers=_STREAM_HEADERS,
+    )

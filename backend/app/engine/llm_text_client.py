@@ -120,3 +120,49 @@ def call_llm(prompt: str, model_id: str = None, max_tokens: int = 4096) -> str:
     """Backward-compatible — discards usage. Existing callers unaffected."""
     text, _ = call_llm_with_usage(prompt, model_id=model_id, max_tokens=max_tokens)
     return text
+
+
+def stream_llm(
+    prompt: str = None,
+    model_id: str = None,
+    max_tokens: int = 4096,
+    system_prompt: str = None,
+    user_prompt: str = None,
+):
+    """Generator that yields text delta chunks token-by-token from Groq."""
+    client = _get_client()
+    model = model_id or config.GROQ_MODEL_RELATIONS
+    if client is None:
+        print("  [llm_text] No Groq client available for streaming.", flush=True)
+        return
+
+    user_content = user_prompt if user_prompt is not None else (prompt or "")
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": user_content})
+
+    if not isinstance(max_tokens, int) or max_tokens <= 0:
+        max_tokens = 1024
+    max_tokens = min(max_tokens, 8192)
+
+    kwargs = {
+        "model": model,
+        "max_tokens": max_tokens,
+        "temperature": 0.1,
+        "presence_penalty": 0.1,
+        "frequency_penalty": 0.15,
+        "messages": messages,
+        "stream": True,
+    }
+
+    try:
+        resp = client.chat.completions.create(**kwargs)
+        for chunk in resp:
+            delta = chunk.choices[0].delta if chunk.choices else None
+            if delta and delta.content:
+                yield delta.content
+    except Exception as exc:
+        print(f"  [llm_text] Groq streaming error: {exc}", flush=True)
+        raise exc
+

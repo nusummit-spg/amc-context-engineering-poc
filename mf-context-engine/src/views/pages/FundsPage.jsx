@@ -77,27 +77,19 @@ export default function FundsPage() {
         />
       </div>
 
-      <div className="stRow" style={{ gap: "1rem", marginBottom: "1.2rem" }}>
-        <div className="stCol" style={{ flex: 1 }}>
-          <Alert type="info">
-            <b>Scheme Name</b>: {selectedRow.Name}
-          </Alert>
-        </div>
-        <div className="stCol" style={{ flex: 1 }}>
-          <Alert type="info">
-            <b>Asset Class</b>: {selectedRow.Category}
-          </Alert>
-        </div>
-        <div className="stCol" style={{ flex: 1 }}>
-          <Alert type="info">
-            <b>Total AUM</b>: {selectedRow["AUM (Cr)"]}
-          </Alert>
-        </div>
-        <div className="stCol" style={{ flex: 1 }}>
-          <Alert type="success">
-            <b>Health Score</b>: {selectedRow.Score}
-          </Alert>
-        </div>
+      <div className="stCardGrid" style={{ marginBottom: "1.2rem" }}>
+        <Alert type="info">
+          <b>Scheme Name</b>: {selectedRow.Name}
+        </Alert>
+        <Alert type="info">
+          <b>Asset Class</b>: {selectedRow.Category}
+        </Alert>
+        <Alert type="info">
+          <b>Total AUM</b>: {selectedRow["AUM (Cr)"]}
+        </Alert>
+        <Alert type="success">
+          <b>Health Score</b>: {selectedRow.Score}
+        </Alert>
       </div>
 
       <h4 style={{ margin: "0.8rem 0 0.4rem 0", color: "#31333F" }}>Registered Breaches for Scheme</h4>

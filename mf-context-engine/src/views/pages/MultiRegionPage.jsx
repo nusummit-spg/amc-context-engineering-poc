@@ -84,34 +84,28 @@ export default function MultiRegionPage() {
       <div className="stCaption">Cross-Border Harmonization: SEBI (India) • US SEC (USA) • ESMA (Europe)</div>
 
       <h3 className="stSubheader" style={{ marginTop: "1.2rem" }}>📊 Regional Scorecards Comparison</h3>
-      <div className="stRow" style={{ gap: "1.2rem" }}>
-        <div className="stCol" style={{ flex: 1 }}>
-          <div style={{ background: "#FFFFFF", border: "1px solid #E7E1D4", borderRadius: "8px", padding: "1rem" }}>
-            <h4 style={{ margin: "0 0 0.5rem 0", color: "#231F1C" }}>🇮🇳 SEBI (India)</h4>
-            <Metric label="Compliance Score" value="91.2%" delta="+1.5%" />
-            <div className="stCaption" style={{ marginTop: "0.5rem" }}>
-              Regulations: 52 Circulars | Rules: 32 Rules
-            </div>
+      <div className="stCardGrid">
+        <div style={{ background: "#FFFFFF", border: "1px solid #E7E1D4", borderRadius: "8px", padding: "1rem" }}>
+          <h4 style={{ margin: "0 0 0.5rem 0", color: "#231F1C" }}>🇮🇳 SEBI (India)</h4>
+          <Metric label="Compliance Score" value="91.2%" delta="+1.5%" />
+          <div className="stCaption" style={{ marginTop: "0.5rem" }}>
+            Regulations: 52 Circulars | Rules: 32 Rules
           </div>
         </div>
 
-        <div className="stCol" style={{ flex: 1 }}>
-          <div style={{ background: "#FFFFFF", border: "1px solid #E7E1D4", borderRadius: "8px", padding: "1rem" }}>
-            <h4 style={{ margin: "0 0 0.5rem 0", color: "#231F1C" }}>🇺🇸 US SEC (USA)</h4>
-            <Metric label="Compliance Score" value="86.5%" delta="-0.8%" />
-            <div className="stCaption" style={{ marginTop: "0.5rem" }}>
-              Regulations: 105 Items | Rules: 54 Rules
-            </div>
+        <div style={{ background: "#FFFFFF", border: "1px solid #E7E1D4", borderRadius: "8px", padding: "1rem" }}>
+          <h4 style={{ margin: "0 0 0.5rem 0", color: "#231F1C" }}>🇺🇸 US SEC (USA)</h4>
+          <Metric label="Compliance Score" value="86.5%" delta="-0.8%" />
+          <div className="stCaption" style={{ marginTop: "0.5rem" }}>
+            Regulations: 105 Items | Rules: 54 Rules
           </div>
         </div>
 
-        <div className="stCol" style={{ flex: 1 }}>
-          <div style={{ background: "#FFFFFF", border: "1px solid #E7E1D4", borderRadius: "8px", padding: "1rem" }}>
-            <h4 style={{ margin: "0 0 0.5rem 0", color: "#231F1C" }}>🇪🇺 ESMA (European Union)</h4>
-            <Metric label="Compliance Score" value="89.0%" delta="+2.1%" />
-            <div className="stCaption" style={{ marginTop: "0.5rem" }}>
-              Regulations: 105 Articles | Rules: 54 Rules
-            </div>
+        <div style={{ background: "#FFFFFF", border: "1px solid #E7E1D4", borderRadius: "8px", padding: "1rem" }}>
+          <h4 style={{ margin: "0 0 0.5rem 0", color: "#231F1C" }}>🇪🇺 ESMA (European Union)</h4>
+          <Metric label="Compliance Score" value="89.0%" delta="+2.1%" />
+          <div className="stCaption" style={{ marginTop: "0.5rem" }}>
+            Regulations: 105 Articles | Rules: 54 Rules
           </div>
         </div>
       </div>
@@ -131,7 +125,7 @@ export default function MultiRegionPage() {
         Simulate audit of a fund scheme evaluated simultaneously against all 3 regulatory regimes.
       </p>
 
-      <div className="stRow" style={{ alignItems: "flex-end", maxWidth: "700px" }}>
+      <div className="stRow stRow--responsive" style={{ alignItems: "flex-end", maxWidth: "700px" }}>
         <div className="stCol" style={{ flex: 3 }}>
           <Selectbox
             label="Select Global Scheme"

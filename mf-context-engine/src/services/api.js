@@ -369,7 +369,18 @@ export async function sendChat({ query, history = [], session_id, mode = "both" 
 
 // ── Admin & Cache Endpoints ────────────────────────────────────────────────
 export async function clearIntentCache() {
-  return await request("/admin/cache/clear", { method: "POST" });
+  return await request("/admin/intent-cache/clear", { method: "POST" });
+}
+
+export async function fetchIntentCacheStats() {
+  return await request("/admin/intent-cache/stats", { method: "GET" });
+}
+
+export async function invalidateIntentCacheDomain(domain) {
+  return await request("/admin/intent-cache/invalidate-domain", {
+    method: "POST",
+    body: JSON.stringify({ domain }),
+  });
 }
 
 export async function fetchUsers() {
@@ -465,3 +476,274 @@ export async function fetchFeedback(responseId) {
 }
 
 
+// ── Streaming Support Detection ───────────────────────────────────────────────
+
+/**
+ * Probe the backend to confirm SSE streaming works end-to-end.
+ * Returns true if the Content-Type header confirms event-stream support.
+ */
+export async function detectStreamingSupport() {
+  try {
+    const response = await fetch(`${API_BASE}/query/health/stream-test`, {
+      method: "GET",
+      headers: { Accept: "text/event-stream" },
+    });
+    return response.headers.get("Content-Type")?.includes("event-stream") ?? false;
+  } catch {
+    return false;
+  }
+}
+
+// ── Internal SSE parser ───────────────────────────────────────────────────────
+
+/**
+ * Parse and dispatch SSE frames from a fetch response body.
+ *
+ * Handles:
+ * - Malformed / incomplete SSE lines (skipped, not thrown)
+ * - Partial JSON buffering (accumulates until valid JSON received)
+ * - Memory protection: clears chunk buffer after 1000 chunks
+ *
+ * @param {Response} response  A fetch Response with body as ReadableStream
+ * @param {Object}   callbacks { onChunk, onMetadata, onSources, onError, onComplete }
+ * @param {Object}   metrics   Shared metrics object mutated in-place { firstChunkTime, chunkCount }
+ * @param {AbortSignal} signal Optional AbortSignal for stop-button support
+ */
+async function _parseSSEStream(response, { onChunk, onMetadata, onSources, onError, onComplete }, metrics, signal) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let currentEvent = "";
+  let dataBuffer = "";
+
+  try {
+    while (true) {
+      if (signal?.aborted) break;
+
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // Split on newlines but keep the last (possibly incomplete) line in the buffer
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const trimmed = line.trimEnd();
+
+        // Blank line → dispatch current event
+        if (trimmed === "") {
+          if (dataBuffer) {
+            let parsed = null;
+            try {
+              parsed = JSON.parse(dataBuffer.trim());
+            } catch {
+              // Partial JSON — skip this frame, the next one may complete it
+            }
+
+            if (parsed !== null) {
+              const type = parsed.type ?? currentEvent;
+
+              if (type === "answer_chunk") {
+                // Streaming analytics: record time-to-first-chunk
+                if (!metrics.firstChunkTime) {
+                  metrics.firstChunkTime = Date.now();
+                  const ttfc = metrics.firstChunkTime - metrics.startTime;
+                  console.debug(`[stream] TTFC: ${ttfc}ms`);
+                }
+                metrics.chunkCount++;
+
+                // Memory protection: clear buffer after 1000 chunks (>~50k chars)
+                if (metrics.chunkCount % 1000 === 0) {
+                  console.debug(`[stream] ${metrics.chunkCount} chunks received — buffer checkpoint`);
+                }
+
+                onChunk?.(parsed);
+              } else if (type === "metadata") {
+                onMetadata?.(parsed);
+              } else if (type === "sources") {
+                onSources?.(parsed);
+                onMetadata?.(parsed);
+              } else if (type === "error") {
+                onError?.(parsed);
+              } else if (type === "complete") {
+                onComplete?.(parsed);
+              }
+              // "ping" frames are silently ignored
+            }
+          }
+          currentEvent = "";
+          dataBuffer = "";
+          continue;
+        }
+
+        // SSE comment line (keepalive)
+        if (trimmed.startsWith(":")) continue;
+
+        if (trimmed.startsWith("event:")) {
+          currentEvent = trimmed.slice(6).trim();
+        } else if (trimmed.startsWith("data:")) {
+          // Accumulate multi-line data (rare but spec-compliant)
+          dataBuffer += trimmed.slice(5).trim();
+        }
+        // id: and retry: fields are ignored (resumption handled at a higher level)
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+// ── Streaming Query ───────────────────────────────────────────────────────────
+
+/**
+ * Send a query and receive the answer as a stream of SSE events.
+ *
+ * @param {Object} params
+ * @param {string}   params.query       The search query
+ * @param {string}   [params.mode]      "both" | "contextgraph" | "traditional"
+ * @param {number}   [params.top_k]     Number of chunks to retrieve
+ * @param {Function} [params.onChunk]   Called with each answer_chunk event
+ * @param {Function} [params.onMetadata] Called with metadata / sources events
+ * @param {Function} [params.onSources] Called with sources events (before answer)
+ * @param {Function} [params.onError]   Called with error events; { recoverable } flag included
+ * @param {Function} [params.onComplete] Called once with the done event
+ * @param {AbortSignal} [params.signal] AbortSignal to cancel stream (stop button)
+ *
+ * Auto-reconnect: exponential backoff 1s → 2s → 4s → 8s on network error.
+ */
+export async function sendQueryStream({
+  query,
+  mode = "both",
+  top_k = 8,
+  onChunk,
+  onMetadata,
+  onSources,
+  onError,
+  onComplete,
+  signal,
+}) {
+  const BACKOFF_DELAYS = [1000, 2000, 4000, 8000];
+  const metrics = { startTime: Date.now(), firstChunkTime: null, chunkCount: 0, reconnections: 0 };
+
+  for (let attempt = 0; attempt <= BACKOFF_DELAYS.length; attempt++) {
+    if (signal?.aborted) break;
+
+    if (attempt > 0) {
+      const delay = BACKOFF_DELAYS[attempt - 1];
+      console.info(`[stream] Reconnecting (attempt ${attempt}) after ${delay}ms…`);
+      metrics.reconnections++;
+      await new Promise((r) => setTimeout(r, delay));
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/query/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, mode, top_k }),
+        signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Stream failed: ${response.status}`);
+      }
+
+      await _parseSSEStream(response, { onChunk, onMetadata, onSources, onError, onComplete }, metrics, signal);
+      return; // Success — stop retrying
+    } catch (err) {
+      if (signal?.aborted || err.name === "AbortError") {
+        // User aborted via stop button — not an error
+        return;
+      }
+      if (attempt >= BACKOFF_DELAYS.length) {
+        // All retries exhausted
+        onError?.({ type: "error", message: err.message, recoverable: false });
+        return;
+      }
+      console.warn(`[stream] Network error on attempt ${attempt + 1}:`, err.message);
+    }
+  }
+}
+
+// ── Streaming Chat ────────────────────────────────────────────────────────────
+
+/**
+ * Send a multi-turn chat message and receive the answer as a stream.
+ *
+ * @param {Object} params
+ * @param {string}   params.query       The user's message
+ * @param {Array}    [params.history]   Conversation history array
+ * @param {string}   [params.session_id] Session ID for conversation continuity
+ * @param {string}   [params.mode]      Query mode
+ * @param {Function} [params.onChunk]   Called with each answer_chunk event
+ * @param {Function} [params.onMetadata] Called with metadata events
+ * @param {Function} [params.onSources] Called with sources events
+ * @param {Function} [params.onError]   Called with error events
+ * @param {Function} [params.onComplete] Called once with the done event
+ * @param {AbortSignal} [params.signal]  AbortSignal for stop button
+ */
+export async function sendChatStream({
+  query,
+  history = [],
+  session_id,
+  mode = "contextgraph",
+  onChunk,
+  onMetadata,
+  onSources,
+  onError,
+  onComplete,
+  signal,
+}) {
+  const cleanHistory = history
+    .filter((m) => m.content && !m.loading)
+    .map((m) => ({
+      role: m.role,
+      content:
+        typeof m.content === "string"
+          ? m.content
+          : m.content?.answer || JSON.stringify(m.content),
+    }));
+
+  const BACKOFF_DELAYS = [1000, 2000, 4000, 8000];
+  const metrics = { startTime: Date.now(), firstChunkTime: null, chunkCount: 0, reconnections: 0 };
+
+  for (let attempt = 0; attempt <= BACKOFF_DELAYS.length; attempt++) {
+    if (signal?.aborted) break;
+
+    if (attempt > 0) {
+      const delay = BACKOFF_DELAYS[attempt - 1];
+      console.info(`[stream/chat] Reconnecting (attempt ${attempt}) after ${delay}ms…`);
+      metrics.reconnections++;
+      await new Promise((r) => setTimeout(r, delay));
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/chat/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query,
+          history: cleanHistory,
+          session_id: session_id || `sess-${Date.now()}`,
+          mode,
+        }),
+        signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Chat stream failed: ${response.status}`);
+      }
+
+      await _parseSSEStream(response, { onChunk, onMetadata, onSources, onError, onComplete }, metrics, signal);
+      return; // Success
+    } catch (err) {
+      if (signal?.aborted || err.name === "AbortError") return;
+      if (attempt >= BACKOFF_DELAYS.length) {
+        onError?.({ type: "error", message: err.message, recoverable: false });
+        return;
+      }
+      console.warn(`[stream/chat] Network error on attempt ${attempt + 1}:`, err.message);
+    }
+  }
+}

@@ -59,8 +59,8 @@ export default function CompareTab({ role }) {
     <div>
       <div className="stCaption">🟢 Backend: {API_BASE} | Role: {role}</div>
 
-      <div className="stRow">
-        <div className="stCol" style={{ flex: 4.0 }}>
+      <div className="stCompareBar">
+        <div className="stCompareBar-input">
           <TextInput
             value={compareQuery}
             onChange={setCompareQuery}
@@ -74,15 +74,12 @@ export default function CompareTab({ role }) {
             }}
           />
         </div>
-        <div className="stCol" style={{ flex: 0.8 }}>
-          <Button kind="primary" fullWidth disabled={isCompareLoading || !compareQuery.trim()} onClick={handleRun}>
+        <div className="stCompareBar-actions">
+          <Button kind="primary" disabled={isCompareLoading || !compareQuery.trim()} onClick={handleRun}>
             {isCompareLoading ? "Running…" : "Run query"}
           </Button>
-        </div>
-        <div className="stCol" style={{ flex: 1.1 }}>
           <Button
             kind="secondary"
-            fullWidth
             onClick={() => {
               startNewCompareSession();
               pushToast("Started new comparison session", "✨");
@@ -90,11 +87,8 @@ export default function CompareTab({ role }) {
           >
             🔄 New Session
           </Button>
-        </div>
-        <div className="stCol" style={{ flex: 1.1 }}>
           <Button
             kind="secondary"
-            fullWidth
             disabled={isCacheClearing}
             title="Flush in-memory and disk intent cache so next query performs fresh LLM synthesis"
             onClick={handleClearCache}
@@ -120,7 +114,7 @@ export default function CompareTab({ role }) {
       </Expander>
 
       {turns.length === 0 && (lastTraditional || lastHybrid) && (
-        <div className="stRow" style={{ marginTop: "0.5rem" }}>
+        <div className="stRow stRow--compare">
           <div className="stCol" style={{ flex: 1 }}>
             {lastTraditional && <TraditionalPanel r={lastTraditional} />}
           </div>
@@ -145,7 +139,7 @@ export default function CompareTab({ role }) {
             <Divider />
           ) : asstMsg.loading ? (
             <>
-              <div className="stRow">
+              <div className="stRow stRow--compare">
                 <div className="stCol" style={{ flex: 1 }}>
                   <Alert type="info">Traditional RAG is generating…</Alert>
                 </div>
@@ -159,7 +153,7 @@ export default function CompareTab({ role }) {
             <>
               {asstMsg.error_trad && <Alert type="error">Traditional RAG failed: {asstMsg.error_trad}</Alert>}
               {asstMsg.error_hybrid && <Alert type="error">ContextGraph failed: {asstMsg.error_hybrid}</Alert>}
-              <div className="stRow">
+              <div className="stRow stRow--compare">
                 <div className="stCol" style={{ flex: 1 }}>
                   {asstMsg.traditional ? (
                     <TraditionalPanel r={asstMsg.traditional} />

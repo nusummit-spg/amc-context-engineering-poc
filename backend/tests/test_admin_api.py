@@ -280,6 +280,35 @@ def test_clear_intent_cache():
     assert "Intent Cache cleared cleanly" in data["message"]
 
 
+def test_get_intent_cache_stats():
+    client = TestClient(admin_test_app)
+    res = client.get("/api/admin/intent-cache/stats")
+    assert res.status_code == 200
+    data = res.json()
+    assert "cache" in data
+    assert "savings" in data
+    assert "domains" in data
+    assert "sebi_regulation" in data["domains"]
+    assert "thresholds" in data
+    assert "ttls_seconds" in data
+
+
+def test_invalidate_domain_endpoint():
+    client = TestClient(admin_test_app)
+    # Valid domain
+    res = client.post("/api/admin/intent-cache/invalidate-domain", json={"domain": "sebi_regulation"})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["success"] is True
+    assert data["invalidated_domain"] == "sebi_regulation"
+    assert "stats" in data
+
+    # Invalid domain
+    res_bad = client.post("/api/admin/intent-cache/invalidate-domain", json={"domain": "non_existent_domain"})
+    assert res_bad.status_code == 400
+
+
+
 
 
 
