@@ -20,6 +20,8 @@ import {
   Sun,
   Moon,
   Monitor,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { useAppState } from "../state/AppState";
 import { useToast } from "./widgets/Toast";
@@ -79,6 +81,8 @@ export default function Sidebar() {
   });
 
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(true);
+  const [isComplianceOpen, setIsComplianceOpen] = useState(true);
   const accountRef = useRef(null);
 
   // Close account popover on click outside
@@ -214,48 +218,82 @@ export default function Sidebar() {
       <div className="cg-sidebar-middle">
       {/* ── 3a. Workspace Section (Chat / Compare / Analytics / Admin) ── */}
       <div className="cg-nav-section">
-        <div className="cg-section-label">Workspace</div>
-        <nav className="cg-nav-list" aria-label="Workspace Navigation">
-          {workspaceTabs.map((t, idx) => {
-            const isActive = (!activePage || activePage === "app") && activeTab === idx;
-            const Icon = t.icon;
-            return (
-              <button
-                key={t.key}
-                type="button"
-                className={`cg-nav-item ${isActive ? "active" : ""}`}
-                onClick={() => handleWorkspaceSelect(idx)}
-                title={t.label}
-              >
-                <span className="cg-nav-icon"><Icon size={18} strokeWidth={1.75} /></span>
-                <span className="cg-nav-label">{t.label}</span>
-              </button>
-            );
-          })}
-        </nav>
+        <button
+          type="button"
+          className="cg-nav-section-header"
+          onClick={() => setIsWorkspaceOpen((prev) => !prev)}
+          aria-expanded={isWorkspaceOpen}
+          title={isWorkspaceOpen ? "Collapse Workspace" : "Expand Workspace"}
+        >
+          <span className="cg-section-label">Workspace</span>
+          <span className="cg-nav-section-toggle">
+            {isWorkspaceOpen ? (
+              <ChevronUp size={14} strokeWidth={1.75} />
+            ) : (
+              <ChevronDown size={14} strokeWidth={1.75} />
+            )}
+          </span>
+        </button>
+        {(isWorkspaceOpen || !isSidebarOpen) && (
+          <nav className="cg-nav-list" aria-label="Workspace Navigation">
+            {workspaceTabs.map((t, idx) => {
+              const isActive = (!activePage || activePage === "app") && activeTab === idx;
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  className={`cg-nav-item ${isActive ? "active" : ""}`}
+                  onClick={() => handleWorkspaceSelect(idx)}
+                  title={t.label}
+                >
+                  <span className="cg-nav-icon"><Icon size={18} strokeWidth={1.75} /></span>
+                  <span className="cg-nav-label">{t.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        )}
       </div>
 
       {/* ── 3b. Compliance Pages Section ── */}
       <div className="cg-nav-section">
-        <div className="cg-section-label">Compliance Modules</div>
-        <nav className="cg-nav-list" aria-label="Compliance Modules Navigation">
-          {PAGES.map((p) => {
-            const isActive = activePage === p.id;
-            const Icon = p.Icon;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                className={`cg-nav-item ${isActive ? "active" : ""}`}
-                onClick={() => handlePageSelect(p.id)}
-                title={p.label}
-              >
-                <span className="cg-nav-icon"><Icon size={18} strokeWidth={1.75} /></span>
-                <span className="cg-nav-label">{p.label}</span>
-              </button>
-            );
-          })}
-        </nav>
+        <button
+          type="button"
+          className="cg-nav-section-header"
+          onClick={() => setIsComplianceOpen((prev) => !prev)}
+          aria-expanded={isComplianceOpen}
+          title={isComplianceOpen ? "Collapse Compliance Modules" : "Expand Compliance Modules"}
+        >
+          <span className="cg-section-label">Compliance Modules</span>
+          <span className="cg-nav-section-toggle">
+            {isComplianceOpen ? (
+              <ChevronUp size={14} strokeWidth={1.75} />
+            ) : (
+              <ChevronDown size={14} strokeWidth={1.75} />
+            )}
+          </span>
+        </button>
+        {(isComplianceOpen || !isSidebarOpen) && (
+          <nav className="cg-nav-list" aria-label="Compliance Modules Navigation">
+            {PAGES.map((p) => {
+              const isActive = activePage === p.id;
+              const Icon = p.Icon;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`cg-nav-item ${isActive ? "active" : ""}`}
+                  onClick={() => handlePageSelect(p.id)}
+                  title={p.label}
+                >
+                  <span className="cg-nav-icon"><Icon size={18} strokeWidth={1.75} /></span>
+                  <span className="cg-nav-label">{p.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        )}
       </div>
 
       {/* ── 4. Chat History / Sessions Section ── */}

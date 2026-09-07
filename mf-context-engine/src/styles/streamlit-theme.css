@@ -636,6 +636,50 @@ html.theme-transition *::after {
   margin-bottom: 0.5rem;
 }
 
+.cg-nav-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.25rem 0.45rem 0.35rem 0.45rem;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  font-family: inherit;
+  transition: background-color var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard);
+  text-align: left;
+}
+
+.cg-nav-section-header:hover {
+  background: rgba(0, 0, 0, 0.035);
+}
+
+.cg-nav-section-header .cg-section-label {
+  padding: 0;
+  pointer-events: none;
+}
+
+.cg-nav-section-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink-warm-350, #8A857D);
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.cg-nav-section-header:hover .cg-section-label,
+.cg-nav-section-header:hover .cg-nav-section-toggle {
+  color: var(--color-navy-700, #1F3A5F);
+}
+
+.cg-nav-section-header:focus-visible {
+  outline: 1.5px solid var(--color-navy-700, #1F3A5F);
+  outline-offset: 1px;
+}
+
 .cg-nav-list {
   display: flex;
   flex-direction: column;
@@ -3736,7 +3780,8 @@ table.stDataFrame td.idx, table.stDataFrame th.idx { color: var(--color-ink-400)
     display: none !important;
   }
 
-  .stSidebar--collapsed .cg-section-label {
+  .stSidebar--collapsed .cg-section-label,
+  .stSidebar--collapsed .cg-nav-section-header {
     display: none !important;
   }
 
