@@ -134,7 +134,7 @@ export default function MultiRegionPage() {
         <Rocket size={17} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
         Run Global Multi-Jurisdiction Audit
       </h3>
-      <p style={{ color: "#5C574C", margin: "0 0 1rem 0" }}>
+      <p style={{ color: "var(--color-ink-warm-500)", margin: "0 0 1rem 0" }}>
         Simulate audit of a fund scheme evaluated simultaneously against all 3 regulatory regimes.
       </p>
 

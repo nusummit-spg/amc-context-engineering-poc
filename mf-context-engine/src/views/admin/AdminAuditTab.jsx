@@ -23,36 +23,33 @@ import {
   clearIntentCache,
 } from "../../services/api";
 
+// badgeColor is a theme token; the badge tint is derived from it in CSS so it
+// follows the palette in both light and dark mode.
 const DOMAIN_METADATA = {
   sebi_regulation: {
     title: "SEBI Regulatory Directives & Circulars",
     icon: ScrollText,
-    badgeColor: "#1B365D",
-    badgeBg: "rgba(27, 54, 93, 0.08)",
+    badgeColor: "var(--accent-domain-navy)",
   },
   corporate_governance: {
     title: "Corporate Governance & Board Oversight",
     icon: Landmark,
-    badgeColor: "#5C3A21",
-    badgeBg: "rgba(92, 58, 33, 0.08)",
+    badgeColor: "var(--accent-domain-brown)",
   },
   esg_sustainability: {
     title: "ESG & BRSR Sustainability Disclosures",
     icon: Leaf,
-    badgeColor: "#2E7D32",
-    badgeBg: "rgba(46, 125, 50, 0.08)",
+    badgeColor: "var(--color-success-text)",
   },
   financial_performance: {
     title: "Financial Performance, Revenue & Earnings",
     icon: TrendingUp,
-    badgeColor: "#D97706",
-    badgeBg: "rgba(217, 119, 6, 0.08)",
+    badgeColor: "var(--accent-domain-amber)",
   },
   fund_performance: {
     title: "Fund NAV, Portfolio Holdings & Returns",
     icon: Briefcase,
-    badgeColor: "#4338CA",
-    badgeBg: "rgba(67, 56, 202, 0.08)",
+    badgeColor: "var(--accent-domain-indigo)",
   },
 };
 
@@ -241,18 +238,18 @@ export default function AdminAuditTab() {
 
       {/* Domain Partition Table */}
       <div style={{ marginTop: "12px", marginBottom: "24px" }}>
-        <h4 style={{ margin: "0 0 8px 0", fontSize: "0.95rem", color: "#31333F", fontWeight: 600 }}>
+        <h4 style={{ margin: "0 0 8px 0", fontSize: "0.95rem", color: "var(--color-ink-800)", fontWeight: 600 }}>
           Domain Partition Governance &amp; Invalidation Controls
         </h4>
-        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", border: "1px solid #E7E1D4", borderRadius: "8px" }}>
-          <table style={{ width: "100%", minWidth: "600px", borderCollapse: "collapse", textAlign: "left", fontSize: "0.88rem" }}>
+        <div className="stCacheTableWrap">
+          <table className="stCacheTable">
             <thead>
-              <tr style={{ backgroundColor: "#F8F6F0", borderBottom: "1px solid #E7E1D4" }}>
-                <th style={{ padding: "10px 14px", fontWeight: 600, color: "#5C574C" }}>Domain Bucket</th>
-                <th style={{ padding: "10px 14px", fontWeight: 600, color: "#5C574C" }}>Cognitive Gate Threshold</th>
-                <th style={{ padding: "10px 14px", fontWeight: 600, color: "#5C574C" }}>Partition TTL</th>
-                <th style={{ padding: "10px 14px", fontWeight: 600, color: "#5C574C" }}>Cached Entries</th>
-                <th style={{ padding: "10px 14px", fontWeight: 600, color: "#5C574C", textAlign: "right" }}>Partition Action</th>
+              <tr>
+                <th>Domain Bucket</th>
+                <th>Cognitive Gate Threshold</th>
+                <th>Partition TTL</th>
+                <th>Cached Entries</th>
+                <th className="is-right">Partition Action</th>
               </tr>
             </thead>
             <tbody>
@@ -260,8 +257,7 @@ export default function AdminAuditTab() {
                 const meta = DOMAIN_METADATA[dom] || {
                   title: dom,
                   icon: FolderOpen,
-                  badgeColor: "#31333F",
-                  badgeBg: "rgba(49, 51, 63, 0.08)",
+                  badgeColor: "var(--color-ink-800)",
                 };
                 const DomainIcon = meta.icon;
                 const thresh = thresholds[dom] !== undefined ? thresholds[dom] : "—";
@@ -270,66 +266,34 @@ export default function AdminAuditTab() {
                 const isInvalidating = actionLoading === dom;
 
                 return (
-                  <tr key={dom} style={{ borderBottom: "1px solid #F0EAE1" }}>
-                    <td style={{ padding: "10px 14px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <DomainIcon size={17} strokeWidth={1.75} style={{ color: meta.badgeColor, flexShrink: 0 }} />
+                  <tr key={dom}>
+                    <td>
+                      <div className="stCacheTable-domain">
+                        <DomainIcon size={17} strokeWidth={1.75} style={{ color: meta.badgeColor }} />
                         <div>
-                          <span
-                            style={{
-                              display: "inline-block",
-                              padding: "2px 6px",
-                              borderRadius: "4px",
-                              fontSize: "0.75rem",
-                              fontWeight: 700,
-                              backgroundColor: meta.badgeBg,
-                              color: meta.badgeColor,
-                              textTransform: "uppercase",
-                              marginBottom: "2px",
-                            }}
-                          >
+                          <span className="stDomainBadge" style={{ "--badge-color": meta.badgeColor }}>
                             {dom}
                           </span>
-                          <div style={{ fontSize: "0.82rem", color: "#555" }}>{meta.title}</div>
+                          <div className="stCacheTable-title">{meta.title}</div>
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: "10px 14px" }}>
-                      <span style={{ fontFamily: "monospace", fontWeight: 600, color: "#2B5329" }}>
-                        ≥ {thresh}
-                      </span>{" "}
-                      <span style={{ color: "#777", fontSize: "0.8rem" }}>cosine</span>
+                    <td>
+                      <span className="stCacheTable-threshold">≥ {thresh}</span>{" "}
+                      <span className="stCacheTable-unit">cosine</span>
                     </td>
-                    <td style={{ padding: "10px 14px", color: "#555" }}>{formatTtl(ttlSec)}</td>
-                    <td style={{ padding: "10px 14px" }}>
-                      <span
-                        style={{
-                          padding: "2px 8px",
-                          borderRadius: "12px",
-                          fontSize: "0.8rem",
-                          fontWeight: 600,
-                          backgroundColor: count > 0 ? "rgba(46, 125, 50, 0.12)" : "rgba(0, 0, 0, 0.05)",
-                          color: count > 0 ? "#2E7D32" : "#888",
-                        }}
-                      >
+                    <td className="stCacheTable-ttl">{formatTtl(ttlSec)}</td>
+                    <td>
+                      <span className={`stCountBadge ${count > 0 ? "is-populated" : ""}`}>
                         {count} {count === 1 ? "entry" : "entries"}
                       </span>
                     </td>
-                    <td style={{ padding: "10px 14px", textAlign: "right" }}>
+                    <td className="is-right">
                       <button
+                        type="button"
+                        className="stInlineBtn"
                         onClick={() => handleInvalidateDomain(dom)}
                         disabled={isInvalidating || count === 0}
-                        style={{
-                          padding: "4px 10px",
-                          fontSize: "0.8rem",
-                          fontWeight: 600,
-                          borderRadius: "var(--radius-sm)",
-                          border: "1px solid var(--color-border)",
-                          backgroundColor: isInvalidating ? "var(--color-surface-tan)" : count === 0 ? "var(--color-surface-tan)" : "var(--color-surface)",
-                          color: count === 0 ? "var(--color-ink-400)" : "var(--color-navy-700)",
-                          cursor: count === 0 ? "not-allowed" : "pointer",
-                          transition: "all var(--duration-fast) var(--ease-standard)",
-                        }}
                         title={`Invalidate cache entries for ${dom}`}
                       >
                         {isInvalidating ? "Flushing…" : "Invalidate Partition"}

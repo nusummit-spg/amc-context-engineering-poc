@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import TextInput from "../components/widgets/TextInput";
+import AutoGrowTextarea from "../components/widgets/AutoGrowTextarea";
 import Button from "../components/widgets/Button";
 import Expander from "../components/widgets/Expander";
 import Divider from "../components/widgets/Divider";
@@ -9,6 +10,30 @@ import { useAppState } from "../state/AppState";
 import { useToast } from "../components/widgets/Toast";
 import TraditionalPanel from "./panels/TraditionalPanel";
 import ContextGraphPanel from "./panels/ContextGraphPanel";
+import ComparisonSummary from "./panels/ComparisonSummary";
+
+/** Placeholder card with the shape of a result panel, shown while one is generating. */
+function PendingPanel({ kind, label }) {
+  return (
+    <div className="cg-wrap cg-panel" aria-busy="true" aria-label={`${label} is generating`}>
+      <div className="cg-panel-head">
+        <div className="cg-panel-title">
+          <span className={`cg-dot ${kind}`}></span>{label}
+        </div>
+        <span className="stSkeleton stSkeleton--pill" />
+      </div>
+      <div className="cg-thinking" role="status" aria-live="polite">
+        <span className="cg-thinking-dots" aria-hidden="true"><span /><span /><span /></span>
+        <span>Generating…</span>
+      </div>
+      <span className="stSkeleton stSkeleton--text" />
+      <span className="stSkeleton stSkeleton--text is-medium" />
+      <span className="stSkeleton stSkeleton--text is-short" />
+      <span className="stSkeleton stSkeleton--block" />
+      <span className="stSkeleton stSkeleton--text is-medium" />
+    </div>
+  );
+}
 
 export default function CompareTab({ role }) {
   const {
@@ -59,18 +84,15 @@ export default function CompareTab({ role }) {
     <div>
       <div className="stCompareBar">
         <div className="stCompareBar-input">
-          <TextInput
-            value={compareQuery}
-            onChange={setCompareQuery}
-            labelVisible={false}
-            placeholder="Type your query and run it against both search modes (Traditional vs ContextGraph)…"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleRun();
-              }
-            }}
-          />
+          <div className="stTextInput">
+            <AutoGrowTextarea
+              value={compareQuery}
+              onChange={setCompareQuery}
+              onSubmit={handleRun}
+              maxRows={6}
+              placeholder="Type your query and run it against both search modes (Traditional vs ContextGraph)…"
+            />
+          </div>
         </div>
         <div className="stCompareBar-actions">
           <Button kind="primary" disabled={isCompareLoading || !compareQuery.trim()} onClick={handleRun}>
@@ -114,37 +136,38 @@ export default function CompareTab({ role }) {
       </Expander>
 
       {turns.length === 0 && (lastTraditional || lastHybrid) && (
-        <div className="stRow stRow--compare">
-          <div className="stCol" style={{ flex: 1 }}>
-            {lastTraditional && <TraditionalPanel r={lastTraditional} />}
+        <>
+          <ComparisonSummary traditional={lastTraditional} hybrid={lastHybrid} />
+          <div className="stRow stRow--compare">
+            <div className="stCol" style={{ flex: 1 }}>
+              {lastTraditional && <TraditionalPanel r={lastTraditional} />}
+            </div>
+            <div className="stCol" style={{ flex: 1 }}>
+              {lastHybrid && (
+                <ContextGraphPanel
+                  r={lastHybrid}
+                  entitySummary={lastHybrid.entity_summary}
+                  showFeedback={false}
+                />
+              )}
+            </div>
           </div>
-          <div className="stCol" style={{ flex: 1 }}>
-            {lastHybrid && (
-              <ContextGraphPanel
-                r={lastHybrid}
-                entitySummary={lastHybrid.entity_summary}
-                showFeedback={false}
-              />
-            )}
-          </div>
-        </div>
+        </>
       )}
 
-      {[...turns].reverse().map(([userMsg, asstMsg], i) => (
-        <div key={i}>
-          <div style={{ fontSize: "1rem", margin: "0.5rem 0" }}>
-            <b>Comparison Turn {userMsg.turn_index ?? 1}:</b> {userMsg.content}
-          </div>
+      {turns.map(([userMsg, asstMsg], i) => (
+        <div key={i} className="cg-cmp-turn">
+          <div className="cg-cmp-query">{userMsg.content}</div>
           {!asstMsg ? (
             <Divider />
           ) : asstMsg.loading ? (
             <>
               <div className="stRow stRow--compare">
                 <div className="stCol" style={{ flex: 1 }}>
-                  <Alert type="info">Traditional RAG is generating…</Alert>
+                  <PendingPanel kind="trad" label="Traditional Document Search" />
                 </div>
                 <div className="stCol" style={{ flex: 1 }}>
-                  <Alert type="info">ContextGraph is generating…</Alert>
+                  <PendingPanel kind="ctx" label="ContextGraph" />
                 </div>
               </div>
               <Divider />
@@ -153,6 +176,7 @@ export default function CompareTab({ role }) {
             <>
               {asstMsg.error_trad && <Alert type="error">Traditional RAG failed: {asstMsg.error_trad}</Alert>}
               {asstMsg.error_hybrid && <Alert type="error">ContextGraph failed: {asstMsg.error_hybrid}</Alert>}
+              <ComparisonSummary traditional={asstMsg.traditional} hybrid={asstMsg.hybrid} />
               <div className="stRow stRow--compare">
                 <div className="stCol" style={{ flex: 1 }}>
                   {asstMsg.traditional ? (

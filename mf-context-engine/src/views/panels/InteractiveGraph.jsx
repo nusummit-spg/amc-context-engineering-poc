@@ -61,7 +61,7 @@ export default function InteractiveGraph({ nodes, edges, matchedTexts, sourceInf
               if (!pos[e.s] || !pos[e.o]) return null;
               const [x1, y1] = pos[e.s];
               const [x2, y2] = pos[e.o];
-              const color = isFallbackGraph ? "#C9C2B4" : "#1F3A5F";
+              const color = isFallbackGraph ? "var(--color-border-strong)" : "var(--color-navy-700)";
               return (
                 <g key={i}>
                   <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth="1.2" />
@@ -74,7 +74,7 @@ export default function InteractiveGraph({ nodes, edges, matchedTexts, sourceInf
             {nodes.map((n, i) => {
               const [x, y] = pos[n];
               const matched = matchedTexts.includes(n);
-              const color = matched ? "#1F3A5F" : (isFallbackGraph ? "#D8D2C4" : "#C9BBA0");
+              const color = matched ? "var(--color-navy-700)" : (isFallbackGraph ? "var(--color-border-strong)" : "var(--color-gold-500)");
               const nodeId = `n${i}`;
               return (
                 <g key={n}>
@@ -84,7 +84,7 @@ export default function InteractiveGraph({ nodes, edges, matchedTexts, sourceInf
                     cx={x} cy={y} r="7" fill={color}
                     onClick={() => setActiveId(nodeId)}
                   />
-                  <text x={x} y={y + 18} fontSize="8.5" fill="#5C574C" textAnchor="middle">
+                  <text x={x} y={y + 18} fontSize="8.5" fill="var(--color-ink-warm-500)" textAnchor="middle">
                     {n.slice(0, 15)}
                   </text>
                 </g>

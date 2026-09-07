@@ -1,10 +1,15 @@
 .mf-provenance-container {
   margin: 1.25rem 0 0.75rem 0;
-  border-radius: 8px;
-  border: 1px solid rgba(49, 51, 63, 0.15);
-  background-color: #FFFFFF;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--ink-rgb), 0.15);
+  background-color: var(--color-surface);
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-resting), inset 0 1px 0 var(--surface-edge);
+}
+
+.mf-provenance-container--flat {
+  margin: 0;
+  box-shadow: none;
 }
 
 .mf-provenance-details {
@@ -15,20 +20,27 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   padding: 10px 14px;
-  background-color: #F8F9FA;
+  background-color: var(--color-surface-raised);
   cursor: pointer;
   user-select: none;
   font-weight: 600;
   font-size: 0.9rem;
-  color: #31333F;
-  border-bottom: 1px solid rgba(49, 51, 63, 0.1);
-  outline: none;
-  transition: background-color 0.15s ease;
+  color: var(--color-ink-800);
+  border-bottom: 1px solid rgba(var(--ink-rgb), 0.1);
+  list-style: none;
+  transition: background-color var(--duration-fast) var(--ease-standard);
 }
+.mf-provenance-summary::-webkit-details-marker { display: none; }
+.mf-provenance-summary:focus-visible { outline-offset: -3px; }
 
 .mf-provenance-summary:hover {
-  background-color: #F1F3F5;
+  background-color: var(--color-surface-tan);
+}
+
+.mf-provenance-details[open] .mf-provenance-table-wrap {
+  animation: stFadeDown var(--duration-slow) var(--ease-out) backwards;
 }
 
 .mf-provenance-summary-title {
@@ -40,7 +52,7 @@
 .mf-provenance-toggle-hint {
   font-size: 0.78rem;
   font-weight: 500;
-  color: #6C757D;
+  color: var(--color-ink-500);
 }
 
 .mf-provenance-table-wrap {
@@ -50,48 +62,58 @@
 
 .mf-provenance-table {
   width: 100%;
+  /* Roughly the narrowest the three columns (marker + document + page) stay
+     readable at. Below this the wrapper scrolls rather than crushing them —
+     which is what happens in the half-width Compare column. */
+  min-width: 320px;
   border-collapse: collapse;
   font-size: 0.85rem;
 }
 
 .mf-provenance-table th {
-  background-color: #F1F3F5;
-  color: #495057;
+  background-color: var(--color-surface-tan);
+  color: var(--color-ink-700);
   font-weight: 600;
   padding: 8px 12px;
   text-align: left;
-  border-bottom: 2px solid rgba(49, 51, 63, 0.12);
+  border-bottom: 2px solid rgba(var(--ink-rgb), 0.12);
 }
 
 .mf-provenance-table td {
   padding: 8px 12px;
-  border-bottom: 1px solid rgba(49, 51, 63, 0.08);
+  border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
   vertical-align: top;
 }
 
-.mf-provenance-row:hover {
-  background-color: rgba(248, 249, 250, 0.8);
+.mf-provenance-row {
+  transition: background-color var(--duration-fast) var(--ease-standard);
 }
+.mf-provenance-row:hover {
+  background-color: rgba(var(--ink-rgb), 0.04);
+}
+.mf-provenance-row:last-child td { border-bottom: none; }
 
 .mf-provenance-marker-tag {
   font-weight: 700;
   font-size: 0.8rem;
-  color: #1F3A5F;
-  background: rgba(31, 58, 95, 0.08);
+  color: var(--color-navy-700);
+  background: rgba(var(--navy-rgb), 0.08);
   padding: 2px 6px;
   border-radius: 4px;
   white-space: nowrap;
 }
 
 .mf-provenance-doc-link {
-  color: #1F3A5F;
+  color: var(--color-navy-700);
   text-decoration: none;
   font-size: 0.86rem;
-  transition: color 0.15s ease;
+  transition: color var(--duration-fast) var(--ease-standard);
 }
+.mf-provenance-doc-link svg { transition: transform var(--duration-base) var(--ease-out); }
+.mf-provenance-doc-link:hover svg { transform: translate(1px, -1px); }
 
 .mf-provenance-doc-link:hover {
-  color: #16283F;
+  color: var(--color-navy-900);
   text-decoration: underline;
 }
 
@@ -101,92 +123,7 @@
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;
-  background-color: rgba(49, 51, 63, 0.08);
-  color: #31333F;
+  background-color: rgba(var(--ink-rgb), 0.08);
+  color: var(--color-ink-800);
 }
 
-.mf-snippet-container {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.mf-accordion-toggle-btn {
-  background: #E9ECEF;
-  border: 1px solid rgba(49, 51, 63, 0.15);
-  border-radius: 4px;
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.85rem;
-  cursor: pointer;
-  color: #495057;
-  padding: 0;
-  flex-shrink: 0;
-  transition: all 0.15s ease;
-}
-
-.mf-accordion-toggle-btn:hover {
-  background-color: #DEE2E6;
-  color: #212529;
-}
-
-.mf-snippet-preview {
-  color: #495057;
-  font-style: italic;
-  line-height: 1.4;
-}
-
-.mf-verbatim-expanded-row {
-  background-color: #F8FAFC;
-}
-
-.mf-verbatim-cell {
-  padding: 6px 16px 14px 44px !important;
-}
-
-.mf-verbatim-blockquote {
-  background-color: #FFFFFF;
-  border: 1px solid rgba(49, 51, 63, 0.15);
-  border-left: 4px solid #1F3A5F;
-  border-radius: 6px;
-  padding: 10px 14px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
-}
-
-.mf-verbatim-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.76rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #64748B;
-  margin-bottom: 6px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid rgba(49, 51, 63, 0.08);
-}
-
-.mf-verbatim-source-link {
-  color: #1F3A5F;
-  text-decoration: none;
-  font-size: 0.76rem;
-  text-transform: none;
-  letter-spacing: normal;
-}
-
-.mf-verbatim-source-link:hover {
-  text-decoration: underline;
-}
-
-.mf-verbatim-body {
-  font-size: 0.86rem;
-  line-height: 1.6;
-  color: #1E293B;
-  white-space: pre-wrap;
-  max-height: 240px;
-  overflow-y: auto;
-}

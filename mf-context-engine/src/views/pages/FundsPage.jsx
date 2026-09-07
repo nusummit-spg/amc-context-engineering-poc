@@ -102,7 +102,7 @@ export default function FundsPage() {
         </Alert>
       </div>
 
-      <h4 style={{ margin: "0.8rem 0 0.4rem 0", color: "#31333F" }}>Registered Breaches for Scheme</h4>
+      <h4 style={{ margin: "0.8rem 0 0.4rem 0", color: "var(--color-ink-800)" }}>Registered Breaches for Scheme</h4>
       {activeBreaches.length > 0 ? (
         <DataFrame
           columns={["violation_id", "rule", "breach", "severity"]}

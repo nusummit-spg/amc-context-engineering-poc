@@ -46,6 +46,7 @@ const STORAGE_KEYS = {
   ADMIN_SUB_TAB: "ns_cg_admin_subtab_v1",
   ACTIVE_PAGE: "ns_cg_active_page_v1",
   SIDEBAR_OPEN: "ns_cg_sidebar_open_v1",
+  THEME: "ns_cg_theme_v1",
 };
 
 function safeStorageGet(key, fallback) {
@@ -314,9 +315,13 @@ export function AppStateProvider({ children }) {
   const [adminSubTab, setAdminSubTabState] = useState(() => safeStorageGet(STORAGE_KEYS.ADMIN_SUB_TAB, 0));
   const [activePage, setActivePageState] = useState(() => safeStorageGet(STORAGE_KEYS.ACTIVE_PAGE, "app"));
   const [isSidebarOpen, setIsSidebarOpenState] = useState(() => {
+    const isCompact = typeof window !== "undefined" && window.innerWidth <= 1024;
+    // On phones and tablets the sidebar is an overlay drawer, so it always
+    // starts closed — an "open" value persisted from a desktop session would
+    // otherwise cover the content on first load.
+    if (isCompact) return false;
     const saved = safeStorageGet(STORAGE_KEYS.SIDEBAR_OPEN, null);
-    if (saved !== null) return saved;
-    return typeof window !== "undefined" ? window.innerWidth > 1024 : true;
+    return saved !== null ? saved : true;
   });
 
   const setActiveTab = useCallback((tab) => {
@@ -345,6 +350,54 @@ export function AppStateProvider({ children }) {
       safeStorageSet(STORAGE_KEYS.SIDEBAR_OPEN, next);
       return next;
     });
+  }, []);
+
+  // ── 2b. Appearance / Theme ─────────────────────────────────────────────────
+  // theme is the user's choice ("light" | "dark" | "system"); resolvedTheme is
+  // what is actually painted, following the OS when the choice is "system".
+  const [theme, setThemeState] = useState(() => {
+    const saved = safeStorageGet(STORAGE_KEYS.THEME, "light");
+    return ["light", "dark", "system"].includes(saved) ? saved : "light";
+  });
+  const [systemPrefersDark, setSystemPrefersDark] = useState(
+    () => typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
+    if (!mq) return;
+    const onChange = (e) => setSystemPrefersDark(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  const resolvedTheme = theme === "system" ? (systemPrefersDark ? "dark" : "light") : theme;
+  const isFirstThemePaint = useRef(true);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute("data-theme", resolvedTheme);
+
+    // Browser chrome (address bar on mobile) follows the painted canvas colour.
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", resolvedTheme === "dark" ? "#141517" : "#FAFAF8");
+
+    // Cross-fade the palette on user-initiated switches only — never on first paint.
+    if (isFirstThemePaint.current) {
+      isFirstThemePaint.current = false;
+      return undefined;
+    }
+    root.classList.add("theme-transition");
+    const timer = setTimeout(() => root.classList.remove("theme-transition"), 360);
+    return () => {
+      clearTimeout(timer);
+      root.classList.remove("theme-transition");
+    };
+  }, [resolvedTheme]);
+
+  const setTheme = useCallback((next) => {
+    setThemeState(next);
+    safeStorageSet(STORAGE_KEYS.THEME, next);
   }, []);
 
   // ── 3. Chat State (Multi-Session & Multi-Turn) ─────────────────────────────
@@ -1106,6 +1159,7 @@ export function AppStateProvider({ children }) {
     adminSubTab, setAdminSubTab,
     activePage, setActivePage,
     isSidebarOpen, setIsSidebarOpen, toggleSidebar,
+    theme, setTheme, resolvedTheme,
 
     // Chat
     chatSessions, setChatSessions,

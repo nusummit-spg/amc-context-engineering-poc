@@ -110,6 +110,17 @@ export default function FeedbackContainer({
         </div>
       </div>
 
+      {isCurrentTurn && selectedCodes.size > 0 && (
+        <div className="cg-feedback-selection">
+          <span>
+            <b>{selectedCodes.size}</b> issue{selectedCodes.size === 1 ? "" : "s"} selected
+          </span>
+          <button type="button" className="cg-feedback-clear-btn" onClick={() => setSelectedCodes(new Set())}>
+            Clear all
+          </button>
+        </div>
+      )}
+
       <FailureCheckboxGrid
         selectedCodes={selectedCodes}
         onChange={handleCheckboxChange}

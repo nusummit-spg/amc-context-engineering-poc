@@ -17,7 +17,6 @@ import MultiRegionPage from "./views/pages/MultiRegionPage";
 import LoginScreen from "./components/auth/LoginScreen";
 import { useAppState } from "./state/AppState";
 import { ROLE_PERMISSIONS } from "./data/rbac";
-import { API_BASE } from "./services/api";
 
 function AdminView() {
   const { adminSubTab, setAdminSubTab } = useAppState();
@@ -45,7 +44,7 @@ function AdminView() {
 }
 
 export default function App() {
-  const { isAuthenticated, activeUser, activeTab, setActiveTab, activePage, isSidebarOpen, toggleSidebar } = useAppState();
+  const { isAuthenticated, activeUser, activeTab, activePage, isSidebarOpen, toggleSidebar } = useAppState();
 
   if (!isAuthenticated) {
     return <LoginScreen />;
@@ -114,16 +113,6 @@ export default function App() {
           </div>
         </header>
 
-        <header className="stHeader">
-          {(!activePage || activePage === "app") && (clampedTab === chatIdx || clampedTab === compareIdx) && (
-            <div className="cg-top-status-indicator" title={`Backend: ${API_BASE} | Role: ${role}`}>
-              <span className="cg-status-dot cg-status-dot--success" />
-              <span className="cg-top-status-text">Backend: <code>{API_BASE}</code></span>
-              <span className="cg-top-status-sep">|</span>
-              <span className="cg-top-status-text">Role: <span className="cg-top-status-role">{role}</span></span>
-            </div>
-          )}
-        </header>
         <div className="block-container stAppBottom">
           {activePage === "01_Scorecard" && <ScorecardPage />}
           {activePage === "02_Violations" && <ViolationsPage />}
@@ -131,15 +120,12 @@ export default function App() {
           {activePage === "04_Remediation" && <RemediationPage />}
           {activePage === "05_Multi_Region" && <MultiRegionPage />}
           {(!activePage || activePage === "app") && (
-            <>
-              <Tabs tabs={tabNames} active={clampedTab} onChange={setActiveTab} />
-              <div className="stTabs-panel">
-                {clampedTab === chatIdx && <ChatTab />}
-                {canCompare && clampedTab === compareIdx && <CompareTab role={role} />}
-                {canAnalytics && clampedTab === analyticsIdx && <AnalyticsTab />}
-                {canAdmin && clampedTab === adminIdx && <AdminView />}
-              </div>
-            </>
+            <div className="stTabs-panel">
+              {clampedTab === chatIdx && <ChatTab />}
+              {canCompare && clampedTab === compareIdx && <CompareTab role={role} />}
+              {canAnalytics && clampedTab === analyticsIdx && <AnalyticsTab />}
+              {canAdmin && clampedTab === adminIdx && <AdminView />}
+            </div>
           )}
         </div>
       </div>

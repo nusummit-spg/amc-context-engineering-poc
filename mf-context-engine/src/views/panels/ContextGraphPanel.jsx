@@ -40,6 +40,10 @@ export default function ContextGraphPanel({
         </div>
         <span className="cg-badge">hybrid graph + vector</span>
       </div>
+      <p className="cg-panel-lede">
+        Resolves the entities in your question, walks the relationships between them, then writes a
+        single answer with every claim traced back to a source.
+      </p>
       <div className="cg-tabs">
         <button className={`cg-tab ${tab === "answer" ? "active" : ""}`} onClick={() => setTab("answer")}>
           Answer

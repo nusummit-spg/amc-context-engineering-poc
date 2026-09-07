@@ -17,6 +17,7 @@
   --navy: #1F3A5F;
   --navy-hover: #16293F;
   --navy-soft: rgba(31, 58, 95, 0.08);
+  --on-navy: #FFFFFF;
   --seal: #9C7A3C;
   --error: #B3261E;
   --error-soft: #FBEEEC;
@@ -32,6 +33,26 @@
   font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
+}
+
+/* Dark appearance — the same paper-and-hairline composition, re-grounded */
+:root[data-theme="dark"] .login-viewport {
+  --paper: #141517;
+  --paper-tint: #1F2226;
+  --ink-950: #E9EBEE;
+  --ink-700: #C3C7CD;
+  --ink-500: #949AA2;
+  --ink-400: #757C85;
+  --line: #2C2F34;
+  --line-strong: #3A3E44;
+  --navy: #8CB2E2;
+  --navy-hover: #AECAF0;
+  --navy-soft: rgba(140, 178, 226, 0.12);
+  --on-navy: #111419;
+  --seal: #C9A35E;
+  --error: #E89B8D;
+  --error-soft: #2E1C19;
+  --success: #8FC895;
 }
 
 /* ── Layout: two panels ───────────────────────────────────────────────────── */
@@ -59,6 +80,16 @@
   max-width: 420px;
   margin: 0 auto 0 max(64px, 10%);
   padding: 40px 0;
+  animation: loginEnter 480ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes loginEnter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.login-visual-inner {
+  animation: loginEnter 640ms cubic-bezier(0.16, 1, 0.3, 1) 120ms backwards;
 }
 
 .login-panel--visual {
@@ -133,6 +164,7 @@
   width: 32px;
   height: 32px;
   flex-shrink: 0;
+  color: var(--ink-950);
 }
 
 .login-logo svg {
@@ -189,6 +221,23 @@
   align-items: center;
 }
 
+/* Focus draws a second rule in from the left over the resting hairline */
+.login-input-wrapper::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1.5px;
+  background: var(--navy);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+.login-input-wrapper:focus-within::after { transform: scaleX(1); }
+.login-input-wrapper:has(.has-error)::after { background: var(--error); }
+
 .login-input-icon {
   position: absolute;
   left: 0;
@@ -197,7 +246,9 @@
   justify-content: center;
   color: var(--ink-400);
   pointer-events: none;
+  transition: color 160ms ease;
 }
+.login-input-wrapper:focus-within .login-input-icon { color: var(--navy); }
 
 .login-input-icon svg {
   width: 16px;
@@ -356,6 +407,11 @@
   margin: 4px 0 18px;
   padding: 0 0 0 12px;
   border-left: 2px solid var(--error);
+  animation: loginEnter 240ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.login-inline-error {
+  animation: loginEnter 240ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 .login-auth-error svg {
@@ -371,7 +427,7 @@
   width: 100%;
   height: 46px;
   background-color: var(--navy);
-  color: #FFFFFF;
+  color: var(--on-navy);
   border: none;
   border-radius: 6px;
   font-family: inherit;
@@ -379,7 +435,7 @@
   font-weight: 600;
   letter-spacing: 0.01em;
   cursor: pointer;
-  transition: background-color 160ms ease;
+  transition: background-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -387,10 +443,17 @@
 
 .login-submit-btn:hover:not(:disabled) {
   background-color: var(--navy-hover);
+  box-shadow: 0 4px 12px var(--navy-soft);
+}
+
+@media (hover: hover) {
+  .login-submit-btn:hover:not(:disabled) { transform: translateY(-1px); }
 }
 
 .login-submit-btn:active:not(:disabled) {
   background-color: var(--navy-hover);
+  transform: translateY(0) scale(0.99);
+  box-shadow: none;
 }
 
 .login-submit-btn:focus-visible {
@@ -414,7 +477,7 @@
   height: 14px;
   margin-right: 0.55rem;
   border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #FFFFFF;
+  border-top-color: var(--on-navy);
   border-radius: 50%;
   animation: login-spin 700ms linear infinite;
 }
@@ -474,6 +537,8 @@
   padding: 9px 11px;
   border-radius: 6px;
   z-index: 2;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  animation: loginEnter 180ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 /* ── Footnote ──────────────────────────────────────────────────────────────── */
@@ -521,7 +586,11 @@
 /* ── Accessibility: reduced motion ────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .login-panel--form,
-  .login-spinner {
+  .login-panel-inner,
+  .login-visual-inner,
+  .login-spinner,
+  .login-auth-error,
+  .login-inline-error {
     animation: none !important;
     transition: none !important;
   }

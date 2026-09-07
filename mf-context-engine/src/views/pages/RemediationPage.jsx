@@ -124,7 +124,7 @@ export default function RemediationPage() {
 
         <div>
           <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontSize: "0.9rem", fontWeight: 600, color: "#31333F" }}>
+            <label style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--color-ink-800)" }}>
               Documented Resolution Action Taken
             </label>
           </div>

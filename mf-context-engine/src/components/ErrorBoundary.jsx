@@ -33,27 +33,27 @@ export default class ErrorBoundary extends Component {
           alignItems: "center",
           justifyContent: "center",
           fontFamily: "'Inter', system-ui, sans-serif",
-          backgroundColor: "#FAFAF8",
+          backgroundColor: "var(--color-canvas)",
           padding: "2rem",
-          color: "#15181D",
+          color: "var(--color-ink-900)",
         }}
       >
         <div
           style={{
             maxWidth: 680,
             width: "100%",
-            background: "#fff",
+            background: "var(--color-surface)",
             borderRadius: 10,
-            border: "1px solid #F5C6BC",
+            border: "1px solid var(--color-danger-border)",
             padding: "2rem",
-            boxShadow: "0 6px 16px rgba(21,24,29,0.08)",
+            boxShadow: "var(--shadow-hover)",
           }}
         >
-          <h1 style={{ display: "flex", alignItems: "center", gap: 10, color: "#9C4A3A", marginBottom: "0.5rem", fontSize: "1.4rem" }}>
+          <h1 style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--color-danger-text)", marginBottom: "0.5rem", fontSize: "1.4rem" }}>
             <AlertTriangle size={22} strokeWidth={1.75} />
             Application Error
           </h1>
-          <p style={{ color: "#3B4149", marginBottom: "1.5rem" }}>
+          <p style={{ color: "var(--color-ink-700)", marginBottom: "1.5rem" }}>
             The app encountered an unexpected error. Open your browser's developer
             console (F12 → Console) for full details, or check the error below.
           </p>
@@ -62,7 +62,7 @@ export default class ErrorBoundary extends Component {
               style={{
                 cursor: "pointer",
                 fontWeight: 600,
-                color: "#1F3A5F",
+                color: "var(--color-navy-700)",
                 userSelect: "none",
               }}
             >
@@ -72,13 +72,13 @@ export default class ErrorBoundary extends Component {
               style={{
                 marginTop: "0.75rem",
                 padding: "1rem",
-                backgroundColor: "#F2EFE7",
+                backgroundColor: "var(--color-surface-tan)",
                 borderRadius: 6,
                 fontSize: "0.8rem",
                 overflowX: "auto",
                 whiteSpace: "pre-wrap",
                 wordBreak: "break-all",
-                color: "#15181D",
+                color: "var(--color-ink-900)",
               }}
             >
               {error?.toString()}
@@ -90,8 +90,8 @@ export default class ErrorBoundary extends Component {
             onClick={() => window.location.reload()}
             style={{
               padding: "0.6rem 1.4rem",
-              backgroundColor: "#1F3A5F",
-              color: "#fff",
+              backgroundColor: "var(--color-navy-700)",
+              color: "var(--color-on-accent)",
               border: "none",
               borderRadius: 6,
               cursor: "pointer",

@@ -1,3 +1,5 @@
+import AutoGrowTextarea from "../widgets/AutoGrowTextarea";
+
 /**
  * Free-text commentary input + Submit button row.
  * Reuses the styling convention of the main query follow-up bar.
@@ -13,25 +15,20 @@ export default function FeedbackInputRow({
   const isSubmitting = submitState === "submitting";
   const isDisabled = disabled || isSubmitting;
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (canSubmit && !isDisabled) {
-        onSubmit();
-      }
-    }
+  const handleSubmitKey = () => {
+    if (canSubmit && !isDisabled) onSubmit();
   };
 
   return (
     <div className={`cg-feedback-input-row ${disabled ? "cg-feedback-input-row--disabled" : ""}`}>
       <div className="cg-feedback-input-wrap">
-        <input
-          type="text"
+        <AutoGrowTextarea
           className="cg-feedback-input"
           placeholder={disabled ? "Feedback is closed for previous turns" : "Add your comments on this answer…"}
           value={freeText}
-          onChange={(e) => setFreeText(e.target.value)}
-          onKeyDown={handleKeyDown}
+          onChange={setFreeText}
+          onSubmit={handleSubmitKey}
+          maxRows={6}
           maxLength={2000}
           disabled={isDisabled}
         />

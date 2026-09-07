@@ -20,7 +20,7 @@ export default function MetricMark({ metric, children }) {
     <div className="mf-metric-tooltip-content">
       <div className="mf-tooltip-title">
         <span className={`mf-metric-badge ${meta.badgeClass}`}>{meta.label}</span>
-        <span style={{ fontSize: "0.82rem", color: "#E2E8F0" }}>{metric.surface_text || children}</span>
+        <span className="mf-metric-surface">{metric.surface_text || children}</span>
       </div>
 
       <div className="mf-metric-explanation">

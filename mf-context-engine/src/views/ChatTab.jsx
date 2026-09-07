@@ -1,12 +1,21 @@
-import { useRef, useState } from "react";
-import { BookOpen } from "lucide-react";
-import Divider from "../components/widgets/Divider";
+import { useRef, useState, useEffect } from "react";
+import { BookOpen, ArrowUp, Square, ChevronDown } from "lucide-react";
 import Alert from "../components/widgets/Alert";
+import AutoGrowTextarea from "../components/widgets/AutoGrowTextarea";
 import StreamingAnswer from "../components/widgets/StreamingAnswer";
 import { useAppState } from "../state/AppState";
 import { useToast } from "../components/widgets/Toast";
-import ContextGraphPanel from "./panels/ContextGraphPanel";
+import AssistantMessage from "./chat/AssistantMessage";
+import EvidenceModal from "./chat/EvidenceModal";
+import OntologyModal from "./chat/OntologyModal";
+import FeedbackModal from "./chat/FeedbackModal";
 import { sendChatStream, adaptHybridResponse } from "../services/api";
+
+const STARTER_PROMPTS = [
+  "Which schemes breached SEBI exposure limits this quarter?",
+  "Summarise our ESG disclosure obligations",
+  "What remediation items are past their SLA?",
+];
 
 export default function ChatTab() {
   const {
@@ -26,7 +35,34 @@ export default function ChatTab() {
   const [progressiveSources, setProgressiveSources] = useState([]);
   const abortControllerRef = useRef(null);
 
+  // ── Evidence / Ontology / Feedback modal state (scoped per response) ────
+  const [evidenceData, setEvidenceData] = useState(null);
+  const [ontologyData, setOntologyData] = useState(null);
+  const [feedbackData, setFeedbackData] = useState(null);
+
+  const bottomRef = useRef(null);
+  const inputRef = useRef(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+
+  // The conversation scrolls inside .stMain, so the jump-to-latest affordance
+  // has to watch that element rather than the window.
+  useEffect(() => {
+    const scroller = document.querySelector(".stMain");
+    if (!scroller) return undefined;
+    const onScroll = () => {
+      const gap = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
+      setIsAtBottom(gap < 160);
+    };
+    onScroll();
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    return () => scroller.removeEventListener("scroll", onScroll);
+  }, []);
+
   const history = getChatHistory(chatSessionId);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [history.length, streamingAnswer, isStreaming]);
 
   // ── Streaming send handler ────────────────────────────────────────────────
   const handleSend = async () => {
@@ -185,104 +221,154 @@ export default function ChatTab() {
   for (let i = 0; i < history.length; i += 2) {
     turns.push([history[i], history[i + 1]]);
   }
+  const lastTurnIdx = turns.length - 1;
 
   return (
     <div className="cg-chat-tab">
-      <div className="cg-chat-fixed-top">
+      <div className="cg-chat-scroll">
+        {turns.length === 0 && !isStreaming && (
+          <div className="cg-chat-empty">
+            <div className="cg-chat-empty-title">What would you like to know?</div>
+            <div className="cg-chat-empty-sub">
+              Ask about compliance, funds, or governance. Every answer cites the documents it came from,
+              and follow-up questions keep the context of this conversation.
+            </div>
+            <div className="cg-chat-starters">
+              {STARTER_PROMPTS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  className="cg-chat-starter"
+                  onClick={() => {
+                    setChatQuery(p);
+                    inputRef.current?.focus();
+                  }}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {turns.map(([userMsg, asstMsg], i) => (
+          <div key={i} className="cg-msg-group">
+            <div className="cg-msg-user">{userMsg.content}</div>
+
+            {!asstMsg ? null : asstMsg.loading ? (
+              i === lastTurnIdx && isStreaming && streamingAnswer ? (
+                <div className="cg-msg-assistant cg-msg-assistant--streaming">
+                  <StreamingAnswer content={streamingAnswer} isStreaming={isStreaming} />
+                  {progressiveSources.length > 0 && (
+                    <div className="cg-progressive-sources">
+                      <div className="cg-progressive-sources-head">
+                        <BookOpen size={14} strokeWidth={1.75} />
+                        Sources found ({progressiveSources.length})
+                      </div>
+                      {progressiveSources.slice(0, 5).map((src, si) => (
+                        <div key={si} className="cg-progressive-source-item">
+                          &bull; {src.document_title || src.document_id}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="cg-msg-assistant">
+                  <div className="cg-thinking" role="status" aria-live="polite">
+                    <span className="cg-thinking-dots" aria-hidden="true">
+                      <span /><span /><span />
+                    </span>
+                    <span className="cg-thinking-text">
+                      {progressiveSources.length > 0
+                        ? `Reading ${progressiveSources.length} source${progressiveSources.length === 1 ? "" : "s"}…`
+                        : "Searching documents and graph…"}
+                    </span>
+                  </div>
+                </div>
+              )
+            ) : (
+              <>
+                {asstMsg.error_hybrid && (
+                  <div className="cg-msg-assistant">
+                    <Alert type="error">ContextGraph failed: {asstMsg.error_hybrid}</Alert>
+                  </div>
+                )}
+                {asstMsg.hybrid && (
+                  <AssistantMessage
+                    r={asstMsg.hybrid}
+                    entitySummary={asstMsg.hybrid.entity_summary}
+                    responseId={asstMsg.hybrid.response_id || `resp_${asstMsg.turn_index || (userMsg?.turn_index ?? 1)}_${chatSessionId}`}
+                    interactionId={asstMsg.hybrid.interaction_id || `int_${chatSessionId}`}
+                    sessionId={chatSessionId}
+                    turnNumber={asstMsg.turn_index || (userMsg?.turn_index ?? 1)}
+                    query={userMsg?.content || ""}
+                    timestamp={asstMsg.timestamp}
+                    showFeedback={true}
+                    isCurrentTurn={i === lastTurnIdx}
+                    onOpenEvidence={setEvidenceData}
+                    onOpenOntology={setOntologyData}
+                    onOpenFeedback={setFeedbackData}
+                  />
+                )}
+              </>
+            )}
+          </div>
+        ))}
+
+        <div ref={bottomRef} />
+      </div>
+
+      <div className="cg-chat-bottom-bar">
+        {!isAtBottom && turns.length > 0 && (
+          <button
+            type="button"
+            className="cg-scroll-bottom-btn"
+            onClick={() => bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })}
+            title="Jump to the latest message"
+            aria-label="Jump to the latest message"
+          >
+            <ChevronDown size={16} strokeWidth={2} />
+          </button>
+        )}
         <div className="cg-chatgpt-query-box">
-          <input
-            type="text"
+          <AutoGrowTextarea
+            ref={inputRef}
             className="cg-chatgpt-query-input"
             value={chatQuery}
-            onChange={(e) => setChatQuery(e.target.value)}
-            placeholder="Ask a follow-up — conversation context carries forward…"
+            onChange={setChatQuery}
+            onSubmit={handleSend}
+            maxRows={10}
+            placeholder={
+              turns.length === 0
+                ? "Ask about compliance, funds, or governance…"
+                : "Ask a follow-up — conversation context carries forward…"
+            }
             disabled={isChatLoading || isStreaming}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
           />
           <button
             type="button"
-            className="cg-chatgpt-send-btn"
-            disabled={isChatLoading || isStreaming || !chatQuery.trim()}
-            onClick={handleSend}
-            title="Send"
+            className={`cg-chatgpt-send-btn ${isStreaming ? "cg-chatgpt-send-btn--streaming" : ""}`}
+            disabled={isChatLoading || (!isStreaming && !chatQuery.trim())}
+            onClick={isStreaming ? handleStop : handleSend}
+            title={isStreaming ? "Stop generating" : "Send message"}
+            aria-label={isStreaming ? "Stop generating" : "Send message"}
           >
-            {isChatLoading ? "Sending…" : isStreaming ? "Streaming…" : "Send"}
+            {isStreaming ? (
+              <Square size={13} fill="currentColor" strokeWidth={0} />
+            ) : (
+              <ArrowUp size={18} strokeWidth={2.5} />
+            )}
           </button>
+        </div>
+        <div className="cg-chat-input-hint">
+          <kbd>Enter</kbd> to send · <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line · answers cite their sources
         </div>
       </div>
 
-      {/* Progressive sources panel — shown while streaming */}
-      {isStreaming && progressiveSources.length > 0 && (
-        <div style={{ marginBottom: "0.5rem", padding: "0.5rem", background: "var(--color-surface-tan)", borderRadius: "var(--radius-sm)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", fontWeight: 600, marginBottom: "0.25rem", color: "var(--color-ink-700)" }}>
-            <BookOpen size={14} strokeWidth={1.75} />
-            Sources found ({progressiveSources.length})
-          </div>
-          {progressiveSources.slice(0, 5).map((src, i) => (
-            <div key={i} style={{ fontSize: "0.78rem", opacity: 0.8, marginLeft: "0.5rem" }}>
-              • {src.document_title || src.document_id}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Inline streaming answer — shown while answer is being streamed */}
-      {isStreaming && streamingAnswer && (
-        <div style={{ marginBottom: "1rem", padding: "0.75rem", border: "1px solid rgba(0,0,0,0.08)", borderRadius: "8px" }}>
-          <StreamingAnswer
-            content={streamingAnswer}
-            isStreaming={isStreaming}
-            onStop={handleStop}
-          />
-        </div>
-      )}
-
-      {[...turns].reverse().map(([userMsg, asstMsg], i) => (
-        <div key={i}>
-          <div style={{ fontSize: "1rem", margin: "0.5rem 0" }}>
-            <b>Turn {userMsg.turn_index ?? 1}:</b> {userMsg.content}
-          </div>
-          {!asstMsg ? (
-            <Divider />
-          ) : asstMsg.loading ? (
-            <>
-              <div className="stRow">
-                <div className="stCol" style={{ flex: 1 }}>
-                  <Alert type="info">ContextGraph is generating…</Alert>
-                </div>
-              </div>
-              <Divider />
-            </>
-          ) : (
-            <>
-              {asstMsg.error_hybrid && <Alert type="error">ContextGraph failed: {asstMsg.error_hybrid}</Alert>}
-              {asstMsg.hybrid && (
-                <div className="stRow">
-                  <div className="stCol" style={{ flex: 1 }}>
-                    <ContextGraphPanel
-                      r={asstMsg.hybrid}
-                      entitySummary={asstMsg.hybrid.entity_summary}
-                      responseId={asstMsg.hybrid.response_id || `resp_${asstMsg.turn_index || (userMsg?.turn_index ?? 1)}_${chatSessionId}`}
-                      interactionId={asstMsg.hybrid.interaction_id || `int_${chatSessionId}`}
-                      sessionId={chatSessionId}
-                      turnNumber={asstMsg.turn_index || (userMsg?.turn_index ?? 1)}
-                      query={userMsg?.content || ""}
-                      showFeedback={true}
-                      isCurrentTurn={i === 0}
-                    />
-                  </div>
-                </div>
-              )}
-              <Divider />
-            </>
-          )}
-        </div>
-      ))}
+      <EvidenceModal open={!!evidenceData} data={evidenceData} onClose={() => setEvidenceData(null)} />
+      <OntologyModal open={!!ontologyData} data={ontologyData} onClose={() => setOntologyData(null)} />
+      <FeedbackModal open={!!feedbackData} data={feedbackData} onClose={() => setFeedbackData(null)} />
     </div>
   );
 }

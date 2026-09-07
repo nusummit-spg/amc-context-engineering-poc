@@ -168,15 +168,15 @@ export default function LoginScreen() {
           <div className="login-brand">
             <div className="login-logo" aria-hidden="true">
               <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="1" y="1" width="30" height="30" rx="7" stroke="#15181D" strokeWidth="1.4" />
+                <rect x="1" y="1" width="30" height="30" rx="7" stroke="currentColor" strokeWidth="1.4" />
                 <path
                   d="M11 20V12l5-2.5 5 2.5v8"
-                  stroke="#15181D"
+                  stroke="currentColor"
                   strokeWidth="1.6"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                <path d="M11 20h10" stroke="#15181D" strokeWidth="1.6" strokeLinecap="round" />
+                <path d="M11 20h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
             </div>
             <span className="login-brand-name">AMC Context Engine</span>

@@ -73,7 +73,7 @@ export default function TelemetryDetails({ t }) {
                     {t.hit_type || "Cached Hit"}
                   </span>
                   {t.domain_intent && (
-                    <span style={{ marginLeft: "8px", fontSize: "11px", color: "#666", textTransform: "uppercase", fontWeight: 600 }}>
+                    <span style={{ marginLeft: "8px", fontSize: "11px", color: "var(--color-ink-500)", textTransform: "uppercase", fontWeight: 600 }}>
                       [{t.domain_intent.replace(/_/g, " ")}]
                     </span>
                   )}

@@ -17,8 +17,8 @@ export default function MiniGraphStatic({ nodes, edges, matchedTexts, width = 46
         const [x2, y2] = pos[e.o];
         return (
           <g key={i}>
-            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#D8D2C4" strokeWidth="1" />
-            <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - 5} fontSize="8" fill="#1F3A5F" textAnchor="middle">
+            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--color-border-strong)" strokeWidth="1" />
+            <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - 5} fontSize="8" fill="var(--color-navy-700)" textAnchor="middle">
               {e.rel}
             </text>
           </g>
@@ -26,11 +26,11 @@ export default function MiniGraphStatic({ nodes, edges, matchedTexts, width = 46
       })}
       {nodes.map((n) => {
         const [x, y] = pos[n];
-        const color = matchedTexts.includes(n) ? "#1F3A5F" : "#D8D2C4";
+        const color = matchedTexts.includes(n) ? "var(--color-navy-700)" : "var(--color-border-strong)";
         return (
           <g key={n}>
             <circle cx={x} cy={y} r="6" fill={color} />
-            <text x={x} y={y + 15} fontSize="8.5" fill="#5C574C" textAnchor="middle">
+            <text x={x} y={y + 15} fontSize="8.5" fill="var(--color-ink-warm-500)" textAnchor="middle">
               {n.slice(0, 14)}
             </text>
           </g>

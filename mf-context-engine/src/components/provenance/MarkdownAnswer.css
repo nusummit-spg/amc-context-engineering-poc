@@ -1,7 +1,7 @@
 .mf-answer-prose {
   font-size: 0.93rem;
   line-height: 1.5;
-  color: #31333F;
+  color: var(--color-ink-800);
   word-break: break-word;
 }
 
@@ -9,14 +9,14 @@
 .mf-prose-p {
   margin: 0.35rem 0;
   line-height: 1.5;
-  color: #31333F;
+  color: var(--color-ink-800);
 }
 
 /* Headings */
 .mf-prose-h {
   margin: 0.65rem 0 0.25rem 0;
   font-weight: 700;
-  color: #1E293B;
+  color: var(--color-ink-900);
   line-height: 1.3;
 }
 
@@ -39,23 +39,24 @@
 
 /* Inline code */
 .mf-inline-code {
-  background: rgba(151, 166, 195, 0.18);
+  background: rgba(var(--navy-rgb), 0.1);
   border-radius: 4px;
   padding: 0.1rem 0.35rem;
-  font-family: "Source Code Pro", monospace;
+  font-family: var(--font-mono);
   font-size: 0.86em;
-  color: #1F3A5F;
+  color: var(--color-navy-700);
 }
 
 /* Table Container & Structured Table */
 .mf-prose-table-container {
   width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   margin: 0.5rem 0 0.65rem 0;
-  border-radius: 6px;
-  border: 1px solid rgba(49, 51, 63, 0.15);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-  background: #FFFFFF;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(var(--ink-rgb), 0.15);
+  box-shadow: var(--shadow-resting), inset 0 1px 0 var(--surface-edge);
+  background: var(--color-surface);
 }
 
 .mf-prose-table {
@@ -66,12 +67,12 @@
 }
 
 .mf-prose-th {
-  background-color: #F1F3F5;
-  color: #1E293B;
+  background-color: var(--color-surface-tan);
+  color: var(--color-ink-900);
   font-weight: 700;
   padding: 6px 12px;
-  border-bottom: 2px solid rgba(49, 51, 63, 0.15);
-  border-right: 1px solid rgba(49, 51, 63, 0.08);
+  border-bottom: 2px solid rgba(var(--ink-rgb), 0.15);
+  border-right: 1px solid rgba(var(--ink-rgb), 0.08);
   white-space: nowrap;
 }
 
@@ -84,17 +85,17 @@
 }
 
 .mf-prose-tr:nth-child(even) {
-  background-color: #FAFAFA;
+  background-color: var(--color-surface-raised);
 }
 
 .mf-prose-tr:hover {
-  background-color: #F1F5F9;
+  background-color: var(--color-surface-tan);
 }
 
 .mf-prose-td {
   padding: 5px 12px;
-  border-bottom: 1px solid rgba(49, 51, 63, 0.08);
-  border-right: 1px solid rgba(49, 51, 63, 0.08);
+  border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
+  border-right: 1px solid rgba(var(--ink-rgb), 0.08);
   vertical-align: middle;
   line-height: 1.4;
   white-space: normal;

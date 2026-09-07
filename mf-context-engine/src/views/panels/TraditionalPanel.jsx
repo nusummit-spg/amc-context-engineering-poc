@@ -29,6 +29,10 @@ export default function TraditionalPanel({ r }) {
         </div>
         <span className="cg-badge">vector-only</span>
       </div>
+      <p className="cg-panel-lede">
+        Matches your wording against document text and hands back the closest files. You read them
+        and draw the conclusion yourself.
+      </p>
       <div className="cg-label">Files returned, ranked by similarity</div>
       <div style={{ marginTop: 8 }}>
         {r.docs && r.docs.length > 0 ? (

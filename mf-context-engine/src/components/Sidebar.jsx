@@ -13,12 +13,32 @@ import {
   Zap,
   LogOut,
   MoreHorizontal,
+  MessageCircle,
+  Scale,
+  BarChart3,
+  UserCog,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
 import { useAppState } from "../state/AppState";
 import { useToast } from "./widgets/Toast";
+import { ROLE_PERMISSIONS } from "../data/rbac";
+
+const WORKSPACE_TABS = [
+  { label: "Chat", icon: MessageCircle, key: "chat" },
+  { label: "Compare", icon: Scale, key: "compare", permKey: "can_access_compare_tab" },
+  { label: "Analytics", icon: BarChart3, key: "analytics", permKey: "can_access_analytics_tab" },
+  { label: "Admin & Governance", icon: UserCog, key: "admin", permKey: "can_view_admin_panel" },
+];
+
+const THEME_OPTIONS = [
+  { id: "light", label: "Light", Icon: Sun, hint: "Always use the light theme" },
+  { id: "dark", label: "Dark", Icon: Moon, hint: "Always use the dark theme" },
+  { id: "system", label: "System", Icon: Monitor, hint: "Follow your operating system setting" },
+];
 
 const PAGES = [
-  { id: "app", label: "Chat Assistant", shortLabel: "Chat", Icon: MessageSquare },
   { id: "01_Scorecard", label: "Compliance Scorecard", shortLabel: "Scorecard", Icon: ShieldCheck },
   { id: "02_Violations", label: "Violations Explorer", shortLabel: "Violations", Icon: AlertTriangle },
   { id: "03_Funds", label: "Fund Schemes Matrix", shortLabel: "Funds", Icon: LayoutGrid },
@@ -40,11 +60,23 @@ export default function Sidebar() {
     isCacheClearing,
     activePage,
     setActivePage,
+    activeTab,
+    setActiveTab,
     isSidebarOpen,
     toggleSidebar,
     logout,
+    theme,
+    setTheme,
   } = useAppState();
   const pushToast = useToast();
+
+  const role = activeUser?.role || "Compliance & Regulatory Officer";
+  const perms = ROLE_PERMISSIONS[role] || {};
+  const workspaceTabs = WORKSPACE_TABS.filter((t) => {
+    if (!t.permKey) return true;
+    const fallback = t.key === "admin" ? false : true;
+    return perms[t.permKey] ?? fallback;
+  });
 
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const accountRef = useRef(null);
@@ -98,6 +130,16 @@ export default function Sidebar() {
         turn_count: Math.floor((s.history || []).length / 2),
       };
     });
+
+  const handleWorkspaceSelect = (idx) => {
+    setActiveTab(idx);
+    if (activePage !== "app") {
+      setActivePage("app");
+    }
+    if (typeof window !== "undefined" && window.innerWidth <= 1024) {
+      toggleSidebar();
+    }
+  };
 
   const handlePageSelect = (pageId) => {
     setActivePage(pageId);
@@ -168,10 +210,35 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* ── 3. Navigation / Pages Section ── */}
+      {/* ── 3–4. Scrollable middle: navigation + chat history ── */}
+      <div className="cg-sidebar-middle">
+      {/* ── 3a. Workspace Section (Chat / Compare / Analytics / Admin) ── */}
       <div className="cg-nav-section">
-        <div className="cg-section-label">Navigation</div>
-        <nav className="cg-nav-list" aria-label="Main Navigation">
+        <div className="cg-section-label">Workspace</div>
+        <nav className="cg-nav-list" aria-label="Workspace Navigation">
+          {workspaceTabs.map((t, idx) => {
+            const isActive = (!activePage || activePage === "app") && activeTab === idx;
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                className={`cg-nav-item ${isActive ? "active" : ""}`}
+                onClick={() => handleWorkspaceSelect(idx)}
+                title={t.label}
+              >
+                <span className="cg-nav-icon"><Icon size={18} strokeWidth={1.75} /></span>
+                <span className="cg-nav-label">{t.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* ── 3b. Compliance Pages Section ── */}
+      <div className="cg-nav-section">
+        <div className="cg-section-label">Compliance Modules</div>
+        <nav className="cg-nav-list" aria-label="Compliance Modules Navigation">
           {PAGES.map((p) => {
             const isActive = activePage === p.id;
             const Icon = p.Icon;
@@ -247,6 +314,7 @@ export default function Sidebar() {
           )}
         </div>
       </div>
+      </div>
 
       {/* ── 5. Background Indexing Tasks Indicator (Compact) ── */}
       {activeIndexing.length > 0 && (
@@ -282,6 +350,32 @@ export default function Sidebar() {
               <div className="cg-popover-role-row">
                 <span className="cg-popover-role-label">Dept:</span>
                 <span className="cg-popover-role-val">{activeUser?.department || "General"}</span>
+              </div>
+            </div>
+
+            <div className="cg-popover-divider" />
+
+            <div className="cg-appearance">
+              <div className="cg-appearance-label">Appearance</div>
+              <div className="cg-appearance-options" role="radiogroup" aria-label="Appearance">
+                {THEME_OPTIONS.map((opt) => {
+                  const Icon = opt.Icon;
+                  const isActive = theme === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={isActive}
+                      className={`cg-appearance-option ${isActive ? "active" : ""}`}
+                      onClick={() => setTheme(opt.id)}
+                      title={opt.hint}
+                    >
+                      <Icon size={15} strokeWidth={1.75} />
+                      <span>{opt.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
