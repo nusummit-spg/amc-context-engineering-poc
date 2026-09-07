@@ -61,7 +61,7 @@ export default function InteractiveGraph({ nodes, edges, matchedTexts, sourceInf
               if (!pos[e.s] || !pos[e.o]) return null;
               const [x1, y1] = pos[e.s];
               const [x2, y2] = pos[e.o];
-              const color = isFallbackGraph ? "#C9C2B4" : "#A8412C";
+              const color = isFallbackGraph ? "#C9C2B4" : "#1F3A5F";
               return (
                 <g key={i}>
                   <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth="1.2" />
@@ -74,7 +74,7 @@ export default function InteractiveGraph({ nodes, edges, matchedTexts, sourceInf
             {nodes.map((n, i) => {
               const [x, y] = pos[n];
               const matched = matchedTexts.includes(n);
-              const color = matched ? "#A8412C" : (isFallbackGraph ? "#D8D2C4" : "#E8A08C");
+              const color = matched ? "#1F3A5F" : (isFallbackGraph ? "#D8D2C4" : "#C9BBA0");
               const nodeId = `n${i}`;
               return (
                 <g key={n}>

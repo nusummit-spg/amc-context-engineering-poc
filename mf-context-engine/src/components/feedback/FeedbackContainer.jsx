@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 import FailureCheckboxGrid from "./FailureCheckboxGrid";
 import FeedbackInputRow from "./FeedbackInputRow";
 import { submitFeedback } from "../../services/api";
@@ -130,7 +131,7 @@ export default function FeedbackContainer({
 
       {submitState === "success" && (
         <div className="cg-feedback-status cg-feedback-status--success">
-          <span className="cg-feedback-status-icon">✓</span>
+          <span className="cg-feedback-status-icon"><CheckCircle2 size={14} strokeWidth={2} /></span>
           <span>
             <b>Feedback recorded</b> — ID: <code>{feedbackId}</code>
             {lastSubmittedAt && ` at ${new Date(lastSubmittedAt).toLocaleTimeString()}`}
@@ -141,7 +142,7 @@ export default function FeedbackContainer({
 
       {submitState === "error" && isCurrentTurn && (
         <div className="cg-feedback-status cg-feedback-status--error">
-          <span className="cg-feedback-status-icon">⚠</span>
+          <span className="cg-feedback-status-icon"><AlertTriangle size={14} strokeWidth={2} /></span>
           <span style={{ flex: 1 }}>{errorMessage}</span>
           <button
             type="button"

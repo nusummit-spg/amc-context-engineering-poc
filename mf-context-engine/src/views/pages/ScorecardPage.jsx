@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { ShieldCheck, RefreshCw, ListTree, CalendarClock } from "lucide-react";
 import Selectbox from "../../components/widgets/Selectbox";
 import Button from "../../components/widgets/Button";
 import Metric from "../../components/widgets/Metric";
@@ -67,7 +68,10 @@ export default function ScorecardPage() {
 
   return (
     <div>
-      <h1 className="stTitle">🎯 Regulatory Compliance Scorecard</h1>
+      <h1 className="stTitle">
+        <ShieldCheck size={26} strokeWidth={1.75} style={{ marginRight: 10, verticalAlign: "-5px" }} />
+        Regulatory Compliance Scorecard
+      </h1>
       <div className="stCaption">Real-Time AMC Statutory Health Breakdown</div>
 
       <div className="stRow stRow--responsive" style={{ marginTop: "1rem", alignItems: "flex-end" }}>
@@ -85,16 +89,17 @@ export default function ScorecardPage() {
             fullWidth
             onClick={() => {
               fetchScorecard(region);
-              pushToast("Scorecard refreshed", "🔄");
+              pushToast("Scorecard refreshed");
             }}
           >
-            {loading ? "Refreshing..." : "🔄 Refresh Scorecard"}
+            <RefreshCw size={15} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-2px" }} />
+            {loading ? "Refreshing..." : "Refresh Scorecard"}
           </Button>
         </div>
       </div>
 
-      <h3 style={{ margin: "1.2rem 0 0.8rem 0", color: "#231F1C", fontSize: "1.3rem" }}>
-        Overall Posture: <b style={{ color: "#A8412C" }}>{score.toFixed(1)}% Compliant</b>
+      <h3 style={{ margin: "1.2rem 0 0.8rem 0", color: "var(--color-ink-900)", fontSize: "1.3rem", fontWeight: 600 }}>
+        Overall Posture: <b style={{ color: "var(--color-navy-700)" }}>{score.toFixed(1)}% Compliant</b>
       </h3>
 
       <div className="stMetricsGrid">
@@ -106,14 +111,20 @@ export default function ScorecardPage() {
 
       <Divider />
 
-      <h3 className="stSubheader">📑 Domain Score Breakdown</h3>
+      <h3 className="stSubheader">
+        <ListTree size={17} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+        Domain Score Breakdown
+      </h3>
       <DataFrame
         columns={["Domain", "Score", "Passing", "Status"]}
         rows={domainsData}
       />
 
       <div style={{ marginTop: "1.5rem" }}>
-        <h3 className="stSubheader">📅 30-Day Score Evolution</h3>
+        <h3 className="stSubheader">
+          <CalendarClock size={17} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+          30-Day Score Evolution
+        </h3>
         <BarChart
           categories={trendLabels}
           series={[

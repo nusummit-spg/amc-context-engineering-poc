@@ -1,9 +1,14 @@
+import { Zap } from "lucide-react";
+
 export default function TelemetryDetails({ t }) {
   if (!t) return null;
   const fmt = (n) => (n ?? 0).toFixed(1);
   return (
     <details className="cg-telemetry-details">
-      <summary>⚡ Microsecond Telemetry &amp; Execution Ledger</summary>
+      <summary style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <Zap size={13} strokeWidth={1.75} />
+        Microsecond Telemetry &amp; Execution Ledger
+      </summary>
       <table className="cg-telemetry-table">
         <tbody>
           <tr>
@@ -61,10 +66,11 @@ export default function TelemetryDetails({ t }) {
                     borderRadius: "4px",
                     fontSize: "12px",
                     fontWeight: 600,
-                    backgroundColor: t.hit_type === "Fingerprint" ? "rgba(46, 125, 50, 0.15)" : "rgba(2, 136, 209, 0.15)",
-                    color: t.hit_type === "Fingerprint" ? "#2e7d32" : "#0288d1"
+                    backgroundColor: t.hit_type === "Fingerprint" ? "var(--color-success-bg)" : "var(--color-navy-100)",
+                    color: t.hit_type === "Fingerprint" ? "var(--color-success-text)" : "var(--color-navy-700)"
                   }}>
-                    ⚡ {t.hit_type || "Cached Hit"}
+                    <Zap size={12} strokeWidth={2} />
+                    {t.hit_type || "Cached Hit"}
                   </span>
                   {t.domain_intent && (
                     <span style={{ marginLeft: "8px", fontSize: "11px", color: "#666", textTransform: "uppercase", fontWeight: 600 }}>
@@ -85,7 +91,7 @@ export default function TelemetryDetails({ t }) {
           </tr>
           <tr>
             <td><b>Vector Noise Bypassed (Pillar 1)</b></td>
-            <td style={{ fontWeight: "bold", color: t.vector_bypassed ? "#3F6B42" : "#8A8378" }}>
+            <td style={{ fontWeight: "bold", color: t.vector_bypassed ? "var(--color-success-text)" : "var(--color-ink-400)" }}>
               {String(!!t.vector_bypassed).toUpperCase()}
             </td>
           </tr>

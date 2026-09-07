@@ -109,6 +109,16 @@ class ChatResponse(BaseModel):
     interaction_id: Optional[str]               = None
 
 
+class ChatTitleRequest(BaseModel):
+    query:      str            = Field(min_length=1, max_length=2000)
+    session_id: Optional[str]  = None
+
+
+class ChatTitleResponse(BaseModel):
+    title:      str
+    session_id: Optional[str]  = None
+
+
 # ── /taxonomy ─────────────────────────────────────────────────────────────────
 
 class TaxonomyNodeOut(BaseModel):

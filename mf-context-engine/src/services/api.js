@@ -198,8 +198,8 @@ export function adaptHybridResponse(hybridData, latencyMs = 0) {
       : (synthesis.answer || hybridData.content || "No answer synthesized.");
 
   const confLabel = synthesis.confidence
-    ? (synthesis.confidence.toUpperCase() === "HIGH" ? "✓ High confidence" : `⚠ ${synthesis.confidence} confidence`)
-    : (hybridData.confidence_label || "✓ High confidence");
+    ? (synthesis.confidence.toUpperCase() === "HIGH" ? "High confidence" : `${synthesis.confidence} confidence`)
+    : (hybridData.confidence_label || "High confidence");
 
   const confReason = synthesis.compliance_note || hybridData.confidence_reason || "";
 
@@ -365,6 +365,64 @@ export async function sendChat({ query, history = [], session_id, mode = "both" 
     traditional: adaptTraditionalResponse(data.traditional, data.traditional?.metrics?.retrieve_ms),
     hybrid: adaptHybridResponse(data.hybrid, data.hybrid?.latency_ms),
   };
+}
+
+/**
+ * Fast client-side topic extractor fallback when backend is offline or slow
+ */
+export function extractClientTopicTitle(query = "") {
+  if (!query || typeof query !== "string") return "New Conversation";
+
+  const cleaned = query
+    .trim()
+    .replace(/^(can you\s+|please\s+|could you\s+|tell me about\s+|what is the\s+|what are the\s+|what is\s+|what are\s+|explain the\s+|explain\s+|how does\s+|how do i\s+|how to\s+|give me\s+|what about\s+|describe\s+|show me\s+|summarize\s+|i want to know about\s+|i need help with\s+)+/i, "")
+    .replace(/[?!.,:;]+$/g, "")
+    .trim();
+
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "New Conversation";
+
+  const selectedWords = words.slice(0, 5);
+  return selectedWords
+    .map((w) => (w.toUpperCase() === w && w.length <= 5 ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(" ");
+}
+
+/**
+ * Generates a concise 2-6 word conversation title near-instantly.
+ * Runs against /api/chat/title with timeout and instant heuristic fallback.
+ */
+export async function generateChatTitle({ query, session_id }) {
+  if (!query || typeof query !== "string" || !query.trim()) {
+    return "New Conversation";
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+    const res = await fetch(`${API_BASE}/chat/title`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: query.trim(), session_id }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.title && typeof data.title === "string" && data.title.trim().length > 0) {
+        const words = data.title.trim().replace(/^["']|["']$/g, "").split(/\s+/).filter(Boolean);
+        if (words.length >= 1) {
+          return words.slice(0, 6).join(" ");
+        }
+      }
+    }
+  } catch {
+    // Non-blocking: fallback to fast client topic extractor
+  }
+
+  return extractClientTopicTitle(query);
 }
 
 // ── Admin & Cache Endpoints ────────────────────────────────────────────────

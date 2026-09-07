@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Wrench, Clock, PenLine, CheckCircle2, ScrollText } from "lucide-react";
 import Metric from "../../components/widgets/Metric";
 import Divider from "../../components/widgets/Divider";
 import DataFrame from "../../components/widgets/DataFrame";
@@ -67,13 +68,16 @@ export default function RemediationPage() {
       { Time: now, Event: "Violation Remediated", Details: `${vId}: ${resolutionText.trim().slice(0, 50)}...`, User: userRole },
       ...prev,
     ]);
-    pushToast(`Violation ${vId} marked as remediated`, "✅");
+    pushToast(`Violation ${vId} marked as remediated`);
     setResolutionText("");
   };
 
   return (
     <div>
-      <h1 className="stTitle">🛠️ Violation Remediation &amp; Escalation SLA Tracking</h1>
+      <h1 className="stTitle">
+        <Wrench size={26} strokeWidth={1.75} style={{ marginRight: 10, verticalAlign: "-5px" }} />
+        Violation Remediation &amp; Escalation SLA Tracking
+      </h1>
       <div className="stCaption">Workflow Automation, Remediation Audit Trail &amp; SLA Countdown</div>
 
       <div className="stMetricsGrid">
@@ -85,7 +89,10 @@ export default function RemediationPage() {
 
       <Divider />
 
-      <h3 className="stSubheader">⏱️ Escalation SLA &amp; Routing Policy</h3>
+      <h3 className="stSubheader">
+        <Clock size={17} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+        Escalation SLA &amp; Routing Policy
+      </h3>
       <DataFrame
         columns={["Severity", "SLA Target", "Escalation Target", "Board Approval Required"]}
         rows={SLA_POLICY}
@@ -93,7 +100,10 @@ export default function RemediationPage() {
 
       <Divider />
 
-      <h3 className="stSubheader">✍️ Resolve Compliance Violation</h3>
+      <h3 className="stSubheader">
+        <PenLine size={17} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+        Resolve Compliance Violation
+      </h3>
       <div className="stFormRow">
         <div>
           <Selectbox
@@ -125,20 +135,22 @@ export default function RemediationPage() {
             rows={4}
             style={{
               width: "100%",
-              backgroundColor: "#EFEAE0",
-              border: "1px solid #E7E1D4",
-              borderRadius: "8px",
-              padding: "0.5rem 0.75rem",
+              backgroundColor: "transparent",
+              border: "none",
+              borderBottom: "1.5px solid var(--color-border)",
+              borderRadius: 0,
+              padding: "0.5rem 0.25rem",
               fontSize: "0.95rem",
               fontFamily: "inherit",
               outline: "none",
-              color: "#5C574C",
+              color: "var(--color-ink-900)",
               boxSizing: "border-box",
             }}
           />
           <div style={{ marginTop: "0.8rem" }}>
             <Button kind="primary" fullWidth onClick={handleResolve}>
-              ✅ Mark Violation as Remediated
+              <CheckCircle2 size={16} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+              Mark Violation as Remediated
             </Button>
           </div>
         </div>
@@ -152,7 +164,10 @@ export default function RemediationPage() {
 
       <Divider />
 
-      <h3 className="stSubheader">📜 Remediation Audit Timeline</h3>
+      <h3 className="stSubheader">
+        <ScrollText size={17} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+        Remediation Audit Timeline
+      </h3>
       <DataFrame
         columns={["Time", "Event", "Details", "User"]}
         rows={timeline}

@@ -76,22 +76,22 @@
 .mf-provenance-marker-tag {
   font-weight: 700;
   font-size: 0.8rem;
-  color: #A8412C;
-  background: rgba(168, 65, 44, 0.08);
+  color: #1F3A5F;
+  background: rgba(31, 58, 95, 0.08);
   padding: 2px 6px;
   border-radius: 4px;
   white-space: nowrap;
 }
 
 .mf-provenance-doc-link {
-  color: #1A73E8;
+  color: #1F3A5F;
   text-decoration: none;
   font-size: 0.86rem;
   transition: color 0.15s ease;
 }
 
 .mf-provenance-doc-link:hover {
-  color: #1557B0;
+  color: #16283F;
   text-decoration: underline;
 }
 
@@ -150,7 +150,7 @@
 .mf-verbatim-blockquote {
   background-color: #FFFFFF;
   border: 1px solid rgba(49, 51, 63, 0.15);
-  border-left: 4px solid #1A73E8;
+  border-left: 4px solid #1F3A5F;
   border-radius: 6px;
   padding: 10px 14px;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
@@ -171,7 +171,7 @@
 }
 
 .mf-verbatim-source-link {
-  color: #1A73E8;
+  color: #1F3A5F;
   text-decoration: none;
   font-size: 0.76rem;
   text-transform: none;

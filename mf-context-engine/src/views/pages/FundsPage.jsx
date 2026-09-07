@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { LayoutGrid, Grid3x3, SearchCheck } from "lucide-react";
 import Selectbox from "../../components/widgets/Selectbox";
 import Divider from "../../components/widgets/Divider";
 import DataFrame from "../../components/widgets/DataFrame";
@@ -45,7 +46,10 @@ export default function FundsPage() {
 
   return (
     <div>
-      <h1 className="stTitle">🏢 Fund Scheme Compliance Heatmap</h1>
+      <h1 className="stTitle">
+        <LayoutGrid size={26} strokeWidth={1.75} style={{ marginRight: 10, verticalAlign: "-5px" }} />
+        Fund Scheme Compliance Heatmap
+      </h1>
       <div className="stCaption">Scheme Health Matrix Across All 5 Statutory Domains</div>
 
       <div style={{ marginTop: "1rem", maxWidth: "320px" }}>
@@ -58,7 +62,10 @@ export default function FundsPage() {
       </div>
 
       <div style={{ marginTop: "1.2rem" }}>
-        <h3 className="stSubheader">📊 5-Domain Compliance Matrix</h3>
+        <h3 className="stSubheader">
+          <Grid3x3 size={17} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+          5-Domain Compliance Matrix
+        </h3>
         <DataFrame
           columns={["Fund ID", "Name", "Category", "AUM (Cr)", "Portfolio", "Gov", "KYC", "Risk", "NAV", "Score"]}
           rows={filteredFunds}
@@ -67,7 +74,10 @@ export default function FundsPage() {
 
       <Divider />
 
-      <h3 className="stSubheader">🔍 Fund Scheme Detailed Audit Inspection</h3>
+      <h3 className="stSubheader">
+        <SearchCheck size={17} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+        Fund Scheme Detailed Audit Inspection
+      </h3>
       <div style={{ maxWidth: "400px", marginBottom: "1rem" }}>
         <Selectbox
           label="Select Scheme to Inspect"

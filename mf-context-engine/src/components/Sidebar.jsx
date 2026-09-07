@@ -1,14 +1,29 @@
 import { useState, useRef, useEffect } from "react";
+import {
+  MessageSquare,
+  ShieldCheck,
+  AlertTriangle,
+  LayoutGrid,
+  Wrench,
+  Globe2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  Trash2,
+  Zap,
+  LogOut,
+  MoreHorizontal,
+} from "lucide-react";
 import { useAppState } from "../state/AppState";
 import { useToast } from "./widgets/Toast";
 
 const PAGES = [
-  { id: "app", label: "Chat Assistant", shortLabel: "Chat", icon: "💬" },
-  { id: "01_Scorecard", label: "Compliance Scorecard", shortLabel: "Scorecard", icon: "🎯" },
-  { id: "02_Violations", label: "Violations Explorer", shortLabel: "Violations", icon: "⚠️" },
-  { id: "03_Funds", label: "Fund Schemes Matrix", shortLabel: "Funds", icon: "🏢" },
-  { id: "04_Remediation", label: "Remediation & SLA", shortLabel: "Remediation", icon: "🛠️" },
-  { id: "05_Multi_Region", label: "Multi-Jurisdiction", shortLabel: "Multi-Region", icon: "🌐" },
+  { id: "app", label: "Chat Assistant", shortLabel: "Chat", Icon: MessageSquare },
+  { id: "01_Scorecard", label: "Compliance Scorecard", shortLabel: "Scorecard", Icon: ShieldCheck },
+  { id: "02_Violations", label: "Violations Explorer", shortLabel: "Violations", Icon: AlertTriangle },
+  { id: "03_Funds", label: "Fund Schemes Matrix", shortLabel: "Funds", Icon: LayoutGrid },
+  { id: "04_Remediation", label: "Remediation & SLA", shortLabel: "Remediation", Icon: Wrench },
+  { id: "05_Multi_Region", label: "Multi-Jurisdiction", shortLabel: "Multi-Region", Icon: Globe2 },
 ];
 
 export default function Sidebar() {
@@ -16,6 +31,7 @@ export default function Sidebar() {
     activeUser,
     chatSessions,
     chatSessionId,
+    animatingSessionId,
     loadChatSession,
     deleteChatSession,
     startNewChatSession,
@@ -51,9 +67,9 @@ export default function Sidebar() {
   const handleClearCache = async () => {
     const ok = await clearCache();
     if (ok) {
-      pushToast("Intent Cache cleared cleanly! Next query will execute full LLM synthesis.", "⚡");
+      pushToast("Intent Cache cleared cleanly! Next query will execute full LLM synthesis.");
     } else {
-      pushToast("Intent Cache flushed locally.", "⚡");
+      pushToast("Intent Cache flushed locally.");
     }
     setIsAccountMenuOpen(false);
   };
@@ -73,9 +89,14 @@ export default function Sidebar() {
     .slice(0, 30)
     .map(([id, s]) => {
       const firstUserMsg = (s.history || []).find((m) => m.role === "user");
-      const firstQuery = s.title || firstUserMsg?.content || "New conversation";
-      const preview = firstQuery.length > 30 ? firstQuery.slice(0, 30) + "…" : firstQuery;
-      return { session_id: id, preview, turn_count: Math.floor((s.history || []).length / 2) };
+      const title = s.title || (firstUserMsg?.content ? (firstUserMsg.content.length > 50 ? firstUserMsg.content.slice(0, 50) + "…" : firstUserMsg.content) : "New Conversation");
+      const words = title.split(/\s+/).filter(Boolean);
+      return {
+        session_id: id,
+        title,
+        words,
+        turn_count: Math.floor((s.history || []).length / 2),
+      };
     });
 
   const handlePageSelect = (pageId) => {
@@ -128,23 +149,11 @@ export default function Sidebar() {
           title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
           aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
         >
-          {isSidebarOpen ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect width="18" height="18" x="3" y="3" rx="2" />
-              <path d="M9 3v18" />
-              <path d="m14 9-3 3 3 3" />
-            </svg>
-          ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect width="18" height="18" x="3" y="3" rx="2" />
-              <path d="M9 3v18" />
-              <path d="m13 15 3-3-3-3" />
-            </svg>
-          )}
+          {isSidebarOpen ? <PanelLeftClose size={18} strokeWidth={1.75} /> : <PanelLeftOpen size={18} strokeWidth={1.75} />}
         </button>
       </div>
 
-      {/* ── 2. Prominent ChatGPT-Style New Chat Button ── */}
+      {/* ── 2. Prominent New Chat Button ── */}
       <div className="cg-new-chat-wrapper">
         <button
           type="button"
@@ -153,10 +162,7 @@ export default function Sidebar() {
           title="Start a new chat conversation"
         >
           <span className="cg-new-chat-icon">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
+            <Plus size={16} strokeWidth={2.25} />
           </span>
           <span className="cg-new-chat-text">New chat</span>
         </button>
@@ -168,6 +174,7 @@ export default function Sidebar() {
         <nav className="cg-nav-list" aria-label="Main Navigation">
           {PAGES.map((p) => {
             const isActive = activePage === p.id;
+            const Icon = p.Icon;
             return (
               <button
                 key={p.id}
@@ -176,7 +183,7 @@ export default function Sidebar() {
                 onClick={() => handlePageSelect(p.id)}
                 title={p.label}
               >
-                <span className="cg-nav-icon">{p.icon}</span>
+                <span className="cg-nav-icon"><Icon size={18} strokeWidth={1.75} /></span>
                 <span className="cg-nav-label">{p.label}</span>
               </button>
             );
@@ -201,26 +208,38 @@ export default function Sidebar() {
                   key={s.session_id}
                   className={`cg-session-item ${isCurrent ? "active" : ""}`}
                   onClick={() => handleSessionSelect(s.session_id)}
-                  title={s.preview}
+                  title={s.title}
                 >
-                  <span className="cg-session-icon">{isCurrent ? "🟢" : "💬"}</span>
-                  <span className="cg-session-title">{s.preview}</span>
+                  <span className={`cg-session-icon ${isCurrent ? "cg-session-icon--current" : ""}`}>
+                    {isCurrent ? <span className="cg-status-dot cg-status-dot--success" /> : <MessageSquare size={14} strokeWidth={1.75} />}
+                  </span>
+                  {animatingSessionId === s.session_id ? (
+                    <span className="cg-session-title cg-session-title--animating">
+                      {s.words.map((word, idx) => (
+                        <span
+                          key={idx}
+                          className="cg-session-title-word"
+                          style={{ animationDelay: `${idx * 65}ms` }}
+                        >
+                          {word}{idx < s.words.length - 1 ? "\u00A0" : ""}
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    <span className="cg-session-title">{s.title}</span>
+                  )}
                   <button
                     type="button"
                     className="cg-session-delete"
                     onClick={(e) => {
                       e.stopPropagation();
                       deleteChatSession(s.session_id);
-                      pushToast("Session deleted", "🗑️");
+                      pushToast("Session deleted");
                     }}
                     title="Delete chat session"
                     aria-label="Delete chat session"
                   >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 6h18" />
-                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                    </svg>
+                    <Trash2 size={13} strokeWidth={1.75} />
                   </button>
                 </div>
               );
@@ -275,7 +294,7 @@ export default function Sidebar() {
               disabled={isCacheClearing}
               title="Flush in-memory and disk intent cache so next query executes fresh LLM synthesis"
             >
-              <span className="cg-popover-item-icon">⚡</span>
+              <span className="cg-popover-item-icon"><Zap size={16} strokeWidth={1.75} /></span>
               <span>{isCacheClearing ? "Flushing Cache..." : "Clear Intent Cache"}</span>
             </button>
 
@@ -285,7 +304,7 @@ export default function Sidebar() {
               onClick={handleLogout}
               title="Sign out of AMC Context Engine"
             >
-              <span className="cg-popover-item-icon">🚪</span>
+              <span className="cg-popover-item-icon"><LogOut size={16} strokeWidth={1.75} /></span>
               <span>Sign out</span>
             </button>
           </div>
@@ -304,11 +323,7 @@ export default function Sidebar() {
             <div className="cg-account-role">{activeUser?.role ? activeUser.role.split("/")[0].trim() : "Compliance"}</div>
           </div>
           <div className="cg-account-more">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="1" />
-              <circle cx="19" cy="12" r="1" />
-              <circle cx="5" cy="12" r="1" />
-            </svg>
+            <MoreHorizontal size={16} strokeWidth={1.75} />
           </div>
         </button>
       </div>

@@ -13,6 +13,7 @@ import {
   fetchProposedEdges,
   fetchGraph,
   sendChat as apiSendChat,
+  generateChatTitle as apiGenerateChatTitle,
   sendQuery as apiSendQuery,
   clearIntentCache as apiClearIntentCache,
   saveUser as apiSaveUser,
@@ -355,6 +356,16 @@ export function AppStateProvider({ children }) {
   const [chatQuery, setChatQuery] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [chatError, setChatError] = useState(null);
+  const [animatingSessionId, setAnimatingSessionId] = useState(null);
+  const titleAnimTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (titleAnimTimerRef.current) {
+        clearTimeout(titleAnimTimerRef.current);
+      }
+    };
+  }, []);
 
   const setChatSessions = useCallback((updater) => {
     setChatSessionsState((prev) => {
@@ -381,20 +392,68 @@ export function AppStateProvider({ children }) {
       setChatSessions((prev) => {
         const current = prev[id]?.history || [];
         const next = typeof historyOrFn === "function" ? historyOrFn(current) : historyOrFn;
-        const title = prev[id]?.title || (next.find((m) => m.role === "user")?.content?.slice(0, 45) || "New Conversation");
+        const existing = prev[id];
+        const title = existing?.title || "New Conversation";
+        const isTitleGenerated = existing?.isTitleGenerated ?? false;
         return {
           ...prev,
           [id]: {
             id,
             title,
+            isTitleGenerated,
             history: next,
-            createdAt: prev[id]?.createdAt || Date.now(),
+            createdAt: existing?.createdAt || Date.now(),
             updatedAt: Date.now(),
           },
         };
       });
     },
     [setChatSessions]
+  );
+
+  const generateConversationTitle = useCallback(
+    async (sessionId, queryText) => {
+      const q = (queryText || "").trim();
+      if (!sessionId || !q) return;
+
+      const current = chatSessions[sessionId];
+      if (current?.isTitleGenerated) {
+        return;
+      }
+
+      try {
+        const generatedTitle = await apiGenerateChatTitle({ query: q, session_id: sessionId });
+        if (generatedTitle && generatedTitle.trim() && generatedTitle !== "New Conversation") {
+          const finalTitle = generatedTitle.trim();
+          setChatSessions((prev) => {
+            const sess = prev[sessionId] || { id: sessionId, history: [] };
+            return {
+              ...prev,
+              [sessionId]: {
+                ...sess,
+                title: finalTitle,
+                isTitleGenerated: true,
+                updatedAt: Date.now(),
+              },
+            };
+          });
+
+          // Trigger word-by-word animation for this session
+          setAnimatingSessionId(sessionId);
+          if (titleAnimTimerRef.current) {
+            clearTimeout(titleAnimTimerRef.current);
+          }
+          const wordCount = finalTitle.split(/\s+/).filter(Boolean).length;
+          const animDuration = Math.max(500, wordCount * 65 + 350);
+          titleAnimTimerRef.current = setTimeout(() => {
+            setAnimatingSessionId(null);
+          }, animDuration);
+        }
+      } catch (err) {
+        console.warn("Async title generation encountered error:", err);
+      }
+    },
+    [chatSessions, setChatSessions]
   );
 
   const startNewChatSession = useCallback(
@@ -408,6 +467,7 @@ export function AppStateProvider({ children }) {
         [newId]: {
           id: newId,
           title: customTitle || "New Conversation",
+          isTitleGenerated: Boolean(customTitle),
           history: [],
           createdAt: Date.now(),
           updatedAt: Date.now(),
@@ -462,6 +522,11 @@ export function AppStateProvider({ children }) {
       const history = getChatHistory(sid);
       const turnIndex = Math.floor(history.length / 2) + 1;
 
+      // Automatically generate concise title on first query without blocking response
+      if (turnIndex === 1 && !chatSessions[sid]?.isTitleGenerated) {
+        generateConversationTitle(sid, q);
+      }
+
       const userMsg = { role: "user", content: q, turn_index: turnIndex, timestamp: Date.now() };
       const loadingMsg = { role: "assistant", loading: true, turn_index: turnIndex };
 
@@ -513,7 +578,7 @@ export function AppStateProvider({ children }) {
         setIsChatLoading(false);
       }
     },
-    [chatQuery, isChatLoading, chatSessionId, getChatHistory, setChatHistory]
+    [chatQuery, isChatLoading, chatSessionId, chatSessions, getChatHistory, setChatHistory, generateConversationTitle]
   );
 
   // ── 4. Compare State (Multi-Session & Multi-Turn Independent from Chat) ────
@@ -1047,9 +1112,10 @@ export function AppStateProvider({ children }) {
     chatSessionId, setChatSessionId,
     chatQuery, setChatQuery,
     isChatLoading, chatError, setChatError,
+    animatingSessionId,
     getChatHistory, setChatHistory,
     startNewChatSession, loadChatSession, deleteChatSession, clearAllChatSessions,
-    sendChatMessage,
+    sendChatMessage, generateConversationTitle,
 
     // Compare
     compareSessions, setCompareSessions,
@@ -1125,15 +1191,15 @@ export function useUser() {
 export function useChat() {
   const {
     chatSessions, chatSessionId, chatQuery, setChatQuery,
-    isChatLoading, chatError, getChatHistory, setChatHistory,
+    isChatLoading, chatError, animatingSessionId, getChatHistory, setChatHistory,
     startNewChatSession, loadChatSession, deleteChatSession, clearAllChatSessions,
-    sendChatMessage,
+    sendChatMessage, generateConversationTitle,
   } = useAppState();
   return {
     chatSessions, chatSessionId, chatQuery, setChatQuery,
-    isChatLoading, chatError, getChatHistory, setChatHistory,
+    isChatLoading, chatError, animatingSessionId, getChatHistory, setChatHistory,
     startNewChatSession, loadChatSession, deleteChatSession, clearAllChatSessions,
-    sendChatMessage,
+    sendChatMessage, generateConversationTitle,
   };
 }
 

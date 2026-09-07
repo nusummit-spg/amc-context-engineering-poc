@@ -1,5 +1,14 @@
+import { Check, Minus } from "lucide-react";
 import DataFrame from "../../components/widgets/DataFrame";
 import { AMCRole, ROLE_DOMAIN_ACCESS, ROLE_PERMISSIONS } from "../../data/rbac";
+
+function BoolCell({ value }) {
+  return value ? (
+    <Check size={16} strokeWidth={2} style={{ color: "var(--color-navy-700)" }} />
+  ) : (
+    <Minus size={16} strokeWidth={2} style={{ color: "var(--color-ink-400)" }} />
+  );
+}
 
 export default function AdminRbacTab() {
   const rows = Object.values(AMCRole).map((role) => {
@@ -8,11 +17,11 @@ export default function AdminRbacTab() {
     return {
       "Role Name": role,
       "Authorized Domains": domains,
-      "Admin Access": perms.can_view_admin_panel ? "YES" : "NO",
-      "Audit Logs": perms.can_view_audit_logs ? "YES" : "NO",
-      "Unredacted PII": perms.can_view_unredacted_pii ? "YES" : "NO",
-      "Cypher Tool": perms.can_run_cypher_tools ? "YES" : "NO",
-      "Compare & Analytics": perms.can_access_compare_tab ? "YES" : "NO",
+      "Admin Access": <BoolCell value={perms.can_view_admin_panel} />,
+      "Audit Logs": <BoolCell value={perms.can_view_audit_logs} />,
+      "Unredacted PII": <BoolCell value={perms.can_view_unredacted_pii} />,
+      "Cypher Tool": <BoolCell value={perms.can_run_cypher_tools} />,
+      "Compare & Analytics": <BoolCell value={perms.can_access_compare_tab} />,
     };
   });
 

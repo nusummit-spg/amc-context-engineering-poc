@@ -1,3 +1,10 @@
+import { isValidElement } from "react";
+
+function cellContent(value) {
+  if (isValidElement(value)) return value;
+  return String(value ?? "");
+}
+
 export default function DataFrame({ columns, rows, showIndex = true, maxHeight = 320 }) {
   return (
     <div className="stDataFrameWrap" style={{ maxHeight }}>
@@ -15,7 +22,9 @@ export default function DataFrame({ columns, rows, showIndex = true, maxHeight =
             <tr key={i}>
               {showIndex && <td className="idx">{i}</td>}
               {columns.map((c) => (
-                <td key={c}>{String(row[c] ?? "")}</td>
+                <td key={c} style={isValidElement(row[c]) ? { textAlign: "center" } : undefined}>
+                  {cellContent(row[c])}
+                </td>
               ))}
             </tr>
           ))}

@@ -1,4 +1,4 @@
-const SERIES_COLORS = ["#5C574C", "#A8412C", "#8AA377", "#4C7EA8"];
+const SERIES_COLORS = ["#1F3A5F", "#C9BBA0", "#6B7280", "#3F6B42"];
 
 export default function BarChart({ categories, labels, series = [], height = 260 }) {
   const cats = categories || labels || [];

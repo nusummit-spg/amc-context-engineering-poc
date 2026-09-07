@@ -1,4 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
+import {
+  Database,
+  RefreshCw,
+  Trash2,
+  Landmark,
+  Leaf,
+  TrendingUp,
+  Briefcase,
+  FolderOpen,
+  ScrollText,
+} from "lucide-react";
 import CodeBlock from "../../components/widgets/CodeBlock";
 import Alert from "../../components/widgets/Alert";
 import Button from "../../components/widgets/Button";
@@ -15,31 +26,31 @@ import {
 const DOMAIN_METADATA = {
   sebi_regulation: {
     title: "SEBI Regulatory Directives & Circulars",
-    icon: "📜",
+    icon: ScrollText,
     badgeColor: "#1B365D",
     badgeBg: "rgba(27, 54, 93, 0.08)",
   },
   corporate_governance: {
     title: "Corporate Governance & Board Oversight",
-    icon: "🏛️",
+    icon: Landmark,
     badgeColor: "#5C3A21",
     badgeBg: "rgba(92, 58, 33, 0.08)",
   },
   esg_sustainability: {
     title: "ESG & BRSR Sustainability Disclosures",
-    icon: "🌱",
+    icon: Leaf,
     badgeColor: "#2E7D32",
     badgeBg: "rgba(46, 125, 50, 0.08)",
   },
   financial_performance: {
     title: "Financial Performance, Revenue & Earnings",
-    icon: "📈",
+    icon: TrendingUp,
     badgeColor: "#D97706",
     badgeBg: "rgba(217, 119, 6, 0.08)",
   },
   fund_performance: {
     title: "Fund NAV, Portfolio Holdings & Returns",
-    icon: "💼",
+    icon: Briefcase,
     badgeColor: "#4338CA",
     badgeBg: "rgba(67, 56, 202, 0.08)",
   },
@@ -115,7 +126,7 @@ export default function AdminAuditTab() {
       await clearIntentCache();
       setFeedback({
         type: "success",
-        message: "⚡ All Intent Cache partitions and semantic cache layers have been flushed cleanly.",
+        message: "All Intent Cache partitions and semantic cache layers have been flushed cleanly.",
       });
       setConfirmClear(false);
       await loadCacheStats();
@@ -155,26 +166,29 @@ export default function AdminAuditTab() {
       {/* ── INTENT CACHE & SAVINGS LEDGER ── */}
       <div className="stRow stRow--responsive" style={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.8rem" }}>
         <div style={{ flex: "1 1 300px" }}>
-          <h3 className="stSubheader" style={{ margin: 0 }}>
-            🧠 Cognitive Intent Cache &amp; Green AI Savings Ledger
+          <h3 className="stSubheader" style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <Database size={19} strokeWidth={1.75} />
+            Cognitive Intent Cache &amp; Green AI Savings Ledger
           </h3>
           <div className="stCaption" style={{ marginTop: 4 }}>
             Multi-tiered cognitive caching: Stage 1 $O(1)$ Fingerprint Probe (&lt;1ms) + Stage 2 Domain-Partitioned Cosine Similarity (0.92–0.95) with Date-Entity Guards.
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ minWidth: 130 }}>
+          <div style={{ minWidth: 150 }}>
             <Button kind="secondary" fullWidth onClick={loadCacheStats} disabled={loadingStats}>
-              {loadingStats ? "Refreshing…" : "🔄 Refresh Stats"}
+              <RefreshCw size={15} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-2px" }} />
+              {loadingStats ? "Refreshing…" : "Refresh Stats"}
             </Button>
           </div>
           <div style={{ minWidth: 130 }}>
             {!confirmClear ? (
               <Button kind="secondary" fullWidth onClick={() => setConfirmClear(true)} disabled={actionLoading === "clear_all"}>
-                🗑️ Clear All
+                <Trash2 size={15} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-2px" }} />
+                Clear All
               </Button>
             ) : (
-              <Button kind="primary" fullWidth onClick={handleClearAll} disabled={actionLoading === "clear_all"}>
+              <Button kind="danger" fullWidth onClick={handleClearAll} disabled={actionLoading === "clear_all"}>
                 Confirm Flush?
               </Button>
             )}
@@ -245,10 +259,11 @@ export default function AdminAuditTab() {
               {domains.map((dom) => {
                 const meta = DOMAIN_METADATA[dom] || {
                   title: dom,
-                  icon: "📁",
+                  icon: FolderOpen,
                   badgeColor: "#31333F",
                   badgeBg: "rgba(49, 51, 63, 0.08)",
                 };
+                const DomainIcon = meta.icon;
                 const thresh = thresholds[dom] !== undefined ? thresholds[dom] : "—";
                 const ttlSec = ttls[dom];
                 const count = cache.buckets?.[dom] ?? 0;
@@ -258,7 +273,7 @@ export default function AdminAuditTab() {
                   <tr key={dom} style={{ borderBottom: "1px solid #F0EAE1" }}>
                     <td style={{ padding: "10px 14px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontSize: "1.1rem" }}>{meta.icon}</span>
+                        <DomainIcon size={17} strokeWidth={1.75} style={{ color: meta.badgeColor, flexShrink: 0 }} />
                         <div>
                           <span
                             style={{
@@ -308,12 +323,12 @@ export default function AdminAuditTab() {
                           padding: "4px 10px",
                           fontSize: "0.8rem",
                           fontWeight: 600,
-                          borderRadius: "6px",
-                          border: "1px solid #D1C7BD",
-                          backgroundColor: isInvalidating ? "#EFEFEF" : count === 0 ? "#F8F8F8" : "#FFFFFF",
-                          color: count === 0 ? "#AAA" : "#A8412C",
+                          borderRadius: "var(--radius-sm)",
+                          border: "1px solid var(--color-border)",
+                          backgroundColor: isInvalidating ? "var(--color-surface-tan)" : count === 0 ? "var(--color-surface-tan)" : "var(--color-surface)",
+                          color: count === 0 ? "var(--color-ink-400)" : "var(--color-navy-700)",
                           cursor: count === 0 ? "not-allowed" : "pointer",
-                          transition: "all 0.15s ease",
+                          transition: "all var(--duration-fast) var(--ease-standard)",
                         }}
                         title={`Invalidate cache entries for ${dom}`}
                       >
@@ -335,7 +350,8 @@ export default function AdminAuditTab() {
         <h3 className="stSubheader" style={{ margin: 0 }}>System Governance &amp; Compliance Audit Stream</h3>
         <div style={{ width: 180 }}>
           <Button kind="secondary" fullWidth onClick={handleRefreshLogs} disabled={loadingLogs}>
-            {loadingLogs ? "Refreshing…" : "🔄 Refresh Logs"}
+            <RefreshCw size={15} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-2px" }} />
+            {loadingLogs ? "Refreshing…" : "Refresh Logs"}
           </Button>
         </div>
       </div>

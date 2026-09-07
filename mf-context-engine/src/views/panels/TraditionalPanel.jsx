@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import TelemetryDetails from "./TelemetryDetails";
 import MarkdownAnswer from "../../components/provenance/MarkdownAnswer";
 
@@ -36,7 +37,10 @@ export default function TraditionalPanel({ r }) {
           <div className="cg-graph-note">No matching documents found.</div>
         )}
       </div>
-      <div className="cg-warning">⚠ No consolidated answer — each document must be reviewed individually.</div>
+      <div className="cg-warning" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <AlertTriangle size={14} strokeWidth={1.75} style={{ flexShrink: 0 }} />
+        No consolidated answer — each document must be reviewed individually.
+      </div>
       <div className="cg-answer">
         <MarkdownAnswer
           text={typeof r.answer === "string" ? r.answer : (r.answer?.answer || "")}

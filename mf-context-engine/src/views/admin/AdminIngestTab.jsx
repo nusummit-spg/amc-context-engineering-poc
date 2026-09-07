@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PlayCircle, SearchCheck, RefreshCw, ListChecks, FileCheck2 } from "lucide-react";
 import Button from "../../components/widgets/Button";
 import Alert from "../../components/widgets/Alert";
 import Spinner from "../../components/widgets/Spinner";
@@ -125,7 +126,7 @@ export default function AdminIngestTab() {
       const resp = await fetchIndexingTasks(10);
       if (resp && resp.tasks && resp.tasks.length > 0) {
         setIndexingTasks(resp.tasks);
-        pushToast("Indexing tasks refreshed!", "🔄");
+        pushToast("Indexing tasks refreshed!");
       }
     } catch (err) {
       console.warn("Could not refresh indexing tasks:", err);
@@ -138,7 +139,7 @@ export default function AdminIngestTab() {
       const sha = Array.from({ length: 32 }, () => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join("");
       addIndexingTask(name);
       setIngestMsg({ type: "success", text: `Document '${name}' accepted! SHA-256: ${sha.slice(0, 12)}. Background indexing started.` });
-      pushToast(`Document accepted! Indexing '${name}' in background...`, "📥");
+      pushToast(`Document accepted! Indexing '${name}' in background...`);
       setSourceUrl(""); setUploadedFile(null);
     } else {
       setIngestMsg({ type: "error", text: "Please provide a Source URL or upload a file." });
@@ -165,21 +166,23 @@ export default function AdminIngestTab() {
     pushToast("Edge rejected.");
   };
 
-  const statusBadge = (status) => {
-    if (status === "COMPLETED") return "#### 🟢 Completed";
-    if (status === "PROCESSING") return "#### 🟡 Indexing";
-    if (status === "FAILED") return "#### 🔴 Failed";
-    return "#### ⚪ Queued";
+  const STATUS_META = {
+    COMPLETED: { label: "Completed", dot: "cg-status-dot--success" },
+    PROCESSING: { label: "Indexing", dot: "cg-status-dot--warning" },
+    FAILED: { label: "Failed", dot: "cg-status-dot--danger" },
+    QUEUED: { label: "Queued", dot: "cg-status-dot--muted" },
   };
+  const statusMeta = (status) => STATUS_META[status] || STATUS_META.QUEUED;
 
   return (
     <div>
-      <h3 className="stSubheader">[PRODUCTION] Data Acquisition &amp; Governance Controls</h3>
+      <h3 className="stSubheader">Data Acquisition &amp; Governance Controls</h3>
 
       <div className="stRow stRow--responsive">
         <div className="stCol" style={{ flex: 1 }}>
           <Button kind="primary" fullWidth onClick={runPipeline} disabled={pipelineRunning}>
-            [RUN] Production Ingestion Pipeline
+            <PlayCircle size={16} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+            Run Production Ingestion Pipeline
           </Button>
           {pipelineRunning && <div style={{ marginTop: 8 }}><Spinner text="Running RSS poll, AMFI fetch, gateway validation, and graph enrichment..." /></div>}
           {pipelineReport && (
@@ -193,19 +196,20 @@ export default function AdminIngestTab() {
         </div>
         <div className="stCol" style={{ flex: 1 }}>
           <Button kind="secondary" fullWidth onClick={runStaleness} disabled={stalenessRunning}>
-            [CHECK] Staleness Drift Detection
+            <SearchCheck size={16} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+            Staleness Drift Detection
           </Button>
           {stalenessRunning && <div style={{ marginTop: 8 }}><Spinner text="Checking SHA-256 hashes and HTTP HEAD headers..." /></div>}
           {stalenessReport && (
             <blockquote className="stMarkdownBlockquote" style={{ marginTop: 8 }}>
-              <span dangerouslySetInnerHTML={{ __html: stalenessReport.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>") }} />
+              <span dangerouslySetInnerHTML={{ __html: stalenessReport.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/✅ ?/g, "").replace(/⚠ ?/g, "") }} />
             </blockquote>
           )}
         </div>
       </div>
 
       <Divider />
-      <h3 className="stSubheader">[FORM] Authorized Document Ingest (SEBI Reg 16C)</h3>
+      <h3 className="stSubheader">Authorized Document Ingest (SEBI Reg 16C)</h3>
       <div className="stForm">
         <div className="stFormRow">
           <div>
@@ -234,53 +238,65 @@ export default function AdminIngestTab() {
       </div>
 
       <Divider />
-      <h3 className="stSubheader">📋 Live Ingestion &amp; Background Indexing Tasks</h3>
+      <h3 className="stSubheader">
+        <ListChecks size={17} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+        Live Ingestion &amp; Background Indexing Tasks
+      </h3>
       <div className="stRow stRow--responsive" style={{ alignItems: "center" }}>
         <div className="stCol" style={{ flex: 4 }}>
           <div className="stCaption">Real-time progress, completion stats, and acknowledgement status for background indexing jobs:</div>
         </div>
         <div className="stCol" style={{ flex: 1 }}>
-          <Button kind="secondary" fullWidth onClick={handleRefreshTasks}>🔄 Refresh Status</Button>
+          <Button kind="secondary" fullWidth onClick={handleRefreshTasks}>
+            <RefreshCw size={15} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-2px" }} />
+            Refresh Status
+          </Button>
         </div>
       </div>
 
       {indexingTasks.length === 0 ? (
         <Alert type="info">No background indexing tasks recorded yet.</Alert>
       ) : (
-        indexingTasks.slice(0, 10).map((t) => (
-          <div key={t.task_id}>
-            <div className="stRow stRow--responsive">
-              <div className="stCol" style={{ flex: 1.5 }}>
-                <div dangerouslySetInnerHTML={{ __html: statusBadge(t.status).replace(/^#### /, "<h4 style='margin:0;font-size:1.05rem;'>") + "</h4>" }} />
-              </div>
-              <div className="stCol" style={{ flex: 5 }}>
-                <div><b><code>{t.filename}</code></b> &nbsp;•&nbsp; SHA-256: <code>{(t.sha256_hash || "").slice(0, 12)}</code></div>
-                <div className="stCaption">Stage: <i>{t.stage}</i></div>
-              </div>
-              <div className="stCol" style={{ flex: 2.5 }}>
-                <div className="stCaption">
-                  Started: {(t.started_at || "").slice(0, 19).replace("T", " ")}
-                  {t.completed_at && (
-                    <>
-                      <br />Completed: {t.completed_at.slice(0, 19).replace("T", " ")}
-                    </>
-                  )}
+        indexingTasks.slice(0, 10).map((t) => {
+          const meta = statusMeta(t.status);
+          return (
+            <div key={t.task_id}>
+              <div className="stRow stRow--responsive">
+                <div className="stCol" style={{ flex: 1.5 }}>
+                  <h4 style={{ margin: 0, fontSize: "1.05rem", display: "flex", alignItems: "center", gap: 8 }}>
+                    <span className={`cg-status-dot ${meta.dot}`} />
+                    {meta.label}
+                  </h4>
+                </div>
+                <div className="stCol" style={{ flex: 5 }}>
+                  <div><b><code>{t.filename}</code></b> &nbsp;•&nbsp; SHA-256: <code>{(t.sha256_hash || "").slice(0, 12)}</code></div>
+                  <div className="stCaption">Stage: <i>{t.stage}</i></div>
+                </div>
+                <div className="stCol" style={{ flex: 2.5 }}>
+                  <div className="stCaption">
+                    Started: {(t.started_at || "").slice(0, 19).replace("T", " ")}
+                    {t.completed_at && (
+                      <>
+                        <br />Completed: {t.completed_at.slice(0, 19).replace("T", " ")}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
+              {t.status === "PROCESSING" && <Progress value={t.progress} text={t.stage} />}
+              {t.status === "COMPLETED" && (
+                <Alert type="success">
+                  <b>Indexing finished.</b> Added <b>{t.entities_count}</b> entities &amp; <b>{t.relations_count}</b> relations to Neo4j graph, and <b>{t.chunks_count}</b> chunks to FAISS vector index.
+                </Alert>
+              )}
+              {t.status === "FAILED" && <Alert type="error">Indexing failed: {t.error_message || "Unknown failure"}</Alert>}
+              <Divider />
             </div>
-            {t.status === "PROCESSING" && <Progress value={t.progress} text={t.stage} />}
-            {t.status === "COMPLETED" && (
-              <Alert type="success">
-                ✨ <b>Indexing Finished!</b> Added <b>{t.entities_count}</b> entities &amp; <b>{t.relations_count}</b> relations to Neo4j graph, and <b>{t.chunks_count}</b> chunks to FAISS vector index.
-              </Alert>
-            )}
-            {t.status === "FAILED" && <Alert type="error">❌ Indexing Failed: {t.error_message || "Unknown failure"}</Alert>}
-            <Divider />
-          </div>
-        ))
+          );
+        })
       )}
 
-      <h3 className="stSubheader">[REVIEW] Proposed Regulatory Supersession Edges (Review Queue)</h3>
+      <h3 className="stSubheader">Proposed Regulatory Supersession Edges (Review Queue)</h3>
       {proposedEdges.length === 0 ? (
         <Alert type="info">No pending proposed supersession edges requiring review.</Alert>
       ) : (
@@ -292,10 +308,10 @@ export default function AdminIngestTab() {
                 <b>{p.source}</b> <code>-[{p.rel}]-&gt;</code> <b>{p.target}</b>
               </div>
               <div className="stCol" style={{ flex: 1 }}>
-                <Button kind="secondary" fullWidth onClick={() => confirmEdge(p.edge_id)}>Confirm</Button>
+                <Button kind="primary" fullWidth onClick={() => confirmEdge(p.edge_id)}>Confirm</Button>
               </div>
               <div className="stCol" style={{ flex: 1 }}>
-                <Button kind="secondary" fullWidth onClick={() => rejectEdge(p.edge_id)}>Reject</Button>
+                <Button kind="danger" fullWidth onClick={() => rejectEdge(p.edge_id)}>Reject</Button>
               </div>
             </div>
           ))}
@@ -303,7 +319,10 @@ export default function AdminIngestTab() {
       )}
 
       <Divider />
-      <h3 className="stSubheader">[REPORT] Regulation 16C Legal Audit Report Export</h3>
+      <h3 className="stSubheader">
+        <FileCheck2 size={17} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+        Regulation 16C Legal Audit Report Export
+      </h3>
       <Button kind="secondary" onClick={() => downloadText("SEBI_Reg16C_Compliance_Audit_Report.md", REPORT_MD, "text/markdown")}>
         Download Regulation 16C Audit Report (.md)
       </Button>

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Pin, ChevronUp, ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import "./ProvenancePanel.css";
 
 export default function ProvenancePanel({ citations = [] }) {
@@ -62,10 +63,12 @@ export default function ProvenancePanel({ citations = [] }) {
       >
         <summary className="mf-provenance-summary">
           <span className="mf-provenance-summary-title">
-            📌 Document Provenance &amp; Exact Page Citations ({normalizedSources.length} Sources)
+            <Pin size={14} strokeWidth={1.75} />
+            Document Provenance &amp; Exact Page Citations ({normalizedSources.length} Sources)
           </span>
-          <span className="mf-provenance-toggle-hint">
-            {panelOpen ? "Collapse panel ▲" : "Expand panel ▼"}
+          <span className="mf-provenance-toggle-hint" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            {panelOpen ? "Collapse panel" : "Expand panel"}
+            {panelOpen ? <ChevronUp size={14} strokeWidth={1.75} /> : <ChevronDown size={14} strokeWidth={1.75} />}
           </span>
         </summary>
 
@@ -99,7 +102,7 @@ export default function ProvenancePanel({ citations = [] }) {
                             className="mf-provenance-doc-link"
                             title={`Open ${row.docName} in a new tab`}
                           >
-                            <b>{row.docName}</b> ↗
+                            <b>{row.docName}</b> <ExternalLink size={12} strokeWidth={1.75} style={{ verticalAlign: "-1px" }} />
                           </a>
                         ) : (
                           <b>{row.docName}</b>
@@ -118,7 +121,7 @@ export default function ProvenancePanel({ citations = [] }) {
                               title={isExpanded ? "Collapse full text" : "Expand full verbatim text"}
                               aria-label={isExpanded ? "Collapse full text" : "Expand full verbatim text"}
                             >
-                              {isExpanded ? "▾" : "▸"}
+                              {isExpanded ? <ChevronDown size={13} strokeWidth={1.75} /> : <ChevronRight size={13} strokeWidth={1.75} />}
                             </button>
                           )}
                           <span className="mf-snippet-preview">
@@ -140,7 +143,7 @@ export default function ProvenancePanel({ citations = [] }) {
                                   rel="noopener noreferrer"
                                   className="mf-verbatim-source-link"
                                 >
-                                  Open Page View ↗
+                                  Open Page View <ExternalLink size={11} strokeWidth={1.75} style={{ verticalAlign: "-1px" }} />
                                 </a>
                               )}
                             </div>

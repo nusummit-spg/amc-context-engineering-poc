@@ -18,7 +18,7 @@ export default function MiniGraphStatic({ nodes, edges, matchedTexts, width = 46
         return (
           <g key={i}>
             <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#D8D2C4" strokeWidth="1" />
-            <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - 5} fontSize="8" fill="#A8412C" textAnchor="middle">
+            <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - 5} fontSize="8" fill="#1F3A5F" textAnchor="middle">
               {e.rel}
             </text>
           </g>
@@ -26,7 +26,7 @@ export default function MiniGraphStatic({ nodes, edges, matchedTexts, width = 46
       })}
       {nodes.map((n) => {
         const [x, y] = pos[n];
-        const color = matchedTexts.includes(n) ? "#A8412C" : "#D8D2C4";
+        const color = matchedTexts.includes(n) ? "#1F3A5F" : "#D8D2C4";
         return (
           <g key={n}>
             <circle cx={x} cy={y} r="6" fill={color} />

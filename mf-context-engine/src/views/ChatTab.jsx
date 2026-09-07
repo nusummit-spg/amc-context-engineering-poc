@@ -1,7 +1,5 @@
 import { useRef, useState } from "react";
-import TextInput from "../components/widgets/TextInput";
-import Button from "../components/widgets/Button";
-import Expander from "../components/widgets/Expander";
+import { BookOpen } from "lucide-react";
 import Divider from "../components/widgets/Divider";
 import Alert from "../components/widgets/Alert";
 import StreamingAnswer from "../components/widgets/StreamingAnswer";
@@ -12,15 +10,14 @@ import { sendChatStream, adaptHybridResponse } from "../services/api";
 
 export default function ChatTab() {
   const {
+    chatSessions,
     chatSessionId, chatQuery, setChatQuery,
     isChatLoading,
-    loadChatSession, sendChatMessage,
+    sendChatMessage,
     getChatHistory, setChatHistory,
+    generateConversationTitle,
   } = useAppState();
   const pushToast = useToast();
-
-  const [resumeId, setResumeId] = useState("");
-  const [resumeError, setResumeError] = useState("");
 
   // ── Streaming state ──────────────────────────────────────────────────────
   const [isStreaming, setIsStreaming] = useState(false);
@@ -39,6 +36,11 @@ export default function ChatTab() {
     const sid = chatSessionId;
     const currentHistory = getChatHistory(sid);
     const turnIndex = Math.floor(currentHistory.length / 2) + 1;
+
+    // Automatically generate concise title on initial query in parallel
+    if (turnIndex === 1 && !chatSessions[sid]?.isTitleGenerated) {
+      generateConversationTitle(sid, q);
+    }
 
     const userMsg = { role: "user", content: q, turn_index: turnIndex, timestamp: Date.now() };
     const loadingMsg = { role: "assistant", loading: true, turn_index: turnIndex };
@@ -88,7 +90,7 @@ export default function ChatTab() {
 
         onError: (error) => {
           if (error.recoverable) {
-            pushToast(`Streaming issue: ${error.message}`, "⚠️");
+            pushToast(`Streaming issue: ${error.message}`);
           } else {
             // Non-recoverable: replace loading placeholder with error message
             setChatHistory(sid, (h) => {
@@ -163,11 +165,11 @@ export default function ChatTab() {
         });
       } else {
         // Stream failed entirely — fall back to synchronous path
-        pushToast(`Streaming failed, falling back to sync mode: ${err.message}`, "⚠️");
+        pushToast(`Streaming failed, falling back to sync mode: ${err.message}`);
         try {
           await sendChatMessage(q);
         } catch (syncErr) {
-          pushToast(`Failed to send message: ${syncErr.message}`, "❌");
+          pushToast(`Failed to send message: ${syncErr.message}`);
         }
       }
       setIsStreaming(false);
@@ -179,31 +181,22 @@ export default function ChatTab() {
     abortControllerRef.current?.abort();
   };
 
-  const handleResumeLoad = () => {
-    if (!resumeId.trim()) return;
-    const ok = loadChatSession(resumeId.trim());
-    if (!ok) {
-      setResumeError("No saved session found with that ID.");
-    } else {
-      setResumeError("");
-      pushToast("Loaded saved conversation session!", "📂");
-    }
-  };
-
   const turns = [];
   for (let i = 0; i < history.length; i += 2) {
     turns.push([history[i], history[i + 1]]);
   }
 
   return (
-    <div>
-      <div className="stChatInputBar">
-        <div className="stChatInputBar-input">
-          <TextInput
+    <div className="cg-chat-tab">
+      <div className="cg-chat-fixed-top">
+        <div className="cg-chatgpt-query-box">
+          <input
+            type="text"
+            className="cg-chatgpt-query-input"
             value={chatQuery}
-            onChange={setChatQuery}
-            labelVisible={false}
+            onChange={(e) => setChatQuery(e.target.value)}
             placeholder="Ask a follow-up — conversation context carries forward…"
+            disabled={isChatLoading || isStreaming}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -211,34 +204,24 @@ export default function ChatTab() {
               }
             }}
           />
-        </div>
-        <div className="stChatInputBar-button">
-          <Button kind="primary" fullWidth disabled={isChatLoading || isStreaming || !chatQuery.trim()} onClick={handleSend}>
+          <button
+            type="button"
+            className="cg-chatgpt-send-btn"
+            disabled={isChatLoading || isStreaming || !chatQuery.trim()}
+            onClick={handleSend}
+            title="Send"
+          >
             {isChatLoading ? "Sending…" : isStreaming ? "Streaming…" : "Send"}
-          </Button>
+          </button>
         </div>
       </div>
 
-      <Expander title={<>Session: <code>{chatSessionId}</code>  ·  resume a previous session</>}>
-        <TextInput
-          value={resumeId}
-          onChange={setResumeId}
-          labelVisible={false}
-          placeholder="Paste a session ID and press Enter…"
-        />
-        {resumeId && (
-          <div style={{ marginTop: 8 }}>
-            <Button kind="secondary" onClick={handleResumeLoad}>Load session</Button>
-          </div>
-        )}
-        {resumeError && <div style={{ marginTop: 8 }}><Alert type="error">{resumeError}</Alert></div>}
-      </Expander>
-
       {/* Progressive sources panel — shown while streaming */}
       {isStreaming && progressiveSources.length > 0 && (
-        <div style={{ marginBottom: "0.5rem", padding: "0.5rem", background: "rgba(0,0,0,0.03)", borderRadius: "6px" }}>
-          <div style={{ fontSize: "0.8rem", fontWeight: 600, marginBottom: "0.25rem", opacity: 0.7 }}>
-            📚 Sources found ({progressiveSources.length})
+        <div style={{ marginBottom: "0.5rem", padding: "0.5rem", background: "var(--color-surface-tan)", borderRadius: "var(--radius-sm)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", fontWeight: 600, marginBottom: "0.25rem", color: "var(--color-ink-700)" }}>
+            <BookOpen size={14} strokeWidth={1.75} />
+            Sources found ({progressiveSources.length})
           </div>
           {progressiveSources.slice(0, 5).map((src, i) => (
             <div key={i} style={{ fontSize: "0.78rem", opacity: 0.8, marginLeft: "0.5rem" }}>

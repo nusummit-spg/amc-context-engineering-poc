@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import TextInput from "../components/widgets/TextInput";
 import Button from "../components/widgets/Button";
 import Expander from "../components/widgets/Expander";
@@ -6,7 +7,6 @@ import Divider from "../components/widgets/Divider";
 import Alert from "../components/widgets/Alert";
 import { useAppState } from "../state/AppState";
 import { useToast } from "../components/widgets/Toast";
-import { API_BASE } from "../services/api";
 import TraditionalPanel from "./panels/TraditionalPanel";
 import ContextGraphPanel from "./panels/ContextGraphPanel";
 
@@ -28,9 +28,9 @@ export default function CompareTab({ role }) {
   const handleClearCache = async () => {
     const ok = await clearCache();
     if (ok) {
-      pushToast("Intent Cache cleared cleanly! Next query will execute full LLM synthesis.", "⚡");
+      pushToast("Intent Cache cleared cleanly! Next query will execute full LLM synthesis.");
     } else {
-      pushToast("Intent Cache flushed locally.", "⚡");
+      pushToast("Intent Cache flushed locally.");
     }
   };
 
@@ -46,7 +46,7 @@ export default function CompareTab({ role }) {
       setResumeError("No saved session found with that ID.");
     } else {
       setResumeError("");
-      pushToast("Loaded saved comparison session!", "📂");
+      pushToast("Loaded saved comparison session!");
     }
   };
 
@@ -57,8 +57,6 @@ export default function CompareTab({ role }) {
 
   return (
     <div>
-      <div className="stCaption">🟢 Backend: {API_BASE} | Role: {role}</div>
-
       <div className="stCompareBar">
         <div className="stCompareBar-input">
           <TextInput
@@ -82,10 +80,11 @@ export default function CompareTab({ role }) {
             kind="secondary"
             onClick={() => {
               startNewCompareSession();
-              pushToast("Started new comparison session", "✨");
+              pushToast("Started new comparison session");
             }}
           >
-            🔄 New Session
+            <Plus size={15} strokeWidth={2} style={{ marginRight: 6, verticalAlign: "-2px" }} />
+            New Session
           </Button>
           <Button
             kind="secondary"
@@ -93,7 +92,8 @@ export default function CompareTab({ role }) {
             title="Flush in-memory and disk intent cache so next query performs fresh LLM synthesis"
             onClick={handleClearCache}
           >
-            {isCacheClearing ? "Flushing…" : "🗑️ Clear Cache"}
+            <Trash2 size={15} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-2px" }} />
+            {isCacheClearing ? "Flushing…" : "Clear Cache"}
           </Button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import React from "react";
+import { FileText, ExternalLink } from "lucide-react";
 import Tooltip from "./Tooltip";
 import "./CitationMark.css";
 
@@ -25,7 +26,10 @@ export default function CitationMark({ citation, marker }) {
   const tooltipContent = (
     <div>
       <div className="mf-tooltip-title">
-        <span>📄 {docTitle}</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <FileText size={14} strokeWidth={1.75} style={{ flexShrink: 0 }} />
+          {docTitle}
+        </span>
         <span className="mf-tooltip-badge">{pageLabel}</span>
       </div>
       {snippet && (
@@ -43,7 +47,7 @@ export default function CitationMark({ citation, marker }) {
             className="mf-tooltip-link"
             onClick={(e) => e.stopPropagation()}
           >
-            Open Document ↗
+            Open Document <ExternalLink size={11} strokeWidth={1.75} style={{ verticalAlign: "-1px" }} />
           </a>
         ) : (
           <span>(Document unlinked)</span>

@@ -15,7 +15,7 @@ const ICONS = {
 
 export default function Alert({ type = "info", children }) {
   return (
-    <div className="stAlert">
+    <div className={`stAlert stAlert--${type}`}>
       {ICONS[type]}
       <div className="stAlert-body">{children}</div>
     </div>

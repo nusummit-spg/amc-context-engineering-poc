@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { AlertTriangle, Search, Trophy, ClipboardList, Download } from "lucide-react";
 import Selectbox from "../../components/widgets/Selectbox";
 import TextInput from "../../components/widgets/TextInput";
 import Button from "../../components/widgets/Button";
@@ -139,11 +140,22 @@ export default function ViolationsPage() {
 
   return (
     <div>
-      <h1 className="stTitle">⚠️ Compliance Violations Explorer</h1>
+      <h1 className="stTitle">
+        <AlertTriangle size={26} strokeWidth={1.75} style={{ marginRight: 10, verticalAlign: "-5px" }} />
+        Compliance Violations Explorer
+      </h1>
       <div className="stCaption">Active Regulatory Breaches, Rule Metrics &amp; Resolution Tracking</div>
 
       <div style={{ marginTop: "1rem" }}>
-        <Expander title="🔍 Filter Criteria" defaultOpen={true}>
+        <Expander
+          title={
+            <>
+              <Search size={16} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+              Filter Criteria
+            </>
+          }
+          defaultOpen={true}
+        >
           <div className="stFilterRow">
             <Selectbox label="Region" options={["SEBI", "SEC", "ESMA"]} value={region} onChange={setRegion} />
             <Selectbox label="Severity" options={["All", "Critical", "High", "Medium", "Low"]} value={severityFilter} onChange={setSeverityFilter} />
@@ -167,7 +179,10 @@ export default function ViolationsPage() {
           />
         </div>
         <div className="stCol" style={{ flex: 1 }}>
-          <h3 className="stSubheader">🏆 Top Violated Rules Leaderboard</h3>
+          <h3 className="stSubheader">
+            <Trophy size={17} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+            Top Violated Rules Leaderboard
+          </h3>
           <DataFrame columns={["Rule ID", "Breach Count"]} rows={ruleLeaderboard} />
         </div>
       </div>
@@ -175,12 +190,14 @@ export default function ViolationsPage() {
       <Divider />
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.8rem" }}>
-        <h3 className="stSubheader" style={{ margin: 0 }}>
-          📋 Violations Register ({filteredViolations.length} records)
+        <h3 className="stSubheader" style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+          <ClipboardList size={17} strokeWidth={1.75} />
+          Violations Register ({filteredViolations.length} records)
         </h3>
         {filteredViolations.length > 0 && (
           <Button kind="secondary" onClick={handleExportCsv}>
-            📥 Export Violations to CSV
+            <Download size={15} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-2px" }} />
+            Export Violations to CSV
           </Button>
         )}
       </div>

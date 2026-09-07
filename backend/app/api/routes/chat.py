@@ -29,7 +29,7 @@ from app.api.routes.query import (
     _traditional_response,
 )
 from app.engine import context_memory, graph_store, retrieval
-from app.schemas.api import ChatRequest, ChatResponse, QueryRequest
+from app.schemas.api import ChatRequest, ChatResponse, ChatTitleRequest, ChatTitleResponse, QueryRequest
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -382,3 +382,65 @@ async def chat_stream(
         media_type="text/event-stream",
         headers=_STREAM_HEADERS,
     )
+
+
+# ---------- Fast Conversation Title Generation ----------
+
+def _fast_heuristic_title(query: str) -> str:
+    """Instant heuristic fallback to extract a clean 2-5 word title without LLM."""
+    import re
+    cleaned = re.sub(
+        r"^(can you\s+|could you\s+|please\s+|tell me about\s+|what is the\s+|what are the\s+|what is\s+|what are\s+|explain the\s+|explain\s+|how does\s+|how do i\s+|how to\s+|give me\s+|what about\s+|describe\s+|show me\s+|summarize\s+)+",
+        "",
+        query.strip(),
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"[?!.,:;]+$", "", cleaned).strip()
+    words = [w for w in cleaned.split() if w]
+    if not words:
+        return "New Conversation"
+    chosen = words[:5]
+    return " ".join(w if w.isupper() else w.capitalize() for w in chosen)
+
+
+async def generate_chat_title(query: str) -> str:
+    """Lightweight, near-instant conversation title generation (capped at 20 tokens)."""
+    from app.engine import config, llm_text_client
+    prompt = (
+        "You are a concise conversation title generator. "
+        "Generate a short, meaningful 2 to 5 word title that captures the primary topic and intent of the following user query.\n"
+        "Rules:\n"
+        "- Between 2 and 5 words maximum.\n"
+        "- Plain text only: no quotation marks, no markdown, no ending period.\n"
+        "- Respond with ONLY the title.\n\n"
+        f"Query: {query}\n"
+        "Title:"
+    )
+    try:
+        raw_title, _ = await asyncio.to_thread(
+            llm_text_client.call_llm_with_usage,
+            prompt,
+            model_id=config.GROQ_MODEL_LIGHT,
+            max_tokens=20,
+        )
+        cleaned = (raw_title or "").strip().strip("\"'#* \n\r\t")
+        cleaned_words = [w for w in cleaned.split() if w]
+        if 2 <= len(cleaned_words) <= 6:
+            return " ".join(cleaned_words[:5])
+        elif len(cleaned_words) == 1 and len(cleaned_words[0]) > 2:
+            return cleaned_words[0]
+    except Exception as exc:
+        import logging
+        logging.getLogger("app").warning("Fast AI title generation fallback: %s", exc)
+
+    return _fast_heuristic_title(query)
+
+
+@router.post("/title", response_model=ChatTitleResponse)
+async def generate_title_endpoint(
+    request: ChatTitleRequest,
+    container: Container = Depends(get_container),
+) -> ChatTitleResponse:
+    """Fast, lightweight endpoint to generate a concise 2-5 word conversation title."""
+    title = await generate_chat_title(request.query)
+    return ChatTitleResponse(title=title, session_id=request.session_id)

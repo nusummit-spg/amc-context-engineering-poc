@@ -1,5 +1,7 @@
+import { MessageCircle, Scale, BarChart3, UserCog, Menu, X } from "lucide-react";
 import Sidebar from "./components/Sidebar";
 import Tabs from "./components/widgets/Tabs";
+import { Users, KeyRound, FileClock, UploadCloud } from "lucide-react";
 import ChatTab from "./views/ChatTab";
 import CompareTab from "./views/CompareTab";
 import AnalyticsTab from "./views/AnalyticsTab";
@@ -20,14 +22,14 @@ import { API_BASE } from "./services/api";
 function AdminView() {
   const { adminSubTab, setAdminSubTab } = useAppState();
   const tabNames = [
-    "[USERS] User Profile Management",
-    "[RBAC] Role Access Matrix",
-    "[AUDIT] Security & Audit Logs",
-    "[INGEST] Authorized Ingest & Pipeline",
+    { label: "User Profile Management", icon: Users },
+    { label: "Role Access Matrix", icon: KeyRound },
+    { label: "Security & Audit Logs", icon: FileClock },
+    { label: "Authorized Ingest & Pipeline", icon: UploadCloud },
   ];
   return (
     <div>
-      <h2 className="stHeader2">👥 Admin Panel &amp; Enterprise RBAC Governance</h2>
+      <h2 className="stHeader2">Admin Panel &amp; Enterprise RBAC Governance</h2>
       <div className="stCaption">
         Manage user profiles, assign AMC organizational roles, inspect clearance boundaries, and view audit trails.
       </div>
@@ -56,10 +58,10 @@ export default function App() {
   const canAnalytics = perms.can_access_analytics_tab ?? true;
   const canAdmin = perms.can_view_admin_panel ?? false;
 
-  const tabNames = ["💬 Chat"];
-  if (canCompare) tabNames.push("⚖️ Compare");
-  if (canAnalytics) tabNames.push("📊 Analytics");
-  if (canAdmin) tabNames.push("👥 Admin & Governance");
+  const tabNames = [{ label: "Chat", icon: MessageCircle }];
+  if (canCompare) tabNames.push({ label: "Compare", icon: Scale });
+  if (canAnalytics) tabNames.push({ label: "Analytics", icon: BarChart3 });
+  if (canAdmin) tabNames.push({ label: "Admin & Governance", icon: UserCog });
 
   const clampedTab = activeTab >= tabNames.length ? 0 : activeTab;
 
@@ -93,7 +95,7 @@ export default function App() {
             aria-label="Toggle navigation menu"
             aria-expanded={isSidebarOpen}
           >
-            {isSidebarOpen ? "✕" : "☰"}
+            {isSidebarOpen ? <X size={18} strokeWidth={1.75} /> : <Menu size={18} strokeWidth={1.75} />}
           </button>
           <div className="stMobileHeader-center">
             <span className="stMobileHeader-brand">
@@ -102,7 +104,7 @@ export default function App() {
             <span className="stMobileHeader-badge">
               {activePage && activePage !== "app"
                 ? activePage.replace(/^\d+_/, "")
-                : tabNames[clampedTab]?.replace(/^[^\s]+\s*/, "")}
+                : tabNames[clampedTab]?.label}
             </span>
           </div>
           <div className="stMobileHeader-right">
@@ -112,7 +114,16 @@ export default function App() {
           </div>
         </header>
 
-        <header className="stHeader" />
+        <header className="stHeader">
+          {(!activePage || activePage === "app") && (clampedTab === chatIdx || clampedTab === compareIdx) && (
+            <div className="cg-top-status-indicator" title={`Backend: ${API_BASE} | Role: ${role}`}>
+              <span className="cg-status-dot cg-status-dot--success" />
+              <span className="cg-top-status-text">Backend: <code>{API_BASE}</code></span>
+              <span className="cg-top-status-sep">|</span>
+              <span className="cg-top-status-text">Role: <span className="cg-top-status-role">{role}</span></span>
+            </div>
+          )}
+        </header>
         <div className="block-container stAppBottom">
           {activePage === "01_Scorecard" && <ScorecardPage />}
           {activePage === "02_Violations" && <ViolationsPage />}
@@ -123,12 +134,7 @@ export default function App() {
             <>
               <Tabs tabs={tabNames} active={clampedTab} onChange={setActiveTab} />
               <div className="stTabs-panel">
-                {clampedTab === chatIdx && (
-                  <div>
-                    <div className="stCaption">🟢 Backend: {API_BASE} | Role: {role}</div>
-                    <ChatTab />
-                  </div>
-                )}
+                {clampedTab === chatIdx && <ChatTab />}
                 {canCompare && clampedTab === compareIdx && <CompareTab role={role} />}
                 {canAnalytics && clampedTab === analyticsIdx && <AnalyticsTab />}
                 {canAdmin && clampedTab === adminIdx && <AdminView />}

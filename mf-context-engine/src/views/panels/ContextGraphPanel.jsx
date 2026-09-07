@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Share2, CheckCircle2, AlertTriangle } from "lucide-react";
 import TelemetryDetails from "./TelemetryDetails";
 import MiniGraphStatic from "./MiniGraphStatic";
 import FeedbackContainer from "../../components/feedback/FeedbackContainer";
@@ -6,9 +7,9 @@ import MarkdownAnswer from "../../components/provenance/MarkdownAnswer";
 import ProvenancePanel from "../../components/provenance/ProvenancePanel";
 
 const BADGE_COLORS = {
-  success: { bg: "#E4EEE1", fg: "#3F6B42" },
-  primary: { bg: "#E8F0FE", fg: "#1A73E8" },
-  default: { bg: "#F3E4C9", fg: "#8A5A20" },
+  success: { bg: "var(--color-success-bg)", fg: "var(--color-success-text)" },
+  primary: { bg: "var(--color-navy-100)", fg: "var(--color-navy-700)" },
+  default: { bg: "var(--color-warning-bg)", fg: "var(--color-warning-text)" },
 };
 
 export default function ContextGraphPanel({
@@ -51,7 +52,12 @@ export default function ContextGraphPanel({
       {tab === "answer" && (
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span className="cg-badge green">
+            <span className={`cg-badge ${/moderate|low/i.test(r.confidence_label || "") ? "" : "green"}`} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+              {/moderate|low/i.test(r.confidence_label || "") ? (
+                <AlertTriangle size={12} strokeWidth={2} />
+              ) : (
+                <CheckCircle2 size={12} strokeWidth={2} />
+              )}
               {r.confidence_label} {r.confidence_reason || ""}
             </span>
           </div>
@@ -61,8 +67,8 @@ export default function ContextGraphPanel({
               {badges.map((b, i) => {
                 const c = BADGE_COLORS[b.type] || BADGE_COLORS.default;
                 return (
-                  <div key={i} style={{ background: c.bg, color: c.fg, borderRadius: 6, padding: "6px 10px", fontSize: 11.5, fontWeight: 600, marginBottom: 6 }}>
-                    ⚡ {b.label} &mdash; <span style={{ fontWeight: 400 }}>{b.desc}</span>
+                  <div key={i} style={{ background: c.bg, color: c.fg, borderRadius: "var(--radius-sm)", padding: "6px 10px", fontSize: 11.5, fontWeight: 600, marginBottom: 6 }}>
+                    {b.label} &mdash; <span style={{ fontWeight: 400 }}>{b.desc}</span>
                   </div>
                 );
               })}
@@ -71,8 +77,9 @@ export default function ContextGraphPanel({
 
           {triplets.length > 0 && (
             <details className="cg-triplet-details">
-              <summary>
-                🕸️ Graph Triplet Path Traversed ({r.graph_nodes?.length ?? 0} Nodes | {r.graph_edges?.length ?? 0} Edges)
+              <summary style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <Share2 size={13} strokeWidth={1.75} />
+                Graph Triplet Path Traversed ({r.graph_nodes?.length ?? 0} Nodes | {r.graph_edges?.length ?? 0} Edges)
               </summary>
               <table className="cg-mini-table">
                 <thead>

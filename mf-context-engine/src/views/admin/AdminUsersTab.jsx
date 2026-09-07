@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import DataFrame from "../../components/widgets/DataFrame";
 import Divider from "../../components/widgets/Divider";
 import TextInput from "../../components/widgets/TextInput";
@@ -60,7 +61,10 @@ export default function AdminUsersTab() {
       />
 
       <Divider />
-      <h3 className="stSubheader">➕ Create / Update User Profile</h3>
+      <h3 className="stSubheader">
+        <Plus size={17} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+        Create / Update User Profile
+      </h3>
       <div className="stForm">
         <div className="stFormRow">
           <div>
@@ -92,7 +96,10 @@ export default function AdminUsersTab() {
       </div>
 
       <Divider />
-      <h3 className="stSubheader">❌ Remove User Profile</h3>
+      <h3 className="stSubheader">
+        <Trash2 size={16} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+        Remove User Profile
+      </h3>
       <Selectbox
         label="Select User to Remove"
         options={removableUsers.map((u) => u.username)}
@@ -100,7 +107,7 @@ export default function AdminUsersTab() {
         onChange={setDelUser}
       />
       <div style={{ marginTop: 10, maxWidth: 220 }}>
-        <Button kind="secondary" fullWidth onClick={handleDelete}>Delete Selected Profile</Button>
+        <Button kind="danger" fullWidth onClick={handleDelete}>Delete Selected Profile</Button>
       </div>
       {delMsg && (
         <div style={{ marginTop: 10 }}>

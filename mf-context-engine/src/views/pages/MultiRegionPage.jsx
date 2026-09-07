@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Globe2, BarChart3, Scale, Rocket } from "lucide-react";
 import Metric from "../../components/widgets/Metric";
 import Divider from "../../components/widgets/Divider";
 import DataFrame from "../../components/widgets/DataFrame";
@@ -74,35 +75,41 @@ export default function MultiRegionPage() {
           ESMA: { status: "COMPLIANT", breaches: 0, detail: "Complies with 10% UCITS cap" },
         },
       });
-      pushToast("Global 3-Jurisdiction Audit Completed!", "🚀");
+      pushToast("Global 3-Jurisdiction Audit Completed!");
     }, 600);
   };
 
   return (
     <div>
-      <h1 className="stTitle">🌐 Multi-Jurisdiction Regulatory Comparison</h1>
+      <h1 className="stTitle">
+        <Globe2 size={26} strokeWidth={1.75} style={{ marginRight: 10, verticalAlign: "-5px" }} />
+        Multi-Jurisdiction Regulatory Comparison
+      </h1>
       <div className="stCaption">Cross-Border Harmonization: SEBI (India) • US SEC (USA) • ESMA (Europe)</div>
 
-      <h3 className="stSubheader" style={{ marginTop: "1.2rem" }}>📊 Regional Scorecards Comparison</h3>
+      <h3 className="stSubheader" style={{ marginTop: "1.2rem" }}>
+        <BarChart3 size={17} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+        Regional Scorecards Comparison
+      </h3>
       <div className="stCardGrid">
-        <div style={{ background: "#FFFFFF", border: "1px solid #E7E1D4", borderRadius: "8px", padding: "1rem" }}>
-          <h4 style={{ margin: "0 0 0.5rem 0", color: "#231F1C" }}>🇮🇳 SEBI (India)</h4>
+        <div className="cg-panel" style={{ padding: "1rem" }}>
+          <h4 style={{ margin: "0 0 0.5rem 0", color: "var(--color-ink-900)" }}>SEBI (India)</h4>
           <Metric label="Compliance Score" value="91.2%" delta="+1.5%" />
           <div className="stCaption" style={{ marginTop: "0.5rem" }}>
             Regulations: 52 Circulars | Rules: 32 Rules
           </div>
         </div>
 
-        <div style={{ background: "#FFFFFF", border: "1px solid #E7E1D4", borderRadius: "8px", padding: "1rem" }}>
-          <h4 style={{ margin: "0 0 0.5rem 0", color: "#231F1C" }}>🇺🇸 US SEC (USA)</h4>
+        <div className="cg-panel" style={{ padding: "1rem" }}>
+          <h4 style={{ margin: "0 0 0.5rem 0", color: "var(--color-ink-900)" }}>US SEC (USA)</h4>
           <Metric label="Compliance Score" value="86.5%" delta="-0.8%" />
           <div className="stCaption" style={{ marginTop: "0.5rem" }}>
             Regulations: 105 Items | Rules: 54 Rules
           </div>
         </div>
 
-        <div style={{ background: "#FFFFFF", border: "1px solid #E7E1D4", borderRadius: "8px", padding: "1rem" }}>
-          <h4 style={{ margin: "0 0 0.5rem 0", color: "#231F1C" }}>🇪🇺 ESMA (European Union)</h4>
+        <div className="cg-panel" style={{ padding: "1rem" }}>
+          <h4 style={{ margin: "0 0 0.5rem 0", color: "var(--color-ink-900)" }}>ESMA (European Union)</h4>
           <Metric label="Compliance Score" value="89.0%" delta="+2.1%" />
           <div className="stCaption" style={{ marginTop: "0.5rem" }}>
             Regulations: 105 Articles | Rules: 54 Rules
@@ -112,7 +119,10 @@ export default function MultiRegionPage() {
 
       <Divider />
 
-      <h3 className="stSubheader">⚖️ Regulatory Threshold Benchmark Matrix</h3>
+      <h3 className="stSubheader">
+        <Scale size={17} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+        Regulatory Threshold Benchmark Matrix
+      </h3>
       <DataFrame
         columns={["Regulatory Area", "SEBI (India)", "US SEC (USA)", "ESMA (Europe)", "Strictest Jurisdiction"]}
         rows={BENCHMARK_TABLE}
@@ -120,7 +130,10 @@ export default function MultiRegionPage() {
 
       <Divider />
 
-      <h3 className="stSubheader">🌍 Run Global Multi-Jurisdiction Audit</h3>
+      <h3 className="stSubheader">
+        <Rocket size={17} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+        Run Global Multi-Jurisdiction Audit
+      </h3>
       <p style={{ color: "#5C574C", margin: "0 0 1rem 0" }}>
         Simulate audit of a fund scheme evaluated simultaneously against all 3 regulatory regimes.
       </p>
@@ -136,7 +149,8 @@ export default function MultiRegionPage() {
         </div>
         <div className="stCol" style={{ flex: 2 }}>
           <Button kind="primary" fullWidth onClick={handleRunGlobalAudit} disabled={isAuditing}>
-            {isAuditing ? "Evaluating..." : "🚀 Audit All 3 Jurisdictions"}
+            <Rocket size={16} strokeWidth={1.75} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+            {isAuditing ? "Evaluating..." : "Audit All 3 Jurisdictions"}
           </Button>
         </div>
       </div>

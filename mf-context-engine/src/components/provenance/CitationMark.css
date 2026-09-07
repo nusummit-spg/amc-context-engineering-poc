@@ -4,8 +4,8 @@
   justify-content: center;
   font-size: 0.76rem;
   font-weight: 700;
-  color: #A8412C;
-  background-color: rgba(168, 65, 44, 0.1);
+  color: #1F3A5F;
+  background-color: rgba(31, 58, 95, 0.1);
   border-radius: 4px;
   padding: 0 4px;
   margin: 0 2px;
@@ -18,9 +18,9 @@
 
 .mf-cite-mark:hover,
 .mf-cite-mark:focus {
-  background-color: #A8412C;
+  background-color: #1F3A5F;
   color: #FFFFFF;
-  box-shadow: 0 2px 5px rgba(168, 65, 44, 0.25);
+  box-shadow: 0 2px 5px rgba(31, 58, 95, 0.25);
   transform: translateY(-1px);
 }
 
