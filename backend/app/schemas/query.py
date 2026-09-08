@@ -49,6 +49,8 @@ class QueryIntent(BaseModel):
     taxonomy_paths:    list[str]  = Field(default_factory=list)
     requires_graph:    bool       = True
     requires_vector:   bool       = True
+    requires_cypher:   bool       = False
+    aggregation_type:  str        = ""
     confidence:        float      = Field(default=0.0, ge=0.0, le=1.0)
     reasoning:         Optional[str] = None
 
@@ -261,6 +263,9 @@ class QueryTrace(BaseModel):
     quality_gate_passed:    Optional[bool] = None
     fallback_used:          bool = False
     fallback_reason:        Optional[str] = None
+    review_queue_escalated: bool = False
+    escalation_reason:      Optional[str] = None
+
 
 
 # ── Traversal Strategy Registry (WS5d) ────────────────────────────────────────

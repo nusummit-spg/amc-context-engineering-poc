@@ -5,15 +5,16 @@
 #
 # ===========================================================================
 
-"""Semantic query caching layer (Phase 1).
+"""Unified Semantic query caching layer (Phase 1 & Phase 2).
 
 Embeds incoming queries and performs fast vector lookup against previously answered queries.
-If cosine similarity >= sim_threshold (default 0.96), returns cached answer in <30ms,
+If cosine similarity >= sim_threshold (default 0.95), returns cached answer in <30ms,
 bypassing Neo4j traversal and LLM generation.
+Supports both orchestrator lookup() and engine check() APIs, pre-warming, TTL, and corpus invalidation.
 """
 import logging
 import time
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 import faiss
 import numpy as np
@@ -26,7 +27,7 @@ class SemanticQueryCache:
         self,
         dim: int = 384,
         sim_threshold: float = 0.95,
-        max_entries: int = 500,
+        max_entries: int = 5000,
         ttl_seconds: int = 3600,
     ) -> None:
         self._dim = dim
@@ -35,6 +36,9 @@ class SemanticQueryCache:
         self._ttl_seconds = ttl_seconds
         self._index = faiss.IndexFlatIP(dim)
         self._cache_data: list[dict[str, Any]] = []
+        # Normalized vectors kept alongside entries so clear_expired() can rebuild
+        # the FAISS index without paying to re-embed every surviving query.
+        self._vectors: list[np.ndarray] = []
         try:
             from fastembed import TextEmbedding
             self._embedder = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
@@ -104,6 +108,14 @@ class SemanticQueryCache:
             logger.warning("Cache lookup error: %s", exc)
             return None
 
+    def check(self, query: str) -> Tuple[Optional[dict], float]:
+        """Returns (cached_payload, latency_ms) if a semantic hit is found, else (None, latency_ms).
+        Compatible with engine/semantic_cache API."""
+        t0 = time.perf_counter()
+        entry = self.lookup(query)
+        latency = (time.perf_counter() - t0) * 1000.0
+        return entry, latency
+
     def store(
         self,
         query: str | np.ndarray,
@@ -122,6 +134,7 @@ class SemanticQueryCache:
             faiss.normalize_L2(vec_copy)
 
             self._index.add(vec_copy)
+            self._vectors.append(vec_copy)
             entry = {
                 "timestamp": time.time(),
                 "query": query if isinstance(query, str) else "",
@@ -134,6 +147,12 @@ class SemanticQueryCache:
             logger.info("Stored response in semantic cache (total entries: %d)", self._index.ntotal)
         except Exception as exc:
             logger.warning("Cache store error: %s", exc)
+
+    def warm_cache_patterns(self, precomputed_items: list[tuple[str, dict]]):
+        """Pre-populates semantic cache with precomputed archetypes/answers."""
+        for query, payload in precomputed_items:
+            self.store(query, payload)
+        logger.info("Pre-warmed semantic cache with %d items.", len(precomputed_items))
 
     def invalidate(self, corpus_version: Optional[str] = None) -> None:
         """Invalidate entries matching corpus_version or clear completely."""
@@ -153,18 +172,63 @@ class SemanticQueryCache:
                 self.store(q, item, corpus_version=item.get("corpus_version"))
         logger.info("Invalidated cache for corpus_version=%s (retained entries: %d)", corpus_version, len(self._cache_data))
 
+    def invalidate_corpus(self, corpus_version: str) -> None:
+        self.invalidate(corpus_version=corpus_version)
+
+    def clear_expired(self) -> int:
+        """Drop TTL-expired entries and rebuild the index. Returns entries removed.
+
+        Called by the nightly cache-maintenance job. Unlike invalidate(), this
+        preserves every entry that is still within its TTL.
+        """
+        if not self._cache_data:
+            return 0
+
+        now = time.time()
+        survivors: list[dict[str, Any]] = []
+        survivor_vectors: list[np.ndarray] = []
+
+        for i, entry in enumerate(self._cache_data):
+            age = now - entry.get("timestamp", 0)
+            if age <= self._ttl_seconds:
+                survivors.append(entry)
+                if i < len(self._vectors):
+                    survivor_vectors.append(self._vectors[i])
+
+        removed = len(self._cache_data) - len(survivors)
+        if removed == 0:
+            return 0
+
+        # Only rebuild if every survivor still has its vector; otherwise the
+        # positional mapping between the index and _cache_data would break.
+        if len(survivor_vectors) != len(survivors):
+            logger.warning("Cache vector/entry mismatch during expiry sweep; clearing cache instead.")
+            self.clear()
+            return removed
+
+        self._index.reset()
+        self._cache_data = survivors
+        self._vectors = survivor_vectors
+        for vec in survivor_vectors:
+            self._index.add(vec)
+
+        logger.info("Pruned %d expired semantic cache entries (%d remain).", removed, len(survivors))
+        return removed
+
     def clear(self) -> None:
         self._index.reset()
         self._cache_data.clear()
+        self._vectors.clear()
         logger.info("Cleared semantic query cache.")
 
 
+UnifiedSemanticCache = SemanticQueryCache
 
-_global_semantic_cache: Optional[SemanticQueryCache] = None
+_global_semantic_cache: Optional[UnifiedSemanticCache] = None
 
 
-def get_semantic_cache() -> SemanticQueryCache:
+def get_semantic_cache() -> UnifiedSemanticCache:
     global _global_semantic_cache
     if _global_semantic_cache is None:
-        _global_semantic_cache = SemanticQueryCache()
+        _global_semantic_cache = UnifiedSemanticCache()
     return _global_semantic_cache

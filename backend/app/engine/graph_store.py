@@ -32,6 +32,18 @@ _WRITE_KEYWORDS = re.compile(
 _CALL_KEYWORD = re.compile(r"\bCALL\b", re.I)
 
 
+def _edge_endpoint(edge: dict, *keys: str) -> str:
+    """Read an edge endpoint under any of the known key spellings.
+    Endpoints may be plain strings or {"id"/"name"/"text": ...} objects."""
+    for k in keys:
+        v = edge.get(k)
+        if isinstance(v, dict):
+            v = v.get("id") or v.get("name") or v.get("text") or ""
+        if v:
+            return str(v).strip()
+    return ""
+
+
 def _load_in_memory_dump() -> Dict[str, Any]:
     global _in_memory_dump
     if _in_memory_dump is not None:
@@ -66,16 +78,23 @@ def _load_in_memory_dump() -> Dict[str, Any]:
                             })
                     elif "edges" in data and isinstance(data["edges"], list):
                         for e in data["edges"]:
-                            s_val = e.get("source", {}).get("id", "") if isinstance(e.get("source"), dict) else str(e.get("source", ""))
-                            o_val = e.get("target", {}).get("id", "") if isinstance(e.get("target"), dict) else str(e.get("target", ""))
+                            # Dumps written by ingest_selected_documents.py use
+                            # s/o/rel/conf; node-link style exports use
+                            # source/target (sometimes as {"id": ...}). Accept both,
+                            # otherwise every edge round-trips to an empty endpoint.
+                            s_val = _edge_endpoint(e, "s", "source")
+                            o_val = _edge_endpoint(e, "o", "target")
+                            if not (s_val and o_val):
+                                continue
+                            props = e.get("properties") if isinstance(e.get("properties"), dict) else {}
                             edges.append({
                                 "s": s_val,
-                                "s_label": "Entity",
-                                "s_product": e.get("properties", {}).get("source_chunk_id", "") if isinstance(e.get("properties"), dict) else "",
-                                "rel": e.get("type", "") or e.get("relationship_type", "") or e.get("rel", "RELATED_TO"),
-                                "conf": e.get("properties", {}).get("confidence", 0.9) if isinstance(e.get("properties"), dict) else 0.9,
+                                "s_label": e.get("s_label", "Entity"),
+                                "s_product": e.get("s_product", "") or props.get("source_chunk_id", ""),
+                                "rel": e.get("rel", "") or e.get("type", "") or e.get("relationship_type", "") or "RELATED_TO",
+                                "conf": e.get("conf", props.get("confidence", 0.9)),
                                 "o": o_val,
-                                "o_label": "Entity",
+                                "o_label": e.get("o_label", "Entity"),
                             })
                 if nodes or edges:
                     logger.info("Loaded in-memory graph fallback: %d nodes, %d edges from %s", len(nodes), len(edges), p.name)
@@ -306,6 +325,91 @@ def get_subgraph_for_query_with_fallback(query: str, product_names: set | None =
         limit=limit,
         query_entities=query_entities
     )
+
+
+def get_subgraph_with_fallback(
+    entity_names: list[str],
+    product_names: list[str],
+    hops: int = 1,
+    limit: int = 15,
+) -> Dict[str, Any]:
+    """Single dual-scope query: entity scope and product scope in ONE roundtrip.
+
+    The sequential form issues an entity-scoped query, inspects the result, and
+    only then issues a product-scoped one — paying two Neo4j roundtrips on the
+    ~30% of queries where the entity scope comes back empty. This UNIONs both
+    scopes and orders by source_priority so entity matches still win, at the
+    cost of a single roundtrip.
+
+    Edge keys match get_subgraph_for_query() (s/rel/o/conf/...) so callers can
+    swap between the two without reshaping their downstream code.
+    """
+    entity_names = [e for e in (entity_names or []) if e]
+    product_names = [p for p in (product_names or []) if p]
+    if not entity_names and not product_names:
+        return {"edges": [], "nodes": [], "matched_by": "none", "dual_scope": True}
+
+    hops = max(int(hops), 1)
+    # Sentinels keep both UNION legs valid when only one scope is populated;
+    # they cannot match a real node.
+    entity_list = entity_names or ["__no_entity_scope__"]
+    product_list = product_names or ["__no_product_scope__"]
+
+    cypher = f"""
+    UNWIND $entity_names AS entity_scope
+    MATCH (n:Entity {{text: entity_scope}})
+    MATCH path = (n)-[r*1..{hops}]-(m)
+    UNWIND relationships(path) AS rel
+    WITH startNode(rel) AS sn, rel, endNode(rel) AS on
+    RETURN DISTINCT sn.text AS s, sn.label AS s_label, sn.product_name AS s_product,
+           type(rel) AS rel, coalesce(rel.confidence, 1.0) AS conf,
+           on.text AS o, on.label AS o_label, 1 AS source_priority
+    UNION
+    UNWIND $product_names AS product_scope
+    MATCH (n:Entity {{product_name: product_scope}})-[r]-(m)
+    RETURN DISTINCT n.text AS s, n.label AS s_label, n.product_name AS s_product,
+           type(r) AS rel, coalesce(r.confidence, 0.8) AS conf,
+           m.text AS o, m.label AS o_label, 2 AS source_priority
+    ORDER BY source_priority, conf DESC
+    LIMIT {int(limit)}
+    """
+
+    rows, err = run_safe_cypher(
+        cypher,
+        params={"entity_names": entity_list, "product_names": product_list},
+        max_rows=limit,
+    )
+
+    if err is None and rows:
+        edges = [dict(r) for r in rows]
+        matched_by = "entity" if any(e.get("source_priority") == 1 for e in edges) else "product"
+        nodes = list({e.get("s", "") for e in edges} | {e.get("o", "") for e in edges})
+        return {"edges": edges, "nodes": nodes, "matched_by": matched_by, "dual_scope": True}
+
+    if err is not None:
+        logger.debug("Merged dual-scope query failed (%s); using in-memory dump", err)
+
+    # Fallback to the in-memory dump if Neo4j is offline or rejected the query.
+    dump = _load_in_memory_dump()
+    lower_entities = {e.lower() for e in entity_names}
+    lower_products = {p.lower() for p in product_names}
+    edges = []
+    for e in dump.get("edges", []):
+        s = (e.get("s") or "")
+        o = (e.get("o") or "")
+        prod = (e.get("s_product") or "")
+        is_entity_match = s.lower() in lower_entities or o.lower() in lower_entities
+        is_product_match = prod.lower() in lower_products
+        if is_entity_match or is_product_match:
+            edges.append({**e, "source_priority": 1 if is_entity_match else 2})
+
+    edges.sort(key=lambda x: (x["source_priority"], -float(x.get("conf") or 0.0)))
+    edges = edges[:limit]
+    if not edges:
+        return {"edges": [], "nodes": [], "matched_by": "none", "dual_scope": True}
+    matched_by = "entity" if edges[0]["source_priority"] == 1 else "product"
+    nodes = list({e.get("s", "") for e in edges} | {e.get("o", "") for e in edges})
+    return {"edges": edges, "nodes": nodes, "matched_by": matched_by, "dual_scope": True}
 
 
 def get_entity_type_summary(active_labels: set | None = None) -> list[dict]:

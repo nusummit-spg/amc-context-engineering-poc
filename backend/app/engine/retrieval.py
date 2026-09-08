@@ -406,11 +406,23 @@ def hybrid_graphrag(query: str, store, chat_history: list[dict] | None = None,
     rerank_ms = faiss_store.get_last_rerank_ms()
 
     if not graph_result["edges"] and hits:
+        # Entity scope came back empty. Retry once with BOTH scopes UNIONed into a
+        # single Neo4j roundtrip rather than re-walking the sequential
+        # entity -> product -> last-resort ladder (Task 4.2: query merging).
         product_names = {h["product_name"] for h in hits}
         t1 = time.perf_counter()
-        graph_result = graph_store.get_subgraph_for_query_with_fallback(
-            query, product_names=product_names, hops=1, limit=15,
-            query_entities=query_entities)
+        merged = graph_store.get_subgraph_with_fallback(
+            entity_names=[e["text"] for e in (query_entities or []) if e.get("text")],
+            product_names=list(product_names),
+            hops=1,
+            limit=15,
+        )
+        if merged.get("edges"):
+            graph_result = merged
+        else:
+            graph_result = graph_store.get_subgraph_for_query_with_fallback(
+                query, product_names=product_names, hops=1, limit=15,
+                query_entities=query_entities)
         graph_time += (time.perf_counter() - t1)
 
     product_names_for_scope = {h["product_name"] for h in hits}
@@ -657,6 +669,9 @@ ANSWER:"""
 
     telemetry_breakdown = {
         "pipeline_mode": "ContextGraph Hybrid RAG",
+        # Reported on the cache-hit path too, so query_intent is populated
+        # consistently in the query_evidence audit log either way.
+        "domain_intent": domain_intent,
         "latency_vector_db_ms": round(retrieve_time * 1000.0, 2),
         "latency_rerank_ms": round(rerank_ms, 2),
         "latency_graph_db_ms": round(graph_time * 1000.0, 2),

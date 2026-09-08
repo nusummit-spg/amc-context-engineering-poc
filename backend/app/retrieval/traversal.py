@@ -19,10 +19,12 @@ Changes vs. original:
     node of each intent.taxonomy_path; (2) if still empty, run SECTOR_ISSUER_LIST to
     at least surface which issuers are in the sector for synthesis context.
 """
+import asyncio
 import logging
 from uuid import uuid4
 
 from app.config import get_settings
+from app.engine import config
 from app.graph import cypher_library as cql
 from app.graph.client import GraphClient
 from app.schemas.entities import BaseEntity, EntityType, IssuerGroup
@@ -52,6 +54,29 @@ class GraphTraversal:
         # Pass intent so strategies can use taxonomy_paths as fallback
         return await strategy(intent, entities)
 
+    async def _gather_rows(self, calls: list[tuple]) -> list[list[dict]]:
+        """Runs independent graph queries concurrently when parallelization is on.
+
+        Each call is (cypher, kwargs). Multi-entity queries previously issued one
+        sequential Neo4j roundtrip per entity; the templates are independent, so
+        the wall-clock cost collapses to that of the slowest one. Failures are
+        isolated — a single bad template yields [] instead of aborting traversal.
+        """
+        if not calls:
+            return []
+
+        async def _run(cypher, kwargs):
+            try:
+                return await self._graph.run(cypher, **kwargs)
+            except Exception as exc:
+                logger.warning("Graph query failed during parallel traversal: %s", exc)
+                return []
+
+        if not config.ENABLE_PARALLELIZATION or len(calls) == 1:
+            return [await _run(cypher, kwargs) for cypher, kwargs in calls]
+
+        return list(await asyncio.gather(*[_run(cypher, kwargs) for cypher, kwargs in calls]))
+
     # ---------- strategies ----------
 
     async def _exposure(self, intent: QueryIntent, entities: list[BaseEntity]):
@@ -59,18 +84,28 @@ class GraphTraversal:
         groups = [e for e in entities if e.entity_type == EntityType.ISSUER_GROUP]
         # If only an Issuer was resolved, hop up to its group (depth controller: +1 hop).
         if not groups:
-            for issuer in (e for e in entities if e.entity_type == EntityType.ISSUER):
-                rows = await self._graph.run(
-                    "MATCH (:Issuer {name: $name})-[:ISSUED_BY]->(g:IssuerGroup) RETURN g.name AS name",
-                    name=issuer.name,
-                )
+            issuers = [e for e in entities if e.entity_type == EntityType.ISSUER]
+            group_hops = await self._gather_rows([
+                ("MATCH (:Issuer {name: $name})-[:ISSUED_BY]->(g:IssuerGroup) RETURN g.name AS name",
+                 {"name": issuer.name})
+                for issuer in issuers
+            ])
+            for rows in group_hops:
                 for row in rows:
                     # FIX: use concrete IssuerGroup subclass (BaseEntity is abstract
                     # after WS5a schema change and cannot be instantiated directly).
                     groups.append(IssuerGroup(name=row["name"]))
 
-        for group in groups:
-            rows = await self._graph.run(cql.GROUP_EXPOSURE, group_name=group.name)
+        # Exposure and risk-theme lookups are independent across every group —
+        # issue them in one concurrent wave instead of 2xN sequential roundtrips.
+        group_results = await self._gather_rows(
+            [(cql.GROUP_EXPOSURE, {"group_name": g.name}) for g in groups]
+            + [(cql.GROUP_RISK_THEMES, {"group_name": g.name}) for g in groups]
+        )
+        exposure_rows = group_results[:len(groups)]
+        risk_theme_rows = group_results[len(groups):]
+
+        for group, rows, risk_rows in zip(groups, exposure_rows, risk_theme_rows):
             cyphers.append("GROUP_EXPOSURE")
             for row in rows:
                 pct = row.get("pct_nav")
@@ -89,7 +124,6 @@ class GraphTraversal:
                     f"aggregated exposure across {len({r['scheme'] for r in rows})} scheme(s)"
                 )
 
-            risk_rows = await self._graph.run(cql.GROUP_RISK_THEMES, group_name=group.name)
             cyphers.append("GROUP_RISK_THEMES")
             for row in risk_rows:
                 facts.append(GraphFact(
@@ -110,14 +144,16 @@ class GraphTraversal:
 
         rows: list[dict] = []
         if circulars:
-            for circ in circulars:
-                rows += await self._graph.run(cql.CIRCULAR_AFFECTED_SCHEMES,
-                                              circular_name=circ.name)
+            for result in await self._gather_rows(
+                [(cql.CIRCULAR_AFFECTED_SCHEMES, {"circular_name": c.name}) for c in circulars]
+            ):
+                rows += result
                 cyphers.append("CIRCULAR_AFFECTED_SCHEMES")
         elif clauses:
-            for clause in clauses:
-                rows += await self._graph.run(cql.CLAUSE_AFFECTED_SCHEMES,
-                                              clause_name=clause.name)
+            for result in await self._gather_rows(
+                [(cql.CLAUSE_AFFECTED_SCHEMES, {"clause_name": c.name}) for c in clauses]
+            ):
+                rows += result
                 cyphers.append("CLAUSE_AFFECTED_SCHEMES")
 
         # Last-resort fallback: if entity resolution failed entirely (no circular,
@@ -155,8 +191,15 @@ class GraphTraversal:
     async def _house_view(self, intent: QueryIntent, entities: list[BaseEntity]):
         facts, paths, cyphers = [], [], []
         sectors = [e for e in entities if e.entity_type == EntityType.SECTOR]
-        for sector in sectors:
-            coverage = await self._graph.run(cql.SECTOR_COVERAGE, sector_name=sector.name)
+        # Coverage and risk-theme lookups are independent per sector.
+        sector_results = await self._gather_rows(
+            [(cql.SECTOR_COVERAGE, {"sector_name": s.name}) for s in sectors]
+            + [(cql.SECTOR_RISK_THEMES, {"sector_name": s.name}) for s in sectors]
+        )
+        coverage_rows = sector_results[:len(sectors)]
+        theme_rows_all = sector_results[len(sectors):]
+
+        for sector, coverage, theme_rows in zip(sectors, coverage_rows, theme_rows_all):
             cyphers.append("SECTOR_COVERAGE")
             for row in coverage:
                 themes = ", ".join(t for t in row["risk_themes"] if t) or "none flagged"
@@ -167,7 +210,6 @@ class GraphTraversal:
                     properties={"risk_themes": row["risk_themes"]},
                     traversal_path="Analyst→COVERS→Issuer→FLAGGED_IN→RiskTheme",
                 ))
-            theme_rows = await self._graph.run(cql.SECTOR_RISK_THEMES, sector_name=sector.name)
             cyphers.append("SECTOR_RISK_THEMES")
             for row in theme_rows:
                 facts.append(GraphFact(
@@ -237,8 +279,11 @@ class GraphTraversal:
 
     async def _entity_lookup(self, intent: QueryIntent, entities: list[BaseEntity]):
         facts, paths, cyphers = [], [], []
-        for entity in entities[:3]:
-            rows = await self._graph.run(cql.ENTITY_FACTS, entity_name=entity.name)
+        lookup_entities = entities[:3]
+        entity_rows = await self._gather_rows(
+            [(cql.ENTITY_FACTS, {"entity_name": e.name}) for e in lookup_entities]
+        )
+        for entity, rows in zip(lookup_entities, entity_rows):
             cyphers.append("ENTITY_FACTS")
             for row in rows:
                 if row["direction"] == "out":

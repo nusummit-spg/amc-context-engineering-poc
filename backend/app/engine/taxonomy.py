@@ -15,6 +15,8 @@ substring match), so it tolerates messy AMFI exports.
 """
 from __future__ import annotations
 import json
+import os
+import re
 from pathlib import Path
 from typing import Dict, Set
 
@@ -49,8 +51,14 @@ def _read_tabular(path: Path):
     return [], []
 
 
+def _normalise_header(h: str) -> str:
+    """Lowercase and collapse _ / - / whitespace to single spaces, so a hint
+    like "scheme name" matches AMFI's `Scheme_Name` and `Scheme-Name` alike."""
+    return re.sub(r"[\s_\-]+", " ", str(h)).strip().lower()
+
+
 def _match_columns(header: list[str]) -> Dict[str, int]:
-    header_lower = [h.lower() for h in header]
+    header_lower = [_normalise_header(h) for h in header]
     matched = {}
     for key, hints in _COLUMN_HINTS.items():
         for i, h in enumerate(header_lower):
@@ -63,7 +71,7 @@ def _match_columns(header: list[str]) -> Dict[str, int]:
 def build_taxonomy(verbose: bool = True) -> Dict[str, list]:
     taxonomy: Dict[str, Set[str]] = {k: set() for k in _COLUMN_HINTS}
 
-    folders = [config.AMFI_DIR, config.SUBCLASS_DIR]
+    folders = getattr(config, "TAXONOMY_SOURCE_DIRS", None) or [config.AMFI_DIR, config.SUBCLASS_DIR]
     for folder in folders:
         if not folder.exists():
             continue
@@ -82,17 +90,27 @@ def build_taxonomy(verbose: bool = True) -> Dict[str, list]:
                 print(f"  [taxonomy] {path.name}: matched {list(col_map.keys())}", flush=True)
 
     result = {k: sorted(v) for k, v in taxonomy.items()}
-    config.TAXONOMY_PATH.write_text(json.dumps(result, indent=2, ensure_ascii=False))
+    _tmp = config.TAXONOMY_PATH.with_suffix(".json.tmp")
+    _tmp.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
+    os.replace(_tmp, config.TAXONOMY_PATH)
     if verbose:
         for k, v in result.items():
             print(f"  [taxonomy] {k}: {len(v)} entries", flush=True)
     return result
 
 
-def load_taxonomy() -> Dict[str, list]:
+def load_taxonomy(rebuild_if_empty: bool = True) -> Dict[str, list]:
     if not config.TAXONOMY_PATH.exists():
         return build_taxonomy()
-    return json.loads(config.TAXONOMY_PATH.read_text())
+    try:
+        data = json.loads(config.TAXONOMY_PATH.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError, OSError):
+        return build_taxonomy()
+    # A taxonomy.json with every bucket empty is indistinguishable from "never
+    # built" for callers (it silently disables the gazetteer) — rebuild it.
+    if rebuild_if_empty and not any(data.get(k) for k in _COLUMN_HINTS):
+        return build_taxonomy()
+    return data
 
 
 if __name__ == "__main__":

@@ -122,6 +122,95 @@ def _file_hash(path: str) -> str:
     return hashlib.md5(Path(path).read_bytes()).hexdigest()[:10]
 
 
+_fitz_mod = None
+
+
+def _get_fitz():
+    """PyMuPDF, imported under its non-deprecated name.
+
+    `import fitz` still works but emits a DeprecationWarning on every ingest
+    run. Prefer `pymupdf`, falling back for PyMuPDF < 1.24.3.
+    """
+    global _fitz_mod
+    if _fitz_mod is None:
+        try:
+            import pymupdf as _m
+        except ImportError:
+            import fitz as _m
+        _fitz_mod = _m
+    return _fitz_mod
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PER-PAGE EXTRACTION CACHE (logs/extraction_cache/)
+# A corrupt or legacy-encoded cache file must never abort a document: it is
+# only ever an optimisation, so a bad read degrades to "no cache" and the file
+# is re-extracted from scratch.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _load_extraction_cache(cache_path: Path, verbose: bool = True) -> Dict[str, Any]:
+    if not cache_path.exists() or cache_path.stat().st_size == 0:
+        return {}
+    legacy_encoding = False
+    try:
+        raw = cache_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        legacy_encoding = True
+        # Written by an older build that used the platform default codec
+        # (cp1252 on Windows). Recover what we can rather than failing.
+        try:
+            raw = cache_path.read_text(encoding="cp1252")
+        except (UnicodeDecodeError, OSError):
+            raw = ""
+    except OSError as exc:
+        if verbose:
+            print(f"    [cache] unreadable ({exc}) — re-extracting", flush=True)
+        return {}
+
+    try:
+        cache = json.loads(raw) if raw.strip() else {}
+    except json.JSONDecodeError:
+        if verbose:
+            print(f"    [cache] corrupt '{cache_path.name}' — re-extracting", flush=True)
+        _discard_extraction_cache(cache_path)
+        return {}
+
+    if not isinstance(cache, dict):
+        _discard_extraction_cache(cache_path)
+        return {}
+
+    # Drop any entry that is not a well-formed page row.
+    cache = {
+        k: v for k, v in cache.items()
+        if isinstance(v, dict) and isinstance(v.get("text"), str) and v.get("text").strip()
+    }
+
+    if legacy_encoding and cache:
+        # Rewrite in UTF-8 so we stop paying for the fallback on every run.
+        _save_extraction_cache(cache_path, cache)
+    return cache
+
+
+def _discard_extraction_cache(cache_path: Path) -> None:
+    try:
+        cache_path.unlink()
+    except OSError:
+        pass
+
+
+def _save_extraction_cache(cache_path: Path, cache: Dict[str, Any]) -> None:
+    """Atomic write — an interrupted run can never leave a 0-byte cache file."""
+    tmp = cache_path.with_suffix(cache_path.suffix + ".tmp")
+    try:
+        tmp.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp, cache_path)
+    except OSError:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # LAZY LOADERS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -169,7 +258,7 @@ def _get_ocr_reader():
 
 def _page_to_png_bytes(page, dpi: int = CLAUDE_PAGE_DPI) -> bytes:
     """Render a PyMuPDF page to PNG bytes at given DPI."""
-    import fitz
+    fitz = _get_fitz()
     mat = fitz.Matrix(dpi / 72, dpi / 72)
     pix = page.get_pixmap(matrix=mat, colorspace=fitz.csRGB)
     return pix.tobytes("png")
@@ -287,7 +376,7 @@ def _extract_embedded_images_ocr(page) -> str:
 
 
 def _full_page_ocr(page, dpi: int = 150) -> str:
-    import fitz
+    fitz = _get_fitz()
     from PIL import Image
     import io
     mat      = fitz.Matrix(dpi / 72, dpi / 72)
@@ -370,7 +459,7 @@ def extract_pdf_text_full(
     Returns list of page dicts:
       {page_num, text, source, extraction_method}
     """
-    import fitz
+    fitz = _get_fitz()
 
     if use_gemini is not None:
         use_vision = use_gemini  # backward-compat: old call sites pass use_gemini=...
@@ -383,10 +472,10 @@ def extract_pdf_text_full(
     # ── per-page disk cache, keyed on file content hash ─────────────────────
     pdf_hash   = _file_hash(pdf_path)
     cache_path = config.EXTRACTION_CACHE_DIR / f"{_slugify(pdf_path)}_{pdf_hash}.json"
-    cache: Dict[str, Any] = json.loads(cache_path.read_text(encoding="utf-8")) if cache_path.exists() else {}
+    cache: Dict[str, Any] = _load_extraction_cache(cache_path, verbose=verbose)
 
     def _save_cache():
-        cache_path.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+        _save_extraction_cache(cache_path, cache)
 
     if verbose:
         mode = "smart (local-first, vision on demand)" if config.SMART_EXTRACTION else "vision-first (every page)"

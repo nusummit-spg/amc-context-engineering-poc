@@ -1,0 +1,380 @@
+.\backend\.venv\Scripts\python.exe backend/scripts/ingest_selected_documents.py
+================================================================
+ Starting Ingestion of Selected Source Documents
+ Source Directory: C:\Users\Laptopadmin\Desktop\context-engineering\Docs\selected_source_documents
+================================================================
+Found 14 files to ingest:
+  1. Adani_Portfolio_H1FY25_ESG.pdf (1721.6 KB)
+  2. AEL_Annual_Return_FY_2024.pdf (867.1 KB)
+  3. AEL_AR_FY24.pdf (22763.8 KB)
+  4. AEL_Earnings_Call_Q1_FY19.pdf (62.4 KB)
+  5. AEL_Earnings_Call_Q4_FY24.pdf (819.0 KB)
+  6. April 2024.pdf (224.8 KB)
+  7. April 2025.pdf (233.2 KB)
+  8. Borrowing by Mutual Funds.pdf (583.6 KB)
+  9. Categorization and Rationalization of Mutual Fund Schemes.pdf (4192.1 KB)
+  10. Disclosure of Risk adjusted Return - Information Ratio (IR) for Mutual Fund Schemes..pdf (158.9 KB)
+  11. Guidelines for Investment Advisers.pdf (925.2 KB)
+  12. May 2024.pdf (230.0 KB)
+  13. mutual_fund_data.csv (4649.7 KB)
+  14. Safer participation of retail investors in Algorithmic trading.pdf (269.7 KB)
+
+Processing [Adani_Portfolio_H1FY25_ESG.pdf]...
+warning: The `fitz` API is deprecated and will be removed in future. Use `import pymupdf` instead.
+  [ERROR] Extraction failed for Adani_Portfolio_H1FY25_ESG.pdf: Expecting value: line 1 column 1 (char 0)
+
+Processing [AEL_Annual_Return_FY_2024.pdf]...
+  [ERROR] Extraction failed for AEL_Annual_Return_FY_2024.pdf: Expecting value: line 1 column 1 (char 0)
+
+Processing [AEL_AR_FY24.pdf]...
+  [ERROR] Extraction failed for AEL_AR_FY24.pdf: Expecting value: line 1 column 1 (char 0)
+
+Processing [AEL_Earnings_Call_Q1_FY19.pdf]...
+  [ERROR] Extraction failed for AEL_Earnings_Call_Q1_FY19.pdf: 'utf-8' codec can't decode byte 0x93 in position 54: invalid start byte
+
+Processing [AEL_Earnings_Call_Q4_FY24.pdf]...
+  [extract] 'AEL_Earnings_Call_Q4_FY24.pdf' (23 pages) — smart (local-first, vision on demand)
+  Extracted 23 pages -> 49 parents, 283 children in 0.06s
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+  [ner-b] Loading GLiNER…
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\huggingface_hub\utils\_validators.py:196: UserWarning: The `resume_download` argument is deprecated and ignored in `snapshot_download`. Downloads always resume whenever possible.
+  warnings.warn(
+[transformers] The tokenizer you are loading from 'microsoft/deberta-v3-base' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+  [llm_text] Groq client ready.
+  [NER] Found 23 entities, 10 relations
+
+Processing [April 2024.pdf]...
+  [extract] 'April 2024.pdf' (2 pages) — smart (local-first, vision on demand)
+  Extracted 2 pages -> 27 parents, 128 children in 0.04s
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+  [NER] Found 8 entities, 4 relations
+
+Processing [April 2025.pdf]...
+  [extract] 'April 2025.pdf' (2 pages) — smart (local-first, vision on demand)
+  Extracted 2 pages -> 27 parents, 133 children in 0.04s
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+  [NER] Found 8 entities, 4 relations
+
+Processing [Borrowing by Mutual Funds.pdf]...
+  [extract] 'Borrowing by Mutual Funds.pdf' (3 pages) — smart (local-first, vision on demand)
+  Extracted 3 pages -> 6 parents, 28 children in 0.02s
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+  [NER] Found 26 entities, 5 relations
+
+Processing [Categorization and Rationalization of Mutual Fund Schemes.pdf]...
+  [extract] 'Categorization and Rationalization of Mutual Fund Schemes.pdf' (23 pages) — smart (local-first, vision on demand)
+  Extracted 23 pages -> 110 parents, 564 children in 0.07s
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+  [NER] Found 25 entities, 7 relations
+
+Processing [Disclosure of Risk adjusted Return - Information Ratio (IR) for Mutual Fund Schemes..pdf]...
+  [extract] 'Disclosure of Risk adjusted Return - Information Ratio (IR) for Mutual Fund Schemes..pdf' (3 pages) — smart (local-first, vision on demand)
+  Extracted 3 pages -> 6 parents, 28 children in 0.04s
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+  [NER] Found 17 entities, 3 relations
+
+Processing [Guidelines for Investment Advisers.pdf]...
+  [extract] 'Guidelines for Investment Advisers.pdf' (12 pages) — smart (local-first, vision on demand)
+  Extracted 12 pages -> 26 parents, 138 children in 0.03s
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+  [NER] Found 11 entities, 3 relations
+
+Processing [May 2024.pdf]...
+  [extract] 'May 2024.pdf' (2 pages) — smart (local-first, vision on demand)
+  Extracted 2 pages -> 26 parents, 127 children in 0.02s
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+  [NER] Found 8 entities, 4 relations
+
+Processing [mutual_fund_data.csv]...
+  Extracted 50 pages -> 429 parents, 1542 children in 0.20s
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+  [NER] Found 15 entities, 8 relations
+
+Processing [Safer participation of retail investors in Algorithmic trading.pdf]...
+  [extract] 'Safer participation of retail investors in Algorithmic trading.pdf' (6 pages) — smart (local-first, vision on demand)
+  Extracted 6 pages -> 15 parents, 70 children in 0.03s
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
+  warnings.warn(Warnings.W036.format(name=self.name))
+  [NER] Found 6 entities, 0 relations
+
+================================================================
+ Total Ingested Corpus Statistics:
+ Total Documents : 14
+ Total Parents   : 721
+ Total Children  : 3041
+ Total Entities  : 147
+ Total Relations : 48
+================================================================
+
+Updating In-Memory Graph Knowledge Bases...
+  [OK] Saved Graph Dump (57 nodes, 7 edges) -> C:\Users\Laptopadmin\Desktop\context-engineering\amc_master_full_dump.json
+  [OK] Saved Graph Dump (57 nodes, 7 edges) -> C:\Users\Laptopadmin\Desktop\context-engineering\backend\graph_dump.json
+
+Computing embeddings with BAAI/bge-small-en-v1.5...
+  [embed] Loading sentence-transformer model (BAAI/bge-small-en-v1.5)…
+Loading weights: 100%|███████████████████████████████████████████████████| 199/199 [00:00<00:00, 1552.56it/s]
+  [embed] BAAI/bge-small-en-v1.5 Model ready.
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+  Embedded 256/3041 chunks
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+  Embedded 512/3041 chunks
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+  Embedded 768/3041 chunks
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+  Embedded 1024/3041 chunks
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+  Embedded 1280/3041 chunks
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+  Embedded 1536/3041 chunks
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+  Embedded 1792/3041 chunks
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+  Embedded 2048/3041 chunks
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+  Embedded 2304/3041 chunks
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+  Embedded 2560/3041 chunks
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+  Embedded 2816/3041 chunks
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+    embed batch 1/4 … ok
+    embed batch 2/4 … ok
+    embed batch 3/4 … ok
+    embed batch 4/4 … ok
+  Embedded 3041/3041 chunks
+Created FAISS IndexFlatIP with 3041 vectors @ dim=384
+  [OK] Successfully synchronized index -> C:\Users\Laptopadmin\Desktop\context-engineering\backend\app\engine\faiss_indexes\amc_master
+  [OK] Successfully synchronized index -> C:\Users\Laptopadmin\Desktop\context-engineering\backend\faiss_indexes\taxonomy_showcase
+  [OK] Successfully synchronized index -> C:\Users\Laptopadmin\Desktop\context-engineering\streamlit_app\faiss_indexes\amc_master
+
+================================================================
+ Ingestion Completed Successfully!
+================================================================

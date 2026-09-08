@@ -57,6 +57,7 @@ ROLE_PERMISSIONS: Dict[AMCRole, Dict[str, bool]] = {
         "enforce_sebi_advice_shield": True,
         "can_access_compare_tab": True,
         "can_access_analytics_tab": True,
+        "can_review_answers": True,
     },
     AMCRole.FUND_MANAGER: {
         "can_view_admin_panel": False,
@@ -66,6 +67,7 @@ ROLE_PERMISSIONS: Dict[AMCRole, Dict[str, bool]] = {
         "enforce_sebi_advice_shield": True,
         "can_access_compare_tab": True,
         "can_access_analytics_tab": True,
+        "can_review_answers": True,
     },
     AMCRole.ESG_ANALYST: {
         "can_view_admin_panel": False,
@@ -75,6 +77,7 @@ ROLE_PERMISSIONS: Dict[AMCRole, Dict[str, bool]] = {
         "enforce_sebi_advice_shield": True,
         "can_access_compare_tab": True,
         "can_access_analytics_tab": True,
+        "can_review_answers": False,
     },
     AMCRole.SALES_MANAGER: {
         "can_view_admin_panel": False,
@@ -84,6 +87,7 @@ ROLE_PERMISSIONS: Dict[AMCRole, Dict[str, bool]] = {
         "enforce_sebi_advice_shield": True,
         "can_access_compare_tab": False,
         "can_access_analytics_tab": False,
+        "can_review_answers": False,
     },
     AMCRole.RETAIL_INVESTOR: {
         "can_view_admin_panel": False,
@@ -93,6 +97,7 @@ ROLE_PERMISSIONS: Dict[AMCRole, Dict[str, bool]] = {
         "enforce_sebi_advice_shield": True,
         "can_access_compare_tab": False,
         "can_access_analytics_tab": False,
+        "can_review_answers": False,
     },
 }
 

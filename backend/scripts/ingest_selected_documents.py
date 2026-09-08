@@ -13,15 +13,24 @@ Extracts PDFs and CSVs, builds parent-child chunks, extracts entities and
 relational graph triplets, updates the Graph store, and builds FAISS indexes.
 """
 import os
+import re
 import sys
 import json
 import pickle
 import time
+import warnings
 from pathlib import Path
 from typing import Dict, Any, List, Set, Tuple
 
 import faiss
 import numpy as np
+
+warnings.filterwarnings(
+    "ignore", message=r".*resume_download.*", category=UserWarning)
+warnings.filterwarnings(
+    "ignore", message=r".*`fitz` API is deprecated.*")
+os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
+os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -62,6 +71,27 @@ GRAPH_DUMP_PATHS = [
     BACKEND_ROOT / "graph_dump.json",
 ]
 
+# Files in DOCS_DIR that are present but should not be indexed.
+# mutual_fund_data.csv is a 16k-row scheme export — it still feeds the NER
+# gazetteer through taxonomy.py (which scans this folder independently), so
+# excluding it here costs nothing there.
+# Override with INGEST_SKIP_FILES="a.csv,b.pdf"; set it empty to skip nothing.
+SKIP_FILES = {
+    n.strip().lower()
+    for n in os.environ.get("INGEST_SKIP_FILES", "mutual_fund_data.csv").split(",")
+    if n.strip()
+}
+
+
+def _node_name(node: dict) -> str:
+    """Graph dumps mix two node shapes: entities written by this script
+    ({name, label, properties}) and Neo4j exports ({id, labels, properties})
+    where the display name lives at properties.text. Read both."""
+    props = node.get("properties") or {}
+    return str(node.get("name") or props.get("name") or node.get("text")
+               or props.get("text") or "").strip()
+
+
 
 def ingest_all_documents():
     print(f"================================================================")
@@ -72,10 +102,15 @@ def ingest_all_documents():
     if not DOCS_DIR.exists():
         raise FileNotFoundError(f"Source documents directory not found: {DOCS_DIR}")
 
-    files = sorted([f for f in DOCS_DIR.iterdir() if f.is_file() and f.suffix.lower() in (".pdf", ".csv", ".xlsx", ".docx", ".txt")])
+    candidates = sorted([f for f in DOCS_DIR.iterdir() if f.is_file() and f.suffix.lower() in (".pdf", ".csv", ".xlsx", ".docx", ".txt")])
+    files = [f for f in candidates if f.name.lower() not in SKIP_FILES]
+    skipped = [f for f in candidates if f.name.lower() in SKIP_FILES]
+
     print(f"Found {len(files)} files to ingest:")
     for i, f in enumerate(files, 1):
         print(f"  {i}. {f.name} ({f.stat().st_size / 1024:.1f} KB)")
+    for f in skipped:
+        print(f"  [SKIP] {f.name} ({f.stat().st_size / 1024:.1f} KB) — excluded via INGEST_SKIP_FILES")
 
     all_parents: Dict[str, dict] = {}
     all_children: List[dict] = []
@@ -147,8 +182,17 @@ def ingest_all_documents():
     # ── Update and export In-Memory Graph Dumps ───────────────────────────────
     print("\nUpdating In-Memory Graph Knowledge Bases...")
     existing_dump = graph_store._load_in_memory_dump()
-    existing_nodes = {n.get("name", n.get("properties", {}).get("name", "")): n for n in existing_dump.get("nodes", [])}
-    existing_edges = {(e["s"], e["rel"], e["o"]): e for e in existing_dump.get("edges", [])}
+    existing_nodes = {}
+    for n in existing_dump.get("nodes", []):
+        key = _node_name(n)
+        if key:
+            existing_nodes[key] = n
+
+    existing_edges = {}
+    for e in existing_dump.get("edges", []):
+        s, r, o = e.get("s", ""), e.get("rel", ""), e.get("o", "")
+        if s and r and o:
+            existing_edges[(s, r, o)] = e
 
     for ent in all_entities:
         name = ent.get("name", ent.get("text", ""))
@@ -160,17 +204,35 @@ def ingest_all_documents():
                 "properties": {"name": name, "label": label, "source": ent.get("source", "")}
             }
 
+    dropped_rels = 0
     for rel in all_relations:
-        s = rel.get("s", rel.get("source", ""))
-        r = rel.get("rel", rel.get("type", "RELATED_TO"))
-        o = rel.get("o", rel.get("target", ""))
-        conf = float(rel.get("conf", 1.0))
-        s_prod = rel.get("s_product", "")
-        if s and r and o:
-            key = (s, r, o)
+        s = str(rel.get("subject") or rel.get("s") or rel.get("source") or "").strip()
+        r = str(rel.get("predicate") or rel.get("rel") or rel.get("type") or "").strip()
+        o = str(rel.get("object") or rel.get("o") or rel.get("target") or "").strip()
+        try:
+            conf = float(rel.get("confidence", rel.get("conf", 0.5)))
+        except (TypeError, ValueError):
+            conf = 0.5
+        s_prod = rel.get("s_product", rel.get("product_name", ""))
+        if not (s and o):
+            dropped_rels += 1
+            continue
+        r = re.sub(r"[^A-Za-z_]", "_", r.upper()).strip("_") or "RELATED_TO"
+        key = (s, r, o)
+        prev = existing_edges.get(key)
+        if prev is None or conf > float(prev.get("conf", 0.0)):
             existing_edges[key] = {
-                "s": s, "rel": r, "o": o, "conf": conf, "s_product": s_prod
+                "s": s, "s_label": "Entity", "s_product": s_prod,
+                "rel": r, "conf": conf,
+                "o": o, "o_label": "Entity",
+                "source_chunk_id": rel.get("source_chunk_id", ""),
             }
+
+    # Relations feed the graph edges — an unusable subject/object is a real
+    # extraction miss, not noise to hide.
+    if dropped_rels:
+        print(f"  [WARN] {dropped_rels}/{len(all_relations)} relations dropped "
+              f"(missing subject or object)")
 
     merged_graph_dump = {
         "nodes": list(existing_nodes.values()),

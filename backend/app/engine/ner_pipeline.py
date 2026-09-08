@@ -42,7 +42,6 @@ def _get_nlp():
     if _nlp is None:
         import spacy
         _nlp = spacy.blank("en")
-        ruler = _nlp.add_pipe("entity_ruler")
         gaz = _get_gazetteer()
         patterns = []
         for name in gaz.get("fund_houses", []):
@@ -51,7 +50,16 @@ def _get_nlp():
             patterns.append({"label": "SCHEME_NAME", "pattern": name})
         for name in gaz.get("benchmarks", []):
             patterns.append({"label": "BENCHMARK", "pattern": name})
-        ruler.add_patterns(patterns)
+        # An entity_ruler with no patterns matches nothing and emits spaCy's
+        # W036 warning on *every* call. Only add the pipe when the gazetteer
+        # actually produced something.
+        if patterns:
+            ruler = _nlp.add_pipe("entity_ruler")
+            ruler.add_patterns(patterns)
+            print(f"  [ner-a] entity_ruler loaded with {len(patterns)} gazetteer patterns", flush=True)
+        else:
+            print("  [ner-a] gazetteer is empty — entity_ruler disabled "
+                  "(rebuild taxonomy.json to enable fund-house/scheme matching)", flush=True)
     return _nlp
 
 
@@ -219,6 +227,11 @@ def layer_c_relations(parent_text: str, parent_id: str,
     prompt = _RELATION_PROMPT.format(text=parent_text[:3000], entities=ent_str, chunk_id=parent_id)
     result = llm_text_client.call_llm_json(prompt, model_id=config.GROQ_MODEL_RELATIONS)
     if not isinstance(result, list):
+        # call_llm_json returns None for an API failure *and* for unparseable
+        # output. Either way it is a miss, not "this chunk has no relations" —
+        # say so, or the relation count silently reads as a legitimate zero.
+        print(f"  [ner-c] no usable relation JSON for {parent_id} "
+              f"(model={config.GROQ_MODEL_RELATIONS}, got {type(result).__name__})", flush=True)
         return []
     clean = []
     for r in result:

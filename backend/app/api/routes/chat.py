@@ -29,6 +29,7 @@ from app.api.routes.query import (
     _traditional_response,
 )
 from app.engine import context_memory, graph_store, retrieval
+from app.retrieval.query_evidence_recorder import get_recorder as get_query_evidence_recorder
 from app.schemas.api import ChatRequest, ChatResponse, ChatTitleRequest, ChatTitleResponse, QueryRequest
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -106,6 +107,18 @@ async def _run_v2_chat(request: ChatRequest, container: Container) -> ChatRespon
         "latency_ms": int(trace.request_total_ms if trace else 0),
         "trace": trace.model_dump() if trace else None,
     }
+
+    # Audit evidence — ContextGraph turns only (never traditional-only turns).
+    if request.mode in ("contextgraph", "both"):
+        await asyncio.to_thread(
+            get_query_evidence_recorder().record_v2_contextgraph_turn,
+            session_id=session_id,
+            query_text=query,
+            hybrid=hybrid_data,
+            intent=intent,
+            trace=trace,
+            serving_engine="v2",
+        )
 
     return ChatResponse(
         query=query,
@@ -224,6 +237,17 @@ async def run_chat(
             "latency_ms": cg_resp.latency_ms,
         }
 
+        # Audit evidence — ContextGraph half only; the traditional_rag result
+        # above is deliberately not recorded.
+        await asyncio.to_thread(
+            get_query_evidence_recorder().record_contextgraph_turn,
+            session_id=request.session_id,
+            query_text=resolved_query,
+            result=ctx_result,
+            hybrid=resp.hybrid,
+            serving_engine="legacy",
+        )
+
     return resp
 
 
@@ -245,6 +269,11 @@ async def _chat_stream_generator(request: "ChatRequest", container: Container):
     """Async generator for multi-turn chat streaming with full ContextGraph fidelity."""
     engine = container.settings.query_engine.lower()
     if engine == "v2":
+        # Streamed events arrive piecemeal; accumulate enough to write one
+        # query_evidence record when the stream completes.
+        stream_meta: dict = {}
+        stream_sources: list = []
+        answer_parts: list[str] = []
         try:
             async for event in container.orchestrator.answer_stream(
                 query=request.query,
@@ -254,12 +283,35 @@ async def _chat_stream_generator(request: "ChatRequest", container: Container):
             ):
                 event_type = event.get("type", "chunk")
                 if event_type == "metadata":
+                    stream_meta = event
                     yield _format_sse("metadata", event)
                 elif event_type == "sources":
+                    stream_sources = event.get("sources") or []
                     yield _format_sse("sources", event)
                 elif event_type == "answer_chunk":
+                    answer_parts.append(event.get("text", ""))
                     yield _format_sse("chunk", event)
                 elif event_type == "complete":
+                    await asyncio.to_thread(
+                        get_query_evidence_recorder().record_v2_contextgraph_turn,
+                        session_id=request.session_id,
+                        query_text=request.query,
+                        hybrid={
+                            "response_id": event.get("response_id"),
+                            "answer": {
+                                "answer": "".join(answer_parts).strip(),
+                                "confidence": stream_meta.get("confidence"),
+                            },
+                            "sources": stream_sources,
+                            "graph_highlight": {
+                                "entities": stream_meta.get("entities") or [],
+                            },
+                            "latency_ms": (event.get("trace") or {}).get("request_total_ms"),
+                        },
+                        intent={"query_type": stream_meta.get("intent")},
+                        trace=event.get("trace") or {},
+                        serving_engine="v2-stream",
+                    )
                     yield _format_sse("done", event)
                 elif event_type == "error":
                     yield _format_sse("error", event)
@@ -338,6 +390,15 @@ async def _chat_stream_generator(request: "ChatRequest", container: Container):
                 "telemetry_breakdown": ctx_result.get("telemetry_breakdown", {}),
                 "latency_ms": cg_resp.latency_ms,
             }
+
+            # Audit evidence — this worker only ever runs hybrid_graphrag.
+            get_query_evidence_recorder().record_contextgraph_turn(
+                session_id=request.session_id,
+                query_text=resolved_query,
+                result=ctx_result,
+                hybrid=hybrid_payload,
+                serving_engine="legacy-stream",
+            )
 
             loop.call_soon_threadsafe(queue.put_nowait, ("done", {
                 "type": "complete",

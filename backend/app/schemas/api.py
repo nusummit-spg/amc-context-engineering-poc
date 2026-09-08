@@ -24,7 +24,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+import re
 
 from app.schemas.documents import IngestionJob, IngestionStatus
 from app.schemas.query import (
@@ -38,6 +39,54 @@ from app.schemas.query import (
 
 # ── /query ────────────────────────────────────────────────────────────────────
 
+def sanitize_user_query(v: str, min_length: int = 3) -> str:
+    """Sanitize a user query against SQL injection, script injection, and degenerate inputs.
+
+    Shared by /query, /chat and /chat/title so every user-supplied prompt gets
+    the same treatment (Task 0.4.1).
+    """
+    v_stripped = v.strip()
+    if len(v_stripped) < min_length:
+        raise ValueError(f"Query must be at least {min_length} non-whitespace characters.")
+
+    # SQL Injection patterns
+    sql_patterns = [
+        r"DROP\s+TABLE",
+        r"DELETE\s+FROM",
+        r"INSERT\s+INTO",
+        r"UNION\s+(ALL\s+)?SELECT",
+        r";\s*DROP",
+        r";\s*DELETE",
+    ]
+    for pat in sql_patterns:
+        if re.search(pat, v_stripped, re.IGNORECASE):
+            raise ValueError("Potentially unsafe SQL injection pattern detected.")
+
+    # Script injection patterns
+    if "<script>" in v_stripped.lower() or "</script>" in v_stripped.lower() or "javascript:" in v_stripped.lower():
+        raise ValueError("Script tags and javascript URIs are not permitted.")
+
+    # Ensure not purely repetitive characters (e.g. "aaaaaaaaa")
+    if len(v_stripped) >= 5 and len(set(v_stripped.lower())) <= 2:
+        raise ValueError("Query is too repetitive or degenerate.")
+
+    return v_stripped
+
+
+def validate_session_id(v: Optional[str]) -> Optional[str]:
+    """Session IDs must be opaque, URL-safe tokens (Task 0.4.1)."""
+    if v is None:
+        return v
+    v_stripped = v.strip()
+    if not v_stripped:
+        raise ValueError("Session ID must not be blank.")
+    if len(v_stripped) > 64:
+        raise ValueError("Session ID must be at most 64 characters.")
+    if not re.match(r"^[a-zA-Z0-9_-]+$", v_stripped):
+        raise ValueError("Invalid session ID format: only letters, digits, '_' and '-' are allowed.")
+    return v_stripped
+
+
 class QueryRequest(BaseModel):
     query:  str            = Field(min_length=3, max_length=2000)
     mode:   str            = Field(
@@ -45,6 +94,12 @@ class QueryRequest(BaseModel):
         description="'contextgraph' | 'traditional' | 'both'",
     )
     top_k: Optional[int]  = Field(default=None, ge=1, le=50)
+
+    @field_validator("query")
+    @classmethod
+    def validate_query(cls, v: str) -> str:
+        return sanitize_user_query(v, min_length=3)
+
 
 
 class GraphHighlight(BaseModel):
@@ -92,6 +147,17 @@ class ChatRequest(BaseModel):
     history:    list[dict]     = Field(default_factory=list)
     mode:       str            = Field(default="both", description="'contextgraph' | 'traditional' | 'both'")
 
+    @field_validator("query")
+    @classmethod
+    def validate_query(cls, v: str) -> str:
+        # Chat turns can legitimately be short ("yes", "why?"), so min_length=1.
+        return sanitize_user_query(v, min_length=1)
+
+    @field_validator("session_id")
+    @classmethod
+    def check_session_id(cls, v: str) -> str:
+        return validate_session_id(v)
+
 
 class ChatResponse(BaseModel):
     query:          str
@@ -112,6 +178,16 @@ class ChatResponse(BaseModel):
 class ChatTitleRequest(BaseModel):
     query:      str            = Field(min_length=1, max_length=2000)
     session_id: Optional[str]  = None
+
+    @field_validator("query")
+    @classmethod
+    def validate_query(cls, v: str) -> str:
+        return sanitize_user_query(v, min_length=1)
+
+    @field_validator("session_id")
+    @classmethod
+    def check_session_id(cls, v: Optional[str]) -> Optional[str]:
+        return validate_session_id(v)
 
 
 class ChatTitleResponse(BaseModel):

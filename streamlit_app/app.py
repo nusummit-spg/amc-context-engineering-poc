@@ -338,12 +338,15 @@ perms = rbac.ROLE_PERMISSIONS.get(rbac.AMCRole(user_role), {})
 can_compare = perms.get("can_access_compare_tab", True)
 can_analytics = perms.get("can_access_analytics_tab", True)
 can_admin = perms.get("can_view_admin_panel", False)
+can_review = perms.get("can_review_answers", False)
 
 tab_names = ["💬 Chat"]
 if can_compare:
     tab_names.append("⚖️ Compare")
 if can_analytics:
     tab_names.append("📊 Analytics")
+if can_review:
+    tab_names.append("📋 Review Queue")
 if can_admin:
     tab_names.append("👥 Admin & Governance")
 
@@ -419,6 +422,16 @@ if can_analytics:
     with tabs[tab_idx]:
         import analytics_view
         analytics_view.render_analytics_tab(None)
+
+if can_review:
+    tab_idx += 1
+    with tabs[tab_idx]:
+        import review_queue_view
+        # review_queue_view resolves the backend from session state; keep it in
+        # sync with the API_BASE this app was configured with.
+        st.session_state.backend_url = API_BASE
+        st.session_state.username = active_user.get("username", user_role)
+        review_queue_view.render_review_queue_tab()
 
 if can_admin:
     tab_idx += 1

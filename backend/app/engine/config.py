@@ -23,6 +23,15 @@ AMFI_DIR       = PROJECT_ROOT / "data" / "AMFI"
 SUBCLASS_DIR   = PROJECT_ROOT / "data" / "Sub Classification"
 TAXONOMY_PATH  = PROJECT_ROOT / "taxonomy.json"
 TAXONOMY_BACKUP_DIR = PROJECT_ROOT / "taxonomy_backups"
+
+# Repo root (…/context-engineering) — PROJECT_ROOT above is backend/app/engine.
+REPO_ROOT      = PROJECT_ROOT.parents[2]
+CORPUS_DIR     = REPO_ROOT / "Docs" / "selected_source_documents"
+
+# Folders build_taxonomy() scans for csv/xlsx scheme tables. data/AMFI and
+# data/Sub Classification are the canonical AMFI exports; the ingest corpus is
+# included so the gazetteer is still populated when those exports are absent.
+TAXONOMY_SOURCE_DIRS = [AMFI_DIR, SUBCLASS_DIR, CORPUS_DIR]
 FAISS_DIR      = PROJECT_ROOT / "faiss_indexes"
 LOG_DIR        = PROJECT_ROOT / "logs"
 for d in (FAISS_DIR, LOG_DIR, TAXONOMY_BACKUP_DIR):
@@ -109,10 +118,17 @@ PII_SCRUB_ENABLED = os.environ.get("PII_SCRUB_ENABLED", "true").lower() == "true
 
 # ── EFFICIENCY INITIATIVE FEATURE FLAGS ────────────────────────────────
 ENABLE_HYDE_CACHE = os.environ.get("ENABLE_HYDE_CACHE", "true").lower() == "true"
+ENABLE_HYDE_IN_ORCHESTRATOR = os.environ.get("ENABLE_HYDE_IN_ORCHESTRATOR", "true").lower() == "true"
 ENABLE_GLINER_SKIP = os.environ.get("ENABLE_GLINER_SKIP", "true").lower() == "true"
 ENABLE_CYPHER_AUTO_CORRECTION = os.environ.get("ENABLE_CYPHER_AUTO_CORRECTION", "true").lower() == "true"
 ENABLE_SMART_VECTOR_PRUNING = os.environ.get("ENABLE_SMART_VECTOR_PRUNING", "true").lower() == "true"
 ENABLE_SEMANTIC_CACHE_WARMUP = os.environ.get("ENABLE_SEMANTIC_CACHE_WARMUP", "true").lower() == "true"
+ENABLE_PARALLELIZATION = os.environ.get("ENABLE_PARALLELIZATION", "true").lower() == "true"
+ENABLE_QUERY_DECOMPOSITION = os.environ.get("ENABLE_QUERY_DECOMPOSITION", "true").lower() == "true"
+
+# CSV ingestion page cap (25 rows/page). The default indexes 1,250 rows;
+# raise it to cover large exports at the cost of a longer embedding pass.
+CSV_MAX_PAGES = int(os.environ.get("CSV_MAX_PAGES", "50"))
 
 # ── MISC ──────────────────────────────────────────────────────────────
 SUPPORTED_EXTS = {".pdf", ".xlsx", ".xls", ".csv", ".docx", ".pptx", ".txt"}

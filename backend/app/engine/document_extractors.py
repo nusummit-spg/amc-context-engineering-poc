@@ -67,13 +67,23 @@ def extract_xlsx_text_full(path: str) -> List[Dict[str, Any]]:
     return pages
 
 
-def extract_csv_text_full(path: str, rows_per_page: int = 25, max_pages: int = 50) -> List[Dict[str, Any]]:
+def extract_csv_text_full(path: str, rows_per_page: int = 25,
+                           max_pages: int | None = None) -> List[Dict[str, Any]]:
     import csv
+    if max_pages is None:
+        max_pages = int(getattr(config, "CSV_MAX_PAGES", 50))
     with open(path, newline="", encoding="utf-8", errors="ignore") as f:
         rows = [r for r in csv.reader(f) if any(c.strip() for c in r)]
     if not rows:
         return []
     header, body = rows[0], rows[1:]
+
+    # Truncation used to be silent: a 16k-row export quietly became 1,250 rows.
+    capacity = rows_per_page * max_pages
+    if len(body) > capacity:
+        print(f"  [WARN] {Path(path).name}: ingesting {capacity:,} of {len(body):,} rows "
+              f"(CSV_MAX_PAGES={max_pages} x {rows_per_page} rows/page). "
+              f"Raise CSV_MAX_PAGES to index the full file.", flush=True)
     header_md = ["| " + " | ".join(header) + " |",
                  "| " + " | ".join(["---"] * len(header)) + " |"]
     

@@ -33,15 +33,14 @@ edges between Entity nodes (e.g. MANAGES, HOLDS, INVESTS_IN, PART_OF) with a
 
 Known entity label VALUES (the `label` property, not the node label): {entity_labels}
 Known relationship TYPES currently in the graph: {rel_types}
-This question is scoped to these product_name values only — your query MUST
-filter on n.product_name IN {product_names}.
+{scope_clause}
 
 RULES:
 - Output ONLY the Cypher query — no markdown fences, no commentary.
 - Must start with MATCH. Must be read-only (no CREATE/MERGE/DELETE/SET/REMOVE).
 - Must end with a RETURN clause and a LIMIT clause (LIMIT 25 or fewer).
 - NEVER use CONTAINS on a single common/generic word as your only filter —
-  filter by n.product_name first, and prefer exact matches on n.text.
+  prefer exact matches on n.text and filter on n.label where possible.
 - If the question cannot be answered with one MATCH query against this
   schema, output exactly: NO_QUERY
 
@@ -122,7 +121,8 @@ def _correct_cypher_syntax(cypher: str, err_msg: str = "") -> str:
 
 def generate_and_run_with_correction(
     question: str,
-    product_names: set[str]
+    product_names: set[str],
+    allow_global_scope: bool = False,
 ) -> tuple[Optional[list[dict[str, Any]]], dict]:
     """
     Generates and executes Cypher with multi-tier fallback:
@@ -130,12 +130,19 @@ def generate_and_run_with_correction(
     Tier 2: LLM Generation -> Direct Execution
     Tier 2.5: Rule-Based Syntax Auto-Correction (0ms, avoids slow LLM retry)
     Tier 3: LLM Retry with critique
+
+    ``allow_global_scope`` lets corpus-wide aggregation questions ("total AUM of
+    all equity schemes") run without any resolved product/entity scope. Without
+    it those queries — precisely the ones the Cypher path exists for — return
+    immediately because no product_name filter can be built.
     """
     empty_usage = {"input_tokens": 0, "output_tokens": 0, "source": "none"}
-    if not product_names:
+    if not product_names and not allow_global_scope:
         return None, empty_usage
 
-    cache_key = _get_cypher_cache_key(question, product_names)
+    cache_key = _get_cypher_cache_key(
+        question, product_names or {"__global__"}
+    )
 
     # Tier 1: Check Cypher cache
     if cache_key in _CYPHER_CACHE:
@@ -149,10 +156,21 @@ def generate_and_run_with_correction(
 
     entity_labels, rel_types = _get_cached_schema()
 
+    if product_names:
+        scope_clause = (
+            "This question is scoped to these product_name values only. Your query MUST "
+            f"filter on n.product_name IN {list(product_names)}."
+        )
+    else:
+        scope_clause = (
+            "This question is a corpus-wide aggregation. Do NOT filter on product_name. "
+            "Aggregate across the whole graph using count/sum/avg/collect and ORDER BY as needed."
+        )
+
     prompt = _CYPHER_PROMPT.format(
         entity_labels=", ".join(entity_labels[:30]),
         rel_types=", ".join(rel_types[:30]),
-        product_names=list(product_names),
+        scope_clause=scope_clause,
         question=question,
     )
 
@@ -200,8 +218,11 @@ def generate_and_run_with_correction(
     return None, empty_usage
 
 
-def generate_and_run(question: str, product_names: set[str]
+def generate_and_run(question: str, product_names: set[str],
+                      allow_global_scope: bool = False
                       ) -> tuple[Optional[list[dict[str, Any]]], dict]:
     """Preserves backwards compatibility with existing pipeline callers."""
-    return generate_and_run_with_correction(question, product_names)
+    return generate_and_run_with_correction(
+        question, product_names, allow_global_scope=allow_global_scope
+    )
 

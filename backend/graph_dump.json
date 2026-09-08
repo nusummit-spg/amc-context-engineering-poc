@@ -184,71 +184,963 @@
         "label": "FINANCIAL_METRIC",
         "source": ""
       }
+    },
+    {
+      "name": "Mr. Saurabh Shah",
+      "label": "FUND_MANAGER",
+      "properties": {
+        "name": "Mr. Saurabh Shah",
+        "label": "FUND_MANAGER",
+        "source": ""
+      }
+    },
+    {
+      "name": "Sunidhi Securities Limited",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "Sunidhi Securities Limited",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "Prateek Kumar",
+      "label": "FUND_MANAGER",
+      "properties": {
+        "name": "Prateek Kumar",
+        "label": "FUND_MANAGER",
+        "source": ""
+      }
+    },
+    {
+      "name": "Jefferies",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "Jefferies",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "Brett Knoblauch",
+      "label": "FUND_MANAGER",
+      "properties": {
+        "name": "Brett Knoblauch",
+        "label": "FUND_MANAGER",
+        "source": ""
+      }
+    },
+    {
+      "name": "Cantor Fitzgerald",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "Cantor Fitzgerald",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "Anuj Suneja",
+      "label": "FUND_MANAGER",
+      "properties": {
+        "name": "Anuj Suneja",
+        "label": "FUND_MANAGER",
+        "source": ""
+      }
+    },
+    {
+      "name": "ICICI Prudential Life",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "ICICI Prudential Life",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "Nikhil Abhyankar",
+      "label": "FUND_MANAGER",
+      "properties": {
+        "name": "Nikhil Abhyankar",
+        "label": "FUND_MANAGER",
+        "source": ""
+      }
+    },
+    {
+      "name": "ICICI Securities",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "ICICI Securities",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "Nirav Shah",
+      "label": "FUND_MANAGER",
+      "properties": {
+        "name": "Nirav Shah",
+        "label": "FUND_MANAGER",
+        "source": ""
+      }
+    },
+    {
+      "name": "Gee Cee Holdings",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "Gee Cee Holdings",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "Girish A",
+      "label": "FUND_MANAGER",
+      "properties": {
+        "name": "Girish A",
+        "label": "FUND_MANAGER",
+        "source": ""
+      }
+    },
+    {
+      "name": "Morgan Stanley",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "Morgan Stanley",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "A\nOpen ended Schemes",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "A\nOpen ended Schemes",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "Income/Debt Oriented Schemes",
+      "label": "ASSET_CLASS",
+      "properties": {
+        "name": "Income/Debt Oriented Schemes",
+        "label": "ASSET_CLASS",
+        "source": ""
+      }
+    },
+    {
+      "name": "Overnight Fund",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "Overnight Fund",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "Liquid Fund",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "Liquid Fund",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "Ultra Short Duration Fund",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "Ultra Short Duration Fund",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "Low Duration Fund",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "Low Duration Fund",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "Money Market Fund",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "Money Market Fund",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "Short Duration Fund",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "Short Duration Fund",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "liquid and overnight schemes",
+      "label": "ASSET_CLASS",
+      "properties": {
+        "name": "liquid and overnight schemes",
+        "label": "ASSET_CLASS",
+        "source": ""
+      }
+    },
+    {
+      "name": "LAD-NRO/GN/2026/294",
+      "label": "BENCHMARK_INDEX",
+      "properties": {
+        "name": "LAD-NRO/GN/2026/294",
+        "label": "BENCHMARK_INDEX",
+        "source": ""
+      }
+    },
+    {
+      "name": "equity oriented index funds",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "equity oriented index funds",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "equity \noriented exchange traded funds",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "equity \noriented exchange traded funds",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "ETFs",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "ETFs",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "A",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "A",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "Schemes",
+      "label": "ASSET_CLASS",
+      "properties": {
+        "name": "Schemes",
+        "label": "ASSET_CLASS",
+        "source": ""
+      }
+    },
+    {
+      "name": "portfolio manager",
+      "label": "FUND_MANAGER",
+      "properties": {
+        "name": "portfolio manager",
+        "label": "FUND_MANAGER",
+        "source": ""
+      }
+    },
+    {
+      "name": "benchmark",
+      "label": "BENCHMARK_INDEX",
+      "properties": {
+        "name": "benchmark",
+        "label": "BENCHMARK_INDEX",
+        "source": ""
+      }
+    },
+    {
+      "name": "All Registered Investment Advisers",
+      "label": "FUND_MANAGER",
+      "properties": {
+        "name": "All Registered Investment Advisers",
+        "label": "FUND_MANAGER",
+        "source": ""
+      }
+    },
+    {
+      "name": "BSE Limited",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "BSE Limited",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "IAASB",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "IAASB",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "Advisers",
+      "label": "FUND_MANAGER",
+      "properties": {
+        "name": "Advisers",
+        "label": "FUND_MANAGER",
+        "source": ""
+      }
+    },
+    {
+      "name": "Investment \nAdvisers",
+      "label": "FUND_MANAGER",
+      "properties": {
+        "name": "Investment \nAdvisers",
+        "label": "FUND_MANAGER",
+        "source": ""
+      }
+    },
+    {
+      "name": "IA",
+      "label": "FUND_MANAGER",
+      "properties": {
+        "name": "IA",
+        "label": "FUND_MANAGER",
+        "source": ""
+      }
+    },
+    {
+      "name": "Adani",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "Adani",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "adani",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "adani",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "Adani Portfolio",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "Adani Portfolio",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "SBTi",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "SBTi",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "UD",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "UD",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "Climate Change",
+      "label": "ASSET_CLASS",
+      "properties": {
+        "name": "Climate Change",
+        "label": "ASSET_CLASS",
+        "source": ""
+      }
+    },
+    {
+      "name": "WS",
+      "label": "MUTUAL_FUND_SCHEME_NAME",
+      "properties": {
+        "name": "WS",
+        "label": "MUTUAL_FUND_SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "Water Security",
+      "label": "SECTOR",
+      "properties": {
+        "name": "Water Security",
+        "label": "SECTOR",
+        "source": ""
+      }
+    },
+    {
+      "name": "ADANI ENTERPRISES",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "ADANI ENTERPRISES",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "e House",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "e House",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "Adani Corporate House",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "Adani Corporate House",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "02/03/1993",
+      "label": "DATE",
+      "properties": {
+        "name": "02/03/1993",
+        "label": "DATE",
+        "source": ""
+      }
+    },
+    {
+      "name": "SPORTS",
+      "label": "SECTOR",
+      "properties": {
+        "name": "SPORTS",
+        "label": "SECTOR",
+        "source": ""
+      }
+    },
+    {
+      "name": "Kapil Dev",
+      "label": "FUND_MANAGER",
+      "properties": {
+        "name": "Kapil Dev",
+        "label": "FUND_MANAGER",
+        "source": ""
+      }
+    },
+    {
+      "name": "mountains",
+      "label": "ASSET_CLASS",
+      "properties": {
+        "name": "mountains",
+        "label": "ASSET_CLASS",
+        "source": ""
+      }
+    },
+    {
+      "name": "Mountains",
+      "label": "ASSET_CLASS",
+      "properties": {
+        "name": "Mountains",
+        "label": "ASSET_CLASS",
+        "source": ""
+      }
+    },
+    {
+      "name": "ADANI GROUP",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "ADANI GROUP",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "PAT",
+      "label": "FINANCIAL_METRIC",
+      "properties": {
+        "name": "PAT",
+        "label": "FINANCIAL_METRIC",
+        "source": ""
+      }
+    },
+    {
+      "name": "Adani Group",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "Adani Group",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "Pat",
+      "label": "FINANCIAL_METRIC",
+      "properties": {
+        "name": "Pat",
+        "label": "FINANCIAL_METRIC",
+        "source": ""
+      }
+    },
+    {
+      "name": "Rakesh Tiwary",
+      "label": "FUND_MANAGER",
+      "properties": {
+        "name": "Rakesh Tiwary",
+        "label": "FUND_MANAGER",
+        "source": ""
+      }
+    },
+    {
+      "name": "Mundra Solar PV Ltd",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "Mundra Solar PV Ltd",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "Mr. Naresh Poddar",
+      "label": "FUND_MANAGER",
+      "properties": {
+        "name": "Mr. Naresh Poddar",
+        "label": "FUND_MANAGER",
+        "source": ""
+      }
+    },
+    {
+      "name": "Adani Gas Limited",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "Adani Gas Limited",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "Mr. Praveen Khandelwal",
+      "label": "FUND_MANAGER",
+      "properties": {
+        "name": "Mr. Praveen Khandelwal",
+        "label": "FUND_MANAGER",
+        "source": ""
+      }
+    },
+    {
+      "name": "Mining Australia",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "Mining Australia",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "Aditya Birla Sun Life Large & Mid Cap Fund",
+      "label": "SCHEME_NAME",
+      "properties": {
+        "name": "Aditya Birla Sun Life Large & Mid Cap Fund",
+        "label": "SCHEME_NAME",
+        "source": ""
+      }
+    },
+    {
+      "name": "Aditya Birla Sun Life AMC Limited",
+      "label": "FUND_HOUSE",
+      "properties": {
+        "name": "Aditya Birla Sun Life AMC Limited",
+        "label": "FUND_HOUSE",
+        "source": ""
+      }
+    },
+    {
+      "name": "Aditya Birla Sun Life Income Fund",
+      "label": "SCHEME_NAME",
+      "properties": {
+        "name": "Aditya Birla Sun Life Income Fund",
+        "label": "SCHEME_NAME",
+        "source": ""
+      }
     }
   ],
   "edges": [
     {
-      "s": "",
+      "s": "Mr. Naresh Poddar",
       "s_label": "Entity",
       "s_product": "",
       "rel": "PART_OF",
-      "conf": 0.9,
-      "o": "",
+      "conf": 0.95,
+      "o": "Adani Gas Limited",
       "o_label": "Entity"
     },
     {
-      "s": "",
+      "s": "Mr. Praveen Khandelwal",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "Mining Australia",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Rakesh Tiwary",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "Mundra Solar PV Ltd",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Mr. Vinay Prakash",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "Adani Enterprises",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Mr. Jugeshinder (Robbie) Singh",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "Adani Enterprises",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Mr. Saurabh Shah",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "Adani Enterprises",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Mr. Manan Vakharia",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "Adani Enterprises",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Dhananjay Mishra",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "Sunidhi Securities Limited",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Prateek Kumar",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "Jefferies",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Brett Knoblauch",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "Cantor Fitzgerald",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Anuj Suneja",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "ICICI Prudential Life",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Nikhil Abhyankar",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "ICICI Securities",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Nirav Shah",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "Gee Cee Holdings",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Girish A",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "Morgan Stanley",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Overnight Fund",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "Income/Debt Oriented Schemes",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Liquid Fund",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "Income/Debt Oriented Schemes",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Ultra Short Duration Fund",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "Income/Debt Oriented Schemes",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Income/Debt Oriented Schemes",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "Open ended Schemes",
+      "o_label": "Entity"
+    },
+    {
+      "s": "SEBI",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "REGULATED_BY",
+      "conf": 0.95,
+      "o": "Mutual Funds",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Mutual Funds",
       "s_label": "Entity",
       "s_product": "",
       "rel": "INVESTS_IN",
-      "conf": 0.9,
-      "o": "",
+      "conf": 0.85,
+      "o": "liquid and overnight schemes",
       "o_label": "Entity"
     },
     {
-      "s": "",
+      "s": "SEBI",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "GOVERNS",
+      "conf": 0.95,
+      "o": "Mutual Funds",
+      "o_label": "Entity"
+    },
+    {
+      "s": "SEBI",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "GOVERNS",
+      "conf": 0.9,
+      "o": "equity oriented index funds",
+      "o_label": "Entity"
+    },
+    {
+      "s": "SEBI",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "GOVERNS",
+      "conf": 0.9,
+      "o": "equity oriented exchange traded funds",
+      "o_label": "Entity"
+    },
+    {
+      "s": "SEBI",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "GOVERNS",
+      "conf": 0.95,
+      "o": "AMC",
+      "o_label": "Entity"
+    },
+    {
+      "s": "SEBI",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "GOVERNS",
+      "conf": 0.9,
+      "o": "mutual fund",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Equity Scheme",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "INVESTS_IN",
+      "conf": 0.95,
+      "o": "equity and equity related instruments",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Debt Scheme",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "INVESTS_IN",
+      "conf": 0.95,
+      "o": "debt and debt related instruments",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Hybrid Scheme",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "INVESTS_IN",
+      "conf": 0.95,
+      "o": "equity, debt, InvITs and commodities related instruments",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Hybrid Scheme",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "REGULATED_BY",
+      "conf": 0.9,
+      "o": "SEBI",
+      "o_label": "Entity"
+    },
+    {
+      "s": "SEBI",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "REGULATED_BY",
+      "conf": 0.95,
+      "o": "AMC",
+      "o_label": "Entity"
+    },
+    {
+      "s": "portfolio manager",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "BENCHMARKS_AGAINST",
+      "conf": 0.95,
+      "o": "benchmark",
+      "o_label": "Entity"
+    },
+    {
+      "s": "SEBI",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "GOVERNS",
+      "conf": 0.95,
+      "o": "Investment Advisers",
+      "o_label": "Entity"
+    },
+    {
+      "s": "BSE Limited",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.85,
+      "o": "IAASB",
+      "o_label": "Entity"
+    },
+    {
+      "s": "investment adviser",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "REGULATED_BY",
+      "conf": 0.95,
+      "o": "SEBI",
+      "o_label": "Entity"
+    },
+    {
+      "s": "Aditya Birla Sun Life AMC Limited",
       "s_label": "Entity",
       "s_product": "",
       "rel": "MANAGES",
-      "conf": 0.9,
-      "o": "",
+      "conf": 1.0,
+      "o": "Aditya Birla Sun Life Large & Mid Cap Fund",
       "o_label": "Entity"
     },
     {
-      "s": "",
+      "s": "Aditya Birla Sun Life Large & Mid Cap Fund",
       "s_label": "Entity",
       "s_product": "",
-      "rel": "REPORTED_HIGHLIGHT",
-      "conf": 0.9,
-      "o": "",
+      "rel": "LAUNCHED_ON",
+      "conf": 1.0,
+      "o": "1995-02-24",
       "o_label": "Entity"
     },
     {
-      "s": "",
+      "s": "Aditya Birla Sun Life AMC Limited",
       "s_label": "Entity",
       "s_product": "",
-      "rel": "GOVERNED_BY_SEBI_CIRCULAR",
-      "conf": 0.9,
-      "o": "",
+      "rel": "MANAGES",
+      "conf": 1.0,
+      "o": "Aditya Birla Sun Life Income Fund",
       "o_label": "Entity"
     },
     {
-      "s": "",
+      "s": "Aditya Birla Sun Life Income Fund",
       "s_label": "Entity",
       "s_product": "",
-      "rel": "TRACKS_PERIOD",
-      "conf": 0.9,
-      "o": "",
+      "rel": "LAUNCHED_ON",
+      "conf": 0.95,
+      "o": "1994-01-01",
       "o_label": "Entity"
     },
     {
-      "s": "",
+      "s": "SEBI",
       "s_label": "Entity",
       "s_product": "",
-      "rel": "INCLUDES_SUB_CLASSIFICATION",
-      "conf": 0.9,
-      "o": "",
+      "rel": "GOVERNS",
+      "conf": 0.95,
+      "o": "Algorithmic trading",
       "o_label": "Entity"
+    },
+    {
+      "s": "ADANI ENTERPRISES",
+      "s_label": "Entity",
+      "s_product": "",
+      "rel": "PART_OF",
+      "conf": 0.95,
+      "o": "ADANI GROUP",
+      "o_label": "Entity",
+      "source_chunk_id": "P03186"
     }
   ]
 }

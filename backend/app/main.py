@@ -19,15 +19,20 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 
 from app.api import deps
-from app.api.routes import admin, auth, chat, compliance, docs, feedback, files, graph, ingest, query, sessions, status, taxonomy
+from app.api.middleware import RateLimitMiddleware, ValidationMiddleware
+from app.api.routes import (
+    admin, auth, chat, compliance, docs, feedback, files, graph, ingest, metrics, query, review_queue, sessions, status, taxonomy
+)
 from app.config import get_settings
 from app.core.errors import AppError, app_error_handler
 from app.core.logging import RequestLoggingMiddleware, setup_logging
 from app.db.feedback import get_feedback_store
 from app.graph.schema import apply_schema
 from app.tasks.queue import ingest_queue
+from app.tasks.scheduler import get_scheduler
 
 logger = logging.getLogger("app")
+
 
 
 @asynccontextmanager
@@ -99,11 +104,24 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Could not initialize feedback store: %s", exc)
 
+    # Start autonomous background scheduler
+    scheduler = get_scheduler()
+    try:
+        scheduler.start()
+        logger.info("Background TaskScheduler wired into FastAPI lifespan")
+    except Exception as exc:
+        logger.warning("Could not start background scheduler: %s", exc)
+
     ingest_queue.bind_pipeline(container.pipeline)
     ingest_queue.start()
     logger.info("%s started (env=%s)", settings.app_name, settings.environment)
 
     yield
+
+    try:
+        scheduler.stop()
+    except Exception as exc:
+        logger.warning("Error stopping scheduler: %s", exc)
 
     await ingest_queue.stop()
     await container.graph.close()
@@ -128,12 +146,15 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(RateLimitMiddleware)
+    app.add_middleware(ValidationMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
     app.add_exception_handler(AppError, app_error_handler)
 
     for router in (auth.router, admin.router, query.router, chat.router, sessions.router, taxonomy.router, graph.router,
-                   docs.router, ingest.router, status.router, compliance.router, feedback.router, files.router):
+                   docs.router, ingest.router, status.router, compliance.router, feedback.router, review_queue.router, files.router, metrics.router):
         app.include_router(router, prefix="/api")
+
 
     # Direct response quality alias endpoint
     @app.get("/api/responses/{response_id}/quality-score", tags=["feedback"])
