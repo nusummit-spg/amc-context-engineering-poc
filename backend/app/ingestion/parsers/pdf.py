@@ -5,11 +5,12 @@
 #
 # ===========================================================================
 
-"""WS2 — PDF parser (pymupdf/fitz): text + table + section boundary extraction."""
 import re
 from pathlib import Path
-
-import fitz  # pymupdf
+try:
+    import pymupdf as fitz  # pymupdf
+except ImportError:
+    import fitz
 
 from app.ingestion.parsers.base import BaseParser
 from app.schemas.documents import Document, DocumentType, Section

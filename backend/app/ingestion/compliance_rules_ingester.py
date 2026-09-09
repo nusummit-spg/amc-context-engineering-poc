@@ -23,6 +23,57 @@ from app.graph.client import GraphClient, get_graph_client
 logger = logging.getLogger("compliance.ingester")
 
 
+def build_condition_dsl(condition: str, metric: str, threshold: Any) -> str:
+    """Build a DSL condition string (e.g. 'holdings.max_single_holding > 0.15') from CSV fields."""
+    cond_str = str(condition or "").strip()
+    # If condition is already a full DSL expression with spaces and comparison operators
+    if any(op in cond_str for op in (">=", "<=", "==", "!=", ">", "<", "=")) and " " in cond_str:
+        return cond_str
+
+    if not metric:
+        return cond_str
+
+    thresh_str = str(threshold).strip() if threshold is not None else "0"
+    is_pct = (
+        metric.endswith("_pct")
+        or any(k in metric.lower() for k in ("holding", "exposure", "allocation", "buffer"))
+    )
+
+    # Value normalization
+    if thresh_str.lower() in ("true", "1"):
+        thresh_val = "1"
+    elif thresh_str.lower() in ("false", "0"):
+        thresh_val = "0"
+    else:
+        try:
+            num = float(thresh_str)
+            if is_pct and 1.0 < num <= 100.0:
+                thresh_val = f"{num / 100.0:g}"
+            else:
+                thresh_val = f"{num:g}"
+        except ValueError:
+            thresh_val = thresh_str
+
+    # Invert regulatory rule operator to violation operator
+    op_map = {
+        "lte": ">",
+        "<=": ">",
+        "gte": "<",
+        ">=": "<",
+        "eq": ">" if thresh_val == "0" else "!=",
+        "==": ">" if thresh_val == "0" else "!=",
+        "=": ">" if thresh_val == "0" else "!=",
+        "neq": "==",
+        "!=": "==",
+        "lt": ">=",
+        "<": ">=",
+        "gt": "<=",
+        ">": "<=",
+    }
+    violation_op = op_map.get(cond_str.lower(), ">")
+    return f"{metric} {violation_op} {thresh_val}"
+
+
 class ComplianceRulesIngester:
     """Ingests regulatory rules from CSV files into Neo4j compliance graph."""
 
@@ -115,6 +166,10 @@ class ComplianceRulesIngester:
                         exclusions = json.loads(excl_raw) if (excl_raw and excl_raw.startswith("[")) else [excl_raw] if excl_raw else []
 
                         conf_thresh = float(row.get("confidence_threshold", 0.95))
+                        raw_condition = row.get("condition", "")
+                        metric_val = row.get("metric", "")
+                        threshold_val = row.get("threshold", "")
+                        condition_dsl = build_condition_dsl(raw_condition, metric_val, threshold_val)
 
                         cypher = """
                         MERGE (r:Rule {id: $rule_id})
@@ -123,6 +178,7 @@ class ComplianceRulesIngester:
                             r.description = $description,
                             r.regulation_id = $regulation_id,
                             r.condition = $condition,
+                            r.raw_condition = $raw_condition,
                             r.metric = $metric,
                             r.threshold = $threshold,
                             r.severity = $severity,
@@ -147,9 +203,10 @@ class ComplianceRulesIngester:
                             title=row.get("title", ""),
                             description=row.get("description", ""),
                             regulation_id=row.get("regulation_id", ""),
-                            condition=row.get("condition", ""),
-                            metric=row.get("metric", ""),
-                            threshold=row.get("threshold", ""),
+                            condition=condition_dsl,
+                            raw_condition=raw_condition,
+                            metric=metric_val,
+                            threshold=threshold_val,
                             severity=row.get("severity", "high"),
                             region=row.get("region", "SEBI"),
                             conf_threshold=conf_thresh,

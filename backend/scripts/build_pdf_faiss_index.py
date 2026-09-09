@@ -15,9 +15,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 import faiss
-import pickle
-import fitz  # PyMuPDF
-import numpy as np
+try:
+    import pymupdf as fitz  # PyMuPDF
+except ImportError:
+    import fitz
+
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.engine import faiss_store as fs

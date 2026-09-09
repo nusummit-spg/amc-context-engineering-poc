@@ -20,6 +20,14 @@ def setup_logging(level: str = "INFO") -> None:
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
     )
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("neo4j.notifications").setLevel(logging.WARNING)
+    logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
+    logging.getLogger("huggingface_hub.utils._http").setLevel(logging.ERROR)
+
+    import warnings
+    warnings.filterwarnings("ignore", message=r".*unauthenticated requests to the HF Hub.*")
+    warnings.filterwarnings("ignore", message=r".*`fitz` API is deprecated.*")
+
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):

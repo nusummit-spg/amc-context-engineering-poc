@@ -1,380 +1,215 @@
-.\backend\.venv\Scripts\python.exe backend/scripts/ingest_selected_documents.py
-================================================================
- Starting Ingestion of Selected Source Documents
- Source Directory: C:\Users\Laptopadmin\Desktop\context-engineering\Docs\selected_source_documents
-================================================================
-Found 14 files to ingest:
-  1. Adani_Portfolio_H1FY25_ESG.pdf (1721.6 KB)
-  2. AEL_Annual_Return_FY_2024.pdf (867.1 KB)
-  3. AEL_AR_FY24.pdf (22763.8 KB)
-  4. AEL_Earnings_Call_Q1_FY19.pdf (62.4 KB)
-  5. AEL_Earnings_Call_Q4_FY24.pdf (819.0 KB)
-  6. April 2024.pdf (224.8 KB)
-  7. April 2025.pdf (233.2 KB)
-  8. Borrowing by Mutual Funds.pdf (583.6 KB)
-  9. Categorization and Rationalization of Mutual Fund Schemes.pdf (4192.1 KB)
-  10. Disclosure of Risk adjusted Return - Information Ratio (IR) for Mutual Fund Schemes..pdf (158.9 KB)
-  11. Guidelines for Investment Advisers.pdf (925.2 KB)
-  12. May 2024.pdf (230.0 KB)
-  13. mutual_fund_data.csv (4649.7 KB)
-  14. Safer participation of retail investors in Algorithmic trading.pdf (269.7 KB)
-
-Processing [Adani_Portfolio_H1FY25_ESG.pdf]...
+ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000                     
 warning: The `fitz` API is deprecated and will be removed in future. Use `import pymupdf` instead.
-  [ERROR] Extraction failed for Adani_Portfolio_H1FY25_ESG.pdf: Expecting value: line 1 column 1 (char 0)
-
-Processing [AEL_Annual_Return_FY_2024.pdf]...
-  [ERROR] Extraction failed for AEL_Annual_Return_FY_2024.pdf: Expecting value: line 1 column 1 (char 0)
-
-Processing [AEL_AR_FY24.pdf]...
-  [ERROR] Extraction failed for AEL_AR_FY24.pdf: Expecting value: line 1 column 1 (char 0)
-
-Processing [AEL_Earnings_Call_Q1_FY19.pdf]...
-  [ERROR] Extraction failed for AEL_Earnings_Call_Q1_FY19.pdf: 'utf-8' codec can't decode byte 0x93 in position 54: invalid start byte
-
-Processing [AEL_Earnings_Call_Q4_FY24.pdf]...
-  [extract] 'AEL_Earnings_Call_Q4_FY24.pdf' (23 pages) — smart (local-first, vision on demand)
-  Extracted 23 pages -> 49 parents, 283 children in 0.06s
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-  [ner-b] Loading GLiNER…
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\huggingface_hub\utils\_validators.py:196: UserWarning: The `resume_download` argument is deprecated and ignored in `snapshot_download`. Downloads always resume whenever possible.
-  warnings.warn(
-[transformers] The tokenizer you are loading from 'microsoft/deberta-v3-base' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-  [llm_text] Groq client ready.
-  [NER] Found 23 entities, 10 relations
-
-Processing [April 2024.pdf]...
-  [extract] 'April 2024.pdf' (2 pages) — smart (local-first, vision on demand)
-  Extracted 2 pages -> 27 parents, 128 children in 0.04s
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-  [NER] Found 8 entities, 4 relations
-
-Processing [April 2025.pdf]...
-  [extract] 'April 2025.pdf' (2 pages) — smart (local-first, vision on demand)
-  Extracted 2 pages -> 27 parents, 133 children in 0.04s
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-  [NER] Found 8 entities, 4 relations
-
-Processing [Borrowing by Mutual Funds.pdf]...
-  [extract] 'Borrowing by Mutual Funds.pdf' (3 pages) — smart (local-first, vision on demand)
-  Extracted 3 pages -> 6 parents, 28 children in 0.02s
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-  [NER] Found 26 entities, 5 relations
-
-Processing [Categorization and Rationalization of Mutual Fund Schemes.pdf]...
-  [extract] 'Categorization and Rationalization of Mutual Fund Schemes.pdf' (23 pages) — smart (local-first, vision on demand)
-  Extracted 23 pages -> 110 parents, 564 children in 0.07s
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-  [NER] Found 25 entities, 7 relations
-
-Processing [Disclosure of Risk adjusted Return - Information Ratio (IR) for Mutual Fund Schemes..pdf]...
-  [extract] 'Disclosure of Risk adjusted Return - Information Ratio (IR) for Mutual Fund Schemes..pdf' (3 pages) — smart (local-first, vision on demand)
-  Extracted 3 pages -> 6 parents, 28 children in 0.04s
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-  [NER] Found 17 entities, 3 relations
-
-Processing [Guidelines for Investment Advisers.pdf]...
-  [extract] 'Guidelines for Investment Advisers.pdf' (12 pages) — smart (local-first, vision on demand)
-  Extracted 12 pages -> 26 parents, 138 children in 0.03s
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-  [NER] Found 11 entities, 3 relations
-
-Processing [May 2024.pdf]...
-  [extract] 'May 2024.pdf' (2 pages) — smart (local-first, vision on demand)
-  Extracted 2 pages -> 26 parents, 127 children in 0.02s
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-  [NER] Found 8 entities, 4 relations
-
-Processing [mutual_fund_data.csv]...
-  Extracted 50 pages -> 429 parents, 1542 children in 0.20s
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-  [NER] Found 15 entities, 8 relations
-
-Processing [Safer participation of retail investors in Algorithmic trading.pdf]...
-  [extract] 'Safer participation of retail investors in Algorithmic trading.pdf' (6 pages) — smart (local-first, vision on demand)
-  Extracted 6 pages -> 15 parents, 70 children in 0.03s
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-C:\Users\Laptopadmin\Desktop\context-engineering\backend\.venv\lib\site-packages\spacy\pipeline\entityruler.py:372: UserWarning: [W036] The component 'entity_ruler' does not have any patterns defined.
-  warnings.warn(Warnings.W036.format(name=self.name))
-  [NER] Found 6 entities, 0 relations
-
-================================================================
- Total Ingested Corpus Statistics:
- Total Documents : 14
- Total Parents   : 721
- Total Children  : 3041
- Total Entities  : 147
- Total Relations : 48
-================================================================
-
-Updating In-Memory Graph Knowledge Bases...
-  [OK] Saved Graph Dump (57 nodes, 7 edges) -> C:\Users\Laptopadmin\Desktop\context-engineering\amc_master_full_dump.json
-  [OK] Saved Graph Dump (57 nodes, 7 edges) -> C:\Users\Laptopadmin\Desktop\context-engineering\backend\graph_dump.json
-
-Computing embeddings with BAAI/bge-small-en-v1.5...
+INFO:     Started server process [9808]
+INFO:     Waiting for application startup.
+2026-09-09 09:52:12,897 INFO [vector] Loaded FAISS index (386 vectors) from ./data/vector_store\v2_baseline_20260814
+2026-09-09 09:52:15,280 INFO [app] Connected to Neo4j successfully (bolt://localhost:7687)
+2026-09-09 09:52:17,461 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT scheme_name IF NOT EXISTS FOR (e:Scheme) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT scheme_name FOR (e:Scheme) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT scheme_name IF NOT EXISTS FOR (n:Scheme) REQUIRE n.name IS UNIQUE'
+2026-09-09 09:52:17,508 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT issuer_name IF NOT EXISTS FOR (e:Issuer) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT issuer_name FOR (e:Issuer) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT issuer_name IF NOT EXISTS FOR (n:Issuer) REQUIRE n.name IS UNIQUE'
+2026-09-09 09:52:17,601 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT issuergroup_name IF NOT EXISTS FOR (e:IssuerGroup) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT issuergroup_name FOR (e:IssuerGroup) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT issuergroup_name IF NOT EXISTS FOR (n:IssuerGroup) REQUIRE n.name IS UNIQUE'
+2026-09-09 09:52:17,657 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT analyst_name IF NOT EXISTS FOR (e:Analyst) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT analyst_name FOR (e:Analyst) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT analyst_name IF NOT EXISTS FOR (n:Analyst) REQUIRE n.name IS UNIQUE'
+2026-09-09 09:52:17,700 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT sector_name IF NOT EXISTS FOR (e:Sector) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT sector_name FOR (e:Sector) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT sector_name IF NOT EXISTS FOR (n:Sector) REQUIRE n.name IS UNIQUE'
+2026-09-09 09:52:17,740 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT risktheme_name IF NOT EXISTS FOR (e:RiskTheme) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT risktheme_name FOR (e:RiskTheme) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT risktheme_name IF NOT EXISTS FOR (n:RiskTheme) REQUIRE n.name IS UNIQUE'
+2026-09-09 09:52:17,777 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT regulatorycircular_name IF NOT EXISTS FOR (e:RegulatoryCircular) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT regulatorycircular_name FOR (e:RegulatoryCircular) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT regulatorycircular_name IF NOT EXISTS FOR (n:RegulatoryCircular) REQUIRE n.name IS UNIQUE'
+2026-09-09 09:52:17,813 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT clausetype_name IF NOT EXISTS FOR (e:ClauseType) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT clausetype_name FOR (e:ClauseType) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT clausetype_name IF NOT EXISTS FOR (n:ClauseType) REQUIRE n.name IS UNIQUE'
+2026-09-09 09:52:17,882 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT tablefact_name IF NOT EXISTS FOR (e:TableFact) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT tablefact_name FOR (e:TableFact) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT tablefact_name IF NOT EXISTS FOR (n:TableFact) REQUIRE n.name IS UNIQUE'
+2026-09-09 09:52:17,989 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT financialmetric_name IF NOT EXISTS FOR (e:FinancialMetric) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT financialmetric_name FOR (e:FinancialMetric) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT financialmetric_name IF NOT EXISTS FOR (n:FinancialMetric) REQUIRE n.name IS UNIQUE'
+2026-09-09 09:52:18,078 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT esgmetric_name IF NOT EXISTS FOR (e:ESGMetric) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT esgmetric_name FOR (e:ESGMetric) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT esgmetric_name IF NOT EXISTS FOR (n:ESGMetric) REQUIRE n.name IS UNIQUE'
+2026-09-09 09:52:18,134 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT compliancerule_name IF NOT EXISTS FOR (e:ComplianceRule) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT compliancerule_name FOR (e:ComplianceRule) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT compliancerule_name IF NOT EXISTS FOR (n:ComplianceRule) REQUIRE n.name IS UNIQUE'
+2026-09-09 09:52:18,269 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT penalty_name IF NOT EXISTS FOR (e:Penalty) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT penalty_name FOR (e:Penalty) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT penalty_name IF NOT EXISTS FOR (n:Penalty) REQUIRE n.name IS UNIQUE'
+2026-09-09 09:52:18,369 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT section_name IF NOT EXISTS FOR (e:Section) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT section_name FOR (e:Section) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT section_name IF NOT EXISTS FOR (n:Section) REQUIRE n.name IS UNIQUE'
+2026-09-09 09:52:18,417 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT clause_name IF NOT EXISTS FOR (e:Clause) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT clause_name FOR (e:Clause) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT clause_name IF NOT EXISTS FOR (n:Clause) REQUIRE n.name IS UNIQUE'
+2026-09-09 09:52:18,454 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT taxonomynode_path IF NOT EXISTS FOR (e:TaxonomyNode) REQUIRE (e.path) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT taxonomynode_path FOR (e:TaxonomyNode) REQUIRE (e.path) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT taxonomynode_path IF NOT EXISTS FOR (t:TaxonomyNode) REQUIRE t.path IS UNIQUE'
+2026-09-09 09:52:18,659 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT docversion_id IF NOT EXISTS FOR (e:DocumentVersion) REQUIRE (e.document_version_id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT docversion_id FOR (e:DocumentVersion) REQUIRE (e.document_version_id) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT docversion_id IF NOT EXISTS FOR (v:DocumentVersion) REQUIRE v.document_version_id IS UNIQUE'
+2026-09-09 09:52:18,717 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT chunk_chunkid IF NOT EXISTS FOR (e:Chunk) REQUIRE (e.chunk_id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT chunk_chunkid FOR (e:Chunk) REQUIRE (e.chunk_id) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT chunk_chunkid IF NOT EXISTS FOR (c:Chunk) REQUIRE c.chunk_id IS UNIQUE'
+2026-09-09 09:52:18,763 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT regulation_id IF NOT EXISTS FOR (e:Regulation) REQUIRE (e.id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT regulation_id FOR (e:Regulation) REQUIRE (e.id) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT regulation_id IF NOT EXISTS FOR (r:Regulation) REQUIRE r.id IS UNIQUE'
+2026-09-09 09:52:18,807 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT rule_id IF NOT EXISTS FOR (e:Rule) REQUIRE (e.id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT rule_id FOR (e:Rule) REQUIRE (e.id) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT rule_id IF NOT EXISTS FOR (r:Rule) REQUIRE r.id IS UNIQUE'
+2026-09-09 09:52:18,838 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT fundscheme_id IF NOT EXISTS FOR (e:FundScheme) REQUIRE (e.id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT fundscheme_id FOR (e:FundScheme) REQUIRE (e.id) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT fundscheme_id IF NOT EXISTS FOR (f:FundScheme) REQUIRE f.id IS UNIQUE'
+2026-09-09 09:52:18,863 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT violation_id IF NOT EXISTS FOR (e:Violation) REQUIRE (e.id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT violation_id FOR (e:Violation) REQUIRE (e.id) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT violation_id IF NOT EXISTS FOR (v:Violation) REQUIRE v.id IS UNIQUE'
+2026-09-09 09:52:18,887 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT riskthreshold_id IF NOT EXISTS FOR (e:RiskThreshold) REQUIRE (e.id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT riskthreshold_id FOR (e:RiskThreshold) REQUIRE (e.id) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT riskthreshold_id IF NOT EXISTS FOR (t:RiskThreshold) REQUIRE t.id IS UNIQUE'
+2026-09-09 09:52:18,920 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT escalation_id IF NOT EXISTS FOR (e:EscalationPath) REQUIRE (e.id) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT escalation_id FOR (e:EscalationPath) REQUIRE (e.id) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT escalation_id IF NOT EXISTS FOR (e:EscalationPath) REQUIRE e.id IS UNIQUE'
+2026-09-09 09:52:18,974 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE RANGE INDEX idx_rule_type IF NOT EXISTS FOR (e:Rule) ON (e.rule_type)' has no effect. The index or constraint specified by 'RANGE INDEX idx_rule_type FOR (e:Rule) ON (e.rule_type)' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE INDEX idx_rule_type IF NOT EXISTS FOR (r:Rule) ON (r.rule_type)'
+2026-09-09 09:52:18,998 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE RANGE INDEX idx_violation_severity IF NOT EXISTS FOR (e:Violation) ON (e.severity)' has no effect. The index or constraint specified by 'RANGE INDEX idx_violation_severity FOR (e:Violation) ON (e.severity)' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE INDEX idx_violation_severity IF NOT EXISTS FOR (v:Violation) ON (v.severity)'
+2026-09-09 09:52:19,027 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE RANGE INDEX idx_violation_status IF NOT EXISTS FOR (e:Violation) ON (e.status)' has no effect. The index or constraint specified by 'RANGE INDEX idx_violation_status FOR (e:Violation) ON (e.status)' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE INDEX idx_violation_status IF NOT EXISTS FOR (v:Violation) ON (v.status)'
+2026-09-09 09:52:19,049 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE RANGE INDEX idx_violation_region IF NOT EXISTS FOR (e:Violation) ON (e.region)' has no effect. The index or constraint specified by 'RANGE INDEX idx_violation_region FOR (e:Violation) ON (e.region)' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE INDEX idx_violation_region IF NOT EXISTS FOR (v:Violation) ON (v.region)'
+2026-09-09 09:52:19,074 INFO [neo4j.notifications] Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE RANGE INDEX idx_regulation_region IF NOT EXISTS FOR (e:Regulation) ON (e.region)' has no effect. The index or constraint specified by 'RANGE INDEX idx_regulation_region FOR (e:Regulation) ON (e.region)' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE INDEX idx_regulation_region IF NOT EXISTS FOR (r:Regulation) ON (r.region)'
+2026-09-09 09:52:19,075 INFO [graph.compliance_schema] Compliance graph schema deployed successfully
+2026-09-09 09:52:21,961 INFO [compliance.ingester] Ingested 52 regulations from C:\Users\Laptopadmin\Desktop\context-engineering\backend\data\compliance\sebi_regulations.csv (0 errors)
+2026-09-09 09:52:23,610 INFO [compliance.ingester] Ingested 32 rules from C:\Users\Laptopadmin\Desktop\context-engineering\backend\data\compliance\rules.csv (0 errors)
+2026-09-09 09:52:24,122 INFO [compliance.ingester] Ingested 10 fund schemes from C:\Users\Laptopadmin\Desktop\context-engineering\backend\data\compliance\fund_schemes.csv (0 errors)
+2026-09-09 09:52:25,015 INFO [compliance.ingester] Ingested 105 regulations from C:\Users\Laptopadmin\Desktop\context-engineering\backend\data\compliance\sec_regulations.csv (0 errors)
+2026-09-09 09:52:25,501 INFO [compliance.ingester] Ingested 54 rules from C:\Users\Laptopadmin\Desktop\context-engineering\backend\data\compliance\sec_rules.csv (0 errors)
+2026-09-09 09:52:26,194 INFO [compliance.ingester] Ingested 105 regulations from C:\Users\Laptopadmin\Desktop\context-engineering\backend\data\compliance\esma_regulations.csv (0 errors)
+2026-09-09 09:52:26,669 INFO [compliance.ingester] Ingested 54 rules from C:\Users\Laptopadmin\Desktop\context-engineering\backend\data\compliance\esma_rules.csv (0 errors)
+2026-09-09 09:52:26,988 WARNING [compliance.rules_engine] Failed to compile rule RULE_PORT_CONC_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,988 WARNING [compliance.rules_engine] Failed to compile rule RULE_PORT_SECTOR_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,988 WARNING [compliance.rules_engine] Failed to compile rule RULE_PORT_SPONSOR_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,989 WARNING [compliance.rules_engine] Failed to compile rule RULE_PORT_UNRATED_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,989 WARNING [compliance.rules_engine] Failed to compile rule RULE_PORT_DERIV_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,989 WARNING [compliance.rules_engine] Failed to compile rule RULE_PORT_FOREIGN_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,989 WARNING [compliance.rules_engine] Failed to compile rule RULE_GOV_MGR_CERT_001: Invalid condition format: 'neq'
+2026-09-09 09:52:26,990 WARNING [compliance.rules_engine] Failed to compile rule RULE_GOV_BOARD_IND_001: Invalid condition format: 'gte'
+2026-09-09 09:52:26,990 WARNING [compliance.rules_engine] Failed to compile rule RULE_GOV_SKIN_GAME_001: Invalid condition format: 'gte'
+2026-09-09 09:52:26,990 WARNING [compliance.rules_engine] Failed to compile rule RULE_GOV_VOTING_DISC_001: Invalid condition format: 'gte'
+2026-09-09 09:52:26,990 WARNING [compliance.rules_engine] Failed to compile rule RULE_KYC_RECENCY_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,990 WARNING [compliance.rules_engine] Failed to compile rule RULE_KYC_PEP_001: Invalid condition format: 'eq'
+2026-09-09 09:52:26,990 WARNING [compliance.rules_engine] Failed to compile rule RULE_KYC_AADHAAR_001: Invalid condition format: 'gte'
+2026-09-09 09:52:26,991 WARNING [compliance.rules_engine] Failed to compile rule RULE_KYC_STR_FILING_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,991 WARNING [compliance.rules_engine] Failed to compile rule RULE_RISK_VAR_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,991 WARNING [compliance.rules_engine] Failed to compile rule RULE_RISK_LIQUID_001: Invalid condition format: 'gte'
+2026-09-09 09:52:26,991 WARNING [compliance.rules_engine] Failed to compile rule RULE_RISK_STRESS_TEST_001: Invalid condition format: 'gte'
+2026-09-09 09:52:26,991 WARNING [compliance.rules_engine] Failed to compile rule RULE_RISK_SWING_PRICING_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,991 WARNING [compliance.rules_engine] Failed to compile rule RULE_RISK_CREDIT_CONC_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,992 WARNING [compliance.rules_engine] Failed to compile rule RULE_REP_NAV_TIME_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,992 WARNING [compliance.rules_engine] Failed to compile rule RULE_REP_FACTSHEET_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,992 WARNING [compliance.rules_engine] Failed to compile rule RULE_REP_PORT_DISC_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,992 WARNING [compliance.rules_engine] Failed to compile rule RULE_REP_GRIEVANCE_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,992 WARNING [compliance.rules_engine] Failed to compile rule RULE_REP_TER_SLAB_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,992 WARNING [compliance.rules_engine] Failed to compile rule RULE_REP_RISKOMETER_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,992 WARNING [compliance.rules_engine] Failed to compile rule RULE_PORT_SMALLCAP_FLOAT_001: Invalid condition format: 'gte'
+2026-09-09 09:52:26,993 WARNING [compliance.rules_engine] Failed to compile rule RULE_PORT_MIDCAP_FLOAT_001: Invalid condition format: 'gte'
+2026-09-09 09:52:26,993 WARNING [compliance.rules_engine] Failed to compile rule RULE_PORT_LARGECAP_FLOAT_001: Invalid condition format: 'gte'
+2026-09-09 09:52:26,993 WARNING [compliance.rules_engine] Failed to compile rule RULE_PORT_ELSS_EQUITY_001: Invalid condition format: 'gte'
+2026-09-09 09:52:26,993 WARNING [compliance.rules_engine] Failed to compile rule RULE_PORT_OVERNIGHT_MAT_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,993 WARNING [compliance.rules_engine] Failed to compile rule RULE_GOV_TRUSTEE_CONFLICT_001: Invalid condition format: 'eq'
+2026-09-09 09:52:26,993 WARNING [compliance.rules_engine] Failed to compile rule RULE_RISK_LIQUID_OVERNIGHT_001: Invalid condition format: 'gte'
+2026-09-09 09:52:26,994 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_PORT_CONC_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,994 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_PORT_SECTOR_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,994 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_PORT_RELATED_001: Invalid condition format: 'eq'
+2026-09-09 09:52:26,994 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_PORT_LIQUID_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,995 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_GOV_BOARD_IND_001: Invalid condition format: 'gte'
+2026-09-09 09:52:26,995 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_GOV_CCO_APPOINT_001: Invalid condition format: 'neq'
+2026-09-09 09:52:26,995 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_KYC_CIP_001: Invalid condition format: 'gte'
+2026-09-09 09:52:26,995 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_KYC_OFAC_001: Invalid condition format: 'eq'
+2026-09-09 09:52:26,996 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_RISK_DERIV_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,996 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_RISK_LIQUID_001: Invalid condition format: 'gte'
+2026-09-09 09:52:26,996 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_REP_NAV_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,997 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_REP_FORM_NCSR_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,997 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_REP_FORM_NPORT_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,998 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_REP_FEES_001: Invalid condition format: 'lte'
+2026-09-09 09:52:26,998 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_015: Invalid condition format: 'lte'
+2026-09-09 09:52:26,998 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_016: Invalid condition format: 'lte'
+2026-09-09 09:52:26,999 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_017: Invalid condition format: 'lte'
+2026-09-09 09:52:27,000 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_018: Invalid condition format: 'lte'
+2026-09-09 09:52:27,000 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_019: Invalid condition format: 'lte'
+2026-09-09 09:52:27,001 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_020: Invalid condition format: 'lte'
+2026-09-09 09:52:27,001 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_021: Invalid condition format: 'lte'
+2026-09-09 09:52:27,002 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_022: Invalid condition format: 'lte'
+2026-09-09 09:52:27,002 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_023: Invalid condition format: 'lte'
+2026-09-09 09:52:27,002 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_024: Invalid condition format: 'lte'
+2026-09-09 09:52:27,002 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_025: Invalid condition format: 'lte'
+2026-09-09 09:52:27,003 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_026: Invalid condition format: 'lte'
+2026-09-09 09:52:27,003 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_027: Invalid condition format: 'lte'
+2026-09-09 09:52:27,003 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_028: Invalid condition format: 'lte'
+2026-09-09 09:52:27,003 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_029: Invalid condition format: 'lte'
+2026-09-09 09:52:27,003 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_030: Invalid condition format: 'lte'
+2026-09-09 09:52:27,003 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_031: Invalid condition format: 'lte'
+2026-09-09 09:52:27,003 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_032: Invalid condition format: 'lte'
+2026-09-09 09:52:27,003 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_033: Invalid condition format: 'lte'
+2026-09-09 09:52:27,004 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_034: Invalid condition format: 'lte'
+2026-09-09 09:52:27,004 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_035: Invalid condition format: 'lte'
+2026-09-09 09:52:27,004 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_036: Invalid condition format: 'lte'
+2026-09-09 09:52:27,005 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_037: Invalid condition format: 'lte'
+2026-09-09 09:52:27,005 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_038: Invalid condition format: 'lte'
+2026-09-09 09:52:27,005 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_039: Invalid condition format: 'lte'
+2026-09-09 09:52:27,005 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_040: Invalid condition format: 'lte'
+2026-09-09 09:52:27,006 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_041: Invalid condition format: 'lte'
+2026-09-09 09:52:27,006 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_042: Invalid condition format: 'lte'
+2026-09-09 09:52:27,006 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_043: Invalid condition format: 'lte'
+2026-09-09 09:52:27,006 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_044: Invalid condition format: 'lte'
+2026-09-09 09:52:27,007 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_045: Invalid condition format: 'lte'
+2026-09-09 09:52:27,007 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_046: Invalid condition format: 'lte'
+2026-09-09 09:52:27,007 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_047: Invalid condition format: 'lte'
+2026-09-09 09:52:27,007 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_048: Invalid condition format: 'lte'
+2026-09-09 09:52:27,007 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_049: Invalid condition format: 'lte'
+2026-09-09 09:52:27,008 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_050: Invalid condition format: 'lte'
+2026-09-09 09:52:27,009 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_051: Invalid condition format: 'lte'
+2026-09-09 09:52:27,009 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_052: Invalid condition format: 'lte'
+2026-09-09 09:52:27,010 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_053: Invalid condition format: 'lte'
+2026-09-09 09:52:27,010 WARNING [compliance.rules_engine] Failed to compile rule RULE_SEC_AUTO_054: Invalid condition format: 'lte'
+2026-09-09 09:52:27,011 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_PORT_CONC_001: Invalid condition format: 'lte'
+2026-09-09 09:52:27,011 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_PORT_40PCT_001: Invalid condition format: 'lte'
+2026-09-09 09:52:27,011 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_PORT_SECTOR_001: Invalid condition format: 'lte'
+2026-09-09 09:52:27,012 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_GOV_BOARD_IND_001: Invalid condition format: 'gte'
+2026-09-09 09:52:27,012 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_GOV_REMUNERATION_001: Invalid condition format: 'gte'
+2026-09-09 09:52:27,012 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_KYC_AML5_001: Invalid condition format: 'gte'
+2026-09-09 09:52:27,013 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_RISK_LIQUID_001: Invalid condition format: 'gte'
+2026-09-09 09:52:27,013 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_RISK_LEVERAGE_001: Invalid condition format: 'lte'
+2026-09-09 09:52:27,013 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_REP_SFDR_ESG_001: Invalid condition format: 'gte'
+2026-09-09 09:52:27,013 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_REP_KID_001: Invalid condition format: 'lte'
+2026-09-09 09:52:27,013 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_011: Invalid condition format: 'lte'
+2026-09-09 09:52:27,014 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_012: Invalid condition format: 'lte'
+2026-09-09 09:52:27,014 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_013: Invalid condition format: 'lte'
+2026-09-09 09:52:27,014 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_014: Invalid condition format: 'lte'
+2026-09-09 09:52:27,014 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_015: Invalid condition format: 'lte'
+2026-09-09 09:52:27,015 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_016: Invalid condition format: 'lte'
+2026-09-09 09:52:27,015 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_017: Invalid condition format: 'lte'
+2026-09-09 09:52:27,016 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_018: Invalid condition format: 'lte'
+2026-09-09 09:52:27,016 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_019: Invalid condition format: 'lte'
+2026-09-09 09:52:27,016 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_020: Invalid condition format: 'lte'
+2026-09-09 09:52:27,016 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_021: Invalid condition format: 'lte'
+2026-09-09 09:52:27,016 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_022: Invalid condition format: 'lte'
+2026-09-09 09:52:27,016 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_023: Invalid condition format: 'lte'
+2026-09-09 09:52:27,017 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_024: Invalid condition format: 'lte'
+2026-09-09 09:52:27,017 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_025: Invalid condition format: 'lte'
+2026-09-09 09:52:27,017 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_026: Invalid condition format: 'lte'
+2026-09-09 09:52:27,018 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_027: Invalid condition format: 'lte'
+2026-09-09 09:52:27,018 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_028: Invalid condition format: 'lte'
+2026-09-09 09:52:27,018 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_029: Invalid condition format: 'lte'
+2026-09-09 09:52:27,019 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_030: Invalid condition format: 'lte'
+2026-09-09 09:52:27,019 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_031: Invalid condition format: 'lte'
+2026-09-09 09:52:27,019 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_032: Invalid condition format: 'lte'
+2026-09-09 09:52:27,020 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_033: Invalid condition format: 'lte'
+2026-09-09 09:52:27,020 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_034: Invalid condition format: 'lte'
+2026-09-09 09:52:27,021 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_035: Invalid condition format: 'lte'
+2026-09-09 09:52:27,021 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_036: Invalid condition format: 'lte'
+2026-09-09 09:52:27,022 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_037: Invalid condition format: 'lte'
+2026-09-09 09:52:27,022 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_038: Invalid condition format: 'lte'
+2026-09-09 09:52:27,022 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_039: Invalid condition format: 'lte'
+2026-09-09 09:52:27,022 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_040: Invalid condition format: 'lte'
+2026-09-09 09:52:27,022 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_041: Invalid condition format: 'lte'
+2026-09-09 09:52:27,023 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_042: Invalid condition format: 'lte'
+2026-09-09 09:52:27,023 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_043: Invalid condition format: 'lte'
+2026-09-09 09:52:27,023 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_044: Invalid condition format: 'lte'
+2026-09-09 09:52:27,023 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_045: Invalid condition format: 'lte'
+2026-09-09 09:52:27,023 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_046: Invalid condition format: 'lte'
+2026-09-09 09:52:27,024 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_047: Invalid condition format: 'lte'
+2026-09-09 09:52:27,024 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_048: Invalid condition format: 'lte'
+2026-09-09 09:52:27,025 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_049: Invalid condition format: 'lte'
+2026-09-09 09:52:27,025 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_050: Invalid condition format: 'lte'
+2026-09-09 09:52:27,026 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_051: Invalid condition format: 'lte'
+2026-09-09 09:52:27,026 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_052: Invalid condition format: 'lte'
+2026-09-09 09:52:27,027 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_053: Invalid condition format: 'lte'
+2026-09-09 09:52:27,027 WARNING [compliance.rules_engine] Failed to compile rule RULE_ESMA_AUTO_054: Invalid condition format: 'lte'
+2026-09-09 09:52:27,028 INFO [compliance.rules_engine] Loaded 140 compliance rules from Neo4j into memory
+2026-09-09 09:52:27,028 INFO [app] Compliance rules and fund schemes initialized successfully
   [embed] Loading sentence-transformer model (BAAI/bge-small-en-v1.5)…
-Loading weights: 100%|███████████████████████████████████████████████████| 199/199 [00:00<00:00, 1552.56it/s]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-09-09 09:53:13,782 WARNING [huggingface_hub.utils._http] Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-09-09 09:53:14,102 INFO [sentence_transformers.base.model] Loading SentenceTransformer model from BAAI/bge-small-en-v1.5.
+Loading weights: 100%|███████████████████████████████████████████████████| 199/199 [00:00<00:00, 2546.45it/s]
   [embed] BAAI/bge-small-en-v1.5 Model ready.
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-  Embedded 256/3041 chunks
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-  Embedded 512/3041 chunks
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-  Embedded 768/3041 chunks
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-  Embedded 1024/3041 chunks
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-  Embedded 1280/3041 chunks
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-  Embedded 1536/3041 chunks
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-  Embedded 1792/3041 chunks
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-  Embedded 2048/3041 chunks
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-  Embedded 2304/3041 chunks
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-  Embedded 2560/3041 chunks
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-  Embedded 2816/3041 chunks
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-    embed batch 1/4 … ok
-    embed batch 2/4 … ok
-    embed batch 3/4 … ok
-    embed batch 4/4 … ok
-  Embedded 3041/3041 chunks
-Created FAISS IndexFlatIP with 3041 vectors @ dim=384
-  [OK] Successfully synchronized index -> C:\Users\Laptopadmin\Desktop\context-engineering\backend\app\engine\faiss_indexes\amc_master
-  [OK] Successfully synchronized index -> C:\Users\Laptopadmin\Desktop\context-engineering\backend\faiss_indexes\taxonomy_showcase
-  [OK] Successfully synchronized index -> C:\Users\Laptopadmin\Desktop\context-engineering\streamlit_app\faiss_indexes\amc_master
-
-================================================================
- Ingestion Completed Successfully!
-================================================================
+Batches: 100%|█████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00,  3.39it/s]
+  [rerank] Loading cross-encoder model…
+2026-09-09 09:53:19,928 INFO [sentence_transformers.base.model] No modules.json found for cross-encoder/ms-marco-MiniLM-L-6-v2, initializing a new CrossEncoder model.
+Loading weights: 100%|███████████████████████████████████████████████████| 105/105 [00:00<00:00, 3430.27it/s]
+  [rerank] Cross-encoder ready.
+Batches: 100%|█████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00,  1.33it/s]
+2026-09-09 09:53:20,892 INFO [app] FAISS store + embedder + reranker warmed up at startup
+2026-09-09 09:53:21,262 INFO [app] Semantic cache initialized and warmed up at startup
+2026-09-09 09:53:21,279 INFO [app.db.feedback] Feedback SQLite store initialized at C:\Users\Laptopadmin\Desktop\context-engineering\backend\app\engine\logs\feedback.db
+2026-09-09 09:53:21,281 INFO [app.db.feedback] Feedback SQLite store initialized at C:\Users\Laptopadmin\Desktop\context-engineering\backend\app\engine\logs\feedback.db
+2026-09-09 09:53:21,281 INFO [app] Feedback SQLite store ready
+2026-09-09 09:53:21,282 WARNING [app.tasks.scheduler] APScheduler not installed - using stdlib FallbackScheduler. Install apscheduler for production-grade cron semantics.
+2026-09-09 09:53:21,283 INFO [app.tasks.scheduler] Scheduled job 'sebi_polling' (SEBI RSS Feed Polling) at CronSpec(minute=0, hour=3, dow=None) UTC
+2026-09-09 09:53:21,283 INFO [app.tasks.scheduler] Scheduled job 'staleness_check' (Regulatory Staleness Check) at CronSpec(minute=0, hour=6, dow=None) UTC
+2026-09-09 09:53:21,286 INFO [app.tasks.scheduler] Scheduled job 'governance_batch' (Governance Feedback Batch) at CronSpec(minute=0, hour=9, dow=fri) UTC
+2026-09-09 09:53:21,288 INFO [app.tasks.scheduler] Scheduled job 'cache_maintenance' (Semantic Cache Maintenance) at CronSpec(minute=0, hour=2, dow=None) UTC
+2026-09-09 09:53:21,288 INFO [app.tasks.scheduler] Scheduled job 'metrics_aggregation' (Hourly Performance Metrics Aggregation) at CronSpec(minute=0, hour=None, dow=None) UTC
+2026-09-09 09:53:21,288 INFO [app.tasks.scheduler] Registered 5 background tasks in scheduler
+2026-09-09 09:53:21,289 INFO [app.tasks.scheduler] FallbackScheduler loop started (tick=30s, 5 jobs)
+2026-09-09 09:53:21,289 INFO [app.tasks.scheduler] Background TaskScheduler started (5 jobs)
+2026-09-09 09:53:21,289 INFO [app] Background TaskScheduler wired into FastAPI lifespan
+2026-09-09 09:53:21,290 INFO [app] NuSummit ContextGraph API started (env=local)
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)

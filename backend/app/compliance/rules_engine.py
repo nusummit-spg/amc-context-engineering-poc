@@ -92,28 +92,80 @@ class RulesEngine:
 
     def _compile_rule(self, rule_id: str, rule_data: Dict[str, Any]) -> Optional[CompiledRule]:
         """Pre-compile a rule: parse condition, split metric path, extract operator/threshold."""
-        condition_str = rule_data.get("condition", "")
-        if not condition_str:
-            return None
-        
+        condition_str = str(rule_data.get("condition") or "").strip()
+        metric = rule_data.get("metric")
+        threshold = rule_data.get("threshold")
+
         try:
-            metric, op, threshold = self._parse_condition(condition_str)
-            metric_parts = metric.split(".")  # Pre-split path for fast lookup
-            
-            # Convert threshold to float if numeric
-            if isinstance(threshold, (int, float)):
-                thresh_val = float(threshold)
+            # Case 1: condition_str is a full DSL expression with spaces and comparison operators
+            if any(sep in condition_str for sep in (">=", "<=", "==", "!=", ">", "<", "=")) and " " in condition_str:
+                metric, op, thresh_val = self._parse_condition(condition_str)
+            # Case 2: condition is an operator keyword (e.g. 'lte', 'gte', 'eq') with metric and threshold in rule_data
+            elif metric or condition_str:
+                raw_op = condition_str.lower() if condition_str else "lte"
+                op_violation_map = {
+                    "lte": "gt",
+                    "<=": "gt",
+                    "gte": "lt",
+                    ">=": "lt",
+                    "eq": "gt" if str(threshold).strip() == "0" else "neq",
+                    "==": "gt" if str(threshold).strip() == "0" else "neq",
+                    "=": "gt" if str(threshold).strip() == "0" else "neq",
+                    "neq": "eq",
+                    "!=": "eq",
+                    "lt": "gte",
+                    "<": "gte",
+                    "gt": "lte",
+                    ">": "lte",
+                }
+                op = op_violation_map.get(raw_op, raw_op)
+
+                thresh_str = str(threshold).strip() if threshold is not None else "0"
+                if thresh_str.lower() in ("true", "1"):
+                    thresh_val = 1.0
+                elif thresh_str.lower() in ("false", "0"):
+                    thresh_val = 0.0
+                else:
+                    try:
+                        raw_val = float(thresh_str)
+                        metric_str = str(metric or "").lower()
+                        is_pct_metric = (
+                            metric_str.endswith("_pct")
+                            or any(k in metric_str for k in ("holding", "exposure", "allocation", "buffer"))
+                        )
+                        if is_pct_metric and 1.0 < raw_val <= 100.0:
+                            thresh_val = raw_val / 100.0
+                        else:
+                            thresh_val = raw_val
+                    except ValueError:
+                        thresh_val = thresh_str
             else:
-                thresh_val = float(threshold) if threshold.replace(".", "", 1).isdigit() else threshold
-            
+                return None
+
+            if not metric:
+                return None
+
+            metric_parts = str(metric).split(".")  # Pre-split path for fast lookup
+
+            # Convert numeric threshold string to float if possible
+            if isinstance(thresh_val, (int, float)):
+                final_thresh = float(thresh_val)
+            elif isinstance(thresh_val, str):
+                try:
+                    final_thresh = float(thresh_val)
+                except ValueError:
+                    final_thresh = thresh_val
+            else:
+                final_thresh = thresh_val
+
             return CompiledRule(
                 id=rule_id,
                 title=rule_data.get("title", ""),
                 description=rule_data.get("description", ""),
-                metric=metric,
+                metric=str(metric),
                 metric_parts=metric_parts,
                 operator=op,
-                threshold=thresh_val,
+                threshold=final_thresh,
                 severity=rule_data.get("severity", "high"),
                 confidence_threshold=float(rule_data.get("confidence_threshold", 0.95)),
                 applicability=rule_data.get("applicability") or [],
@@ -135,7 +187,8 @@ class RulesEngine:
                r.description AS description, r.condition AS condition,
                r.severity AS severity, r.confidence_threshold AS confidence_threshold,
                r.applicability AS applicability, r.exclusions AS exclusions,
-               r.enforcement_level AS enforcement_level, r.regulation_id AS regulation_id
+               r.enforcement_level AS enforcement_level, r.regulation_id AS regulation_id,
+               r.metric AS metric, r.threshold AS threshold, r.region AS region
         """
         try:
             results = await self.graph.run(cypher)
@@ -148,6 +201,9 @@ class RulesEngine:
                         "title": row.get("title", ""),
                         "description": row.get("description", ""),
                         "condition": row.get("condition", ""),
+                        "metric": row.get("metric", ""),
+                        "threshold": row.get("threshold", ""),
+                        "region": row.get("region", "SEBI"),
                         "severity": row.get("severity", "high"),
                         "confidence_threshold": float(row.get("confidence_threshold", 0.95)),
                         "applicability": row.get("applicability") or [],
@@ -493,22 +549,43 @@ class RulesEngine:
 
     def _compare(self, actual: Any, operator: str, threshold: Any) -> bool:
         """Direct comparison without lambda dispatch (faster than dict lookup + call)."""
-        # Type conversion for numeric comparison
+        # Type conversion and scale alignment for numeric comparison
         if isinstance(threshold, (int, float)) and isinstance(actual, (int, float)):
             actual = float(actual)
             threshold = float(threshold)
-        
+            # Handle scale difference between fraction (0-1) and percentage (1-100)
+            if 0.0 <= actual <= 1.0 and 1.0 < threshold <= 100.0:
+                threshold = threshold / 100.0
+            elif 0.0 <= threshold <= 1.0 and 1.0 < actual <= 100.0:
+                actual = actual / 100.0
+
         if operator == "gt":
-            return actual > threshold
+            try:
+                return float(actual) > float(threshold)
+            except (ValueError, TypeError):
+                return False
         elif operator == "gte":
-            return actual >= threshold
+            try:
+                return float(actual) >= float(threshold)
+            except (ValueError, TypeError):
+                return False
         elif operator == "lt":
-            return actual < threshold
+            try:
+                return float(actual) < float(threshold)
+            except (ValueError, TypeError):
+                return False
         elif operator == "lte":
-            return actual <= threshold
+            try:
+                return float(actual) <= float(threshold)
+            except (ValueError, TypeError):
+                return False
         elif operator == "eq":
+            if isinstance(threshold, str) or isinstance(actual, str):
+                return str(actual).strip().upper() == str(threshold).strip().upper()
             return actual == threshold
         elif operator == "neq":
+            if isinstance(threshold, str) or isinstance(actual, str):
+                return str(actual).strip().upper() != str(threshold).strip().upper()
             return actual != threshold
         return False
 
