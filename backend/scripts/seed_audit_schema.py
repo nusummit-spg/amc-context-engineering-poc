@@ -138,7 +138,7 @@ def seed_audit_schema():
             actor_id="reviewer_01",
             actor_role="Compliance & Regulatory Officer",
             selected_categories=["F03", "F07"],
-            free_text="Confirmed the exposure figure is below the SEBI threshold.",
+            feedback_text="Confirmed the exposure figure is below the SEBI threshold.",
             answer_relevance_score=4,
             source_quality_score=5,
             completeness_score=4,

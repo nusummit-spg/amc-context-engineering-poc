@@ -32,14 +32,11 @@ from app.core.logging import RequestLoggingMiddleware, setup_logging
 from app.db.feedback import get_feedback_store
 from app.graph.schema import apply_schema
 from app.tasks.queue import ingest_queue
-<<<<<<< Updated upstream
 from app.tasks.scheduler import get_scheduler
-=======
 from app.core.database import init_db
 #from app.api.routes import feedback_evaluation
 from app.api.routes import audit
 
->>>>>>> Stashed changes
 
 logger = logging.getLogger("app")
 

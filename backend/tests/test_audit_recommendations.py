@@ -163,7 +163,7 @@ def test_update_feedback_quality_endpoint(client):
         "actor_id": "analyst_1",
         "actor_role": "Analyst",
         "selected_categories": ["F08"],
-        "free_text": "TER percentage calculation mismatch in note 4",
+        "feedback_text": "TER percentage calculation mismatch in note 4",
     }
     submit_res = client.post("/api/feedback", json=fb_payload)
     assert submit_res.status_code == 201

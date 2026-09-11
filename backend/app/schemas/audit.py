@@ -82,7 +82,7 @@ class ResponseFeedbackCreate(BaseModel):
     actor_id: Optional[str] = None
     actor_role: Optional[str] = None
     selected_categories: list[str] = Field(default_factory=list)
-    free_text: Optional[str] = None
+    feedback_text: Optional[str] = None
     answer_relevance_score: Optional[int] = Field(default=None, ge=1, le=5)
     source_quality_score: Optional[int] = Field(default=None, ge=1, le=5)
     completeness_score: Optional[int] = Field(default=None, ge=1, le=5)
@@ -179,3 +179,4 @@ class ChatSessionCreate(BaseModel):
     session_id: Optional[str] = None
     user_id: Optional[str] = None
     audit_id: Optional[str] = Field(default=None, description="Must match audit_metadata.audit_id if set")
+

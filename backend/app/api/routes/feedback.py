@@ -50,7 +50,7 @@ class FeedbackIn(BaseModel):
     actor_id: Optional[str] = Field(default=None, max_length=200, description="Reviewer / user identifier")
     actor_role: Optional[str] = Field(default="Compliance & Regulatory Officer", max_length=200)
     selected_categories: list[str] = Field(default_factory=list, description="Array of failure taxonomy codes F01-F12")
-    free_text: Optional[str] = Field(default=None, max_length=2000, description="Reviewer commentary")
+    feedback_text: Optional[str] = Field(default=None, max_length=2000, description="Reviewer commentary")
     client_timestamp: Optional[str] = Field(default=None, description="ISO timestamp from client")
 
     @field_validator("selected_categories")
@@ -84,8 +84,8 @@ def submit_feedback(
     Requires at least one failure code OR non-empty commentary.
     Upserts by (response_id, actor_id) and evaluates signal quality.
     """
-    free_text_clean = (payload.free_text or "").strip()
-    if not payload.selected_categories and not free_text_clean:
+    feedback_text_clean = (payload.feedback_text or "").strip()
+    if not payload.selected_categories and not feedback_text_clean:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Submit at least one category or a comment.",
@@ -102,7 +102,7 @@ def submit_feedback(
             query_text=payload.query_text,
             actor_id=payload.actor_id,
             actor_role=payload.actor_role,
-            free_text=free_text_clean if free_text_clean else None,
+            feedback_text=feedback_text_clean if feedback_text_clean else None,
             client_timestamp=payload.client_timestamp,
         )
 
@@ -111,7 +111,7 @@ def submit_feedback(
         quality_eval = metrics_store.evaluate_feedback_quality(
             feedback_id=result["feedback_id"],
             response_id=payload.response_id,
-            free_text=free_text_clean,
+            feedback_text=feedback_text_clean,
             selected_categories=payload.selected_categories,
             actor_role=payload.actor_role,
         )

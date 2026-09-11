@@ -766,12 +766,12 @@ class MetricsStore:
         self,
         feedback_id: str,
         response_id: str,
-        free_text: Optional[str] = None,
+        feedback_text: Optional[str] = None,
         selected_categories: Optional[List[str]] = None,
         actor_role: Optional[str] = "Compliance Officer",
     ) -> FeedbackQualityMetrics:
         """Automated evaluator scoring feedback clarity, actionability, and priority."""
-        text = (free_text or "").strip()
+        text = (feedback_text or "").strip()
         cats = selected_categories or []
         
         # Detail score based on text length & specificity
@@ -874,7 +874,7 @@ class MetricsStore:
             cats = fb.get("selected_categories", [])
             flagged_cats.extend(cats)
 
-        neg_count = sum(1 for fb in feedbacks if fb.get("selected_categories") or fb.get("free_text"))
+        neg_count = sum(1 for fb in feedbacks if fb.get("selected_categories") or fb.get("feedback_text"))
         pos_count = max(0, total_fb - neg_count)
 
         # Accuracy & compliance scores
@@ -1737,17 +1737,20 @@ class MetricsStore:
             success = False
 
             if item_type == "RemediationMetrics":
-                r = self.get_remediation_metrics(item_id)
-                if r:
-                    success = await self.persist_remediation_to_neo4j(r, graph_client=client)
+                if isinstance(item_id, str):
+                    r = self.get_remediation_metrics(item_id)
+                    if r:
+                        success = await self.persist_remediation_to_neo4j(r, graph_client=client)
             elif item_type == "FeedbackQualityMetrics":
-                f = self.get_feedback_quality_metrics(item_id)
-                if f:
-                    success = await self.persist_feedback_quality_to_neo4j(f, graph_client=client)
+                if isinstance(item_id, str):
+                    f = self.get_feedback_quality(item_id)
+                    if f:
+                        success = await self.persist_feedback_quality_to_neo4j(f, graph_client=client)
             elif item_type == "RootCauseAnalysis":
-                rca = self.get_root_cause_analysis(item_id)
-                if rca:
-                    success = await self.persist_root_cause_to_neo4j(rca, graph_client=client)
+                if isinstance(item_id, str):
+                    rca = self.get_root_cause_analysis(item_id)
+                    if rca:
+                        success = await self.persist_root_cause_to_neo4j(rca, graph_client=client)
 
             if success:
                 replayed_count += 1
@@ -1833,6 +1836,11 @@ class MetricsStore:
                         sla_variance_hours=round(overdue_hours, 2),
                         triggered_at=now.isoformat(),
                         suppression_window_minutes=15,
+                        acknowledged_at=None,
+                        acknowledged_by_user_id=None,
+                        resolved_at=None,
+                        resolved_by_user_id=None,
+                        resolution_notes=None,
                     )
                     self._alerts[alert_id] = alert
                     self._last_alert_time_by_violation[r.violation_id] = now

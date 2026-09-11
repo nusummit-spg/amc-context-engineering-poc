@@ -146,7 +146,7 @@ def test_get_high_priority_feedback(client):
         "actor_id": "auditor_test",
         "actor_role": "Chief Compliance Officer",
         "selected_categories": ["F12"],
-        "free_text": "SEBI violation: The response suggested an assured return which is prohibited under mutual fund regulations.",
+        "feedback_text": "SEBI violation: The response suggested an assured return which is prohibited under mutual fund regulations.",
     }
     submit_res = client.post("/api/feedback", json=fb_payload)
     assert submit_res.status_code == 201
@@ -187,7 +187,7 @@ def test_get_feedback_quality_metrics(client):
         "session_id": "SESS_TEST_002",
         "turn_number": 1,
         "selected_categories": ["F08"],
-        "free_text": "The actual expense ratio is 0.82% instead of 1.20% shown on page 4 of the factsheet.",
+        "feedback_text": "The actual expense ratio is 0.82% instead of 1.20% shown on page 4 of the factsheet.",
     }
     submit_res = client.post("/api/feedback", json=fb_payload)
     assert submit_res.status_code == 201

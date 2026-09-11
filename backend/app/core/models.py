@@ -339,7 +339,7 @@ class ResponseFeedback(Base):
     actor_role: Mapped[str | None] = mapped_column(String(60), nullable=True, index=True)
 
     selected_categories: Mapped[list] = mapped_column(JSON, nullable=False)
-    free_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    feedback_text: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     answer_relevance_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     source_quality_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -482,9 +482,6 @@ class QueryEvidence(Base):
             func.length(cast(dissatisfaction_evidence_json, Text)) > 0,
         ),
     )
-
-
-
 # ---------------------------------------------------------
 # TABLE 5: compliance_rules
 # ---------------------------------------------------------

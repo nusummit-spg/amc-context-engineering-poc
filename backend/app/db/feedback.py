@@ -62,7 +62,7 @@ class FeedbackStore:
                         actor_id            TEXT,
                         actor_role          TEXT,
                         selected_categories TEXT NOT NULL,
-                        free_text           TEXT,
+                        feedback_text           TEXT,
                         client_timestamp   TEXT,
                         created_at          TEXT NOT NULL DEFAULT (datetime('now')),
                         updated_at          TEXT NOT NULL DEFAULT (datetime('now')),
@@ -90,7 +90,7 @@ class FeedbackStore:
         query_text: Optional[str] = None,
         actor_id: Optional[str] = None,
         actor_role: Optional[str] = None,
-        free_text: Optional[str] = None,
+        feedback_text: Optional[str] = None,
         client_timestamp: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
@@ -119,7 +119,7 @@ class FeedbackStore:
                             query_text = coalesce(?, query_text),
                             actor_role = coalesce(?, actor_role),
                             selected_categories = ?,
-                            free_text = ?,
+                            feedback_text = ?,
                             client_timestamp = coalesce(?, client_timestamp),
                             updated_at = ?
                         WHERE feedback_id = ?
@@ -131,7 +131,7 @@ class FeedbackStore:
                             query_text,
                             actor_role,
                             categories_json,
-                            free_text,
+                            feedback_text,
                             client_timestamp,
                             now,
                             feedback_id,
@@ -144,7 +144,7 @@ class FeedbackStore:
                         INSERT INTO response_feedback (
                             feedback_id, response_id, interaction_id, session_id,
                             turn_number, query_text, actor_id, actor_role,
-                            selected_categories, free_text, client_timestamp,
+                            selected_categories, feedback_text, client_timestamp,
                             created_at, updated_at
                         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
@@ -158,7 +158,7 @@ class FeedbackStore:
                             effective_actor,
                             actor_role or "Compliance & Regulatory Officer",
                             categories_json,
-                            free_text,
+                            feedback_text,
                             client_timestamp,
                             now,
                             now,
@@ -192,7 +192,7 @@ class FeedbackStore:
             "actor_id": row["actor_id"],
             "actor_role": row["actor_role"],
             "selected_categories": categories,
-            "free_text": row["free_text"],
+            "feedback_text": row["feedback_text"],
             "client_timestamp": row["client_timestamp"],
             "created_at": row["created_at"],
             "updated_at": row["updated_at"],
