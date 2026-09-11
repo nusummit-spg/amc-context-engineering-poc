@@ -168,7 +168,7 @@ CREATE TABLE response_feedback (
     session_id TEXT NOT NULL,
     selected_categories TEXT NOT NULL,  -- JSON array
     actor_role TEXT,
-    free_text TEXT,
+    feedback_text TEXT,
     created_at TEXT DEFAULT (datetime('now')),
     INDEX(session_id), INDEX(response_id)
 );

@@ -286,7 +286,7 @@ fully logged and reversible until governance signs off on making it permanent.</
 <h2 id="hld-record"><span class="tag hld">HLD</span>1.5 Unified Evaluation Record — Conceptual Shape</h2>
 <pre><code>EvaluationRecord
 ├── interaction_id
-├── feedback (raw_feedback, categories, free_text)
+├── feedback (raw_feedback, categories, feedback_text)
 ├── evidence (retrieved_sources, graph_paths, taxonomy_nodes, citations)
 ├── deterministic_results (by rule category)
 ├── gnn_plausibility_score
@@ -505,7 +505,7 @@ interaction_id
 actor_role
 selected_categories[]
 highlighted_span
-free_text
+feedback_text
 timestamp
 raw_feedback
 normalized_feedback</code></pre>

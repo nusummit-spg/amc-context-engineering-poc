@@ -202,7 +202,7 @@ CREATE TABLE response_feedback (
     
     -- ─── Classification & Feedback ────────────────────
     selected_categories    TEXT NOT NULL,  -- JSON array: ["answer_incorrect", "missing_source", "harmful", "unclear", ...]
-    free_text              TEXT,           -- Detailed feedback from human
+    feedback_text              TEXT,           -- Detailed feedback from human
     
     -- ─── Relevance & Quality ──────────────────────────
     answer_relevance_score INTEGER,        -- 1-5 Likert scale

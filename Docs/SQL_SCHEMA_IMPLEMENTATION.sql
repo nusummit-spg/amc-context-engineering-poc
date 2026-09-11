@@ -212,7 +212,7 @@ CREATE TABLE IF NOT EXISTS response_feedback (
     
     -- Classification & Feedback
     selected_categories    TEXT NOT NULL,  -- JSON array
-    free_text              TEXT,
+   feedback_text              TEXT,
     
     -- Quality Scores (1-5 Likert)
     answer_relevance_score INTEGER CHECK (answer_relevance_score IS NULL OR (answer_relevance_score >= 1 AND answer_relevance_score <= 5)),
