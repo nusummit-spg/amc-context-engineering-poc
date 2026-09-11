@@ -4,6 +4,9 @@
 # Author: NuSummit Developers
 #
 # ===========================================================================
+import truststore
+
+truststore.inject_into_ssl()
 
 """WS3 — FastAPI application: routing, CORS, structured errors, request logging,
 startup wiring (DI container, Qdrant collection, Neo4j schema, ingest worker).
@@ -13,7 +16,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -29,7 +32,14 @@ from app.core.logging import RequestLoggingMiddleware, setup_logging
 from app.db.feedback import get_feedback_store
 from app.graph.schema import apply_schema
 from app.tasks.queue import ingest_queue
+<<<<<<< Updated upstream
 from app.tasks.scheduler import get_scheduler
+=======
+from app.core.database import init_db
+#from app.api.routes import feedback_evaluation
+from app.api.routes import audit
+
+>>>>>>> Stashed changes
 
 logger = logging.getLogger("app")
 
@@ -39,6 +49,10 @@ logger = logging.getLogger("app")
 async def lifespan(app: FastAPI):
     settings = get_settings()
     setup_logging(settings.log_level)
+
+    # Initialize SQLite database
+    # Creates the tables if they don't exist, and applies any schema migrations
+    init_db()
 
     container = deps.init_container()
     # Fast check if Neo4j is available before applying schema/rules
@@ -149,7 +163,12 @@ def create_app() -> FastAPI:
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(ValidationMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
-    app.add_exception_handler(AppError, app_error_handler)
+    async def handle_app_error(request: Request, exc: Exception) -> JSONResponse:
+        if not isinstance(exc, AppError):
+            raise exc
+        return await app_error_handler(request, exc)
+
+    app.add_exception_handler(AppError, handle_app_error)
 
     for router in (auth.router, admin.router, query.router, chat.router, sessions.router, taxonomy.router, graph.router,
                    docs.router, ingest.router, status.router, compliance.router, feedback.router, review_queue.router, files.router, metrics.router):
@@ -166,6 +185,9 @@ def create_app() -> FastAPI:
     app.include_router(files.router, prefix="")
 
 
+    # app.include_router(feedback_evaluation.router, prefix="/api")
+    app.include_router(audit.router, prefix="/api")
+    
     # Phase 4: Serve React frontend (check mf-context-engine/dist first, then frontend/dist)
     mf_engine_dir = Path(__file__).parent.parent.parent / "mf-context-engine" / "dist"
     legacy_frontend_dir = Path(__file__).parent.parent.parent / "frontend" / "dist"
@@ -227,10 +249,5 @@ def create_app() -> FastAPI:
         logger.warning("For now, API-only mode enabled. Visit http://localhost:8000/docs for API docs.")
 
     return app
-
-
-
-
-
-
+    
 app = create_app()

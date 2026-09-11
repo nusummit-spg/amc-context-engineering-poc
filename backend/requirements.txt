@@ -19,6 +19,7 @@ groq>=0.9.0
 neo4j>=5.24
 faiss-cpu>=1.8
 fastembed>=0.3
+sqlalchemy>=2.0
 
 # --- AWS (prod: SSM secret load) ---
 boto3>=1.34
@@ -47,7 +48,15 @@ tenacity>=9.0
 pytest>=8.0
 pytest-asyncio>=0.24
 
+<<<<<<< Updated upstream
 # --- Phase 0 Task 0.3: background scheduler ---
 # Optional but recommended: without it TaskScheduler falls back to a stdlib
 # thread-based engine with minute-granularity cron matching.
 apscheduler>=3.10.4
+=======
+# --- SSL / Windows certificate store ---
+truststore==0.10.4
+
+# --- Human feedback loop ---
+human-feedback-loop @ git+https://github.com/nusummit-spg/human-feedback-loop.git@repo-join
+>>>>>>> Stashed changes

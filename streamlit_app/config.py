@@ -146,7 +146,7 @@ GLINER_LABELS_BY_DOMAIN = {
     ],
 }
 
-def get_gliner_labels(domain_intent: str = None) -> list[str]:
+def get_gliner_labels(domain_intent: str = "") -> list[str]:
     """Returns domain-specific GLiNER labels if domain_intent matches, else fallback to GLINER_LABELS."""
     if domain_intent and domain_intent in GLINER_LABELS_BY_DOMAIN:
         return GLINER_LABELS_BY_DOMAIN[domain_intent]
