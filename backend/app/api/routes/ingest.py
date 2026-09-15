@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, UploadFile
 
 from app.api.deps import Container, get_container
 from app.core.errors import NotFoundError, ValidationFailedError
-from app.schemas.api import IngestJobResponse, IngestStatusResponse
+from app.models.api import IngestJobResponse, IngestStatusResponse
 from app.tasks.queue import ingest_queue
 
 router = APIRouter(prefix="/ingest", tags=["ingest"])

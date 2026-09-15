@@ -19,7 +19,7 @@ import pytest
 
 from app.db.review_queue_repository import ReviewQueueRepository
 from app.evaluation.patch_generator import PatchGenerator
-from app.schemas.review_queue import ReviewQueueItem, ReviewReason, ReviewStatus, Verdict
+from app.models.review_queue import ReviewQueueItem, ReviewReason, ReviewStatus, Verdict
 from app.tasks.governance_batch import GovernanceBatch
 
 

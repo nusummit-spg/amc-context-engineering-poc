@@ -10,8 +10,8 @@ import logging
 
 from app.core.llm import LLMClient
 from app.prompts import get_prompt
-from app.schemas.query import QueryIntent, QueryType
-from app.schemas.taxonomy import TaxonomyTree
+from app.models.query import QueryIntent, QueryType
+from app.models.taxonomy import TaxonomyTree
 
 logger = logging.getLogger("retrieval")
 

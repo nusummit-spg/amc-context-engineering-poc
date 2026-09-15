@@ -12,7 +12,7 @@ Tests sliding window rate limiting, RBAC role enforcement, and encryption.
 """
 import pytest
 from app.compliance.security import InMemoryRateLimiter, ComplianceDataEncryptor, get_client_role
-from app.schemas.compliance_models import Role
+from app.models.compliance_models import Role
 from fastapi import HTTPException
 
 

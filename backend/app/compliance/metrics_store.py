@@ -35,27 +35,27 @@ import uuid
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes, serialization
 
-from app.schemas.compliance_alert import ComplianceAlert, AlertSeverity, AlertStatus, EscalationTier
+from app.models.compliance_alert import ComplianceAlert, AlertSeverity, AlertStatus, EscalationTier
 
 
 
-from app.schemas.regulatory_metadata import RegulatoryMetadata
-from app.schemas.fund_metadata import FundAuditMetadata
-from app.schemas.remediation_metrics import RemediationMetrics
-from app.schemas.feedback_quality import FeedbackQualityMetrics
-from app.schemas.feedback_analytics import FeedbackCategoryAnalytics
-from app.schemas.response_quality import ResponseQualityMetrics
+from app.models.regulatory_metadata import RegulatoryMetadata
+from app.models.fund_metadata import FundAuditMetadata
+from app.models.remediation_metrics import RemediationMetrics
+from app.models.feedback_quality import FeedbackQualityMetrics
+from app.models.feedback_analytics import FeedbackCategoryAnalytics
+from app.models.response_quality import ResponseQualityMetrics
 
 # Phase 2 Analysis Schemas
-from app.schemas.root_cause_analysis import RootCauseAnalysis
-from app.schemas.violation_cluster import ViolationCluster
-from app.schemas.evidence_metadata import EvidenceMetadata
-from app.schemas.fund_family_analysis import FundFamilyAnalysis
+from app.models.root_cause_analysis import RootCauseAnalysis
+from app.models.violation_cluster import ViolationCluster
+from app.models.evidence_metadata import EvidenceMetadata
+from app.models.fund_family_analysis import FundFamilyAnalysis
 
 # Phase 3 Dashboard Schemas
-from app.schemas.audit_trail_access import AuditTrailAccessMetrics
-from app.schemas.realtime_monitoring import RealTimeMonitoringMetrics
-from app.schemas.compliance_dashboard_kpis import ComplianceDashboardKPIs
+from app.models.audit_trail_access import AuditTrailAccessMetrics
+from app.models.realtime_monitoring import RealTimeMonitoringMetrics
+from app.models.compliance_dashboard_kpis import ComplianceDashboardKPIs
 
 
 class MetricsStore:

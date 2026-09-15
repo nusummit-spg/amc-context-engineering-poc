@@ -17,7 +17,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.engine import config, hyde
-from app.schemas.query import QueryIntent, QueryType, AssembledContext, SynthesisOutput
+from app.models.query import QueryIntent, QueryType, AssembledContext, SynthesisOutput
 
 
 @pytest.fixture

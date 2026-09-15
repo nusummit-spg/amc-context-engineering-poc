@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 
 from app.core.database import SessionLocal, init_db
-from app.core.models import (
+from backend.app.schemas.models import (
     AuditMetadata,
     Violation,
     ResponseFeedback,

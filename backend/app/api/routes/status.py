@@ -11,7 +11,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends
 
 from app.api.deps import Container, get_container
-from app.schemas.api import DataPlanesResponse, HealthResponse
+from app.models.api import DataPlanesResponse, HealthResponse
 
 router = APIRouter(prefix="/status", tags=["status"])
 

@@ -18,10 +18,10 @@ Unit tests for the 4 Phase 2 Analysis Layer Pydantic schemas:
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.root_cause_analysis import RootCauseAnalysis
-from app.schemas.violation_cluster import ViolationCluster
-from app.schemas.evidence_metadata import EvidenceMetadata
-from app.schemas.fund_family_analysis import FundFamilyAnalysis
+from app.models.root_cause_analysis import RootCauseAnalysis
+from app.models.violation_cluster import ViolationCluster
+from app.models.evidence_metadata import EvidenceMetadata
+from app.models.fund_family_analysis import FundFamilyAnalysis
 
 
 # ---------------------------------------------------------------------------

@@ -22,7 +22,7 @@ import re
 from typing import Any, Dict, Optional, Tuple
 
 from app.evaluation.nli_evaluator import NLIEvaluator, get_nli_evaluator
-from app.schemas.review_queue import Verdict
+from app.models.review_queue import Verdict
 
 logger = logging.getLogger("app.evaluation.verdict")
 

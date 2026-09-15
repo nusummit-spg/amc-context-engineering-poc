@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.models import (
+from app.schemas.models import (
     Region,
     AuditType,
     AuditStatus,

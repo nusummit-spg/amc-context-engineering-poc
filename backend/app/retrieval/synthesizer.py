@@ -10,7 +10,7 @@ import logging
 
 from app.core.llm import LLMClient
 from app.prompts import get_prompt
-from app.schemas.query import AssembledContext, Citation, SynthesisOutput
+from app.models.query import AssembledContext, Citation, SynthesisOutput
 
 logger = logging.getLogger("retrieval")
 

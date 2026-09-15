@@ -12,8 +12,8 @@ from pydantic import BaseModel, Field
 
 from app.core.llm import LLMClient
 from app.prompts import get_prompt
-from app.schemas.documents import Document, DocumentCategory
-from app.schemas.taxonomy import TaxonomyTree
+from app.models.documents import Document, DocumentCategory
+from app.models.taxonomy import TaxonomyTree
 
 logger = logging.getLogger("extraction")
 

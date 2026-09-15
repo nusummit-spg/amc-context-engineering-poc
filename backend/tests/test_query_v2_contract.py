@@ -12,7 +12,7 @@ from httpx import AsyncClient, ASGITransport
 from app.main import create_app
 from app.api import deps
 from app.config import get_settings
-from app.schemas.query import QueryIntent, QueryType, SynthesisOutput
+from app.models.query import QueryIntent, QueryType, SynthesisOutput
 
 
 @pytest.fixture

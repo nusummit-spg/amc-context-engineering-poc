@@ -21,8 +21,8 @@ from typing import NamedTuple, Optional
 from app.core.llm import LLMClient
 from app.extraction.entities import ExtractedMention
 from app.prompts import get_prompt
-from app.schemas.documents import Document
-from app.schemas.entities import ENTITY_CLASS_BY_TYPE, BaseEntity, EntityType
+from app.models.documents import Document
+from app.models.entities import ENTITY_CLASS_BY_TYPE, BaseEntity, EntityType
 
 logger = logging.getLogger("extraction")
 

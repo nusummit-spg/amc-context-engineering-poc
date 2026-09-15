@@ -18,10 +18,10 @@ import re
 from typing import TYPE_CHECKING
 
 from app.contracts.identity import generate_chunk_id
-from app.schemas.documents import Chunk, Document
+from app.models.documents import Chunk, Document
 
 if TYPE_CHECKING:
-    from app.schemas.documents import ParentChunk
+    from app.models.documents import ParentChunk
 
 # Sentence boundary regex — Unicode-aware, covers:
 #   Latin scripts (English)
@@ -242,7 +242,7 @@ def chunk_document_hierarchical(
         # Store parents keyed by parent_chunk_id for retrieval expansion
         # At query time: retrieve child -> fetch parent -> send parent.text to LLM
     """
-    from app.schemas.documents import ParentChunk
+    from app.models.documents import ParentChunk
 
     parents: list[ParentChunk] = []
     children: list[Chunk] = []

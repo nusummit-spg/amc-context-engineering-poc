@@ -22,8 +22,8 @@ from datetime import datetime
 import pytest
 
 from app.compliance.metrics_store import get_metrics_store
-from app.schemas.remediation_metrics import RemediationMetrics
-from app.schemas.audit_trail_access import AuditTrailAccessMetrics
+from app.models.remediation_metrics import RemediationMetrics
+from app.models.audit_trail_access import AuditTrailAccessMetrics
 
 
 def test_throughput_benchmark_1000_metrics_per_minute():

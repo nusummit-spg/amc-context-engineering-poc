@@ -20,7 +20,7 @@ from fastapi import APIRouter, Depends, Header
 from app.api.deps import get_auth_service
 from app.auth.service import AuthResult, AuthService
 from app.core.errors import AppError
-from app.schemas.auth import LoginRequest, LoginResponse, MeResponse, UserPublic
+from app.models.auth import LoginRequest, LoginResponse, MeResponse, UserPublic
 
 logger = logging.getLogger("auth")
 
@@ -62,6 +62,8 @@ async def login(payload: LoginRequest, auth_service: AuthService = Depends(get_a
             raise AccountInactiveError(result.error)
         raise InvalidCredentialsError(result.error or "Authentication failed.")
 
+    assert result.token is not None
+    assert result.expires_at is not None
     return LoginResponse(
         token=result.token,
         expires_at=result.expires_at,

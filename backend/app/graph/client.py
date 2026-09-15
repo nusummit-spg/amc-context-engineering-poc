@@ -12,8 +12,8 @@ from typing import Any, Optional
 from neo4j import AsyncDriver, AsyncGraphDatabase
 
 from app.config import get_settings
-from app.schemas.entities import BaseEntity
-from app.schemas.relationships import Relationship
+from app.models.entities import BaseEntity
+from app.models.relationships import Relationship
 
 logger = logging.getLogger("graph")
 

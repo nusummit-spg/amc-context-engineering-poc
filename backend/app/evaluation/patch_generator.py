@@ -17,7 +17,7 @@ import logging
 import re
 from typing import Any, Dict, Optional
 
-from app.schemas.review_queue import Verdict
+from app.models.review_queue import Verdict
 
 logger = logging.getLogger("app.evaluation.patch_generator")
 

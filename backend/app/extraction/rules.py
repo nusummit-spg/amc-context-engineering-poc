@@ -25,8 +25,8 @@ import hashlib
 import re
 from typing import Any
 
-from app.schemas.rules import DocumentRule
-from app.schemas.documents import Document
+from app.models.rules import DocumentRule
+from app.models.documents import Document
 
 # Keywords that signal a conditional or rule sentence
 RULE_TRIGGERS = (

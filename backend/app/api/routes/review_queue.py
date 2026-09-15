@@ -21,8 +21,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 
 from app.compliance.security import get_client_role
 from app.db.review_queue_repository import ReviewQueueRepository, get_review_queue_repo
-from app.schemas.compliance_models import Role
-from app.schemas.review_queue import (
+from app.models.compliance_models import Role
+from app.models.review_queue import (
     ApproveRequest,
     AssignRequest,
     EscalateRequest,

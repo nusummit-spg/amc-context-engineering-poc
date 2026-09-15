@@ -24,7 +24,7 @@ import pytest
 from datetime import datetime, timedelta
 from pydantic import ValidationError
 
-from app.schemas.remediation_metrics import RemediationMetrics
+from app.models.remediation_metrics import RemediationMetrics
 from app.compliance.metrics_store import get_metrics_store
 
 

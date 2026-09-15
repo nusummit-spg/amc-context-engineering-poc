@@ -2,14 +2,13 @@
 from pathlib import Path
 
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent  # backend/
 DATABASE_URL = f"sqlite:///{BASE_DIR / 'data.db'}"
 
 
-class Base(DeclarativeBase):
-    pass
+Base = declarative_base()
 
 
 engine = create_engine(
@@ -38,15 +37,6 @@ def get_db():
 
 
 def init_db():
-    from app.core.models import (
-        UnifiedEvaluationRecord,
-        AuditMetadata,
-        Violation,
-        ResponseFeedback,
-        QueryEvidence,
-        ComplianceRule,
-        FundScheme,
-        ChatSession,
-    )
+    from app import schemas
 
     Base.metadata.create_all(bind=engine)

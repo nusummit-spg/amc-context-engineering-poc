@@ -24,16 +24,15 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.models import (
-    AuditMetadata,
-    Violation,
-    ResponseFeedback,
-    QueryEvidence,
-    ComplianceRule,
-    FundScheme,
-    ChatSession,
-)
-from app.schemas.audit import (
+from app.schemas.audit_metadata_table import AuditMetadata
+from app.schemas.violations_table import Violation
+from app.schemas.response_feedback_table import ResponseFeedback
+from app.schemas.query_evidence_table import QueryEvidence
+from app.schemas.compliance_rules_table import ComplianceRule
+from app.schemas.fund_schemes_table import FundScheme
+from app.schemas.chat_sessions_table import ChatSession
+
+from app.models.audit import (
     AuditMetadataCreate,
     ViolationCreate,
     ResponseFeedbackCreate,
@@ -212,17 +211,17 @@ def list_fund_schemes(limit: int = Query(50, ge=1, le=500), db: Session = Depend
 
 
 # ---------------------------------------------------------
-# sessions
+# chatsessions
 # ---------------------------------------------------------
 
-@router.post("/sessions", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post("/chat_sessions", response_model=dict, status_code=status.HTTP_201_CREATED)
 def create_session(payload: ChatSessionCreate, db: Session = Depends(get_db)):
     data = payload.model_dump(exclude_none=True)
     row = _create_row(db, ChatSession, data)
     return _row_to_dict(row)
 
 
-@router.get("/sessions", response_model=List[dict])
+@router.get("/chat_sessions", response_model=List[dict])
 def list_sessions(limit: int = Query(50, ge=1, le=500), db: Session = Depends(get_db)):
     rows = db.query(ChatSession).order_by(ChatSession.created_at.desc()).limit(limit).all()
     return [_row_to_dict(r) for r in rows]

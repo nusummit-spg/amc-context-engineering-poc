@@ -22,7 +22,7 @@ from app.retrieval.adaptive_retriever import AdaptiveRetriever
 from app.evaluation.answer_critic import AnswerCritic, CriticSeverity
 from app.evaluation.patch_generator import PatchGenerator
 from app.tasks.governance_batch import GovernanceBatch
-from app.schemas.review_queue import Verdict
+from app.models.review_queue import Verdict
 from app.retrieval.query_phases import (
     CacheLookupPhase,
     QueryExecutionPipeline,

@@ -21,7 +21,7 @@ from datetime import datetime
 import pytest
 
 from app.compliance.metrics_store import get_metrics_store
-from app.schemas.remediation_metrics import RemediationMetrics
+from app.models.remediation_metrics import RemediationMetrics
 
 
 def test_5000_writes_across_100_threads():

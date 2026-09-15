@@ -24,7 +24,7 @@ from app.api.deps import Container, get_container
 from app.compliance.audit_integration import log_resolution_audit, store_agent_metrics
 from app.compliance.escalation_engine import EscalationEngine
 from app.compliance.security import get_client_role, limit_requests, require_roles
-from app.schemas.compliance_models import (
+from app.models.compliance_models import (
     AggregatedAgentMetrics,
     AuditReportResponse,
     ComplianceAuditResultResponse,
@@ -36,17 +36,17 @@ from app.schemas.compliance_models import (
     ViolationResponse,
     ViolationStatusEnum,
 )
-from app.schemas.regulatory_metadata import RegulatoryMetadata
-from app.schemas.fund_metadata import FundAuditMetadata
-from app.schemas.remediation_metrics import RemediationMetrics
-from app.schemas.root_cause_analysis import RootCauseAnalysis
-from app.schemas.violation_cluster import ViolationCluster
-from app.schemas.evidence_metadata import EvidenceMetadata
-from app.schemas.fund_family_analysis import FundFamilyAnalysis
-from app.schemas.audit_trail_access import AuditTrailAccessMetrics
-from app.schemas.realtime_monitoring import RealTimeMonitoringMetrics
-from app.schemas.compliance_dashboard_kpis import ComplianceDashboardKPIs
-from app.schemas.compliance_alert import ComplianceAlert
+from app.models.regulatory_metadata import RegulatoryMetadata
+from app.models.fund_metadata import FundAuditMetadata
+from app.models.remediation_metrics import RemediationMetrics
+from app.models.root_cause_analysis import RootCauseAnalysis
+from app.models.violation_cluster import ViolationCluster
+from app.models.evidence_metadata import EvidenceMetadata
+from app.models.fund_family_analysis import FundFamilyAnalysis
+from app.models.audit_trail_access import AuditTrailAccessMetrics
+from app.models.realtime_monitoring import RealTimeMonitoringMetrics
+from app.models.compliance_dashboard_kpis import ComplianceDashboardKPIs
+from app.models.compliance_alert import ComplianceAlert
 from app.compliance.metrics_store import get_metrics_store
 
 
@@ -302,7 +302,7 @@ async def get_agent_metrics(
 
 import re
 from fastapi.responses import PlainTextResponse
-from app.schemas.compliance_models import (
+from app.models.compliance_models import (
     AggregatedAgentMetrics,
     AuditBatchRequest,
     AuditFundRequest,

@@ -34,7 +34,7 @@ from app.ingestion.chunker import chunk_document
 from app.ingestion.ledger import IngestionLedger, IngestionStage
 from app.ingestion.parsers import build_registry
 from app.ingestion.pii import PiiScrubber
-from app.schemas.documents import Document
+from app.models.documents import Document
 from app.vector.client import VectorStore
 
 logger = logging.getLogger("ingestion")

@@ -22,8 +22,8 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.compliance.metrics_store import get_metrics_store
-from app.schemas.remediation_metrics import RemediationMetrics
-from app.schemas.compliance_alert import AlertSeverity, AlertStatus, EscalationTier
+from app.models.remediation_metrics import RemediationMetrics
+from app.models.compliance_alert import AlertSeverity, AlertStatus, EscalationTier
 
 
 @pytest.fixture(scope="module")

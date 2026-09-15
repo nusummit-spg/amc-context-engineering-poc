@@ -19,7 +19,7 @@ import logging
 from typing import Any, Dict, List, Optional
 import uuid
 
-from app.schemas.compliance_alert import ComplianceAlert, AlertSeverity, EscalationTier
+from app.models.compliance_alert import ComplianceAlert, AlertSeverity, EscalationTier
 
 
 logger = logging.getLogger("compliance.alerting_service")

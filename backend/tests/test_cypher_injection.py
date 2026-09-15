@@ -18,7 +18,7 @@ Security tests verifying zero Cypher injection vulnerability:
 import pytest
 from app.graph.cypher_builder import CypherBuilder, CypherSecurityError
 from app.compliance.metrics_store import get_metrics_store
-from app.schemas.remediation_metrics import RemediationMetrics
+from app.models.remediation_metrics import RemediationMetrics
 
 
 HOSTILE_CYPHER_PAYLOADS = [

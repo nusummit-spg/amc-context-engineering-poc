@@ -16,7 +16,7 @@ import pytest
 
 from app.engine import text_to_cypher
 from app.retrieval.intent import IntentClassifier
-from app.schemas.query import QueryType
+from app.models.query import QueryType
 
 
 def test_aggregation_keyword_detection():

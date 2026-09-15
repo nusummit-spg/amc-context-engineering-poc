@@ -165,7 +165,7 @@ class ComplianceAgentOrchestrator:
 
     def get_agent_metrics(self, region: str = "SEBI") -> Dict[str, Any]:
         """Calculate p95, p99, average latencies and accuracy scores for each domain agent."""
-        from app.schemas.compliance_models import AgentMetrics
+        from app.models.compliance_models import AgentMetrics
         metrics_out = {}
 
         for agent_name, data in self.metrics.items():

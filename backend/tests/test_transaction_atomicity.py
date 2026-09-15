@@ -18,7 +18,7 @@ import pytest
 from datetime import datetime
 
 from app.compliance.metrics_store import get_metrics_store
-from app.schemas.remediation_metrics import RemediationMetrics
+from app.models.remediation_metrics import RemediationMetrics
 
 
 def test_atomic_transaction_commits_on_success():

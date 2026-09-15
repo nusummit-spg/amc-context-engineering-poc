@@ -28,7 +28,7 @@ import numpy as np
 from fastembed import TextEmbedding
 
 from app.config import get_settings
-from app.schemas.documents import Chunk
+from app.models.documents import Chunk
 
 logger = logging.getLogger("vector")
 

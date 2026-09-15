@@ -23,8 +23,8 @@ import hashlib
 import re
 from typing import Any, Optional
 
-from app.schemas.facts import DocumentFact
-from app.schemas.documents import Document, Section
+from app.models.facts import DocumentFact
+from app.models.documents import Document, Section
 
 # ─────────────────────────────────────────────────────────────────────────────
 # AMC domain concept dictionary (canonical names + aliases for subject binding)

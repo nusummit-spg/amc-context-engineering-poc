@@ -12,7 +12,7 @@ import pytest
 from app.contracts.identity import generate_chunk_id, generate_document_id, generate_source_id
 from app.retrieval.cache import SemanticQueryCache, get_semantic_cache
 from app.retrieval.orchestrator import RetrievalOrchestrator
-from app.schemas.query import AssembledContext, QueryIntent, QueryType, RetrievedChunk, SynthesisOutput
+from app.models.query import AssembledContext, QueryIntent, QueryType, RetrievedChunk, SynthesisOutput
 
 
 @pytest.fixture

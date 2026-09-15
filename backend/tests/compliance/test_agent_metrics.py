@@ -14,7 +14,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 from app.compliance.agents.orchestrator import ComplianceAgentOrchestrator
 from app.compliance.rules_engine import RulesEngine
-from app.schemas.compliance_models import AgentMetrics, AggregatedAgentMetrics
+from app.models.compliance_models import AgentMetrics, AggregatedAgentMetrics
 
 
 @pytest.fixture
