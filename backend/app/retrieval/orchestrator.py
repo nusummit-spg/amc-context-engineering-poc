@@ -606,6 +606,31 @@ class RetrievalOrchestrator:
         if metrics:
             metrics.add_component(comp_asm)
 
+        # Step 7.5 — Track 6: Apply Correction Patch Layer (Shadow Graph)
+        try:
+            from app.graph.correction_patch_layer import get_correction_patch_layer
+            patch_layer = get_correction_patch_layer()
+            entity_keys = []
+            if resolved_entities:
+                for ent in resolved_entities:
+                    if hasattr(ent, "isin") and ent.isin:
+                        entity_keys.append(ent.isin)
+                    if hasattr(ent, "dedup_key") and ent.dedup_key:
+                        entity_keys.append(ent.dedup_key)
+                    if hasattr(ent, "name") and ent.name:
+                        entity_keys.append(ent.name)
+            if intent.entities_mentioned:
+                entity_keys.extend(intent.entities_mentioned)
+            seen_e = set()
+            unique_entity_keys = [e for e in entity_keys if e and not (e in seen_e or seen_e.add(e))]
+            if unique_entity_keys and context.context_text:
+                context.context_text = patch_layer.apply_patches_to_context(
+                    entities=unique_entity_keys,
+                    retrieval_context=context.context_text
+                )
+        except Exception as patch_exc:
+            logger.debug("Correction patch layer notice: %s", patch_exc)
+
         # Step 8 — synthesis
         comp_synth = ComponentMetric("synthesis", time.perf_counter())
         t_gen_start = time.perf_counter()

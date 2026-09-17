@@ -7,7 +7,7 @@
 
 """Canonical identity and provenance contract (SHA-256 deterministic IDs).
 
-Implements the identifier model defined in Docs/convergence_implementation_plan.md:
+Implements the identifier model defined in Docs/03-Implementation-Plans/convergence_implementation_plan.md:
   - source_id:           SHA-256 of canonical source URI/path + namespace
   - document_id:         Stable logical document ID, derived from source_id
   - content_sha256:      SHA-256 of exact acquired raw file bytes

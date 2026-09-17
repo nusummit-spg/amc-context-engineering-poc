@@ -805,3 +805,55 @@ export async function sendChatStream({
     }
   }
 }
+
+// ── Track 7: Governance Review Queue Endpoints ───────────────────────────────
+
+export async function fetchPendingCorrections() {
+  return await request("/governance/pending-corrections");
+}
+
+export async function fetchCorrectionDetail(patchId) {
+  return await request(`/governance/correction/${patchId}`);
+}
+
+export async function approveCorrection(patchId, comment = "") {
+  return await request(`/governance/approve/${patchId}`, {
+    method: "POST",
+    body: JSON.stringify({ comment }),
+  });
+}
+
+export async function rejectCorrection(patchId, reason = "") {
+  return await request(`/governance/reject/${patchId}`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function batchApproveCorrections(patchIds, action, comment = "") {
+  return await request("/governance/batch-approve", {
+    method: "POST",
+    body: JSON.stringify({ patch_ids: patchIds, action, comment }),
+  });
+}
+
+// ── Track 4: Dissatisfaction Detection Endpoint ───────────────────────────────
+
+export async function detectFollowUpCorrection({
+  sessionId,
+  previousResponseId,
+  followUpQuery,
+  originalQuery,
+  originalResponse,
+}) {
+  return await request("/feedback/follow-up-detection", {
+    method: "POST",
+    body: JSON.stringify({
+      session_id: sessionId,
+      previous_response_id: previousResponseId,
+      follow_up_query: followUpQuery,
+      original_query: originalQuery,
+      original_response: originalResponse,
+    }),
+  });
+}

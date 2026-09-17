@@ -8,12 +8,12 @@
 """
 query_evidence_recorder.py
 ==========================
-Phase 3 of the Schema & Audit roadmap (Docs/SCHEMA_AND_AUDIT_STRUCTURE.md
+Phase 3 of the Schema & Audit roadmap (Docs/02-Architecture-and-Design/SCHEMA_AND_AUDIT_STRUCTURE.md
 Part 1.4 / Part 4 "Phase 3: Audit Trail & Query Evidence").
 
 Records one **query_evidence** record per Chat-tab turn as JSON on disk, using
 the exact column names of the ``query_evidence`` table from
-``Docs/SQL_SCHEMA_IMPLEMENTATION.sql`` as the top-level keys. The file is the
+``Docs/02-Architecture-and-Design/SQL_SCHEMA_IMPLEMENTATION.sql`` as the top-level keys. The file is the
 file-based equivalent of that table, so a later ``init_audit_schema.py`` load
 is a straight column-for-column insert.
 

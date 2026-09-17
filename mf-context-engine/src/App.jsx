@@ -14,6 +14,7 @@ import ViolationsPage from "./views/pages/ViolationsPage";
 import FundsPage from "./views/pages/FundsPage";
 import RemediationPage from "./views/pages/RemediationPage";
 import MultiRegionPage from "./views/pages/MultiRegionPage";
+import GovernancePage from "./views/pages/GovernancePage";
 import LoginScreen from "./components/auth/LoginScreen";
 import { useAppState } from "./state/AppState";
 import { ROLE_PERMISSIONS } from "./data/rbac";
@@ -119,6 +120,7 @@ export default function App() {
           {activePage === "03_Funds" && <FundsPage />}
           {activePage === "04_Remediation" && <RemediationPage />}
           {activePage === "05_Multi_Region" && <MultiRegionPage />}
+          {activePage === "06_Governance" && <GovernancePage />}
           {(!activePage || activePage === "app") && (
             <div className="stTabs-panel">
               {clampedTab === chatIdx && <ChatTab />}

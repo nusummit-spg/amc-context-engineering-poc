@@ -1,4 +1,4 @@
-﻿# ===========================================================================
+# ===========================================================================
 # Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
 #
 # Author: NuSummit Developers
@@ -12,7 +12,7 @@ Full EvidencePack schema — the immutable D0–D3 frozen snapshot created at
 response-delivery time and referenced by the human-feedback-loop and
 Evaluation Layer.
 
-Design reference: REVISED_SUMMARY.md §Gap 2 and Docs/evidence_pack.md
+Design reference: REVISED_SUMMARY.md §Gap 2 and Docs/06-Evaluation-and-Testing/evidence_pack.md
 
 Sections
 --------

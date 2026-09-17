@@ -515,15 +515,51 @@ def run_safe_cypher(cypher: str, params: dict | None = None,
         return None, "rejected: write keyword detected"
     if _CALL_KEYWORD.search(cypher_stripped):
         return None, "rejected: CALL not allowed"
+    if "UNION" in cypher_stripped.upper():
+        return None, "rejected: UNION queries not supported"
+    
+    # Complexity checks
+    opt_matches = len(re.findall(r"\bOPTIONAL\s+MATCH\b", cypher_stripped, re.I))
+    all_matches = len(re.findall(r"\bMATCH\b", cypher_stripped, re.I))
+    standalone_matches = all_matches - opt_matches
+    if standalone_matches > 3:
+        return None, "rejected: max 3 MATCH clauses allowed"
+    if opt_matches > 2:
+        return None, "rejected: max 2 OPTIONAL MATCH clauses allowed"
+
     if not re.search(r"\bLIMIT\s+\d+\b", cypher_stripped, re.I):
         cypher_stripped += f" LIMIT {max_rows}"
 
+    start_time = time.time()
     try:
         with get_driver().session(database=config.NEO4J_DATABASE) as session:
             result = session.run(cypher_stripped, params or {})
             rows = [dict(r) for r in result][:max_rows]
+        
+        try:
+            from app.graph.cypher_audit_log import CypherAuditLogger
+            CypherAuditLogger.get_logger().log_query(
+                query_method="run_safe_cypher",
+                parameters={"query_preview": cypher_stripped[:100], "params": params or {}},
+                rows_returned=len(rows),
+                duration_ms=(time.time() - start_time) * 1000
+            )
+        except Exception:
+            pass
+
         return rows, None
     except Exception as e:
+        try:
+            from app.graph.cypher_audit_log import CypherAuditLogger
+            CypherAuditLogger.get_logger().log_query(
+                query_method="run_safe_cypher",
+                parameters={"query_preview": cypher_stripped[:100], "params": params or {}},
+                rows_returned=0,
+                duration_ms=(time.time() - start_time) * 1000,
+                error=str(e)
+            )
+        except Exception:
+            pass
         return None, str(e)
 
 

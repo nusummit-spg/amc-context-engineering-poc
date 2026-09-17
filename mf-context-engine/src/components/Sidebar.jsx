@@ -22,6 +22,7 @@ import {
   Monitor,
   ChevronUp,
   ChevronDown,
+  ClipboardCheck,
 } from "lucide-react";
 import { useAppState } from "../state/AppState";
 import { useToast } from "./widgets/Toast";
@@ -36,7 +37,7 @@ const WORKSPACE_TABS = [
 
 const THEME_OPTIONS = [
   { id: "light", label: "Light", Icon: Sun, hint: "Always use the light theme" },
-  { id: "dark", label: "Dark", Icon: Moon, hint: "Always use the dark theme" },
+  { id: "dark", label: "Dark", Icon: Moon, hint: "Follow your operating system setting" },
   { id: "system", label: "System", Icon: Monitor, hint: "Follow your operating system setting" },
 ];
 
@@ -46,6 +47,7 @@ const PAGES = [
   { id: "03_Funds", label: "Fund Schemes Matrix", shortLabel: "Funds", Icon: LayoutGrid },
   { id: "04_Remediation", label: "Remediation & SLA", shortLabel: "Remediation", Icon: Wrench },
   { id: "05_Multi_Region", label: "Multi-Jurisdiction", shortLabel: "Multi-Region", Icon: Globe2 },
+  { id: "06_Governance", label: "Governance Review Queue", shortLabel: "Governance", Icon: ClipboardCheck },
 ];
 
 export default function Sidebar() {

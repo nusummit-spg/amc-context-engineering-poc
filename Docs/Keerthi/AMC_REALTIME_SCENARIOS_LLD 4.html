@@ -1,0 +1,2053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>AMC Feedback Loop — Real-Time Scenario LLD</title>
+  <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    :root{
+      --purple:#6c63ff;--violet:#5a52d5;--pink:#f093fb;--red:#e53e3e;
+      --blue:#3b82f6;--cyan:#06b6d4;--green:#10b981;--teal:#14b8a6;
+      --orange:#f97316;--yellow:#f59e0b;--amber:#d97706;
+      --bg:#f0f2f8;--card:#ffffff;--border:#dde3f0;
+      --text:#1a202c;--muted:#64748b;--light:#f8fafc;
+      --active-gradient:linear-gradient(135deg,#6c63ff,#5a52d5);
+      --passive-gradient:linear-gradient(135deg,#06b6d4,#14b8a6);
+      --r:10px;--shadow:0 4px 24px rgba(108,99,255,.15);
+    }
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+    /* ── SITE HEADER ── */
+    .site-header{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:44px 48px 36px;position:relative;overflow:hidden;}
+    .site-header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 70% 50%,rgba(108,99,255,.25) 0%,transparent 70%);}
+    .site-header h1{font-size:clamp(22px,3vw,36px);font-weight:800;color:#fff;position:relative;letter-spacing:-.5px;}
+    .site-header .sub{margin-top:8px;font-size:15px;color:rgba(255,255,255,.7);position:relative;}
+    .mode-chips{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;position:relative;}
+    .chip{padding:6px 18px;border-radius:20px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;}
+    .chip.active-chip{background:rgba(108,99,255,.3);color:#c4b5fd;border:1px solid rgba(108,99,255,.5);}
+    .chip.passive-chip{background:rgba(6,182,212,.2);color:#67e8f9;border:1px solid rgba(6,182,212,.4);}
+    .chip.note-chip{background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);}
+
+    /* ── TOP NAV ── */
+    .top-nav{background:#fff;border-bottom:2px solid var(--border);padding:0 32px;display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin;position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+    .nav-group{display:flex;align-items:center;gap:2px;padding:0 6px;border-right:1px solid var(--border);}
+    .nav-group:last-child{border-right:none;}
+    .nav-group-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;padding:0 6px;white-space:nowrap;}
+    .nb{padding:12px 14px;border:none;background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;}
+    .nb:hover{color:var(--purple);}
+    .nb.active{color:var(--purple);border-bottom-color:var(--purple);}
+    .nb.active-tab{color:#6c63ff;}
+    .nb.passive-tab{color:#06b6d4;}
+    .nb.a-active{color:#6c63ff;border-bottom-color:#6c63ff;}
+    .nb.p-active{color:#06b6d4;border-bottom-color:#06b6d4;}
+
+    /* ── CONTENT SHELL ── */
+    .content{max-width:1500px;margin:0 auto;padding:32px 40px 60px;}
+    .section{display:none;}
+    .section.active{display:block;animation:fadeIn .3s ease;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+    /* ── SECTION HEADERS ── */
+    .sec-head{display:flex;align-items:flex-start;gap:16px;margin-bottom:28px;}
+    .sec-icon{font-size:40px;flex-shrink:0;}
+    .sec-head h2{font-size:26px;font-weight:800;color:var(--text);}
+    .sec-head .sec-desc{font-size:14px;color:var(--muted);margin-top:5px;max-width:800px;line-height:1.6;}
+    .mode-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 12px;border-radius:12px;font-size:12px;font-weight:700;margin-bottom:8px;}
+    .mode-pill.active{background:#ede9fe;color:#6c63ff;}
+    .mode-pill.passive{background:#cffafe;color:#0891b2;}
+    .mode-pill.shared{background:#f0fdf4;color:#059669;}
+
+    /* ── STEP FLOW CARDS ── */
+    .flow-container{display:flex;flex-direction:column;gap:0;}
+    .step-block{display:grid;grid-template-columns:56px 1fr;gap:0;position:relative;}
+    .step-block:not(:last-child)::after{content:'';position:absolute;left:27px;top:72px;bottom:-20px;width:2px;background:linear-gradient(180deg,var(--border),transparent);z-index:0;}
+    .step-number-col{display:flex;flex-direction:column;align-items:center;padding-top:12px;}
+    .step-num{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0;z-index:1;box-shadow:0 4px 12px rgba(0,0,0,.2);}
+    .step-body{padding:0 0 32px 16px;}
+    .step-card{background:var(--card);border-radius:var(--r);border:2px solid var(--border);padding:20px 24px;transition:border-color .2s;}
+    .step-card:hover{border-color:var(--purple);}
+    .step-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;}
+    .step-title{font-size:16px;font-weight:800;color:var(--text);}
+    .step-phase{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:3px 10px;border-radius:10px;white-space:nowrap;}
+    .phase-rt{background:#ede9fe;color:#6c63ff;}
+    .phase-ev{background:#fef9c3;color:#a16207;}
+    .phase-rep{background:#dcfce7;color:#15803d;}
+    .phase-async{background:#f0f9ff;color:#0369a1;}
+
+    /* ── EXAMPLE BOX ── */
+    .example-box{background:linear-gradient(135deg,#f8f4ff,#f0eeff);border-left:4px solid var(--purple);border-radius:8px;padding:14px 16px;margin:12px 0;}
+    .example-box.cyan{background:linear-gradient(135deg,#f0fdfe,#e0f7fa);border-left-color:var(--cyan);}
+    .example-box.green{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-left-color:var(--green);}
+    .example-box.red{background:linear-gradient(135deg,#fff5f5,#fee2e2);border-left-color:var(--red);}
+    .example-box.yellow{background:linear-gradient(135deg,#fffbeb,#fef9c3);border-left-color:var(--yellow);}
+    .example-box.orange{background:linear-gradient(135deg,#fff7ed,#ffedd5);border-left-color:var(--orange);}
+    .ex-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--purple);margin-bottom:6px;}
+    .ex-label.cyan{color:var(--cyan);}
+    .ex-label.green{color:var(--green);}
+    .ex-label.red{color:var(--red);}
+    .ex-label.yellow{color:var(--amber);}
+    .ex-label.orange{color:var(--orange);}
+    .ex-content{font-size:13px;color:var(--text);line-height:1.65;}
+    .ex-content code{font-family:'Cascadia Code','Consolas',monospace;background:rgba(0,0,0,.07);padding:1px 5px;border-radius:4px;font-size:12px;}
+    .ex-content strong{font-weight:700;}
+
+    /* ── WHY BOX ── */
+    .why-box{background:#f8fafc;border-radius:8px;padding:10px 14px;margin-top:10px;display:flex;gap:8px;}
+    .why-icon{font-size:16px;flex-shrink:0;}
+    .why-text{font-size:12px;color:var(--muted);line-height:1.55;}
+    .why-text strong{color:var(--text);font-weight:700;}
+
+    /* ── DATA CAPTURED TABLE ── */
+    .capture-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin:10px 0;}
+    .capture-item{background:var(--light);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+    .cap-key{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;}
+    .cap-val{font-size:12px;font-weight:600;color:var(--text);margin-top:3px;font-family:'Cascadia Code','Consolas',monospace;}
+
+    /* ── VERDICT BADGE ── */
+    .verdict{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:700;}
+    .verdict.pass{background:#dcfce7;color:#166534;}
+    .verdict.fail{background:#fee2e2;color:#991b1b;}
+    .verdict.partial{background:#fef9c3;color:#a16207;}
+    .verdict.unknown{background:#f1f5f9;color:#475569;}
+    .verdict.block{background:#fce7f3;color:#9d174d;}
+    .verdict.hold{background:#fff7ed;color:#c2410c;}
+
+    /* ── HORIZONTAL PIPELINE ── */
+    .pipe-row{display:flex;align-items:stretch;flex-wrap:wrap;gap:0;margin:16px 0;}
+    .pipe-node{background:var(--light);border:2px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;font-weight:600;text-align:center;min-width:100px;flex:1;transition:all .2s;position:relative;}
+    .pipe-node:hover{background:var(--purple);color:#fff;border-color:var(--purple);}
+    .pipe-node .pn-sub{font-size:10px;font-weight:400;color:var(--muted);margin-top:2px;}
+    .pipe-node:hover .pn-sub{color:rgba(255,255,255,.8);}
+    .pipe-arrow{display:flex;align-items:center;padding:0 4px;color:var(--purple);font-size:16px;font-weight:700;flex-shrink:0;}
+
+    /* ── COMPARISON TABLE ── */
+    .cmp-table{width:100%;border-collapse:collapse;font-size:13px;border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);}
+    .cmp-table th{padding:12px 16px;text-align:left;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;}
+    .cmp-table td{padding:11px 16px;border-bottom:1px solid var(--border);vertical-align:top;}
+    .cmp-table tr:last-child td{border:none;}
+    .cmp-table tr:hover td{background:var(--light);}
+    .th-active{background:#ede9fe;color:#6c63ff;}
+    .th-passive{background:#cffafe;color:#0891b2;}
+    .th-shared{background:#f1f5f9;color:var(--text);}
+
+    /* ── CALLOUT ── */
+    .callout{border-radius:var(--r);padding:16px 20px;margin:20px 0;display:flex;gap:14px;}
+    .callout.info{background:#ede9fe;border-left:4px solid var(--purple);}
+    .callout.warn{background:#fffbeb;border-left:4px solid var(--yellow);}
+    .callout.success{background:#f0fdf4;border-left:4px solid var(--green);}
+    .callout.danger{background:#fff5f5;border-left:4px solid var(--red);}
+    .callout.cyan{background:#f0fdfe;border-left:4px solid var(--cyan);}
+    .cl-icon{font-size:22px;flex-shrink:0;}
+    .cl-body{font-size:13px;line-height:1.6;}
+    .cl-body strong{display:block;font-size:14px;font-weight:700;margin-bottom:4px;}
+
+    /* ── KPI ROW ── */
+    .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:20px 0;}
+    .kpi{border-radius:var(--r);padding:20px 16px;text-align:center;color:#fff;}
+    .kpi .kv{font-size:28px;font-weight:800;line-height:1;}
+    .kpi .kl{font-size:12px;opacity:.85;margin-top:5px;}
+    .kpi.k1{background:linear-gradient(135deg,#6c63ff,#5a52d5);}
+    .kpi.k2{background:linear-gradient(135deg,#f093fb,#f5576c);}
+    .kpi.k3{background:linear-gradient(135deg,#06b6d4,#14b8a6);}
+    .kpi.k4{background:linear-gradient(135deg,#10b981,#059669);}
+    .kpi.k5{background:linear-gradient(135deg,#f97316,#ef4444);}
+
+    /* ── REPAIR CARD ── */
+    .repair-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin:16px 0;}
+    .repair-card{background:var(--card);border:2px solid var(--border);border-radius:var(--r);padding:18px;transition:all .2s;}
+    .repair-card:hover{border-color:var(--green);box-shadow:var(--shadow);}
+    .rc-id{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;padding:2px 8px;border-radius:8px;display:inline-block;margin-bottom:8px;}
+    .rc-r1{background:#dcfce7;color:#166534;}
+    .rc-r2{background:#dbeafe;color:#1e40af;}
+    .rc-r3{background:#fef9c3;color:#a16207;}
+    .rc-r4{background:#ffedd5;color:#c2410c;}
+    .rc-r5{background:#fee2e2;color:#991b1b;}
+    .rc-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;}
+    .rc-desc{font-size:12px;color:var(--muted);line-height:1.5;}
+
+    /* ── SEPARATOR ── */
+    .separator{height:1px;background:var(--border);margin:28px 0;}
+    h3.sub{font-size:17px;font-weight:700;color:var(--text);margin:24px 0 14px;display:flex;align-items:center;gap:8px;}
+    h3.sub::after{content:'';flex:1;height:2px;background:linear-gradient(90deg,var(--border),transparent);}
+    h3.sub.a{color:var(--purple);}
+    h3.sub.p{color:var(--cyan);}
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar{width:6px;height:6px;}
+    ::-webkit-scrollbar-track{background:var(--bg);}
+    ::-webkit-scrollbar-thumb{background:var(--purple);border-radius:3px;}
+
+    /* ── FOOTER ── */
+    .site-footer{background:var(--card);border-top:2px solid var(--border);padding:20px 48px;text-align:center;font-size:13px;color:var(--muted);}
+
+    /* responsive */
+    @media(max-width:768px){.content{padding:20px 16px;}.site-header{padding:28px 20px;}.step-block{grid-template-columns:44px 1fr;}}
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════ HEADER ══════════════════════════════════ -->
+<header class="site-header">
+  <h1>AMC Feedback Loop — Real-Time Scenario Low-Level Design</h1>
+  <p class="sub">Every step annotated with: what action is performed · what data is captured · why it matters · real AMC examples throughout</p>
+  <div class="mode-chips">
+    <span class="chip active-chip">🟣 Active Scenario — User provides explicit feedback</span>
+    <span class="chip passive-chip">🔵 Passive Scenario — No feedback; system captures metrics &amp; session signals</span>
+    <span class="chip note-chip">📋 Reference: Architecture v1.2 · Deterministic-first · LLM-last</span>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════ NAV ══════════════════════════════════ -->
+<nav class="top-nav">
+  <div class="nav-group">
+    <span class="nav-group-label">Start</span>
+    <button class="nb active" onclick="show('overview',this)">Overview</button>
+    <button class="nb" onclick="show('query-to-response',this)">Query → Response</button>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">🟣 Active</span>
+    <button class="nb active-tab" onclick="show('a-hallucination',this)">Hallucination</button>
+    <button class="nb active-tab" onclick="show('a-inaccuracy',this)">Inaccuracy</button>
+    <button class="nb active-tab" onclick="show('a-missing-context',this)">Missing Context</button>
+    <button class="nb active-tab" onclick="show('a-citation',this)">Citation</button>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">🔵 Passive</span>
+    <button class="nb passive-tab" onclick="show('p-hallucination',this)">Hallucination</button>
+    <button class="nb passive-tab" onclick="show('p-inaccuracy',this)">Inaccuracy</button>
+    <button class="nb passive-tab" onclick="show('p-missing-context',this)">Missing Context</button>
+    <button class="nb passive-tab" onclick="show('p-citation',this)">Citation</button>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">End</span>
+    <button class="nb" onclick="show('resolution',this)">Resolution Map</button>
+  </div>
+</nav>
+
+<main class="content">
+
+<!-- ══════════════════════════ OVERVIEW TAB ══════════════════════════ -->
+<section id="overview" class="section active">
+  <div class="sec-head">
+    <div class="sec-icon">🗺️</div>
+    <div>
+      <span class="mode-pill shared">📐 Shared Foundation</span>
+      <h2>Active vs Passive — How the Loop Differs</h2>
+      <p class="sec-desc">Every interaction produces a frozen EvidencePack the moment a response is delivered. What happens <em>after</em> that delivery splits into two paths depending on whether the user speaks up. Both paths ultimately feed the same evaluation, diagnosis, and repair engine — they just arrive with different signal richness.</p>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
+    <div style="background:#fff;border:2px solid #c4b5fd;border-radius:12px;padding:24px;">
+      <div style="font-size:28px;margin-bottom:8px;">🟣</div>
+      <h3 style="font-size:18px;font-weight:800;color:#6c63ff;margin-bottom:10px;">Active Scenario</h3>
+      <p style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:14px;">The user explicitly submits feedback — a thumbs-down, a category selection ("Hallucination", "Wrong NAV"), a highlighted span, or free text. This is a <strong>direct signal</strong> with high specificity but low volume (~5–15% of interactions).</p>
+      <div style="background:#f5f3ff;border-radius:8px;padding:12px;">
+        <div style="font-size:11px;font-weight:700;color:#6c63ff;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">What the system gains</div>
+        <ul style="font-size:12px;color:var(--text);line-height:1.8;list-style:none;">
+          <li>✅ Specific failure category from user</li>
+          <li>✅ Highlighted span pointing to wrong sentence</li>
+          <li>✅ Free-text correction ("NAV should be ₹42.18")</li>
+          <li>✅ Actor role (end-user vs compliance officer vs SME)</li>
+          <li>✅ High-value signal for entity + correction extraction</li>
+        </ul>
+      </div>
+      <div style="margin-top:12px;background:#ede9fe;border-radius:8px;padding:10px 12px;">
+        <div style="font-size:12px;font-weight:700;color:#6c63ff;">Trigger path</div>
+        <div style="font-size:12px;color:var(--text);margin-top:4px;">POST /api/feedback → NER + Sentiment → Quality Score → Evaluation Queue</div>
+      </div>
+    </div>
+    <div style="background:#fff;border:2px solid #67e8f9;border-radius:12px;padding:24px;">
+      <div style="font-size:28px;margin-bottom:8px;">🔵</div>
+      <h3 style="font-size:18px;font-weight:800;color:#0891b2;margin-bottom:10px;">Passive Scenario</h3>
+      <p style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:14px;">The user says nothing. The system captures <strong>session telemetry, retrieval metrics, source health signals, and structural checks</strong> automatically on every interaction — 100% coverage with zero user burden.</p>
+      <div style="background:#f0fdfe;border-radius:8px;padding:12px;">
+        <div style="font-size:11px;font-weight:700;color:#0891b2;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">What the system gains</div>
+        <ul style="font-size:12px;color:var(--text);line-height:1.8;list-style:none;">
+          <li>✅ Source version vs index version mismatch</li>
+          <li>✅ Retrieval confidence scores and empty-retrieval flags</li>
+          <li>✅ Citation integrity (exists? resolves? matches span?)</li>
+          <li>✅ Numeric extraction vs canonical source comparison</li>
+          <li>✅ Context truncation, tool failure, latency anomalies</li>
+        </ul>
+      </div>
+      <div style="margin-top:12px;background:#cffafe;border-radius:8px;padding:10px 12px;">
+        <div style="font-size:12px;font-weight:700;color:#0891b2;">Trigger path</div>
+        <div style="font-size:12px;color:var(--text);margin-top:4px;">Auto-signal on every response → D2 metrics → E0/E1 deterministic checks → anomaly flag if triggered</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sub">The 4 Failure Types — How Each Enters Both Paths</h3>
+  <table class="cmp-table">
+    <thead>
+      <tr>
+        <th class="th-shared" style="min-width:140px;">Failure Type</th>
+        <th class="th-shared">Real AMC Example</th>
+        <th class="th-active" style="min-width:200px;">🟣 Active Signal</th>
+        <th class="th-passive" style="min-width:200px;">🔵 Passive Signal</th>
+        <th class="th-shared">True Root Cause</th>
+        <th class="th-shared">Repair Class</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Hallucination</strong><br/><span style="font-size:11px;color:var(--muted);">F07 — Unsupported Generation</span></td>
+        <td style="font-size:13px;">Chatbot says <em>"Axis Bluechip Fund was the top performer in 2023 with 38% return"</em> — this figure does not exist in any retrieved document. Evidence shows 26.4%.</td>
+        <td style="font-size:12px;">User clicks 👎 → selects "Hallucination / Unsupported Claim" → highlights the span "38% return" → types "This is wrong, check the factsheet"</td>
+        <td style="font-size:12px;">D2 evidence shows no chunk containing "38%". Numeric extraction finds 38 in response but 26.4 in all sources. Citation points to a chunk that says 26.4%. <code>source_supports_claim = FALSE</code></td>
+        <td style="font-size:12px;">Generation error — model did not copy retrieved value correctly (F07 + F08)</td>
+        <td><span class="verdict fail">R2 — Auto+Shadow</span></td>
+      </tr>
+      <tr>
+        <td><strong>Inaccuracy</strong><br/><span style="font-size:11px;color:var(--muted);">F08 — Numerical Accuracy</span></td>
+        <td style="font-size:13px;">User asks TER of Axis Bluechip Direct Growth. Chatbot says <em>"0.79%"</em>. Canonical current source (AMFI dated today) says <em>"0.82%"</em>. Old factsheet (v17) said 0.79%.</td>
+        <td style="font-size:12px;">User clicks 👎 → selects "Numerical Error" → types "TER is 0.82% not 0.79%, check AMFI" → provides source reference</td>
+        <td style="font-size:12px;"><code>source_version_mismatch = TRUE</code>. D2 shows retrieval used source v17. Canonical registry shows v18 available since 3 days ago. <code>source_age_days = 3</code></td>
+        <td style="font-size:12px;">Stale source — ingestion lag. Model correctly copied stale value. (F05 + F08)</td>
+        <td><span class="verdict pass">R1 — Auto-Safe</span></td>
+      </tr>
+      <tr>
+        <td><strong>Missing Context</strong><br/><span style="font-size:11px;color:var(--muted);">F09 — Completeness</span></td>
+        <td style="font-size:13px;">User asks "Compare Axis Bluechip vs Mirae Asset Large Cap for 5 years." Response gives returns only. Omits: benchmark, risk-grade, TER, exit load — all required by the comparison template.</td>
+        <td style="font-size:12px;">User clicks 👎 → selects "Incomplete Answer" → highlights the response → types "You didn't mention TER or risk classification"</td>
+        <td style="font-size:12px;">D2 <code>taxonomy_template_coverage</code> = 3/7 required fields. Context engineering log shows benchmark chunk was retrieved (rank 4) but dropped at reranking stage. <code>evidence_rejected</code> contains benchmark chunk.</td>
+        <td style="font-size:12px;">Context engineering failure — reranker excluded required chunks (F09 + F03)</td>
+        <td><span class="verdict partial">R2 — Auto+Shadow</span></td>
+      </tr>
+      <tr>
+        <td><strong>Citation</strong><br/><span style="font-size:11px;color:var(--muted);">F06 — Citation/Attribution</span></td>
+        <td style="font-size:13px;">Response says <em>"As per SEBI circular dated 15 Jan 2024 [source: SEBI_Cir_2024_01]"</em> — but that citation ID resolves to a circular about NFO guidelines, not TER limits. The claim is unsupported by the cited source.</td>
+        <td style="font-size:12px;">User clicks 👎 → selects "Citation / Source Problem" → highlights "[source: SEBI_Cir_2024_01]" → types "This circular is about NFOs, not TER"</td>
+        <td style="font-size:12px;"><code>citation_integrity = RESOLVED</code> (link exists) but <code>claim_citation_entailment = FALSE</code> (NLI: cited chunk does not support TER claim). D2 shows citation span mismatch.</td>
+        <td style="font-size:12px;">Citation entailment failure — wrong chunk surfaced as citation for TER claim (F06 + F04)</td>
+        <td><span class="verdict partial">R2 — Auto+Shadow</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout info" style="margin-top:28px;">
+    <span class="cl-icon">🔑</span>
+    <div class="cl-body">
+      <strong>Core principle: Observable symptom ≠ Root cause ≠ Repair action</strong>
+      When a user says "hallucination" — the system must verify whether the true origin is: (a) genuine generation error, (b) stale source the model correctly copied, (c) wrong entity resolved, (d) retrieval miss, or (e) context truncation that dropped the correct evidence. Each has a different repair. The architecture prevents the blunt action of "retrain the model" for what is actually a stale AMFI data file.
+    </div>
+  </div>
+
+  <h3 class="sub">Full Flow at a Glance</h3>
+  <div class="pipe-row">
+    <div class="pipe-node">👤 User Query<div class="pn-sub">any intent</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">🤖 LLM Response<div class="pn-sub">generated</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">📦 EvidencePack D0–D3<div class="pn-sub">frozen immediately</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">🚦 Intercept<div class="pn-sub">&lt;40ms hard checks</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">📤 Deliver<div class="pn-sub">response + ID</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node" style="border-color:#c4b5fd;">🟣 Active Feedback<div class="pn-sub">user submits signal</div></div>
+    <div class="pipe-arrow" style="color:#ccc;">|</div>
+    <div class="pipe-node" style="border-color:#67e8f9;">🔵 Passive Metrics<div class="pn-sub">auto-captured</div></div>
+  </div>
+  <div class="pipe-row">
+    <div class="pipe-node">🔍 Evaluation Router<div class="pn-sub">E0→E5 ladder</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">⚖️ Adjudication<div class="pn-sub">supported/not/partial</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">🔬 Root Cause<div class="pn-sub">F01–F14 family</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">🏥 Repair Eligibility<div class="pn-sub">R0–R5 class</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">🔧 Shadow Repair<div class="pn-sub">never direct prod</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">✅ Promote / Rollback<div class="pn-sub">regression gate</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">📊 Post-Heal Monitor<div class="pn-sub">7-day window</div></div>
+  </div>
+</section>
+
+<!-- ══════════════════════ QUERY → RESPONSE TAB ══════════════════════ -->
+<section id="query-to-response" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">⚡</div>
+    <div>
+      <span class="mode-pill shared">📐 Shared — Both Paths</span>
+      <h2>Phase 1: User Query → LLM Response → EvidencePack (Shared Foundation)</h2>
+      <p class="sec-desc">This phase is identical for both Active and Passive scenarios. By the time the response is delivered, a frozen EvidencePack (D0–D3) has already been created. Every later evaluation references this immutable snapshot — not the live system state.</p>
+    </div>
+  </div>
+
+  <div class="flow-container">
+
+    <!-- STEP 1 -->
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#6c63ff,#5a52d5);">1</div></div>
+      <div class="step-body">
+        <div class="step-card">
+          <div class="step-header">
+            <span class="step-title">👤 User Submits Query</span>
+            <span class="step-phase phase-rt">Runtime · Sync</span>
+          </div>
+          <div class="example-box">
+            <div class="ex-label">Real Query Example</div>
+            <div class="ex-content">User types: <strong>"What is the current TER and NAV of Axis Bluechip Fund Direct Growth Plan? Also compare its 5-year return against Mirae Asset Large Cap."</strong></div>
+          </div>
+          <div class="capture-grid">
+            <div class="capture-item"><div class="cap-key">Raw Query</div><div class="cap-val">"What is the current TER and NAV..."</div></div>
+            <div class="capture-item"><div class="cap-key">Session ID</div><div class="cap-val">sess_7f3a9b12</div></div>
+            <div class="capture-item"><div class="cap-key">Timestamp</div><div class="cap-val">2026-08-20T14:32:07Z</div></div>
+            <div class="capture-item"><div class="cap-key">Channel</div><div class="cap-val">web_app</div></div>
+            <div class="capture-item"><div class="cap-key">Jurisdiction</div><div class="cap-val">IN (India)</div></div>
+            <div class="capture-item"><div class="cap-key">User Role</div><div class="cap-val">retail_investor</div></div>
+          </div>
+          <div class="why-box">
+            <span class="why-icon">🎯</span>
+            <div class="why-text"><strong>Why captured:</strong> Session ID links all events (query → response → feedback → evaluation) into one auditable chain. Jurisdiction and channel determine which compliance controls apply — a retail investor in India triggers SEBI mutual fund disclosure rules, not SEC rules. Timestamp anchors every claim to its temporal context.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">2</div></div>
+      <div class="step-body">
+        <div class="step-card">
+          <div class="step-header">
+            <span class="step-title">🧠 Intent Resolution + Entity Extraction</span>
+            <span class="step-phase phase-rt">Runtime · Sync · ~2ms</span>
+          </div>
+          <div class="example-box cyan">
+            <div class="ex-label cyan">What the system derives</div>
+            <div class="ex-content">
+              <strong>Primary intent:</strong> <code>CURRENT_NUMERIC_FACT</code> (TER + NAV lookup)<br/>
+              <strong>Secondary intent:</strong> <code>COMPARATIVE_CLAIM</code> (5-year performance comparison)<br/>
+              <strong>Entity 1:</strong> Axis Bluechip Fund → canonical ID <code>INF846K01DP5</code> (Direct Growth)<br/>
+              <strong>Entity 2:</strong> Mirae Asset Large Cap → canonical ID <code>INF769K01EW8</code><br/>
+              <strong>Attributes:</strong> TER, NAV, 5yr_return, plan=Direct, option=Growth<br/>
+              <strong>Temporal:</strong> current (today's date), period=5yr
+            </div>
+          </div>
+          <div class="why-box">
+            <span class="why-icon">🎯</span>
+            <div class="why-text"><strong>Why captured in D1:</strong> Intent type drives evaluator selection — <code>CURRENT_NUMERIC_FACT</code> means deterministic TER/NAV reconciliation is mandatory (E1, zero LLM tokens). <code>COMPARATIVE_CLAIM</code> triggers period/basis normalization. Canonical entity IDs prevent entity confusion — "Axis Bluechip" vs "Axis Bluechip Direct" are different products with different TERs. Without canonical resolution at this step, a numeric mismatch could be misdiagnosed as hallucination when it is actually entity confusion (F02).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#10b981,#059669);">3</div></div>
+      <div class="step-body">
+        <div class="step-card">
+          <div class="step-header">
+            <span class="step-title">🔍 Hybrid Retrieval — FAISS + Neo4j + BM25</span>
+            <span class="step-phase phase-rt">Runtime · Sync</span>
+          </div>
+          <div class="example-box green">
+            <div class="ex-label green">What retrieval returns</div>
+            <div class="ex-content">
+              <strong>FAISS (vector):</strong> 8 chunks — factsheet v18 (TER=0.82%, NAV=₹64.31), performance report, KIM document<br/>
+              <strong>BM25 (lexical):</strong> 6 chunks — same factsheet v18, AMFI data page<br/>
+              <strong>Neo4j (graph):</strong> entity node <code>INF846K01DP5</code> → <code>HAS_FACT</code> → TER=0.82% (effective 2026-07-01, source=AMFI_v18) → <code>HAS_FACT</code> → NAV=₹64.31 (as of 2026-08-19)<br/>
+              <strong>Agreement:</strong> FAISS ∩ Graph both return 0.82% TER ✅ <code>vector_graph_overlap = HIGH</code>
+            </div>
+          </div>
+          <div class="capture-grid">
+            <div class="capture-item"><div class="cap-key">Chunks Retrieved</div><div class="cap-val">14 total</div></div>
+            <div class="capture-item"><div class="cap-key">Top Score</div><div class="cap-val">0.91 cosine</div></div>
+            <div class="capture-item"><div class="cap-key">Source Version</div><div class="cap-val">AMFI_v18</div></div>
+            <div class="capture-item"><div class="cap-key">Source Date</div><div class="cap-val">2026-08-17</div></div>
+            <div class="capture-item"><div class="cap-key">vector_graph_overlap</div><div class="cap-val">HIGH</div></div>
+            <div class="capture-item"><div class="cap-key">missing_expected_source</div><div class="cap-val">FALSE</div></div>
+          </div>
+          <div class="why-box">
+            <span class="why-icon">🎯</span>
+            <div class="why-text"><strong>Why all three channels are captured in D2:</strong> The agreement matrix is a passive diagnostic sensor. If in a different scenario FAISS misses the source but BM25 finds it, that is vector retrieval degradation (F04/R006) detectable at zero LLM cost. Source version is captured because if TER=0.79% is returned tomorrow after a bad ingestion, the mismatch between <code>retrieved_source_version</code> and <code>canonical_current_version</code> instantly identifies stale-source (F05) without any LLM diagnosis.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#f59e0b,#d97706);">4</div></div>
+      <div class="step-body">
+        <div class="step-card">
+          <div class="step-header">
+            <span class="step-title">🏗️ Context Assembly + Reranking + Disclosure Injection</span>
+            <span class="step-phase phase-rt">Runtime · Sync</span>
+          </div>
+          <div class="example-box yellow">
+            <div class="ex-label yellow">What happens here</div>
+            <div class="ex-content">
+              Cross-encoder reranker scores 14 chunks. Top 6 selected into context window.<br/>
+              <strong>Selected:</strong> TER chunk (0.91), NAV chunk (0.89), performance chunk (0.84), KIM risk section (0.79), Mirae TER chunk (0.77), Mirae performance chunk (0.73)<br/>
+              <strong>Rejected (rank 7–14):</strong> exit load chunk (0.68), older performance chunk (0.61), benchmark chunk (0.58) ← <em>this rejection matters for Missing Context scenario</em><br/>
+              <strong>Compliance injection:</strong> SEBI mandatory disclosure template appended — "Mutual fund investments are subject to market risks..."<br/>
+              <strong>Context tokens:</strong> 3,240 / 4,096 limit. Truncation: FALSE.
+            </div>
+          </div>
+          <div class="why-box">
+            <span class="why-icon">🎯</span>
+            <div class="why-text"><strong>Why rejected chunks are recorded in D2:</strong> The benchmark chunk being rejected at rank 0.58 is exactly why the response might omit benchmark comparison. When a user later says "you didn't mention the benchmark" (Missing Context), the system can point to <code>evidence_rejected = [benchmark_chunk_id_7]</code> and confirm this is a context engineering failure (F09), not hallucination. The reranker threshold needs adjustment — not the model.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#6c63ff,#5a52d5);">5</div></div>
+      <div class="step-body">
+        <div class="step-card">
+          <div class="step-header">
+            <span class="step-title">🤖 LLM Synthesis (Claude)</span>
+            <span class="step-phase phase-rt">Runtime · Sync</span>
+          </div>
+          <div class="example-box">
+            <div class="ex-label">LLM Response Generated</div>
+            <div class="ex-content">
+              <strong>Response text:</strong> "The Axis Bluechip Fund Direct Growth Plan currently has a TER of 0.82% (effective from 01 July 2026) and a NAV of ₹64.31 as of 19 August 2026 [source: AMFI_factsheet_v18, chunk_id: C_4421]. Over the past 5 years, the fund has returned approximately 14.2% CAGR [source: performance_report_v3, chunk_id: C_2891]. For comparison, Mirae Asset Large Cap Direct Growth has returned 13.8% CAGR over the same period [source: mirae_perf_v2, chunk_id: C_5502]. Mutual fund investments are subject to market risks. Please read the Scheme Information Document carefully before investing."<br/><br/>
+              <strong>Input tokens:</strong> 3,891 · <strong>Output tokens:</strong> 287 · <strong>Latency:</strong> 1.4s
+            </div>
+          </div>
+          <div class="capture-grid">
+            <div class="capture-item"><div class="cap-key">model_id</div><div class="cap-val">claude-3-5-sonnet</div></div>
+            <div class="capture-item"><div class="cap-key">prompt_template_version</div><div class="cap-val">v2.4.1</div></div>
+            <div class="capture-item"><div class="cap-key">response_hash (SHA-256)</div><div class="cap-val">a7f3c9...d821</div></div>
+            <div class="capture-item"><div class="cap-key">citations_shown</div><div class="cap-val">[AMFI_v18, perf_v3, mirae_v2]</div></div>
+            <div class="capture-item"><div class="cap-key">disclosures_shown</div><div class="cap-val">SEBI_STD_001</div></div>
+            <div class="capture-item"><div class="cap-key">truncation_flag</div><div class="cap-val">FALSE</div></div>
+          </div>
+          <div class="why-box">
+            <span class="why-icon">🎯</span>
+            <div class="why-text"><strong>Why response_hash is captured:</strong> If the TER value is disputed tomorrow, the hash proves the response said exactly "0.82%" — not some other value. If someone claims "the system said 0.79%", the hash combined with D2 source versions is the deterministic proof of what was said and what evidence was used. No LLM re-evaluation needed — this is STOP-1 (deterministic proof).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#f97316,#ef4444);">6</div></div>
+      <div class="step-body">
+        <div class="step-card">
+          <div class="step-header">
+            <span class="step-title">📦 EvidencePack D0–D3 Created (Frozen Immediately)</span>
+            <span class="step-phase phase-rt">Runtime · ~8ms · Zero LLM</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="example-box">
+              <div class="ex-label">D0 — Response Finalization</div>
+              <div class="ex-content">
+                <code>response_id: resp_9c4f1a</code><br/>
+                <code>response_hash: a7f3c9...d821</code><br/>
+                <code>model_id: claude-3-5-sonnet</code><br/>
+                <code>prompt_template_version: v2.4.1</code><br/>
+                <code>citations_shown: [AMFI_v18, perf_v3, mirae_v2]</code><br/>
+                <code>disclosures_shown: [SEBI_STD_001]</code><br/>
+                <code>input_tokens: 3891, output_tokens: 287</code><br/>
+                <code>truncation_flag: FALSE</code>
+              </div>
+            </div>
+            <div class="example-box cyan">
+              <div class="ex-label cyan">D1 — Interaction Snapshot</div>
+              <div class="ex-content">
+                <code>interaction_id: int_8b2e7f</code><br/>
+                <code>detected_intent: CURRENT_NUMERIC_FACT + COMPARATIVE_CLAIM</code><br/>
+                <code>entity_1: INF846K01DP5 (Axis Bluechip Direct Growth)</code><br/>
+                <code>entity_2: INF769K01EW8 (Mirae Large Cap Direct)</code><br/>
+                <code>attributes: [TER, NAV, 5yr_return]</code><br/>
+                <code>jurisdiction: IN</code><br/>
+                <code>channel: web_app</code>
+              </div>
+            </div>
+            <div class="example-box green">
+              <div class="ex-label green">D2 — Evidence Pack (13 derived metrics)</div>
+              <div class="ex-content">
+                <code>chunk_ids: [C_4421, C_2891, C_5502, ...]</code><br/>
+                <code>source_version: AMFI_v18 (2026-08-17)</code><br/>
+                <code>source_age_days: 3</code><br/>
+                <code>source_version_mismatch: FALSE</code><br/>
+                <code>citation_coverage: 3/3 (100%)</code><br/>
+                <code>evidence_rejected: [C_benchmark_7, C_exit_load_9]</code><br/>
+                <code>vector_graph_overlap: HIGH</code><br/>
+                <code>context_truncation: FALSE</code>
+              </div>
+            </div>
+            <div class="example-box yellow">
+              <div class="ex-label yellow">D3 — Applicability / Policy Context</div>
+              <div class="ex-content">
+                <code>jurisdiction: IN</code><br/>
+                <code>policy_pack: INDIA_SEBI_v2026_03</code><br/>
+                <code>applicable_controls: [C01,C02,C03,C07,C08]</code><br/>
+                <code>mandatory_controls: [C02_source_currency, C03_numeric_accuracy, C07_disclosure]</code><br/>
+                <code>advice_flag: FALSE (informational query)</code><br/>
+                <code>interaction_mode: INFORMATION</code>
+              </div>
+            </div>
+          </div>
+          <div class="why-box">
+            <span class="why-icon">🔒</span>
+            <div class="why-text"><strong>Why D0–D3 are frozen immediately and never modified:</strong> If the AMFI file is updated to v19 tomorrow (TER changes to 0.85%), the evaluation of today's response must still use <code>source_version=AMFI_v18</code>. Without this freeze, the evaluator would retrospectively judge the response as wrong using knowledge that didn't exist at response time. This also means a compliance auditor can reconstruct exactly what the system knew, said, and cited — for any response — years later.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#e53e3e,#c53030);">7</div></div>
+      <div class="step-body">
+        <div class="step-card">
+          <div class="step-header">
+            <span class="step-title">🚦 Critical Deterministic Intercept (&lt;40ms, Synchronous)</span>
+            <span class="step-phase phase-rt">Runtime · Sync · Hard Gate</span>
+          </div>
+          <div class="example-box red">
+            <div class="ex-label red">Checks that run before delivery</div>
+            <div class="ex-content">
+              ✅ <strong>C02 Source Currency:</strong> AMFI_v18 is 3 days old. Threshold = 7 days. <span class="verdict pass">PASS</span><br/>
+              ✅ <strong>C03 Numeric Accuracy:</strong> TER 0.82% in response matches canonical TER 0.82% in D2. <span class="verdict pass">PASS</span><br/>
+              ✅ <strong>C07 Disclosure:</strong> SEBI_STD_001 disclosure present in response. <span class="verdict pass">PASS</span><br/>
+              ✅ <strong>C08 Eligibility:</strong> Informational query — no product restriction violation. <span class="verdict pass">PASS</span><br/>
+              ✅ <strong>C11 PII:</strong> No personal data in response. <span class="verdict pass">PASS</span><br/>
+              ✅ <strong>Prohibited patterns:</strong> No "guaranteed returns", "best fund for you" wording. <span class="verdict pass">PASS</span><br/><br/>
+              <strong>→ All checks pass. Response is delivered.</strong>
+            </div>
+          </div>
+          <div class="example-box orange">
+            <div class="ex-label orange">What would happen if TER was wrong (0.79% in response, 0.82% canonical)</div>
+            <div class="ex-content">
+              C03 numeric check: response TER=0.79% ≠ canonical TER=0.82% → <span class="verdict fail">FAIL</span><br/>
+              Action: <strong>SAFE_FALLBACK</strong> — response replaced with: "The current TER for Axis Bluechip Direct Growth is 0.82% as per AMFI data dated 17 August 2026." LLM response is suppressed. Zero LLM tokens for this correction.
+            </div>
+          </div>
+          <div class="why-box">
+            <span class="why-icon">🎯</span>
+            <div class="why-text"><strong>Why this runs synchronously before delivery:</strong> A wrong TER delivered to a retail investor is a C03 (Factual Accuracy) and potentially C02 (Source Currency) compliance failure. In India under SEBI MF Regulations, incorrect expense ratio information in investor communications is a regulatory violation. Catching it deterministically in &lt;40ms — before the user ever sees it — is cheaper, faster, and safer than any post-delivery feedback loop.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#10b981,#059669);">8</div></div>
+      <div class="step-body">
+        <div class="step-card">
+          <div class="step-header">
+            <span class="step-title">📤 Response Delivered with response_id Embedded</span>
+            <span class="step-phase phase-rt">Runtime · Sync</span>
+          </div>
+          <div class="example-box green">
+            <div class="ex-label green">What the user sees + what the system sends</div>
+            <div class="ex-content">
+              <strong>User sees:</strong> The full response text with citations + SEBI disclosure.<br/>
+              <strong>UI receives:</strong> <code>{ "response": "...", "response_id": "resp_9c4f1a", "feedback_enabled": true }</code><br/>
+              <strong>The response_id is embedded invisibly in the UI</strong> — when the user later clicks 👎, the feedback payload automatically includes <code>response_id: resp_9c4f1a</code>, which links feedback to the frozen D0–D3 pack.<br/><br/>
+              <strong>Simultaneously (passive):</strong> Auto-signal emitted to evaluation queue with <code>auto_signal: { source_age_days: 3, citation_coverage: 1.0, truncation: false, vector_graph_overlap: HIGH, anomaly: NONE }</code>. Since no anomaly is detected, this interaction exits at E0 (telemetry only). No LLM evaluation triggered.
+            </div>
+          </div>
+          <div class="why-box">
+            <span class="why-icon">🔗</span>
+            <div class="why-text"><strong>Why response_id is the critical anchor:</strong> Without it, feedback is just "user complained about something at some point." With it, every complaint is precisely linked to: the exact retrieval context, the exact source versions used, the exact prompt template, the exact entities resolved — making diagnosis deterministic rather than speculative.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end flow-container -->
+
+  <div class="callout success">
+    <span class="cl-icon">🟢</span>
+    <div class="cl-body">
+      <strong>Happy path complete</strong> — The response was accurate, cited, disclosed, and delivered. The EvidencePack (D0–D3) sits in PostgreSQL and Redis. The passive auto-signal showed no anomaly (E0 exit). No feedback was submitted. The interaction is archived after 90 days. Now see the scenario tabs to understand what happens when something goes wrong — either the user tells us (Active) or the system detects it (Passive).
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ ACTIVE: HALLUCINATION ══════════════════════ -->
+<section id="a-hallucination" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">👻</div>
+    <div>
+      <span class="mode-pill active">🟣 Active Scenario</span>
+      <h2>Hallucination — User Reports Fabricated Claim</h2>
+      <p class="sec-desc">
+        The chatbot generated a performance figure that does not exist in any retrieved document. The user recognises it and submits explicit feedback. The system must distinguish genuine generation error from stale source, wrong entity, or retrieval miss — each requiring a different repair.
+      </p>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="cl-icon">⚠️</span>
+    <div class="cl-body">
+      <strong>Setup — What went wrong before the user spoke</strong>
+      Query: <em>"What was Axis Bluechip Fund's 5-year return?"</em> · The LLM responded: <em>"Axis Bluechip Fund Direct Growth delivered a 38% CAGR over 5 years"</em>. The retrieved performance chunk (C_2891) clearly states <strong>14.2% CAGR</strong>. The model did not copy the retrieved value — it synthesised an unsupported number. The EvidencePack D2 correctly captured 14.2% from the source.
+    </div>
+  </div>
+
+  <div class="flow-container">
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#6c63ff,#5a52d5);">A1</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🖱️ User Submits Feedback (POST /api/feedback)</span><span class="step-phase phase-rt">Sync · &lt;10ms HTTP response</span></div>
+        <div class="example-box">
+          <div class="ex-label">Exact feedback payload received</div>
+          <div class="ex-content">
+            <code>response_id: "resp_9c4f1a"</code><br/>
+            <code>rating: 1</code> (thumbs-down)<br/>
+            <code>feedback_type: "hallucination"</code><br/>
+            <code>highlighted_span: "38% CAGR over 5 years"</code><br/>
+            <code>comment: "This is completely wrong. The fund's 5-year return is around 14%. Please check the factsheet."</code><br/>
+            <code>correction: "Should be approximately 14.2% CAGR"</code>
+          </div>
+        </div>
+        <div class="capture-grid">
+          <div class="capture-item"><div class="cap-key">feedback_id generated</div><div class="cap-val">fb_hall_001</div></div>
+          <div class="capture-item"><div class="cap-key">response_id linked</div><div class="cap-val">resp_9c4f1a → D0–D3</div></div>
+          <div class="capture-item"><div class="cap-key">HTTP response sent</div><div class="cap-val">202 Accepted ~8ms</div></div>
+          <div class="capture-item"><div class="cap-key">status</div><div class="cap-val">pending (await NLP)</div></div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why 202 not 200:</strong> The system accepts and persists the feedback record immediately and returns to the user. All NLP classification (NER, sentiment, quality scoring) fires as a BackgroundTask after the HTTP response — the user never waits for it. The <code>response_id</code> link is validated synchronously (~1ms SELECT on evidence_packs) — if the response_id doesn't exist, the feedback is rejected with 404.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">A2</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🏷️ Background NLP — NER + Sentiment + Intent + Quality Score</span><span class="step-phase phase-async">Async · BackgroundTask · ~30ms</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">What NLP extracts from the comment</div>
+          <div class="ex-content">
+            <strong>NER tags:</strong> <code>entity: "Axis Bluechip Fund" → canonical_id: INF846K01DP5</code>, <code>attribute: "5-year return"</code>, <code>value_mentioned: "14%"</code><br/>
+            <strong>Sentiment (VADER):</strong> <code>compound: -0.72</code> (strongly negative), <code>neg: 0.61</code><br/>
+            <strong>Intent:</strong> <code>correction</code> (feedback_type=hallucination + entity extracted + correction text present)<br/>
+            <strong>Quality score:</strong> base 0.50 + 0.20 (comment &gt;20 chars) + 0.15 (entity extracted) + 0.10 (correction present) + 0.10 (highlighted span) = <strong>1.05 → clamped to 1.00</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why NER runs on the comment:</strong> The user said "14%". The system extracted the entity <code>INF846K01DP5</code> and the user-asserted value <code>14%</code>. This doesn't become ground truth — it becomes a structured hypothesis: <em>"user asserts 5-year return for INF846K01DP5 should be ~14%"</em>. The system will verify this against the canonical source independently. The quality score of 1.00 routes this directly to the evaluation queue with highest priority — it has entity, correction, highlighted span, and negative sentiment all aligned.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#f59e0b,#d97706);">A3</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">📥 Hourly Orchestration Picks Up — Fetch + Enrich + Deduplicate</span><span class="step-phase phase-async">Async · Hourly cycle</span></div>
+        <div class="example-box yellow">
+          <div class="ex-label yellow">What the orchestrator sees at fetch time</div>
+          <div class="ex-content">
+            Fetches <code>fb_hall_001</code> from feedback_records WHERE status='pending'.<br/>
+            Joins with evidence_packs to attach frozen D2: <code>chunk_ids=[C_4421,C_2891,...], source_version=AMFI_v18, performance_chunk_value=14.2%</code><br/>
+            <strong>Deduplication check:</strong> semantic embed of comment → cosine similarity scan. No near-duplicate found. Cluster size = 1 (isolated feedback).<br/>
+            <strong>Routing decision:</strong> quality_score=1.00 → would auto-apply IF cluster≥3. Cluster=1 → routes to <code>to_evaluate</code> lane for LLM batch.
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why enriching with D2 matters here:</strong> The orchestrator now sees that D2 <code>evidence_selected</code> contains chunk C_2891 with value 14.2%. The response said 38%. This is already detectable deterministically without any LLM — the numeric values can be compared directly. The routing engine flags <code>factual_risk=HIGH</code> and <code>evidence_risk=LOW</code> (evidence was present and retrieved correctly — the model failed to use it).</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#10b981,#059669);">A4</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔍 Adaptive Evaluation Router — Stage-by-Stage</span><span class="step-phase phase-async">Async · E1 → deterministic STOP</span></div>
+        <div class="example-box green">
+          <div class="ex-label green">Router execution trace</div>
+          <div class="ex-content">
+            <strong>R0 — Applicability:</strong> IN + retail + mutual_fund + web + information_mode → ApplicableControlSet ACS-IN-003. Mandatory: C02, C03, C07. ✅<br/>
+            <strong>R1 — Mandatory Controls:</strong> C03 numeric accuracy check fires. Response value=<code>38.0</code>. D2 canonical value=<code>14.2</code> (from source chunk C_2891, AMFI_v18). Mismatch: <code>|38.0 - 14.2| / 14.2 = 167%</code>. <span class="verdict fail">C03 FAIL — severity: HIGH</span><br/>
+            <strong>R3 — Evidence Sufficiency:</strong> D2 has performance chunk C_2891 with value 14.2% → evidence_status = <code>SUFFICIENT</code><br/>
+            <strong>R4 — Active Incident:</strong> No matching incident for INF846K01DP5 performance at this timestamp. Isolated failure.<br/>
+            <strong>R5 — Evaluator selection:</strong> C03 FAIL already confirmed by deterministic rule (EV_NUM_010). → <strong>STOP-1 fires. No LLM needed.</strong><br/>
+            <strong>Token budget used: B0 (zero generative tokens)</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🛑</span><div class="why-text"><strong>Why STOP-1 fires here and LLM is not invoked:</strong> The authoritative performance chunk says 14.2%. The response says 38.0%. This is a deterministic, numerical, source-backed mismatch. There is no ambiguity that requires semantic or generative reasoning. Calling an LLM to "evaluate whether 38% is accurate" would spend ~500 tokens to confirm what arithmetic already proved. STOP-1 exists precisely to prevent this wasteful escalation.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#e53e3e,#c53030);">A5</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">⚖️ Adjudication — Multi-Dimension Verdict</span><span class="step-phase phase-async">Async · Zero LLM</span></div>
+        <div class="example-box red">
+          <div class="ex-label red">Adjudication output — per dimension</div>
+          <div class="ex-content">
+            <strong>Factuality:</strong> <span class="verdict fail">FAIL</span> — response value 38.0% ≠ source value 14.2% (deterministic C03 rule, confidence=1.0)<br/>
+            <strong>Grounding:</strong> <span class="verdict fail">FAIL</span> — response claim is not supported by any retrieved chunk (semantic NLI would confirm, but deterministic already decisive)<br/>
+            <strong>Compliance (C03):</strong> <span class="verdict fail">FAIL</span> — numerical accuracy control violated<br/>
+            <strong>Citation:</strong> <span class="verdict partial">PARTIAL</span> — citation C_2891 exists and resolves, but the response value contradicts the cited chunk<br/>
+            <strong>Completeness:</strong> <span class="verdict pass">PASS</span> — response answered the question (wrong value but not incomplete)<br/>
+            <strong>Human feedback:</strong> <span class="verdict pass">SUPPORTED</span> — user claim verified against canonical source<br/><br/>
+            <strong>Overall adjudication: SUPPORTED FAILURE · Severity: HIGH · Confidence: 1.0 (deterministic)</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why adjudication is per-dimension, not a single score:</strong> The citation dimension is PARTIAL (not FAIL) because the citation link is valid — it's the model that failed to use the cited value. If we collapsed everything to one score, we'd misclassify this as a citation failure and repair the citation pipeline. The actual failure is generation (the model didn't copy the cited value correctly) — a completely different repair target.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#6c63ff,#5a52d5);">A6</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔬 Failure Diagnosis — Causal Tracing</span><span class="step-phase phase-async">Async · Deterministic cascade</span></div>
+        <div class="example-box">
+          <div class="ex-label">Causal diagnosis flowchart executed</div>
+          <div class="ex-content">
+            ✅ Was correct knowledge available? → YES (C_2891 has 14.2%)<br/>
+            ✅ Was it retrieved? → YES (C_2891 in top-K, rank 3)<br/>
+            ✅ Was it selected into context? → YES (evidence_selected includes C_2891)<br/>
+            ❌ Did the model use it correctly? → NO (response says 38%, chunk says 14.2%)<br/>
+            <br/>
+            <strong>→ Failure Family: F07 (Grounding/Unsupported Generation) + F08 (Numerical Accuracy)</strong><br/>
+            <strong>→ Origin: Generation layer (Axis C: Generation)</strong><br/>
+            <strong>→ Axis A (What): Grounding + Numerical Accuracy</strong><br/>
+            <strong>→ Axis B (How detected): RULE (EV_NUM_010, deterministic)</strong><br/>
+            <strong>→ Axis D (Heal): No source fix needed. Prompt regression + golden set update.</strong><br/>
+            <strong>→ Attribution confidence: CONFIRMED (all deterministic)</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">💡</span><div class="why-text"><strong>Why this is NOT classified as stale source (F05):</strong> The causal trace shows the correct value was in the context. A stale source failure means the model correctly copied a wrong value from a stale document. Here the model ignored the correct value and generated 38% — which appears nowhere in any retrieved chunk. This distinction is critical: F05 → source refresh. F07 → prompt regression testing, possibly model evaluation. Wrong diagnosis = wrong repair.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#f97316,#ef4444);">A7</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🏥 Repair Eligibility + Failure Graph Write</span><span class="step-phase phase-async">Async · R2 class assigned</span></div>
+        <div class="example-box orange">
+          <div class="ex-label orange">Repair eligibility assessment</div>
+          <div class="ex-content">
+            Source provable? ✅ YES — canonical source clearly shows 14.2%<br/>
+            Deterministic? ✅ YES — numeric comparison proved the error<br/>
+            Reversible? ✅ YES — adding a golden regression test is safe and reversible<br/>
+            Blast radius bounded? ✅ YES — specific to numerical synthesis in performance claims<br/>
+            Compliance impact understood? ✅ YES — C03 violation, severity HIGH<br/>
+            Policy permits auto-change? ⚠️ PARTIAL — golden test can auto-add; prompt change requires approval<br/><br/>
+            <strong>→ Repair Class: R2 (Auto + Shadow for golden set addition; R3 for any prompt change)</strong><br/><br/>
+            <strong>Failure Graph nodes written:</strong><br/>
+            <code>FailureObservation FO_hall_001</code> → family=F07+F08, entity=INF846K01DP5, response=resp_9c4f1a<br/>
+            <code>RootCause RC_001</code> → CONFIRMED, method=RULE, component=GenerationLayer<br/>
+            <code>RepairCandidate RP_001</code> → recipe=GOLDEN_REGRESSION_ADD, class=R2
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🔒</span><div class="why-text"><strong>Why the Failure Graph is separate from the production Context Graph:</strong> <code>FailureObservation FO_hall_001</code> records that the system generated a wrong value. This must NOT be retrievable by future user queries — otherwise a user asking "what was the fund's return?" might receive the diagnostic record "38% was generated incorrectly" as an answer. The failure graph is operational intelligence only, with strict access controls.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#10b981,#059669);">A8</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔧 Shadow Repair → Regression → Promote</span><span class="step-phase phase-rep">Repair · Shadow env</span></div>
+        <div class="example-box green">
+          <div class="ex-label green">What the repair does</div>
+          <div class="ex-content">
+            <strong>Repair action:</strong> Add golden regression test case:<br/>
+            <code>input: "5-year return of Axis Bluechip Direct Growth"</code><br/>
+            <code>expected: contains "14.2%" AND source_cited = "C_2891"</code><br/>
+            <code>must_not_contain: any value &gt; 20% for this query</code><br/><br/>
+            <strong>Shadow execution:</strong> Run golden test against shadow environment. Current model fails (reproduces 38%). Test added to regression suite.<br/>
+            <strong>Regression gate:</strong> 47/48 golden tests pass. 1 new test added (this case). All existing tests stable.<br/>
+            <strong>Blast-radius check:</strong> No other entity performance queries affected.<br/>
+            <strong>Compliance routing check:</strong> C03 control coverage unchanged.<br/>
+            <strong>→ Promotion approved. Golden test suite updated. Engineering team notified for prompt review.</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why shadow-first even for a simple regression test addition:</strong> Adding a golden test that uses the wrong expected value would silently corrupt the evaluation suite. The shadow environment verifies the test correctly identifies the failure before it is promoted to the production regression suite. This prevents evaluation integrity failures (F14).</div></div>
+      </div></div>
+    </div>
+
+  </div><!-- end flow-container -->
+  <div class="callout success"><span class="cl-icon">✅</span><div class="cl-body"><strong>Resolution summary — Hallucination (Active)</strong> User feedback → NER extracted entity + correction → quality score 1.0 → evaluation queue → E1 deterministic rule proved mismatch (0 LLM tokens) → STOP-1 → Failure: F07+F08 CONFIRMED → R2 repair: golden regression test added in shadow → promoted. Engineering alerted for prompt regression. The response that contained 38% is now a permanent regression case that will catch this class of generation error in future deployments.</div></div>
+</section>
+
+<!-- ══════════════════════ ACTIVE: INACCURACY ══════════════════════ -->
+<section id="a-inaccuracy" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">🔢</div>
+    <div>
+      <span class="mode-pill active">🟣 Active Scenario</span>
+      <h2>Inaccuracy — User Reports Wrong TER Value</h2>
+      <p class="sec-desc">The chatbot gave a numerically incorrect TER. The user knows the right value and reports it. The key distinction: the model correctly copied the value from its source — the source itself was stale. This is F05 (Source Freshness) + F08 (Numerical Accuracy), not F07 (Hallucination). The repair is a source refresh, not a model change.</p>
+    </div>
+  </div>
+
+  <div class="callout warn"><span class="cl-icon">⚠️</span><div class="cl-body"><strong>Setup:</strong> Three days ago, AMFI updated Axis Bluechip's TER from 0.79% to 0.82%. The vector index and context graph still reference source v17 (0.79%). Ingestion job for v18 failed silently. Today a user asks for the TER. The chatbot correctly copies 0.79% from v17. The user, who checked the AMFI website, knows it should be 0.82%.</div></div>
+
+  <div class="flow-container">
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#6c63ff,#5a52d5);">A1</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🖱️ User Submits Feedback</span><span class="step-phase phase-rt">Sync · &lt;10ms</span></div>
+        <div class="example-box">
+          <div class="ex-label">Feedback payload</div>
+          <div class="ex-content">
+            <code>response_id: "resp_4d2b8c"</code><br/>
+            <code>rating: 2</code> (low)<br/>
+            <code>feedback_type: "numerical_error"</code><br/>
+            <code>highlighted_span: "TER of 0.79%"</code><br/>
+            <code>comment: "TER is 0.82% not 0.79%. I checked on AMFI website today."</code><br/>
+            <code>correction: "0.82%"</code>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>What's captured and why:</strong> The <code>highlighted_span</code> "TER of 0.79%" gives the exact text the user believes is wrong. The <code>correction</code> field "0.82%" gives a user-asserted value. Neither becomes ground truth yet — both become structured hypotheses the system verifies against the canonical source registry.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">A2</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🏷️ NLP Background Processing</span><span class="step-phase phase-async">Async · BackgroundTask</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">NLP output</div>
+          <div class="ex-content">
+            <strong>NER:</strong> entity=<code>INF846K01DP5</code>, attribute=<code>TER</code>, response_value=<code>0.79</code>, user_asserted_value=<code>0.82</code><br/>
+            <strong>Sentiment:</strong> compound=-0.51 (negative but mild — factual correction, not angry)<br/>
+            <strong>Intent:</strong> <code>correction</code> — numerical_error feedback type, entity extracted, correction present<br/>
+            <strong>Quality score:</strong> 0.50 + 0.20 + 0.15 + 0.10 + 0.10 = <strong>1.00</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why the two values (0.79 and 0.82) are extracted separately:</strong> The system creates a structured hypothesis: <em>"For INF846K01DP5, user asserts TER should be 0.82. Response showed 0.79. D2 says source used was v17."</em> This enables a three-way comparison: response value vs source-at-retrieval-time vs canonical-current-source — the only way to distinguish stale source from generation error.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#f59e0b,#d97706);">A3</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔍 Router Evaluation — E1 Deterministic + Source Registry Check</span><span class="step-phase phase-async">Async · Zero LLM · STOP-1</span></div>
+        <div class="example-box yellow">
+          <div class="ex-label yellow">Router execution trace</div>
+          <div class="ex-content">
+            <strong>R1 — Mandatory C03:</strong> Extract TER from response = 0.79. Load D2 source version = AMFI_v17. Check canonical source registry: AMFI_<strong>v18</strong> available since 2026-08-17 (3 days ago) with TER = 0.82. <span class="verdict fail">SOURCE VERSION MISMATCH</span><br/><br/>
+            <strong>Critical distinction test (EV_SRC_009):</strong><br/>
+            Q: Did the model correctly copy the value from the source it used? → YES (v17 says 0.79, response says 0.79)<br/>
+            Q: Is there a newer authoritative source with a different value? → YES (v18 says 0.82)<br/>
+            <strong>→ F05 (Stale Source) CONFIRMED. NOT F07 (Generation Hallucination).</strong><br/><br/>
+            STOP-1 fires. Token budget: B0 (zero).
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">💡</span><div class="why-text"><strong>Why this distinction (F05 vs F07) is architecturally critical:</strong> If diagnosed as F07, the repair team would investigate model behaviour, potentially change prompts or model versions — expensive and ineffective. The real fix is: trigger source ingestion for AMFI_v18, re-embed the TER chunk, update the graph edge. This takes minutes and costs zero LLM tokens. The three-way value comparison (response ↔ retrieval-time source ↔ current canonical source) is the core pattern that separates these two failure families deterministically.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#e53e3e,#c53030);">A4</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">⚖️ Adjudication + Root Cause Confirmation</span><span class="step-phase phase-async">Async</span></div>
+        <div class="example-box red">
+          <div class="ex-label red">Adjudication verdicts</div>
+          <div class="ex-content">
+            <strong>Factuality at response time:</strong> <span class="verdict partial">PARTIAL</span> — response was accurate against the source used (v17), but the source was stale<br/>
+            <strong>Source Currency (C02):</strong> <span class="verdict fail">FAIL</span> — v18 available for 3 days; threshold exceeded<br/>
+            <strong>Numerical Accuracy (C03):</strong> <span class="verdict fail">FAIL</span> — response value 0.79 ≠ current canonical value 0.82<br/>
+            <strong>Human feedback:</strong> <span class="verdict pass">SUPPORTED</span> — user correction 0.82 matches canonical v18<br/><br/>
+            <strong>Root Cause:</strong> F05 (Source Freshness) — ingestion of AMFI_v18 failed 3 days ago<br/>
+            <strong>Origin:</strong> Axis C = Source Ingestion pipeline<br/>
+            <strong>Axis D (Heal):</strong> SOURCE_REFRESH + REEMBED<br/>
+            <strong>Repair Class: R1 (Auto-Safe Mechanical)</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why factuality verdict is PARTIAL not FAIL:</strong> The model was not hallucinating. At the time of the response, using source v17, TER=0.79% was the correct answer from the system's available knowledge. The failure is that the system's knowledge was stale. This distinction matters for attribution: the generation layer behaved correctly. The ingestion pipeline failed. Blaming the wrong component wastes repair effort.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#10b981,#059669);">A5</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔧 R1 Auto-Safe Repair: Source Refresh + Re-embed</span><span class="step-phase phase-rep">Repair · Recipe R002 StaleEmbedding</span></div>
+        <div class="example-box green">
+          <div class="ex-label green">Repair execution (Recipe R002)</div>
+          <div class="ex-content">
+            <strong>Step 1:</strong> Source registry check → AMFI_v18 available at canonical URL<br/>
+            <strong>Step 2:</strong> Re-ingest AMFI_v18 → parse → extract TER chunk → new content hash<br/>
+            <strong>Step 3:</strong> Re-embed TER chunk → replace old embedding in FAISS<br/>
+            <strong>Step 4:</strong> Update Neo4j graph edge: <code>INF846K01DP5 -[HAS_FACT]-> TER</code> set <code>value=0.82, effective_from=2026-07-01, source_version=AMFI_v18</code>. Expire old edge (<code>effective_to=2026-07-01</code>).<br/>
+            <strong>Step 5:</strong> Shadow regression — 5 TER-related golden queries. All return 0.82%. ✅<br/>
+            <strong>Step 6:</strong> Cache invalidation — DEL <code>evidence:resp_4d2b8c</code>, DEL <code>graph_ctx:{INF846K01DP5_hash}</code><br/>
+            <strong>Step 7:</strong> Promote to production. Ingestion pipeline alert raised to engineering.<br/>
+            <strong>LLM tokens: 0</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why this is R1 (Auto-Safe, no shadow approval needed):</strong> The repair replaces a stale value with the current value from the authoritative source (AMFI). There is no ambiguity — v18 is the canonical current source. The change is deterministic, reversible, bounded to one entity's TER attribute, and has a clear validation test (TER queries return 0.82%). Shadow regression still runs as a safeguard but human approval is not required.</div></div>
+      </div></div>
+    </div>
+
+  </div>
+  <div class="callout success"><span class="cl-icon">✅</span><div class="cl-body"><strong>Resolution summary — Inaccuracy (Active)</strong> User reported wrong TER → NER extracted entity + values → three-way comparison (response ↔ v17 ↔ v18) proved stale source (F05), not hallucination (F07) → R1 auto-repair: AMFI_v18 re-ingested, TER chunk re-embedded, graph edge updated, cache invalidated → 0 LLM tokens total. Next query for this fund's TER will return 0.82%.</div></div>
+</section>
+
+<!-- ══════════════════════ ACTIVE: MISSING CONTEXT ══════════════════════ -->
+<section id="a-missing-context" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">📭</div>
+    <div>
+      <span class="mode-pill active">🟣 Active Scenario</span>
+      <h2>Missing Context — User Reports Incomplete Answer</h2>
+      <p class="sec-desc">The user asked for a fund comparison. The response gave returns only — omitting benchmark, risk grade, TER, and exit load, all of which the AMC comparison template requires. The evidence was retrieved but dropped at reranking. This is F09 (Completeness) + F03 (Context Engineering), not a retrieval failure.</p>
+    </div>
+  </div>
+
+  <div class="callout warn"><span class="cl-icon">⚠️</span><div class="cl-body"><strong>Setup:</strong> Query: <em>"Compare Axis Bluechip vs Mirae Asset Large Cap for 5 years."</em> The reranker's similarity threshold (0.70 minimum) dropped the benchmark chunk (score=0.58) and TER chunks for Mirae (score=0.65) from the context window. The response answered returns only. The AMC comparison taxonomy template requires 7 fields: returns, benchmark, risk-grade, TER, exit load, AUM, fund manager.</div></div>
+
+  <div class="flow-container">
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#6c63ff,#5a52d5);">A1</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🖱️ User Submits Feedback</span><span class="step-phase phase-rt">Sync · &lt;10ms</span></div>
+        <div class="example-box">
+          <div class="ex-label">Feedback payload</div>
+          <div class="ex-content">
+            <code>feedback_type: "incomplete_answer"</code><br/>
+            <code>comment: "You only gave returns. What about TER, risk level, and benchmark? That's what I need for a proper comparison."</code><br/>
+            <code>rating: 2</code><br/>
+            <code>highlighted_span: ""</code> (user did not highlight — complained about what was absent)
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why no highlighted span is still valid:</strong> Missing-context complaints often cannot highlight a span because there's nothing to point to — the user is reporting an absence. The NLP pipeline handles this: "TER", "risk level", "benchmark" extracted as attributes from the comment. The quality score still reaches 0.85 (entity extracted via NER, comment &gt;20 chars, feedback_type=incomplete).</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">A2</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🏷️ NLP + Context Engineering Audit (D2 Evidence_Rejected)</span><span class="step-phase phase-async">Async · Key diagnostic step</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">What D2 reveals — the smoking gun</div>
+          <div class="ex-content">
+            <strong>NER from comment:</strong> Missing attributes = [TER, risk_grade, benchmark] · Entities = [INF846K01DP5, INF769K01EW8]<br/><br/>
+            <strong>D2 evidence_rejected lookup:</strong><br/>
+            <code>C_benchmark_7</code> — Axis benchmark chunk (Nifty 100 TRI) — rerank score: 0.58 — dropped at threshold 0.70<br/>
+            <code>C_mirae_TER_11</code> — Mirae TER chunk (0.55%) — rerank score: 0.65 — dropped at threshold 0.70<br/>
+            <code>C_risk_grade_4</code> — Axis risk-grade chunk — rerank score: 0.61 — dropped at threshold 0.70<br/><br/>
+            <strong>Finding:</strong> All three user-requested attributes were retrieved by FAISS/BM25 but then dropped by the reranker. They exist in the index. They were not missing from retrieval. They were lost at context assembly.
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why recording <code>evidence_rejected</code> in D2 is the most important design decision for this failure type:</strong> Without it, a Missing Context complaint looks identical to a Retrieval Failure from the outside. With it, the diagnosis takes milliseconds: the benchmark, TER, and risk chunks were in the retrieved set — they were discarded at reranking. This means the fix is a context engineering rule (lower the threshold for comparison-intent queries) not a re-indexing job. Wrong diagnosis → months of re-indexing work → problem unchanged.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#f59e0b,#d97706);">A3</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔍 Router + Taxonomy Template Check (E1)</span><span class="step-phase phase-async">Async · Deterministic</span></div>
+        <div class="example-box yellow">
+          <div class="ex-label yellow">Taxonomy template completeness check</div>
+          <div class="ex-content">
+            <strong>Intent = COMPARATIVE_CLAIM:</strong> AMC taxonomy T5 defines required fields for comparison responses:<br/>
+            Required: [returns_5yr, benchmark, risk_grade, TER, exit_load, AUM, fund_manager] — 7 fields<br/>
+            Present in response: [returns_5yr_axis, returns_5yr_mirae] — 2 fields<br/>
+            <strong>template_coverage = 2/7 = 28.6%</strong> → <span class="verdict fail">FAIL</span><br/><br/>
+            <strong>Evidence check:</strong> All 5 missing fields exist in evidence_rejected chunks (confirmed in D2). They were <em>available but not selected</em>.<br/>
+            <strong>Failure family: F09 (Completeness) + F03 (Context Engineering)</strong><br/>
+            STOP-1 fires (deterministic template mismatch confirmed). Token budget: B0.
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why the taxonomy template is essential for this diagnosis:</strong> "Incomplete" is subjective without a reference template. The AMC comparison taxonomy defines authoritatively what a fund comparison must contain. The router uses this template as the ground truth for completeness evaluation — no LLM judge needed to decide "was the answer complete?" The answer is structurally incomplete by a documented standard.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#10b981,#059669);">A4</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔧 R2 Repair: Context Engineering Rule Update</span><span class="step-phase phase-rep">Repair · Recipe CONTEXT_RULE</span></div>
+        <div class="example-box green">
+          <div class="ex-label green">Repair: reranker threshold adjustment for comparison queries</div>
+          <div class="ex-content">
+            <strong>Current rule:</strong> rerank_threshold = 0.70 (all intent types)<br/>
+            <strong>Proposed rule:</strong> IF intent = COMPARATIVE_CLAIM AND entity_count ≥ 2:<br/>
+            &nbsp;&nbsp;rerank_threshold = 0.55 (lower)<br/>
+            &nbsp;&nbsp;force_include: chunks matching taxonomy required fields [benchmark, TER, risk_grade, exit_load]<br/><br/>
+            <strong>Shadow validation:</strong> 10 comparison queries replayed. Before: avg template_coverage=2.8/7. After: avg template_coverage=6.4/7. ✅<br/>
+            <strong>Blast-radius check:</strong> Non-comparison queries unaffected. <br/>
+            <strong>Compliance routing:</strong> No change to control applicability. ✅<br/>
+            <strong>→ Promoted. Context engineering rule v2.5 deployed.</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why this is R2 (shadow required) not R1 (auto-safe):</strong> Changing the reranker threshold affects context selection for all comparison queries — not just this one entity. The blast-radius is broader than a single entity fix. Shadow validation verifies the change improves completeness without degrading relevance or introducing new failures. This is the validation step that prevents fixing one thing by breaking another.</div></div>
+      </div></div>
+    </div>
+
+  </div>
+  <div class="callout success"><span class="cl-icon">✅</span><div class="cl-body"><strong>Resolution summary — Missing Context (Active)</strong> User complained about incomplete comparison → D2 evidence_rejected exposed that benchmark/TER/risk chunks were retrieved but dropped → taxonomy template check confirmed 2/7 fields covered → root cause: reranker threshold too aggressive for comparison intent (F09+F03) → R2 shadow repair: context engineering rule updated, reranker threshold lowered for COMPARATIVE_CLAIM intent → next comparison query covers 6.4/7 fields on average. 0 LLM tokens.</div></div>
+</section>
+
+<!-- ══════════════════════ ACTIVE: CITATION ══════════════════════ -->
+<section id="a-citation" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">📎</div>
+    <div>
+      <span class="mode-pill active">🟣 Active Scenario</span>
+      <h2>Citation — User Reports Citation Doesn't Support the Claim</h2>
+      <p class="sec-desc">The chatbot cited a real SEBI circular to support a TER claim. The circular exists and the link resolves — but it is about NFO guidelines, not TER limits. The citation integrity check passes; the citation entailment check fails. This is F06 (Citation/Attribution) + F04 (Retrieval) — the wrong chunk was surfaced as citation evidence.</p>
+    </div>
+  </div>
+
+  <div class="callout warn"><span class="cl-icon">⚠️</span><div class="cl-body"><strong>Setup:</strong> Query: <em>"What are the TER limits for large-cap mutual funds under SEBI rules?"</em> Response cited <code>[SEBI_Cir_2024_01]</code> to support a TER limit statement. That circular is about NFO subscription timelines — not TER. The retrieval pipeline ranked it highly because it mentioned "large cap" and "SEBI" but the content was irrelevant to TER limits. The correct source (SEBI circular on TER limits) was in the index at rank 9, below the top-6 selection threshold.</div></div>
+
+  <div class="flow-container">
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#6c63ff,#5a52d5);">A1</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🖱️ User Submits Feedback</span><span class="step-phase phase-rt">Sync · &lt;10ms</span></div>
+        <div class="example-box">
+          <div class="ex-label">Feedback payload</div>
+          <div class="ex-content">
+            <code>feedback_type: "citation_problem"</code><br/>
+            <code>highlighted_span: "As per SEBI circular SEBI_Cir_2024_01"</code><br/>
+            <code>comment: "I opened this circular. It's about NFO timelines, not TER limits. Your citation is wrong."</code><br/>
+            <code>rating: 1</code>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why the highlighted span is the most important field here:</strong> The user pinpointed exactly which citation they checked. This removes ambiguity — the complaint is about <code>SEBI_Cir_2024_01</code> specifically, not about citations generally. The evaluation can skip all other citations and focus precisely on this one document-claim entailment check.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">A2</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🏷️ NLP + Citation Split: Integrity vs Entailment</span><span class="step-phase phase-async">Async · Two-stage check</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Two-stage citation evaluation</div>
+          <div class="ex-content">
+            <strong>Stage 1 — Citation Integrity (deterministic, E1):</strong><br/>
+            Does <code>SEBI_Cir_2024_01</code> exist in the source registry? → YES ✅<br/>
+            Does the citation ID resolve to a document? → YES ✅<br/>
+            Is the document indexed? → YES ✅<br/>
+            Integrity verdict: <span class="verdict pass">PASS</span> — the citation is structurally valid<br/><br/>
+            <strong>Stage 2 — Citation Entailment (semantic NLI, E3):</strong><br/>
+            Claim from response: <em>"SEBI mandates maximum TER of 1.05% for direct plans of large-cap equity funds"</em><br/>
+            Cited chunk content: <em>"...subscription period for NFO shall not exceed 15 days from the date of closure..."</em><br/>
+            NLI model verdict: <code>entailment_score: 0.04</code> (essentially contradiction — not entailment)<br/>
+            Entailment verdict: <span class="verdict fail">FAIL</span> — cited document does not support TER claim
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why citation is split into integrity + entailment:</strong> These are different failures with different repairs. Integrity failure = the link is broken (fix: citation pipeline). Entailment failure = the wrong chunk was retrieved and shown as evidence (fix: retrieval + reranking). Without this split, both would be labelled "citation problem" and both would be sent to the same repair queue. The entailment check uses a local NLI model — not a generative LLM — so the cost is near-zero generative tokens.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#f59e0b,#d97706);">A3</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔍 Router — Retrieval Diagnostic (E1 + E2)</span><span class="step-phase phase-async">Async · Source registry trace</span></div>
+        <div class="example-box yellow">
+          <div class="ex-label yellow">Retrieval trace for "SEBI TER limits large-cap"</div>
+          <div class="ex-content">
+            <strong>Source registry check:</strong> Known authoritative source for SEBI TER limits = <code>SEBI_Cir_TER_2021_48</code> (SEBI circular on total expense ratio)<br/>
+            <strong>Was it indexed?</strong> YES — present in FAISS at chunk <code>C_TER_SEBI_88</code><br/>
+            <strong>Was it retrieved?</strong> YES — BM25 score: 0.88 (rank 1). Vector score: 0.71 (rank 9). <span style="color:#e53e3e;font-weight:700;">Vector rank: 9 — below top-6 threshold</span><br/>
+            <strong>What was retrieved instead at vector rank 1?</strong> <code>SEBI_Cir_2024_01</code> (NFO circular) — vector score: 0.84 (high because "SEBI + large cap + regulatory" keywords all match)<br/><br/>
+            <strong>Finding:</strong> BM25 found the right source (rank 1). Vector search found the wrong source (rank 1) due to keyword-topic overlap. The hybrid merge ranked the NFO circular above the TER circular.<br/>
+            <strong>Failure: F04 (Retrieval — rank failure) + F06 (Citation entailment)</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why the BM25 vs Vector disagreement is a built-in diagnostic sensor:</strong> BM25 retrieves by lexical overlap — "TER limits" are specific terms. Vector retrieves by semantic embedding — the NFO circular is semantically close to "SEBI regulatory large-cap" even without mentioning TER. The disagreement (BM25 rank 1 vs Vector rank 9 for the TER circular) is a signal that the vector embedding may not distinguish regulatory sub-topics well for this domain. This doesn't need an LLM to detect — it's structural disagreement between retrieval channels.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#e53e3e,#c53030);">A4</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">⚖️ Adjudication + Root Cause</span><span class="step-phase phase-async">Async</span></div>
+        <div class="example-box red">
+          <div class="ex-label red">Adjudication per dimension</div>
+          <div class="ex-content">
+            <strong>Citation Integrity:</strong> <span class="verdict pass">PASS</span> — link valid, document real<br/>
+            <strong>Citation Entailment:</strong> <span class="verdict fail">FAIL</span> — cited document does not support TER claim (NLI: 0.04)<br/>
+            <strong>Factuality of TER claim itself:</strong> <span class="verdict pass">PASS</span> — TER limit of 1.05% is correct per SEBI_Cir_TER_2021_48<br/>
+            <strong>Compliance C06 (Source Currency):</strong> <span class="verdict partial">PARTIAL</span> — correct info, wrong source cited<br/>
+            <strong>Human feedback:</strong> <span class="verdict pass">SUPPORTED</span> — user correctly identified wrong circular<br/><br/>
+            <strong>Root Cause: F06 (Citation/Attribution) ← caused by F04 (Retrieval rank failure)</strong><br/>
+            The factual claim is correct. The evidence support is wrong. Repair: fix retrieval ranking for regulatory sub-topics.
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">💡</span><div class="why-text"><strong>Why the TER claim being factually correct still constitutes a failure:</strong> Under SEBI investor communication standards (C06), a response must be supported by the cited source, not just factually correct. A correct statement with a wrong citation is a compliance problem — an auditor cannot trace the regulatory basis for the claim. Even though the answer was right, the citation trail is broken. Compliance and factuality are independently scored for exactly this reason.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#10b981,#059669);">A5</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔧 R2 Repair: Retrieval Rule + Citation Context Rule</span><span class="step-phase phase-rep">Repair · Recipe R006 RetrievalRegression</span></div>
+        <div class="example-box green">
+          <div class="ex-label green">Two-part repair</div>
+          <div class="ex-content">
+            <strong>Part 1 — Retrieval rule (Context Rule):</strong><br/>
+            Add rule: IF intent=REGULATORY_CLAIM AND attribute=TER → force_include canonical_source <code>SEBI_Cir_TER_2021_48</code> in context regardless of rank<br/><br/>
+            <strong>Part 2 — Citation entailment pre-delivery check (E3 gate):</strong><br/>
+            Before delivery, for REGULATORY_CLAIM intent: run NLI entailment check on each citation-claim pair. If entailment_score &lt; 0.6 → swap citation to next-best ranked chunk from same document family OR add ALLOW_WITH_DISCLOSURE.<br/><br/>
+            <strong>Shadow validation:</strong> 8 SEBI/regulatory queries replayed. All now cite correct documents. ✅<br/>
+            <strong>→ Promoted. Context rule v2.6 deployed.</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why adding a pre-delivery entailment check (Part 2) is justified here:</strong> Citation entailment failure for regulatory claims is a compliance issue (C06) — not just a quality issue. Adding a lightweight NLI check (~0 generative tokens) to the pre-delivery intercept path catches this before the user ever sees a wrong citation. The cost is minimal; the compliance benefit is substantial for a regulated AMC platform.</div></div>
+      </div></div>
+    </div>
+
+  </div>
+  <div class="callout success"><span class="cl-icon">✅</span><div class="cl-body"><strong>Resolution summary — Citation (Active)</strong> User highlighted wrong citation → integrity check passed (link valid), entailment check failed (NLI 0.04) → retrieval trace: correct TER circular was in index at BM25 rank 1 but vector rank 9 → root cause: retrieval rank failure (F04) caused citation entailment failure (F06) → R2 repair: forced-include rule for TER regulatory queries + pre-delivery citation entailment gate added → next regulatory query cites correct SEBI circular. Claim was factually correct throughout — only the evidence trail was broken.</div></div>
+</section>
+
+<!-- ══════════════════════ PASSIVE: HALLUCINATION ══════════════════════ -->
+<section id="p-hallucination" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">🔵</div>
+    <div>
+      <span class="mode-pill passive">🔵 Passive Scenario</span>
+      <h2>Hallucination — Detected Without Any User Feedback</h2>
+      <p class="sec-desc">
+        No user complained. No thumbs-down was submitted. Yet the system detected a fabricated performance figure autonomously — through numeric extraction on D0, canonical comparison on D2, and cohort drift monitoring on E2. This is 100% of interactions automatically inspected at zero LLM cost.
+      </p>
+    </div>
+  </div>
+
+  <div class="callout cyan"><span class="cl-icon">🔵</span><div class="cl-body">
+    <strong>Key principle: Passive ≠ Silent. The system watches every response.</strong>
+    The same "38% CAGR" generation error from the Active scenario — but this time no user provided feedback. Here is how the system detects it anyway, within the same hourly cycle, purely from the frozen EvidencePack and structural signals.
+  </div></div>
+
+  <div class="flow-container">
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">P1</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">📤 Response Delivered — Auto-Signal Emitted Immediately</span><span class="step-phase phase-rt">Runtime · Sync · Every response</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Auto-signal captured at delivery time (D0 + D2 derived metrics)</div>
+          <div class="ex-content">
+            Response delivered. User says nothing. System immediately emits:<br/><br/>
+            <code>response_id: "resp_7g1x3p"</code><br/>
+            <code>intent: COMPARATIVE_CLAIM (5yr performance)</code><br/>
+            <code>contains_numbers: TRUE</code><br/>
+            <code>numbers_extracted_from_response: [38.0] (CAGR %)</code><br/>
+            <code>numbers_in_retrieved_chunks: [14.2, 13.8] (from C_2891, C_5502)</code><br/>
+            <code>numeric_mismatch_flag: TRUE → 38.0 not found in any retrieved chunk</code><br/>
+            <code>source_version: AMFI_v18 (current) → source_version_mismatch: FALSE</code><br/>
+            <code>citation_integrity: PASS (all citations resolve)</code><br/>
+            <code>auto_signal_severity: HIGH (numeric value in response not in any source chunk)</code>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why numeric extraction at delivery time is the passive hallucination detector:</strong> Every number in the response is extracted and cross-referenced against numbers in D2 retrieved chunks. If a number appears in the response but in none of the retrieved chunks — it was not copied from any source. This is the structural signature of generation hallucination (F07/F08), detectable in milliseconds with zero LLM tokens. The system doesn't need the user to say "38% is wrong" — it already knows 38% came from nowhere.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">P2</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">📊 E2 Cohort Drift Monitor — Same Pattern Across Multiple Responses</span><span class="step-phase phase-async">Async · Statistical · No LLM</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">What the cohort monitor sees over 24 hours</div>
+          <div class="ex-content">
+            <strong>Cohort: "5-year performance" queries for large-cap funds</strong><br/>
+            Historical baseline: numeric_mismatch_rate for this cohort = 0.8% (1 in 125 responses)<br/><br/>
+            Today's sample (last 6 hours):<br/>
+            <code>resp_7g1x3p</code> → numeric_mismatch: 38.0 vs 14.2 ✗<br/>
+            <code>resp_8h2y4q</code> → numeric_mismatch: 22.1 vs 16.3 ✗ (different fund)<br/>
+            <code>resp_9i3z5r</code> → numeric_mismatch: 31.5 vs 18.7 ✗ (different fund)<br/><br/>
+            Current rate: 3/18 = 16.7% → <strong>20× above baseline</strong><br/>
+            <code>alert: COHORT_DRIFT — performance_numeric_mismatch_rate elevated</code><br/>
+            <code>correlation_key: model_version=claude-3-5-sonnet-v3.2, prompt_template=v2.4.1</code><br/>
+            <strong>→ Incident I-047 created. All three observations correlated.</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why cohort monitoring catches what single-response checks miss:</strong> One numeric mismatch could be an edge case. Three mismatches across different funds in the same model version and prompt template version is a systemic signal — likely a model regression introduced in v3.2. Creating Incident I-047 means all future matching observations are attached to this incident rather than triggering separate diagnosis. Without cohort monitoring, 50 individual evaluations would be opened; with it, one incident is investigated once.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">P3</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔍 Router — Incident Match Short-Circuit (R4)</span><span class="step-phase phase-async">Async · STOP-3 fires</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Router R4 stage for every subsequent performance query</div>
+          <div class="ex-content">
+            New response <code>resp_10j4a6s</code> (different user, Mirae performance query) emits auto-signal:<br/>
+            <code>numeric_mismatch: TRUE</code>, <code>model_version: v3.2</code>, <code>prompt_template: v2.4.1</code><br/><br/>
+            <strong>R4 — Active Incident check:</strong><br/>
+            Match keys: model_version=v3.2 ∩ prompt_template=v2.4.1 ∩ intent=performance_numeric<br/>
+            → <strong>Matches Incident I-047</strong> (confirmed active)<br/>
+            Action: Attach <code>resp_10j4a6s</code> observation to Incident I-047<br/>
+            <strong>STOP-3 fires. No separate root-cause investigation opened.</strong><br/><br/>
+            <code>diagnostic_calls_avoided: 1</code><br/>
+            <code>tokens_avoided: ~400 (what a bounded LLM judge would have spent)</code>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why incident correlation is one of the highest-value cost controls in the architecture:</strong> If 200 users receive wrong performance figures from model v3.2 and none complain (passive scenario), without incident correlation the system would open 200 separate evaluation jobs — each potentially spending 400 LLM tokens to diagnose what is one shared root cause. With I-047 active, observation 4 through 200 each cost 0 tokens and take 2ms to process. One investigation, 200 observations, one repair.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">P4</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">⚖️ Root Cause + Repair — Model Version Regression</span><span class="step-phase phase-async">Async · R3 class — Engineering approval required</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Root cause attributed to model regression</div>
+          <div class="ex-content">
+            <strong>Causal trace (E2 statistical):</strong><br/>
+            All 3 initial failures: model_version=v3.2, prompt_template=v2.4.1<br/>
+            Previous version v3.1 cohort: numeric_mismatch_rate = 0.8% (baseline)<br/>
+            v3.2 cohort: numeric_mismatch_rate = 16.7%<br/>
+            Golden set replay on v3.2: 4/20 golden performance tests fail (v3.1: 0/20)<br/><br/>
+            <strong>Root Cause: F13 (Infrastructure/Model) — model version regression in numeric synthesis</strong><br/>
+            <strong>Repair class: R3 (Engineering approval required before rollback)</strong><br/><br/>
+            <strong>Repair options evaluated:</strong><br/>
+            Option A: Rollback model to v3.1 (R3 — approval required)<br/>
+            Option B: Add numeric grounding constraint to prompt template v2.5 (R3 — shadow + approval)<br/>
+            Option C: Add pre-delivery numeric check (C03) to all PERFORMANCE_CLAIM intent responses (R1 — auto-safe)<br/><br/>
+            <strong>Option C applied immediately (R1 — no approval needed):</strong> Numeric extraction + canonical comparison added to pre-delivery intercept for performance queries. Wrong numbers are now caught before delivery even if model regression persists.<br/>
+            <strong>Option A/B routed to engineering approval queue.</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why Option C is applied immediately while A/B wait for approval:</strong> Option C (add a deterministic pre-delivery numeric check) is bounded, reversible, and has no compliance impact — it only blocks clearly wrong numbers from reaching users. It doesn't change the model or the index. It can be applied and shadow-validated in hours. Options A and B change production model behaviour — that requires engineering sign-off to avoid introducing new regressions. The architecture applies the safest available fix immediately and queues the structural fix properly.</div></div>
+      </div></div>
+    </div>
+
+  </div>
+  <div class="callout success"><span class="cl-icon">✅</span><div class="cl-body"><strong>Resolution summary — Hallucination (Passive)</strong> No user feedback submitted. Numeric extraction at delivery time flagged mismatch → cohort drift monitor identified 20× spike across 3 responses → Incident I-047 created → 197 subsequent matching observations attached via STOP-3 (0 tokens each) → root cause: model v3.2 regression → R1 numeric intercept applied immediately (0 approval needed) → R3 model rollback queued for engineering approval. Total LLM tokens for 200 affected responses: ~0 (all E0/E1/E2).</div></div>
+</section>
+
+<!-- ══════════════════════ PASSIVE: INACCURACY ══════════════════════ -->
+<section id="p-inaccuracy" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">🔵</div>
+    <div>
+      <span class="mode-pill passive">🔵 Passive Scenario</span>
+      <h2>Inaccuracy — Stale TER Detected via Source Manifest Diff</h2>
+      <p class="sec-desc">
+        No user complained about the wrong TER. The system detects the ingestion failure and stale value autonomously through the RAG Health Engine's source manifest diff — before any user is affected at scale. This is the passive equivalent of the active inaccuracy scenario, caught three days earlier through structural health monitoring.
+      </p>
+    </div>
+  </div>
+
+  <div class="callout cyan"><span class="cl-icon">🔵</span><div class="cl-body">
+    <strong>Setup:</strong> AMFI published TER v18 (TER=0.82%) on 2026-08-17. The nightly ingestion job for AMFI data files failed silently — exit code 0 was returned but the parsed output was empty due to a schema change in the AMFI file format. Source manifest says expected chunk count = 142 but actual FAISS index has 141 chunks. The missing chunk is the TER chunk for Axis Bluechip Direct Growth. No alert was raised by the ingestion system. No user has complained yet.
+  </div></div>
+
+  <div class="flow-container">
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">P1</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🏥 RAG Health Engine — Hourly Source Manifest Diff</span><span class="step-phase phase-async">Async · Continuous · Zero LLM</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Source manifest vs actual index comparison</div>
+          <div class="ex-content">
+            <strong>Source manifest (expected state):</strong><br/>
+            <code>source_id: AMFI_v18</code><br/>
+            <code>expected_chunk_count: 142</code><br/>
+            <code>expected_chunk_hashes: [hash_001, hash_002, ..., hash_142]</code><br/>
+            <code>effective_from: 2026-08-17</code><br/><br/>
+            <strong>Actual FAISS index (actual state):</strong><br/>
+            <code>indexed_chunks_for_AMFI_v18: 141</code><br/>
+            <code>missing: hash_089 (chunk: "Axis Bluechip Direct Growth TER = 0.82%")</code><br/><br/>
+            <strong>Diff result: source_version_mismatch = TRUE, missing_chunk_count = 1</strong><br/>
+            <code>alert: R001 MissingVector — AMFI_v18 chunk hash_089 absent from index</code><br/>
+            <code>affected_entity: INF846K01DP5 (Axis Bluechip Direct Growth)</code><br/>
+            <code>affected_attribute: TER</code>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why the source manifest is the single most important passive health mechanism:</strong> The manifest records the ground truth of what should be in the index. Any deviation — even a single missing chunk — is immediately detectable by a simple count and hash comparison. No LLM, no semantic analysis, no user complaint needed. This is state reconciliation: expected state vs actual state → diff → repair recipe. The ingestion job said it succeeded, but the manifest diff caught the lie.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">P2</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔍 Impact Assessment — Who Has Already Seen Wrong TER?</span><span class="step-phase phase-async">Async · D2 retroactive query</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Retroactive exposure analysis using frozen D2 records</div>
+          <div class="ex-content">
+            Query: <em>SELECT responses WHERE source_version=AMFI_v17 AND entity=INF846K01DP5 AND attribute=TER AND created_at &gt; '2026-08-17'</em><br/><br/>
+            <strong>Results:</strong> 23 responses in the past 3 days served TER=0.79% from AMFI_v17<br/>
+            None of these 23 users complained (passive — no feedback submitted)<br/><br/>
+            <strong>Exposure assessment:</strong><br/>
+            <code>affected_response_count: 23</code><br/>
+            <code>severity: MEDIUM</code> (TER difference: 0.03%, not a large error)<br/>
+            <code>compliance_risk: LOW-MEDIUM</code> (C03 numeric accuracy, C02 source currency)<br/>
+            <code>blast_radius: bounded</code> (single entity, single attribute)<br/><br/>
+            All 23 response IDs logged in Incident I-051 for audit trail.
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why frozen D2 enables retroactive exposure analysis:</strong> Because every response's source version was recorded at delivery time, the system can answer "how many users received information from the stale source?" without reprocessing any conversations. This is the audit capability — for regulatory purposes, the AMC can document exactly which users received which version of which fact, and on what date. Without D2 freezing, this analysis would require replaying all conversations against current system state — which would be both expensive and inaccurate.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">P3</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔧 R1 Auto-Repair: Recipe R001 MissingVector + R002 StaleEmbedding</span><span class="step-phase phase-rep">Repair · Auto-Safe · Zero LLM</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Automated repair sequence</div>
+          <div class="ex-content">
+            <strong>Recipe R001 — MissingVector:</strong><br/>
+            Re-parse AMFI_v18 source → extract chunk hash_089 (TER=0.82%) → embed → insert into FAISS index → verify chunk count = 142 ✅<br/><br/>
+            <strong>Recipe R002 — StaleEmbedding:</strong><br/>
+            Compare old AMFI_v17 TER chunk (hash_031) content hash vs AMFI_v18 TER chunk (hash_089) → different → expire old chunk from active index, promote new<br/><br/>
+            <strong>Neo4j graph update:</strong><br/>
+            Edge: <code>INF846K01DP5 -[HAS_FACT {attribute:"TER"}]-> 0.79</code> → set <code>effective_to=2026-07-01</code><br/>
+            New edge: <code>INF846K01DP5 -[HAS_FACT {attribute:"TER", effective_from:"2026-07-01", source_version:"AMFI_v18"}]-> 0.82</code><br/><br/>
+            <strong>Shadow regression:</strong> 5 TER queries → all return 0.82% ✅<br/>
+            <strong>Cache invalidation:</strong> DEL all <code>evidence:{resp_id}</code> for 23 affected responses<br/>
+            <strong>Promoted. Source manifest updated. Ingestion team alerted re: schema change in AMFI format.</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why this passive detection is more valuable than waiting for user feedback:</strong> The 23 users who received TER=0.79% never complained — they may not have known it was wrong. But the AMC's regulatory obligation exists regardless of whether users complain. By detecting and repairing the stale value within the next hourly cycle after AMFI published v18, the exposure window is minimised. The ingestion schema change bug is also caught and reported — preventing the same failure in the next AMFI publication cycle.</div></div>
+      </div></div>
+    </div>
+
+  </div>
+  <div class="callout success"><span class="cl-icon">✅</span><div class="cl-body"><strong>Resolution summary — Inaccuracy (Passive)</strong> Zero user feedback. Source manifest diff at hourly health check detected 1 missing chunk (AMFI_v18 TER for Axis Bluechip). Retroactive D2 query identified 23 already-affected responses. R1 auto-repair: re-ingest + re-embed + graph edge update + cache invalidation → 0 LLM tokens. Future queries return 0.82%. Ingestion schema bug escalated to engineering. All 23 affected response IDs logged in audit trail (Incident I-051).</div></div>
+</section>
+
+<!-- ══════════════════════ PASSIVE: MISSING CONTEXT ══════════════════════ -->
+<section id="p-missing-context" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">🔵</div>
+    <div>
+      <span class="mode-pill passive">🔵 Passive Scenario</span>
+      <h2>Missing Context — Detected via Taxonomy Template Coverage Monitoring</h2>
+      <p class="sec-desc">
+        No user complained that the comparison answer was incomplete. The system detects systematic template under-coverage passively through taxonomy-driven completeness monitoring across the COMPARATIVE_CLAIM cohort. A reranker threshold issue is identified as a pattern across 31 comparison queries — not just one.
+      </p>
+    </div>
+  </div>
+
+  <div class="callout cyan"><span class="cl-icon">🔵</span><div class="cl-body">
+    <strong>Setup:</strong> Over the past week, 31 "compare fund A vs fund B" queries were answered. None of the users complained. But the AMC comparison taxonomy defines 7 required fields. Monitoring shows the average template_coverage across these 31 responses is 2.9/7 — well below the required minimum of 6/7. The reranker threshold introduced in v2.4.0 is systematically dropping benchmark and risk-grade chunks for comparison intents.
+  </div></div>
+
+  <div class="flow-container">
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">P1</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">📊 D2 Derived Metric: taxonomy_template_coverage Auto-Captured on Every Response</span><span class="step-phase phase-rt">Runtime · Every COMPARATIVE_CLAIM response</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">What is captured automatically in D2 for each comparison response</div>
+          <div class="ex-content">
+            For every response with intent=COMPARATIVE_CLAIM, D2 records:<br/><br/>
+            <code>taxonomy_template_id: "AMC_COMPARISON_V3"</code><br/>
+            <code>required_fields: [returns, benchmark, risk_grade, TER, exit_load, AUM, fund_manager]</code><br/>
+            <code>fields_present_in_response: [returns_fund_a, returns_fund_b]</code><br/>
+            <code>fields_absent: [benchmark, risk_grade, TER_fund_b, exit_load, AUM, fund_manager]</code><br/>
+            <code>template_coverage_score: 2/7 = 0.286</code><br/>
+            <code>evidence_rejected: [C_benchmark_7 (score:0.58), C_risk_4 (score:0.61), C_mirae_TER_11 (score:0.65)]</code><br/><br/>
+            No alert on single response (threshold = coverage &lt; 0.50 for 3+ consecutive responses).
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why template coverage is computed and stored on every comparison response:</strong> A single low-coverage response could be a one-off (the user asked a narrow question). A pattern of low-coverage across many responses is a systemic failure. By recording it in D2 for every response, the monitoring system can aggregate across the cohort without re-evaluating any response. The metric is free to compute at delivery time and invaluable for trend detection.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">P2</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">📈 E2 Cohort Monitor — COMPARATIVE_CLAIM Template Coverage Drift</span><span class="step-phase phase-async">Async · Statistical · Daily aggregate</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Weekly cohort analysis — COMPARATIVE_CLAIM intent</div>
+          <div class="ex-content">
+            <strong>Baseline (pre v2.4.0 reranker):</strong> avg template_coverage = 5.8/7 (83%)<br/>
+            <strong>This week (post v2.4.0 reranker, 31 responses):</strong> avg template_coverage = 2.9/7 (41%)<br/><br/>
+            <strong>Consistent pattern in evidence_rejected across all 31 responses:</strong><br/>
+            benchmark chunks: dropped in 29/31 responses (rerank score avg: 0.57)<br/>
+            risk_grade chunks: dropped in 27/31 responses (rerank score avg: 0.60)<br/>
+            TER chunks (second entity): dropped in 25/31 responses (rerank score avg: 0.63)<br/><br/>
+            <strong>Correlation key: context_engineering_version = v2.4.0 (reranker threshold = 0.70)</strong><br/>
+            <code>alert: COMPLETENESS_REGRESSION — COMPARATIVE_CLAIM template coverage dropped 42% after context v2.4.0</code><br/>
+            <strong>→ Incident I-052 created. Root cause: context engineering version regression.</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why the version correlation is the critical signal here:</strong> The coverage dropped exactly when context engineering v2.4.0 was deployed. This is not a retrieval failure — FAISS is finding the benchmark and risk chunks (they appear in the retrieved set). It is a context assembly failure — the reranker threshold of 0.70 systematically drops these chunks because comparison-supporting content scores below 0.70 while returns-content scores above 0.85. The version correlation provides the causal anchor without any LLM investigation.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">P3</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔧 R2 Repair — Context Rule Rollback + Intent-Specific Threshold</span><span class="step-phase phase-rep">Repair · Shadow required</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Repair options and execution</div>
+          <div class="ex-content">
+            <strong>Option A (fastest):</strong> Rollback context engineering to v2.3.9 (threshold=0.60 for all intents)<br/>
+            Shadow test: 10 comparison queries → avg coverage 5.9/7. Non-comparison queries: unaffected. ✅<br/><br/>
+            <strong>Option B (better long-term):</strong> Intent-specific threshold rule (same as Active scenario repair):<br/>
+            IF intent=COMPARATIVE_CLAIM → threshold=0.55 + force_include taxonomy required fields<br/>
+            Shadow test: 10 comparison queries → avg coverage 6.4/7. ✅<br/><br/>
+            <strong>Option B selected and promoted.</strong> Context engineering v2.5.0 deployed.<br/>
+            31 affected comparison responses logged in audit trail (Incident I-052).<br/>
+            Post-deploy monitoring: coverage at 6.2/7 over next 48h. ✅
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why 31 passively affected responses are just as important as 1 actively-reported one:</strong> These 31 users received incomplete fund comparisons without knowing it. They may have made investment decisions with incomplete information — missing risk grades, TER differentials, and benchmark context that are material to fund selection. The AMC's investor communication obligation under SEBI extends to all responses, not just the ones users complain about. Passive detection protects investors who don't know what they're missing.</div></div>
+      </div></div>
+    </div>
+
+  </div>
+  <div class="callout success"><span class="cl-icon">✅</span><div class="cl-body"><strong>Resolution summary — Missing Context (Passive)</strong> Zero user feedback across 31 comparison queries. Daily cohort monitor detected template coverage regression from 83% to 41% correlated with context_engineering v2.4.0. Root cause: reranker threshold 0.70 systematically drops comparison-support chunks. R2 shadow repair: intent-specific threshold rule deployed as v2.5.0. Future comparison queries achieve 6.2/7 template coverage. All 31 affected responses logged. 0 LLM tokens for detection and diagnosis.</div></div>
+</section>
+
+<!-- ══════════════════════ PASSIVE: CITATION ══════════════════════ -->
+<section id="p-citation" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">🔵</div>
+    <div>
+      <span class="mode-pill passive">🔵 Passive Scenario</span>
+      <h2>Citation — Wrong Citation Detected via Entailment Sampling</h2>
+      <p class="sec-desc">
+        No user checked the citation or complained. The system detects citation entailment failures passively through a sampling pipeline that runs NLI entailment checks on a fraction of REGULATORY_CLAIM responses — specifically the highest-risk intent category where wrong citations have compliance consequences.
+      </p>
+    </div>
+  </div>
+
+  <div class="callout cyan"><span class="cl-icon">🔵</span><div class="cl-body">
+    <strong>Setup:</strong> The same wrong-citation pattern from the Active scenario — SEBI_Cir_2024_01 (NFO circular) cited for TER claims. No user checked the citation. But the system runs a 10% sampling pipeline on REGULATORY_CLAIM responses, checking citation entailment using a local NLI model. In a batch of 40 sampled regulatory responses, 6 show entailment_score &lt; 0.40 for their primary citation. All 6 cite SEBI_Cir_2024_01.
+  </div></div>
+
+  <div class="flow-container">
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">P1</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🎲 Adaptive Sampling — REGULATORY_CLAIM Responses Elevated to 10%</span><span class="step-phase phase-async">Async · Policy-driven · E3 sampling</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Sampling policy for REGULATORY_CLAIM intent</div>
+          <div class="ex-content">
+            <strong>Global baseline sampling rate:</strong> 2% (telemetry + E1 checks only)<br/>
+            <strong>REGULATORY_CLAIM elevated rate:</strong> 10% (NLI entailment added due to compliance risk of wrong citations)<br/>
+            <strong>Trigger:</strong> D3 <code>applicable_controls</code> includes C06 (Source/Citation Currency) → elevated sampling automatically applied<br/><br/>
+            <strong>Batch of 40 REGULATORY_CLAIM responses sampled this cycle:</strong><br/>
+            6 responses: <code>primary_citation = SEBI_Cir_2024_01</code><br/>
+            NLI entailment check (local model, ~0 generative tokens): <code>entailment_score avg: 0.06</code><br/>
+            <strong>6/6 = 100% entailment FAIL for this citation</strong><br/>
+            Compared to baseline entailment rate for this cohort: 94% PASS<br/>
+            <code>alert: CITATION_ENTAILMENT_REGRESSION — SEBI_Cir_2024_01 cited for non-NFO claims</code>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why sampling rate is elevated specifically for REGULATORY_CLAIM and not all intents:</strong> The cost of citation entailment checking (NLI model compute) is non-zero. Running it on 100% of traffic would be wasteful for low-risk intents like "what is the NAV today?" where citation integrity alone (a free check) is sufficient. For REGULATORY_CLAIM — where a wrong citation could mean a compliance officer cannot trace the regulatory basis for an investor communication — the compliance stakes justify elevated NLI sampling. D3 makes the elevated sampling automatic: control C06 in the applicable set → rate increases.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">P2</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔍 Retrieval Diagnostic — Why SEBI_Cir_2024_01 Keeps Appearing</span><span class="step-phase phase-async">Async · E1 source registry trace</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Source registry analysis across 6 affected responses</div>
+          <div class="ex-content">
+            <strong>Pattern across all 6 responses:</strong><br/>
+            All 6: intent contains "SEBI" + "large cap" + "regulation/limit"<br/>
+            All 6: SEBI_Cir_2024_01 retrieved at vector rank 1–3 (score: 0.82–0.87)<br/>
+            All 6: Correct regulatory source (SEBI_Cir_TER_2021_48) retrieved at vector rank 8–12 (below threshold)<br/><br/>
+            <strong>Root cause trace:</strong><br/>
+            SEBI_Cir_2024_01 embedding was trained on content mentioning "large cap fund" + "SEBI regulation" + "limit" — keywords shared with TER queries<br/>
+            SEBI_Cir_TER_2021_48 chunk embedding is more specific (TER-focused keywords) but scores lower on broad regulatory queries<br/><br/>
+            <strong>Failure: F04 (Retrieval — vector rank failure) causing F06 (Citation entailment failure)</strong><br/>
+            <strong>Incident I-053 created. Correlation key: vector_index_version=v4.1 + query_type=regulatory_broad</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why the retrieval diagnostic is run across all 6 responses together, not individually:</strong> The pattern — same wrong citation, same vector rank pattern, same correct source at rank 8–12 — across 6 independent responses confirms this is systematic, not random. Individual evaluation would see one citation complaint. Aggregate analysis reveals the embedding model conflates "SEBI + large cap + regulatory" semantics with TER content — a calibration issue in the vector index that affects an entire class of queries.</div></div>
+      </div></div>
+    </div>
+
+    <div class="step-block">
+      <div class="step-number-col"><div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">P3</div></div>
+      <div class="step-body"><div class="step-card">
+        <div class="step-header"><span class="step-title">🔧 R2 Repair — Forced-Include Rule + Citation Pre-Delivery Gate</span><span class="step-phase phase-rep">Repair · Shadow required</span></div>
+        <div class="example-box cyan">
+          <div class="ex-label cyan">Two-part repair (same as active, but triggered by sampling not user report)</div>
+          <div class="ex-content">
+            <strong>Part 1 — Forced-include rule (immediate, R1):</strong><br/>
+            IF intent contains REGULATORY_CLAIM AND attribute=TER → force_include SEBI_Cir_TER_2021_48 regardless of rank<br/>
+            Shadow test: 8 TER regulatory queries → SEBI_Cir_TER_2021_48 now in context for all 8. ✅<br/><br/>
+            <strong>Part 2 — Citation entailment pre-delivery gate (new, R2):</strong><br/>
+            Add to Critical Intercept: for REGULATORY_CLAIM + C06 applicable → run NLI entailment on primary citation before delivery<br/>
+            If entailment_score &lt; 0.50 → swap to next-best ranked chunk from authoritative source family<br/>
+            Shadow test: entailment pass rate improves from 83% to 97% for regulatory queries. ✅<br/><br/>
+            <strong>Both parts promoted. Longer-term: vector index re-embedding for regulatory sub-topics added to roadmap.</strong>
+          </div>
+        </div>
+        <div class="why-box"><span class="why-icon">🎯</span><div class="why-text"><strong>Why the passive path leads to the same repair as the active path — but catches it earlier:</strong> In the active scenario, one user reported this problem after checking a citation. In the passive scenario, the sampling pipeline caught 6 instances of the same pattern before any user was aware. The passive path is proactive — it surfaces systemic problems before the scale of user impact becomes large enough to generate feedback volume. The repair logic is identical; the trigger is structural monitoring rather than user distress.</div></div>
+      </div></div>
+    </div>
+
+  </div>
+  <div class="callout success"><span class="cl-icon">✅</span><div class="cl-body"><strong>Resolution summary — Citation (Passive)</strong> Zero user feedback. 10% NLI sampling on REGULATORY_CLAIM responses (triggered by C06 in D3 applicable controls) caught 6/40 sampled responses with entailment_score &lt;0.06 for SEBI_Cir_2024_01. Pattern analysis: same wrong citation, same vector rank failure across all 6. Root cause: F04 vector rank failure causing F06 citation entailment failure. R1 forced-include rule deployed immediately. R2 citation pre-delivery entailment gate added. 0 generative LLM tokens for detection. Regulatory compliance risk contained before user scale.</div></div>
+</section>
+
+<!-- ══════════════════════ RESOLUTION MAP ══════════════════════ -->
+<section id="resolution" class="section">
+  <div class="sec-head">
+    <div class="sec-icon">🗂️</div>
+    <div>
+      <span class="mode-pill shared">📐 Shared — Both Paths</span>
+      <h2>Resolution Map — End-to-End for All 8 Scenarios</h2>
+      <p class="sec-desc">
+        How every failure type resolves from signal to production change — across both Active and Passive paths. Includes the data captured at each decision gate, why each step exists, LLM token cost, and the exact repair that fires. Use this as the single-page reference for the full loop.
+      </p>
+    </div>
+  </div>
+
+  <!-- ── MASTER RESOLUTION TABLE ── -->
+  <h3 class="sub">Master Resolution Matrix — All 8 Scenarios</h3>
+  <div style="overflow-x:auto;">
+  <table class="cmp-table" style="min-width:1200px;">
+    <thead>
+      <tr>
+        <th class="th-shared" style="min-width:130px;">Scenario</th>
+        <th class="th-shared" style="min-width:100px;">Path</th>
+        <th class="th-shared">Signal Origin</th>
+        <th class="th-shared">True Root Cause</th>
+        <th class="th-shared">Failure Families</th>
+        <th class="th-shared">Evaluator Used</th>
+        <th class="th-shared">Stop Rule</th>
+        <th class="th-shared">LLM Tokens</th>
+        <th class="th-shared">Repair Class</th>
+        <th class="th-shared">Repair Action</th>
+        <th class="th-shared">Time to Resolution</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="background:#faf5ff;">
+        <td><strong>Hallucination</strong><br/><span style="font-size:11px;color:var(--muted);">38% CAGR fabricated</span></td>
+        <td><span class="mode-pill active" style="font-size:11px;margin:0;">🟣 Active</span></td>
+        <td style="font-size:12px;">User: 👎 + "hallucination" + highlighted span + correction "14.2%"</td>
+        <td style="font-size:12px;">Model did not copy retrieved value (14.2%) — generated unsupported figure (38%)</td>
+        <td style="font-size:12px;"><strong>F07</strong> Grounding<br/><strong>F08</strong> Numeric</td>
+        <td style="font-size:12px;">EV_NUM_010 (deterministic numeric comparison against D2 chunk values)</td>
+        <td><span class="verdict pass">STOP-1</span><br/><span style="font-size:11px;">Deterministic proof</span></td>
+        <td><strong style="color:#059669;">0</strong></td>
+        <td><span class="verdict" style="background:#dbeafe;color:#1e40af;">R2</span></td>
+        <td style="font-size:12px;">Golden regression test added; engineering notified for prompt review; pre-delivery numeric intercept added for PERFORMANCE_CLAIM</td>
+        <td style="font-size:12px;">~1 hour (next eval cycle)</td>
+      </tr>
+      <tr style="background:#f0fdfe;">
+        <td><strong>Hallucination</strong><br/><span style="font-size:11px;color:var(--muted);">38% CAGR fabricated</span></td>
+        <td><span class="mode-pill passive" style="font-size:11px;margin:0;">🔵 Passive</span></td>
+        <td style="font-size:12px;">Auto: numeric extraction at delivery — 38.0 not in any retrieved chunk. Cohort drift: 16.7% vs 0.8% baseline</td>
+        <td style="font-size:12px;">Model v3.2 regression — numeric synthesis degraded across all performance queries</td>
+        <td style="font-size:12px;"><strong>F13</strong> Model regression<br/><strong>F07+F08</strong> downstream</td>
+        <td style="font-size:12px;">E0 numeric mismatch flag + E2 cohort drift monitor. Incident I-047 created after 3 correlated observations</td>
+        <td><span class="verdict pass">STOP-3</span><br/><span style="font-size:11px;">Known incident (obs 4–200)</span></td>
+        <td><strong style="color:#059669;">0</strong></td>
+        <td><span class="verdict" style="background:#fef9c3;color:#a16207;">R3</span></td>
+        <td style="font-size:12px;">R1 numeric intercept added immediately (no approval). R3 model rollback queued for engineering. Incident I-047 absorbs 197 subsequent observations</td>
+        <td style="font-size:12px;">R1: &lt;1hr. R3: next release cycle</td>
+      </tr>
+      <tr style="background:#faf5ff;">
+        <td><strong>Inaccuracy</strong><br/><span style="font-size:11px;color:var(--muted);">TER 0.79% vs 0.82%</span></td>
+        <td><span class="mode-pill active" style="font-size:11px;margin:0;">🟣 Active</span></td>
+        <td style="font-size:12px;">User: "Numerical Error" + "TER is 0.82%" + correction field</td>
+        <td style="font-size:12px;">Ingestion of AMFI_v18 failed — model correctly copied stale value from v17</td>
+        <td style="font-size:12px;"><strong>F05</strong> Source Freshness<br/><strong>F08</strong> Numeric (secondary)</td>
+        <td style="font-size:12px;">EV_SRC_009 (source version diff: v17 used vs v18 available). Three-way comparison: response ↔ v17 ↔ v18</td>
+        <td><span class="verdict pass">STOP-1</span><br/><span style="font-size:11px;">Deterministic proof</span></td>
+        <td><strong style="color:#059669;">0</strong></td>
+        <td><span class="verdict" style="background:#dcfce7;color:#166534;">R1</span></td>
+        <td style="font-size:12px;">Re-ingest AMFI_v18. Re-embed TER chunk. Update graph edge (expire 0.79%, create 0.82%). Cache invalidation. Ingestion schema bug escalated</td>
+        <td style="font-size:12px;">~1 hour auto-repair</td>
+      </tr>
+      <tr style="background:#f0fdfe;">
+        <td><strong>Inaccuracy</strong><br/><span style="font-size:11px;color:var(--muted);">TER 0.79% vs 0.82%</span></td>
+        <td><span class="mode-pill passive" style="font-size:11px;margin:0;">🔵 Passive</span></td>
+        <td style="font-size:12px;">RAG Health hourly manifest diff: expected 142 chunks, found 141. Missing: AMFI_v18 TER chunk</td>
+        <td style="font-size:12px;">Ingestion job parsed 0 chunks due to AMFI file format schema change</td>
+        <td style="font-size:12px;"><strong>F13</strong> Infrastructure<br/><strong>F05</strong> Source (downstream)</td>
+        <td style="font-size:12px;">E0: source manifest diff (count + hash comparison). Zero LLM. D2 retroactive query: 23 responses already affected</td>
+        <td><span class="verdict pass">STOP-1</span><br/><span style="font-size:11px;">Deterministic manifest proof</span></td>
+        <td><strong style="color:#059669;">0</strong></td>
+        <td><span class="verdict" style="background:#dcfce7;color:#166534;">R1</span></td>
+        <td style="font-size:12px;">Same as Active repair. Additionally: 23 affected response IDs logged in Incident I-051. Ingestion parser fix escalated</td>
+        <td style="font-size:12px;">&lt;1hr; detected before users needed to complain</td>
+      </tr>
+      <tr style="background:#faf5ff;">
+        <td><strong>Missing Context</strong><br/><span style="font-size:11px;color:var(--muted);">Comparison omits benchmark, TER, risk</span></td>
+        <td><span class="mode-pill active" style="font-size:11px;margin:0;">🟣 Active</span></td>
+        <td style="font-size:12px;">User: "Incomplete Answer" + "didn't mention TER or risk classification"</td>
+        <td style="font-size:12px;">Reranker threshold 0.70 dropped benchmark (0.58), risk_grade (0.61), TER (0.65) chunks — all retrieved, none selected</td>
+        <td style="font-size:12px;"><strong>F09</strong> Completeness<br/><strong>F03</strong> Context Engineering</td>
+        <td style="font-size:12px;">D2 evidence_rejected lookup → taxonomy template check: 2/7 fields covered. E1 deterministic template rule</td>
+        <td><span class="verdict pass">STOP-1</span><br/><span style="font-size:11px;">Template mismatch proven</span></td>
+        <td><strong style="color:#059669;">0</strong></td>
+        <td><span class="verdict" style="background:#dbeafe;color:#1e40af;">R2</span></td>
+        <td style="font-size:12px;">Context rule: lower threshold to 0.55 + force-include taxonomy required fields for COMPARATIVE_CLAIM intent. Shadow validated: 6.4/7 avg coverage</td>
+        <td style="font-size:12px;">~2 hours (shadow validation)</td>
+      </tr>
+      <tr style="background:#f0fdfe;">
+        <td><strong>Missing Context</strong><br/><span style="font-size:11px;color:var(--muted);">Comparison omits benchmark, TER, risk</span></td>
+        <td><span class="mode-pill passive" style="font-size:11px;margin:0;">🔵 Passive</span></td>
+        <td style="font-size:12px;">E2 cohort: avg template_coverage dropped from 5.8/7 to 2.9/7 across 31 comparison responses after context v2.4.0</td>
+        <td style="font-size:12px;">Context engineering v2.4.0 reranker threshold regression — same root cause as Active but systemic</td>
+        <td style="font-size:12px;"><strong>F09</strong> Completeness<br/><strong>F03</strong> Context (systemic)</td>
+        <td style="font-size:12px;">E2 cohort drift: coverage metric tracked in D2 for every COMPARATIVE_CLAIM. Version correlation confirms v2.4.0 as root</td>
+        <td><span class="verdict pass">STOP-1</span><br/><span style="font-size:11px;">Cohort + version correlation</span></td>
+        <td><strong style="color:#059669;">0</strong></td>
+        <td><span class="verdict" style="background:#dbeafe;color:#1e40af;">R2</span></td>
+        <td style="font-size:12px;">Same context rule repair. 31 affected responses logged. Caught 31 users passively vs 1 user actively — same fix applied earlier</td>
+        <td style="font-size:12px;">~2 hours; 31 users protected retroactively</td>
+      </tr>
+      <tr style="background:#faf5ff;">
+        <td><strong>Citation</strong><br/><span style="font-size:11px;color:var(--muted);">NFO circular cited for TER claim</span></td>
+        <td><span class="mode-pill active" style="font-size:11px;margin:0;">🟣 Active</span></td>
+        <td style="font-size:12px;">User: "Citation Problem" + highlighted "[SEBI_Cir_2024_01]" + "this is about NFOs not TER"</td>
+        <td style="font-size:12px;">Vector rank failure: NFO circular ranked above TER circular due to keyword overlap. Wrong chunk cited</td>
+        <td style="font-size:12px;"><strong>F06</strong> Citation Entailment<br/><strong>F04</strong> Retrieval Rank</td>
+        <td style="font-size:12px;">E1: citation integrity PASS. E3: NLI entailment FAIL (score 0.04). Source registry trace confirms TER circular at rank 9</td>
+        <td><span class="verdict pass">STOP-4</span><br/><span style="font-size:11px;">Semantic NLI resolves</span></td>
+        <td><strong style="color:#059669;">~0 gen.</strong><br/><span style="font-size:11px;">(local NLI)</span></td>
+        <td><span class="verdict" style="background:#dbeafe;color:#1e40af;">R2</span></td>
+        <td style="font-size:12px;">Forced-include rule for TER regulatory queries. Citation pre-delivery NLI gate added (E3, &lt;40ms). Shadow validated: entailment pass 97%</td>
+        <td style="font-size:12px;">~2 hours (shadow)</td>
+      </tr>
+      <tr style="background:#f0fdfe;">
+        <td><strong>Citation</strong><br/><span style="font-size:11px;color:var(--muted);">NFO circular cited for TER claim</span></td>
+        <td><span class="mode-pill passive" style="font-size:11px;margin:0;">🔵 Passive</span></td>
+        <td style="font-size:12px;">10% NLI sampling on REGULATORY_CLAIM (C06 applicable). 6/40 sampled: entailment_score 0.06, all citing SEBI_Cir_2024_01</td>
+        <td style="font-size:12px;">Same vector rank failure — but detected across 6 responses via proactive sampling before user awareness</td>
+        <td style="font-size:12px;"><strong>F06</strong> Citation Entailment<br/><strong>F04</strong> Retrieval (systemic)</td>
+        <td style="font-size:12px;">E3 NLI sampling pipeline (10% rate, C06-triggered). Pattern: 6/6 same wrong citation across different users and query wordings</td>
+        <td><span class="verdict pass">STOP-4</span><br/><span style="font-size:11px;">Semantic model resolves</span></td>
+        <td><strong style="color:#059669;">~0 gen.</strong><br/><span style="font-size:11px;">(local NLI)</span></td>
+        <td><span class="verdict" style="background:#dbeafe;color:#1e40af;">R2</span></td>
+        <td style="font-size:12px;">Same repair. 6 affected responses logged. Proactive detection: compliance risk contained before user scale. Vector re-embedding roadmapped</td>
+        <td style="font-size:12px;">~2 hours; caught before user complaints</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <!-- ── SIGNAL → CAPTURE → DERIVE → ACT REFERENCE ── -->
+  <h3 class="sub" style="margin-top:40px;">Per-Step Reference: Signal → Capture → Derive → Act</h3>
+  <p style="font-size:14px;color:var(--muted);margin-bottom:20px;">Every data point captured has a specific downstream consumer. This table maps each capture decision to the exact action it enables — the "why we capture it" made concrete.</p>
+
+  <div style="overflow-x:auto;">
+  <table class="cmp-table">
+    <thead>
+      <tr>
+        <th class="th-shared">Step</th>
+        <th class="th-shared">What is Captured / Derived</th>
+        <th class="th-shared">Where Stored</th>
+        <th class="th-active">Active: How It's Used</th>
+        <th class="th-passive">Passive: How It's Used</th>
+        <th class="th-shared">If NOT Captured</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Query step</strong></td>
+        <td style="font-size:12px;"><code>canonical_entity_id</code> (e.g. INF846K01DP5) resolved from "Axis Bluechip Fund"</td>
+        <td style="font-size:12px;">D1 extracted_entities[]</td>
+        <td style="font-size:12px;">NER tagger maps user feedback entity mention to same canonical ID → enables three-way value comparison</td>
+        <td style="font-size:12px;">Source manifest diff and graph edge checks operate on canonical ID not display name → no ambiguity</td>
+        <td style="font-size:12px;font-style:italic;color:var(--red);">Entity collision: "Axis Bluechip" vs "Axis Bluechip Direct" have different TERs. Wrong entity diagnosed leads to wrong repair.</td>
+      </tr>
+      <tr>
+        <td><strong>Retrieval step</strong></td>
+        <td style="font-size:12px;"><code>source_version</code> of every retrieved chunk captured in D2</td>
+        <td style="font-size:12px;">D2 source_provenance</td>
+        <td style="font-size:12px;">3-way comparison: response value ↔ v17 value ↔ v18 canonical = stale source (F05) not hallucination (F07)</td>
+        <td style="font-size:12px;">Manifest diff compares indexed version vs source registry version → stale chunk detected automatically</td>
+        <td style="font-size:12px;font-style:italic;color:var(--red);">All TER errors look identical. Cannot distinguish stale-copy from generation error. Wrong repair applied. Model blamed when ingestion is at fault.</td>
+      </tr>
+      <tr>
+        <td><strong>Retrieval step</strong></td>
+        <td style="font-size:12px;"><code>evidence_rejected[]</code> — chunks retrieved but dropped at reranking, with scores</td>
+        <td style="font-size:12px;">D2 context_engineering</td>
+        <td style="font-size:12px;">Missing context complaint → D2 shows benchmark chunk was retrieved (score 0.58) but dropped → reranker fix, not retrieval fix</td>
+        <td style="font-size:12px;">Cohort monitor sees all comparison responses have same 4 chunks in evidence_rejected → systemic pattern identified</td>
+        <td style="font-size:12px;font-style:italic;color:var(--red);">Missing context diagnosed as retrieval failure. Re-indexing done. Problem unchanged because chunks were never missing — they were rejected at assembly.</td>
+      </tr>
+      <tr>
+        <td><strong>Generation step</strong></td>
+        <td style="font-size:12px;"><code>numbers_extracted_from_response[]</code> cross-referenced against <code>numbers_in_chunks[]</code></td>
+        <td style="font-size:12px;">D2 derived metric (auto-computed)</td>
+        <td style="font-size:12px;">User says "38% is wrong" → system already knew 38 not in any chunk → deterministic STOP-1, no LLM needed</td>
+        <td style="font-size:12px;">Passive hallucination detector: number in response but not in any source chunk → numeric_mismatch_flag = TRUE at delivery time</td>
+        <td style="font-size:12px;font-style:italic;color:var(--red);">Every performance complaint requires LLM evaluation (~400 tokens each). 200 complaints = 80,000 tokens for what arithmetic could prove in milliseconds.</td>
+      </tr>
+      <tr>
+        <td><strong>Generation step</strong></td>
+        <td style="font-size:12px;"><code>citation_ids[]</code> shown to user, linked to chunk IDs in D2</td>
+        <td style="font-size:12px;">D0 citations_shown + D2 chunk_ids</td>
+        <td style="font-size:12px;">User highlights citation → system runs NLI on (citation chunk content, response claim) → entailment_score 0.04 → retrieval rank failure confirmed</td>
+        <td style="font-size:12px;">10% NLI sampling: for each sampled response, (citation chunk, claim) pairs evaluated → systematic wrong citation caught across 6 responses</td>
+        <td style="font-size:12px;font-style:italic;color:var(--red);">Citation complaints are fully opaque. Cannot distinguish wrong link (integrity) from wrong content (entailment). Both get same generic "fix the citation pipeline" treatment.</td>
+      </tr>
+      <tr>
+        <td><strong>Delivery step</strong></td>
+        <td style="font-size:12px;"><code>response_id</code> embedded in UI payload, linked to frozen D0–D3</td>
+        <td style="font-size:12px;">D0 + UI payload</td>
+        <td style="font-size:12px;">Feedback POST includes response_id → instant link to exact evidence, source version, prompt template, entities used at that moment</td>
+        <td style="font-size:12px;">D2 retroactive query: SELECT responses WHERE entity=X AND source_version=v17 AND date &gt; AMFI_v18_date → 23 affected responses identified</td>
+        <td style="font-size:12px;font-style:italic;color:var(--red);">Feedback is unanchored. "User complained about TER" with no response_id → cannot determine which source version, which entity, which prompt was used. Diagnosis becomes speculation.</td>
+      </tr>
+      <tr>
+        <td><strong>Feedback step (Active)</strong></td>
+        <td style="font-size:12px;"><code>highlighted_span</code> + <code>correction</code> field in feedback payload</td>
+        <td style="font-size:12px;">feedback_records</td>
+        <td style="font-size:12px;">Span "38% CAGR" → extract numeric value → compare against D2 chunks. Correction "14.2%" → verify against canonical source (not accepted as truth until verified)</td>
+        <td style="font-size:12px;">N/A (passive path has no highlighted span)</td>
+        <td style="font-size:12px;font-style:italic;color:var(--red);">Cannot locate which part of the response failed. NER must infer the failure locus from free text — lower precision, more LLM tokens needed to structure the evaluation question.</td>
+      </tr>
+      <tr>
+        <td><strong>Health monitoring</strong></td>
+        <td style="font-size:12px;"><code>taxonomy_template_coverage</code> score on every COMPARATIVE_CLAIM response</td>
+        <td style="font-size:12px;">D2 derived metric</td>
+        <td style="font-size:12px;">User complaint → D2 shows 2/7 template fields → context engineering failure confirmed vs retrieval failure</td>
+        <td style="font-size:12px;">Cohort: 31 responses avg 2.9/7 → systemic regression detected. Correlated with context_engineering_version=v2.4.0</td>
+        <td style="font-size:12px;font-style:italic;color:var(--red);">Completeness is evaluated per-response only when a user complains. Systemic completeness regression across 31 responses goes undetected until enough users complain — which may never happen.</td>
+      </tr>
+      <tr>
+        <td><strong>Incident correlation</strong></td>
+        <td style="font-size:12px;"><code>model_version</code> + <code>prompt_template_version</code> + <code>context_engineering_version</code> in every D0/D2</td>
+        <td style="font-size:12px;">D0 + D2 system versions</td>
+        <td style="font-size:12px;">User feedback → router R4 checks if model_version matches active incident → STOP-3 → 0 duplicate investigations</td>
+        <td style="font-size:12px;">Cohort drift correlates spike to model_version=v3.2 → Incident I-047 created after 3 observations → 197 subsequent observations cost 0 tokens</td>
+        <td style="font-size:12px;font-style:italic;color:var(--red);">200 TER complaints from model v3.2 regression → 200 individual LLM diagnoses → ~80,000 tokens wasted → still recommending "fix the source" when it's a model regression.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <!-- ── REPAIR DECISION TREE ── -->
+  <h3 class="sub" style="margin-top:40px;">Repair Decision Tree — Which Class Fires for Which Scenario</h3>
+  <div class="repair-grid">
+    <div class="repair-card">
+      <span class="rc-id rc-r1">R1 — Auto-Safe Mechanical</span>
+      <div class="rc-name">When it fires</div>
+      <div class="rc-desc">
+        Source exists in registry. Repair replaces a stale value with a current authoritative value. Bounded to one entity/attribute. Deterministic validation available. No compliance impact.<br/><br/>
+        <strong>Fires for:</strong> Inaccuracy (Active + Passive) — stale TER. Recipe: R001 MissingVector + R002 StaleEmbedding.<br/><br/>
+        <strong>Example action:</strong> Re-ingest AMFI_v18, re-embed TER chunk, update graph edge, invalidate cache. Shadow regression still runs as safeguard. No human approval needed.
+      </div>
+    </div>
+    <div class="repair-card">
+      <span class="rc-id rc-r2">R2 — Auto + Shadow Validation</span>
+      <div class="rc-name">When it fires</div>
+      <div class="rc-desc">
+        Repair is deterministic and source-provable but affects a broader scope — multiple queries, multiple entities, or a pipeline rule change. Shadow validation verifies no collateral damage before promotion.<br/><br/>
+        <strong>Fires for:</strong> Hallucination Active (golden test addition), Missing Context both paths (reranker threshold rule), Citation both paths (forced-include rule + pre-delivery NLI gate).<br/><br/>
+        <strong>Example action:</strong> Context engineering rule deployed to shadow → 10 comparison queries replayed → coverage 6.4/7 → no blast-radius failures → promoted.
+      </div>
+    </div>
+    <div class="repair-card">
+      <span class="rc-id rc-r3">R3 — Engineering Approval Required</span>
+      <div class="rc-name">When it fires</div>
+      <div class="rc-desc">
+        Repair changes model behaviour, prompt templates, or system components with wide blast radius. Shadow validation alone is insufficient — a human engineering decision is required.<br/><br/>
+        <strong>Fires for:</strong> Hallucination Passive (model v3.2 rollback). Also fires if prompt template change is required to fix hallucination generation pattern.<br/><br/>
+        <strong>What happens meanwhile:</strong> R1 or R2 mitigations applied immediately (pre-delivery numeric intercept). R3 queued for engineering sprint. Users protected before structural fix lands.
+      </div>
+    </div>
+    <div class="repair-card">
+      <span class="rc-id rc-r4">R4 — Investigative</span>
+      <div class="rc-name">When it fires</div>
+      <div class="rc-desc">
+        Conflicting authoritative sources. Causal attribution ambiguous. Agent or SME investigation required to establish root cause before any repair is attempted.<br/><br/>
+        <strong>Example:</strong> AMFI says TER=0.82%, official SID still says 0.79% due to update lag. System cannot auto-resolve which is authoritative for which effective date. Sent to compliance team.<br/><br/>
+        <strong>Key rule:</strong> No LLM decides which authoritative source is correct. Evidence is surfaced; human decides.
+      </div>
+    </div>
+    <div class="repair-card">
+      <span class="rc-id rc-r5">R5 — Prohibited Auto-Repair</span>
+      <div class="rc-name">When it fires</div>
+      <div class="rc-desc">
+        Repair requires interpreting a regulatory rule, a suitability standard, or a jurisdiction applicability decision. These are legal/compliance determinations — never autonomous.<br/><br/>
+        <strong>Example:</strong> New SEBI circular is ambiguous about whether an existing disclosure template satisfies the new requirement. The system flags the ambiguity; compliance team interprets and updates the rule pack.<br/><br/>
+        <strong>LLM role:</strong> May summarise the conflict. Must not make the regulatory determination.
+      </div>
+    </div>
+    <div class="repair-card">
+      <span class="rc-id" style="background:#f1f5f9;color:#475569;">R0 — No Repair / Monitor</span>
+      <div class="rc-name">When it fires</div>
+      <div class="rc-desc">
+        Feedback is invalid, duplicated, or system behaved correctly. The complaint is about user preference, not a system defect.<br/><br/>
+        <strong>Example:</strong> User repeatedly submits 1-star feedback with comment "I don't like mutual funds". NER finds no entity correction. Sentiment is extreme. Quality score &lt; 0.20. Routed to auto-reject. No evaluation opened.<br/><br/>
+        <strong>Important:</strong> The feedback record is still preserved. It is marked as R0 but never deleted — audit trail requirement.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CRITICAL DISTINCTIONS ── -->
+  <h3 class="sub" style="margin-top:36px;">The 5 Distinctions That Prevent Wrong Repairs</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px;">
+    <div style="background:#fff;border:2px solid #c4b5fd;border-radius:10px;padding:20px;">
+      <div style="font-size:20px;margin-bottom:8px;">1️⃣</div>
+      <div style="font-weight:700;color:#6c63ff;margin-bottom:8px;">F07 Hallucination vs F05 Stale Source</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">
+        <strong>F07:</strong> Model generated value not in any retrieved chunk. Response says 38%, all chunks say 14.2%. Detection: <code>response_number ∉ chunk_numbers</code>. Fix: prompt regression.<br/><br/>
+        <strong>F05:</strong> Model correctly copied a stale value. Response says 0.79%, chunk says 0.79%, but canonical source now says 0.82%. Detection: <code>source_version_used ≠ canonical_current_version</code>. Fix: re-ingest source.<br/><br/>
+        <em>Confusing these → wrong component blamed, wrong team investigates, same error recurs.</em>
+      </div>
+    </div>
+    <div style="background:#fff;border:2px solid #67e8f9;border-radius:10px;padding:20px;">
+      <div style="font-size:20px;margin-bottom:8px;">2️⃣</div>
+      <div style="font-weight:700;color:#0891b2;margin-bottom:8px;">F09 Context Drop vs F04 Retrieval Miss</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">
+        <strong>Context Drop:</strong> Chunk was retrieved (appears in FAISS top-K) but dropped at reranking stage. Visible in <code>D2.evidence_rejected[]</code>. Fix: reranker threshold rule.<br/><br/>
+        <strong>Retrieval Miss:</strong> Chunk was never retrieved — not in top-K at all. Fix: re-embedding, index update, or BM25 rule.<br/><br/>
+        <em>Confusing these → months of re-indexing work when the actual fix is a one-line reranker threshold rule.</em>
+      </div>
+    </div>
+    <div style="background:#fff;border:2px solid #bbf7d0;border-radius:10px;padding:20px;">
+      <div style="font-size:20px;margin-bottom:8px;">3️⃣</div>
+      <div style="font-weight:700;color:#059669;margin-bottom:8px;">F06 Citation Integrity vs Citation Entailment</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">
+        <strong>Integrity:</strong> Does the citation link exist and resolve? Deterministic check (E1). Fix: citation pipeline repair.<br/><br/>
+        <strong>Entailment:</strong> Does the cited content support the claim? Semantic NLI check (E3, ~0 generative tokens). Fix: retrieval ranking rule, forced-include, or pre-delivery gate.<br/><br/>
+        <em>Treating both as "citation problem" sends integrity fixes to the wrong pipeline and misses entailment failures entirely.</em>
+      </div>
+    </div>
+    <div style="background:#fff;border:2px solid #fde68a;border-radius:10px;padding:20px;">
+      <div style="font-size:20px;margin-bottom:8px;">4️⃣</div>
+      <div style="font-weight:700;color:#d97706;margin-bottom:8px;">Feedback as Claim vs Feedback as Ground Truth</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">
+        <strong>Claim:</strong> User says "TER should be 0.82%". This is a hypothesis. The system verifies it against the canonical source (AMFI_v18). If the canonical source confirms 0.82%, the feedback is supported.<br/><br/>
+        <strong>Ground Truth (wrong):</strong> Directly updating the graph with user-asserted value. Could cause feedback poisoning — a competitor or malicious actor submitting false corrections at scale.<br/><br/>
+        <em>The verification step is non-negotiable. It is what separates a governed improvement loop from a feedback-poisoning vulnerability.</em>
+      </div>
+    </div>
+    <div style="background:#fff;border:2px solid #fecdd3;border-radius:10px;padding:20px;">
+      <div style="font-size:20px;margin-bottom:8px;">5️⃣</div>
+      <div style="font-weight:700;color:#e53e3e;margin-bottom:8px;">Isolated Failure vs Incident (Root Shared)</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">
+        <strong>Isolated:</strong> One response with a wrong value. One user reported it. Root cause may be local (single entity, single chunk problem).<br/><br/>
+        <strong>Incident:</strong> 20+ responses share the same failure signature (same source version, same model version, same chunk). One investigation, one repair. Without incident correlation: 200 individual LLM evaluations. With it: 1 investigation + 199 STOP-3 short-circuits.<br/><br/>
+        <em>Incident awareness is the single biggest cost control mechanism in the evaluation loop.</em>
+      </div>
+    </div>
+    <div style="background:#fff;border:2px solid #d8b4fe;border-radius:10px;padding:20px;">
+      <div style="font-size:20px;margin-bottom:8px;">✅</div>
+      <div style="font-weight:700;color:#7c3aed;margin-bottom:8px;">Factuality vs Compliance — Independently Scored</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">
+        A response can be: <strong>factually correct but non-compliant</strong> (correct TER, missing SEBI risk disclosure) or <strong>compliant but factually wrong</strong> (all disclosures present, but TER value is stale).<br/><br/>
+        Both dimensions are evaluated independently. A single "quality score" would mask which dimension failed. C03 (Factual Accuracy) and C07 (Disclosure) are separate control families for exactly this reason.<br/><br/>
+        <em>Combined scores hide regulatory failures behind factual passes and vice versa.</em>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TOKEN ECONOMICS SUMMARY ── -->
+  <h3 class="sub">Token Economics Across All 8 Scenarios</h3>
+  <div class="kpi-row">
+    <div class="kpi k1"><div class="kv">0</div><div class="kl">Generative tokens for Inaccuracy detection + repair (both paths)</div></div>
+    <div class="kpi k2"><div class="kv">0</div><div class="kl">Generative tokens for Missing Context detection (template rule)</div></div>
+    <div class="kpi k3"><div class="kv">~0</div><div class="kl">Generative tokens for Citation entailment (local NLI model)</div></div>
+    <div class="kpi k4"><div class="kv">STOP-1</div><div class="kl">Fires for Hallucination Active, Inaccuracy both, Missing Context both</div></div>
+    <div class="kpi k5"><div class="kv">STOP-3</div><div class="kl">Fires for Hallucination Passive observations 4–200 (incident match)</div></div>
+  </div>
+
+  <div class="callout info" style="margin-top:8px;">
+    <span class="cl-icon">💰</span>
+    <div class="cl-body">
+      <strong>Token cost comparison: naive vs architecture</strong>
+      Naive approach (LLM judge per response): 200 hallucination observations × ~400 tokens = <strong>80,000 tokens</strong>. With incident correlation (I-047) + numeric extraction + STOP-3: <strong>~1,200 tokens total</strong> (first 3 observations diagnosed, 197 attached at zero cost). For inaccuracy and missing context: <strong>0 tokens regardless of volume</strong> — both are structurally diagnosable from D2 metrics alone. The architecture is designed to become cheaper as it matures — not more expensive.
+    </div>
+  </div>
+
+  <!-- ── DATA LINEAGE CHAIN ── -->
+  <h3 class="sub" style="margin-top:36px;">Full Data Lineage — One Interaction to One Deployed Fix</h3>
+  <div style="background:#fff;border:2px solid var(--border);border-radius:12px;padding:28px;font-family:'Cascadia Code','Consolas',monospace;font-size:12px;line-height:2;overflow-x:auto;">
+    <span style="color:#6c63ff;font-weight:700;">User Query</span> (sess_7f3a9b12, 2026-08-20T14:32:07Z, IN, retail)<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+    <span style="color:#3b82f6;font-weight:700;">Intent: CURRENT_NUMERIC_FACT + COMPARATIVE_CLAIM</span> → entity: INF846K01DP5<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+    <span style="color:#10b981;font-weight:700;">Retrieval</span>: AMFI_v18, chunks [C_4421, C_2891...], source_age=3d, vector_graph_overlap=HIGH<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+    <span style="color:#6c63ff;font-weight:700;">LLM Response</span>: model=claude-3-5-sonnet, prompt_v=v2.4.1, hash=a7f3c9...d821<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+    <span style="color:#f59e0b;font-weight:700;">EvidencePack D0–D3 frozen</span>: response_id=resp_9c4f1a · source=AMFI_v18 · template_coverage=2/7 · citations=[AMFI_v18,perf_v3,mirae_v2]<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+    <span style="color:#e53e3e;font-weight:700;">Critical Intercept</span>: C02✅ C03✅ C07✅ C08✅ → PASS → delivered<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+    <span style="color:#6c63ff;font-weight:700;">Feedback</span> (Active): fb_hall_001 · type=hallucination · span="38% CAGR" · correction="14.2%" · quality=1.0<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+    <span style="color:#3b82f6;font-weight:700;">NLP</span>: entity=INF846K01DP5 · sentiment=-0.72 · intent=correction · quality_score=1.0<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+    <span style="color:#f59e0b;font-weight:700;">Router R0→R5</span>: ACS-IN-003 · mandatory C03 · EV_NUM_010 · 38.0∉chunks · STOP-1 · B0 (0 tokens)<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+    <span style="color:#e53e3e;font-weight:700;">Adjudication</span>: Factuality=FAIL · C03=FAIL · Citation=PARTIAL · Human=SUPPORTED<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+    <span style="color:#6c63ff;font-weight:700;">Root Cause</span>: F07+F08 CONFIRMED · Origin=GenerationLayer · method=RULE · confidence=1.0<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+    <span style="color:#10b981;font-weight:700;">Failure Graph</span>: FO_hall_001 → RC_001 → RP_001 (R2, recipe=GOLDEN_REGRESSION_ADD)<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+    <span style="color:#f97316;font-weight:700;">Shadow Repair</span>: golden test added · shadow regression 47/48 pass · blast-radius clear · compliance routing unchanged<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+    <span style="color:#10b981;font-weight:700;">Promotion</span>: golden suite v49 deployed · engineering alerted · pre-delivery numeric gate added for PERFORMANCE_CLAIM<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+    <span style="color:#6c63ff;font-weight:700;">Post-Heal Monitor</span>: 7-day window · performance numeric mismatch rate for INF846K01DP5: 0% ✅
+  </div>
+</section>
+
+</main><!-- end .content -->
+
+<footer class="site-footer">
+  <strong>AMC Feedback Loop — Real-Time Scenario LLD</strong><br/>
+  Active &amp; Passive paths · 4 failure types · Every step annotated · Grounded in Architecture v1.2 · August 2026<br/>
+  <span style="font-size:11px;margin-top:6px;display:block;">Deterministic-first · Evidence-first · LLM-last · Compliance-aware</span>
+</footer>
+
+<script>
+  // ── Tab switching ──
+  function show(id, btn) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nb').forEach(b => b.classList.remove('a-active','p-active','active'));
+    const sec = document.getElementById(id);
+    if (sec) sec.classList.add('active');
+    if (btn) {
+      if (btn.classList.contains('active-tab')) btn.classList.add('a-active');
+      else if (btn.classList.contains('passive-tab')) btn.classList.add('p-active');
+      else btn.classList.add('active');
+    }
+    // scroll nav into view
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── Keyboard navigation ──
+  const TAB_ORDER = [
+    'overview','query-to-response',
+    'a-hallucination','a-inaccuracy','a-missing-context','a-citation',
+    'p-hallucination','p-inaccuracy','p-missing-context','p-citation',
+    'resolution'
+  ];
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    const active = document.querySelector('.section.active');
+    if (!active) return;
+    const idx = TAB_ORDER.indexOf(active.id);
+    let next = -1;
+    if (e.key === 'ArrowRight' && idx < TAB_ORDER.length - 1) next = idx + 1;
+    if (e.key === 'ArrowLeft' && idx > 0) next = idx - 1;
+    if (next === -1) return;
+    const targetId = TAB_ORDER[next];
+    const targetBtn = document.querySelector(`.nb[onclick*="'${targetId}'"]`);
+    show(targetId, targetBtn);
+  });
+
+  // ── Step card hover: highlight step number ──
+  document.querySelectorAll('.step-card').forEach(card => {
+    card.addEventListener('mouseenter', () => {
+      const num = card.closest('.step-block')?.querySelector('.step-num');
+      if (num) num.style.transform = 'scale(1.15)';
+    });
+    card.addEventListener('mouseleave', () => {
+      const num = card.closest('.step-block')?.querySelector('.step-num');
+      if (num) num.style.transform = 'scale(1)';
+    });
+  });
+
+  // ── Active section on load ──
+  document.addEventListener('DOMContentLoaded', () => {
+    const first = document.querySelector('.nb');
+    if (first) first.classList.add('active');
+  });
+</script>
+</body>
+</html>

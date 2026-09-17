@@ -24,7 +24,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from app.api import deps
 from app.api.middleware import RateLimitMiddleware, ValidationMiddleware
 from app.api.routes import (
-    admin, auth, chat, compliance, docs, feedback, files, graph, ingest, metrics, query, review_queue, sessions, status, taxonomy
+    admin, auth, chat, compliance, docs, feedback, files, governance, graph, ingest, metrics, query, review_queue, sessions, status, taxonomy
 )
 from app.config import get_settings
 from app.core.errors import AppError, app_error_handler
@@ -168,7 +168,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(AppError, handle_app_error)
 
     for router in (auth.router, admin.router, query.router, chat.router, sessions.router, taxonomy.router, graph.router,
-                   docs.router, ingest.router, status.router, compliance.router, feedback.router, review_queue.router, files.router, metrics.router):
+                   docs.router, ingest.router, status.router, compliance.router, feedback.router, review_queue.router, governance.router, files.router, metrics.router):
         app.include_router(router, prefix="/api")
 
 

@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Implementation Steps — Batch Evaluator &amp; Tiered Evaluator | AMC Context Engineering</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#f5f6fa;--surf:#ffffff;--surf2:#f0f2f8;--bdr:#dde3f0;
+  --txt:#1a202c;--muted:#64748b;--dim:#94a3b8;
+  --purple:#6c63ff;--blue:#3b82f6;--green:#10b981;--yellow:#f59e0b;
+  --red:#ef4444;--cyan:#06b6d4;--orange:#f97316;--pink:#ec4899;
+  --indigo:#4f46e5;--teal:#14b8a6;--violet:#7c3aed;
+  --sidebar:248px;--shadow:0 2px 12px rgba(0,0,0,.08);
+}
+body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans-serif;display:flex;min-height:100vh;font-size:14px;line-height:1.6;}
+.sidebar{width:var(--sidebar);min-width:var(--sidebar);background:var(--surf);border-right:1px solid var(--bdr);position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:100;display:flex;flex-direction:column;box-shadow:2px 0 8px rgba(0,0,0,.06);}
+.sb-logo{padding:20px 16px 14px;border-bottom:1px solid var(--bdr);}
+.sb-logo .lg-title{font-size:13px;font-weight:800;color:var(--purple);line-height:1.3;}
+.sb-logo .lg-sub{font-size:10.5px;color:var(--muted);margin-top:2px;}
+.sb-badge{margin:10px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:6px 10px;font-size:10px;font-weight:700;color:var(--orange);text-align:center;letter-spacing:.4px;}
+.sb-grp{padding:10px 14px 3px;font-size:9px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;border-left:3px solid transparent;border:none;background:transparent;width:100%;text-align:left;transition:all .15s;}
+.nav-item:hover{color:var(--purple);background:#f5f3ff;}
+.nav-item.active{color:var(--purple);border-left:3px solid var(--purple);background:#ede9fe;font-weight:600;}
+.nav-item .ni{font-size:13px;flex-shrink:0;}
+.main{margin-left:var(--sidebar);flex:1;padding:0;}
+.section{display:none;padding:40px 52px 64px;max-width:1080px;}
+.section.active{display:block;animation:fi .25s ease;}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.pg-title{font-size:28px;font-weight:800;color:var(--txt);letter-spacing:-.5px;margin-bottom:6px;}
+.pg-sub{font-size:14px;color:var(--muted);margin-bottom:28px;line-height:1.65;}
+h2{font-size:17px;font-weight:700;color:var(--txt);margin:32px 0 14px;display:flex;align-items:center;gap:8px;}
+h2::after{content:'';flex:1;height:1px;background:var(--bdr);}
+h3{font-size:14px;font-weight:700;color:var(--purple);margin:18px 0 8px;}
+h4{font-size:13px;font-weight:700;color:var(--blue);margin:12px 0 6px;}
+p{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:10px;}
+code{font-family:'Cascadia Code','Consolas',monospace;background:#ede9fe;color:var(--purple);padding:1px 6px;border-radius:4px;font-size:11.5px;}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin:12px 0 20px;border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+.tbl th{background:linear-gradient(135deg,var(--purple),var(--indigo));color:#fff;padding:10px 15px;text-align:left;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.tbl td{padding:10px 15px;border-bottom:1px solid var(--bdr);vertical-align:top;line-height:1.55;}
+.tbl tr:last-child td{border:none;}
+.tbl tr:nth-child(even) td{background:#fafbff;}
+.tbl tr:hover td{background:#f0f0ff;}
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:18px 22px;margin-bottom:14px;box-shadow:var(--shadow);}
+.card.purple{border-top:3px solid var(--purple);background:#fafafe;}
+.card.blue{border-top:3px solid var(--blue);background:#f8fbff;}
+.card.green{border-top:3px solid var(--green);background:#f6fefa;}
+.card.yellow{border-top:3px solid var(--yellow);background:#fffdf5;}
+.card.cyan{border-top:3px solid var(--cyan);background:#f5fdff;}
+.card.orange{border-top:3px solid var(--orange);background:#fff8f5;}
+.card-title{font-size:13px;font-weight:700;margin-bottom:8px;}
+.card.purple .card-title{color:var(--purple);}
+.card.blue .card-title{color:var(--blue);}
+.card.green .card-title{color:var(--green);}
+.card.yellow .card-title{color:var(--yellow);}
+.card.cyan .card-title{color:var(--cyan);}
+.card.orange .card-title{color:var(--orange);}
+.badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap;}
+.b-green{background:#d1fae5;color:#065f46;}
+.b-yellow{background:#fef3c7;color:#92400e;}
+.b-red{background:#fee2e2;color:#991b1b;}
+.b-blue{background:#dbeafe;color:#1e40af;}
+.b-purple{background:#ede9fe;color:#5b21b6;}
+.b-cyan{background:#cffafe;color:#0e7490;}
+.b-orange{background:#ffedd5;color:#9a3412;}
+.callout{border-radius:8px;padding:14px 18px;margin:14px 0;display:flex;gap:12px;font-size:13px;line-height:1.65;}
+.callout.info{background:#ede9fe;border-left:4px solid var(--purple);}
+.callout.warn{background:#fef3c7;border-left:4px solid var(--yellow);}
+.callout.ok{background:#d1fae5;border-left:4px solid var(--green);}
+.callout.note{background:#cffafe;border-left:4px solid var(--cyan);}
+.callout.orange{background:#ffedd5;border-left:4px solid var(--orange);}
+.ci{font-size:18px;flex-shrink:0;margin-top:1px;}
+.cb{color:var(--txt);}
+.cb b{font-weight:700;}
+.cb code{background:#fff;border:1px solid var(--bdr);}
+.codeblock{background:#1e1e2e;border-radius:8px;padding:16px;margin:12px 0;overflow-x:auto;}
+.codeblock pre{font-family:'Cascadia Code','Consolas',monospace;font-size:12px;color:#cdd6f4;line-height:1.85;white-space:pre;}
+.ck{color:#cba6f7;}.cs{color:#a6e3a1;}.cc{color:#6c7086;font-style:italic;}.ct{color:#89b4fa;}.cn{color:#fab387;}.cf{color:#f38ba8;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:12px 0;}
+@media(max-width:860px){.grid2,.grid3{grid-template-columns:1fr;}}
+.tier{border-radius:9px;padding:14px 18px;margin-bottom:10px;border-left:4px solid var(--bdr);}
+.tier.t0{border-color:var(--green);background:#f0fdf4;}
+.tier.t1{border-color:var(--blue);background:#f0f7ff;}
+.tier.t2{border-color:var(--cyan);background:#f0fdfe;}
+.tier.t3{border-color:var(--orange);background:#fff7f0;}
+.tier-hdr{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;}
+.tier-lbl{font-size:12px;font-weight:800;}
+.tier.t0 .tier-lbl{color:var(--green);}
+.tier.t1 .tier-lbl{color:var(--blue);}
+.tier.t2 .tier-lbl{color:var(--cyan);}
+.tier.t3 .tier-lbl{color:var(--orange);}
+.tier-cost{font-size:11px;color:var(--muted);background:#fff;border:1px solid var(--bdr);padding:2px 8px;border-radius:10px;}
+.sprint{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:18px 22px;margin-bottom:14px;box-shadow:var(--shadow);}
+.sprint-hdr{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.sprint-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;}
+.sprint-title{font-size:13.5px;font-weight:700;color:var(--txt);}
+.sprint-sub{font-size:12px;color:var(--muted);}
+ul.blist{list-style:none;margin:8px 0;display:flex;flex-direction:column;gap:5px;}
+ul.blist li{font-size:12.5px;color:var(--muted);padding:4px 0 4px 18px;position:relative;line-height:1.5;}
+ul.blist li::before{content:'→';position:absolute;left:0;color:var(--purple);font-size:11px;top:5px;}
+ul.blist li b{color:var(--txt);}
+.opt-hdr{font-size:13px;font-weight:800;letter-spacing:.3px;padding:8px 14px;border-radius:8px 8px 0 0;color:#fff;}
+.opt-box{border:1px solid var(--bdr);border-radius:0 0 8px 8px;padding:16px 18px;background:var(--surf);margin-bottom:16px;box-shadow:var(--shadow);}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:#c7d2fe;border-radius:3px;}
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sb-logo">
+    <div class="lg-title">AMC Context Engineering</div>
+    <div class="lg-sub">Implementation Steps</div>
+  </div>
+  <div class="sb-badge">🛠️ Build Guide</div>
+  <div class="sb-grp">Sections</div>
+  <button class="nav-item active" onclick="show('batch',this)"><span class="ni">⚡</span>Batch Evaluator</button>
+  <button class="nav-item" onclick="show('tiered',this)"><span class="ni">🏗️</span>Tiered Evaluator</button>
+</nav>
+
+<main class="main">
+
+<!-- ══════════════════════════════ BATCH EVALUATOR ══════════════════════════════ -->
+<section id="batch" class="section active">
+  <div class="pg-title">3.6 — app/engine/batch_evaluation.py <span class="badge b-red" style="font-size:13px;">Implementation Steps</span></div>
+  <div class="pg-sub">Build order for <code>BatchEvaluationEngine</code>, the passive-path LLM evaluator that scores feedback batches and proposes Cypher corrections under 7 token-optimisation layers. Each step is independently testable before the next begins.</div>
+
+  <div class="sprint">
+    <div class="sprint-hdr"><div class="sprint-num" style="background:linear-gradient(135deg,#6c63ff,#4f46e5);">1</div><div><div class="sprint-title">Extend data contracts in schemas/feedback.py</div><div class="sprint-sub">No dependencies — do this first so every later step has a typed interface to build against.</div></div></div>
+    <ul class="blist">
+      <li>Add <code>EvaluationVerdict</code> enum: <code>correction_needed | no_action | insufficient_evidence</code></li>
+      <li>Add <code>BatchEvaluationItem</code> (input) and <code>CorrectionRecommendation</code> (output) Pydantic models, mirroring the LLM output JSON schema field-for-field</li>
+      <li>Add <code>CorrectionType</code> enum: <code>add_entity | update_property | add_relationship | remove_relationship</code></li>
+    </ul>
+    <div class="codeblock"><pre><span class="ck">class</span> <span class="cn">CorrectionRecommendation</span>(<span class="ct">BaseModel</span>):
+    feedback_id: <span class="ct">str</span>
+    verdict: <span class="ct">EvaluationVerdict</span>
+    confidence: <span class="ct">float</span> = <span class="ct">Field</span>(ge=<span class="cn">0.0</span>, le=<span class="cn">1.0</span>)
+    correction_type: <span class="ct">CorrectionType | None</span>
+    target_entity: <span class="ct">str | None</span>
+    cypher_mutation: <span class="ct">str | None</span>
+    reasoning: <span class="ct">str</span></pre></div>
+  </div>
+
+  <div class="sprint">
+    <div class="sprint-hdr"><div class="sprint-num" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">2</div><div><div class="sprint-title">Pre-batch conditional router (Layer 5)</div><div class="sprint-sub">Runs before the engine is even invoked — filters ~60% of items out of the LLM path entirely.</div></div></div>
+    <ul class="blist">
+      <li>Pure function <code>route_feedback_item(item) → Literal["auto_apply","auto_reject","evaluate"]</code></li>
+      <li><code>quality_score ≥ auto_apply_threshold</code> (0.85) <b>and</b> inter-annotator agreement ≥ 0.90 → auto-apply, never reaches the engine</li>
+      <li><code>quality_score &lt; auto_reject_threshold</code> (0.20) → auto-reject</li>
+      <li>Everything else is queued for batching — read both thresholds from <code>app/config.py</code>, don't hardcode</li>
+    </ul>
+  </div>
+
+  <div class="sprint">
+    <div class="sprint-hdr"><div class="sprint-num" style="background:linear-gradient(135deg,#10b981,#059669);">3</div><div><div class="sprint-title">Semantic dedup + batch formation (Layer 6)</div><div class="sprint-sub">Sits in FeedbackProcessor upstream of the engine — reduces item count ~40% before any LLM call.</div></div></div>
+    <ul class="blist">
+      <li>Embed each feedback claim (existing FAISS embedding model), cluster with cosine-similarity threshold (start at 0.88)</li>
+      <li>Cluster representative carries a <code>vote_weight</code> = cluster size; only the representative goes into the batch</li>
+      <li>Chunk the deduplicated queue into batches of <code>evaluation_batch_size</code> (default 25, from config)</li>
+    </ul>
+  </div>
+
+  <div class="sprint">
+    <div class="sprint-hdr"><div class="sprint-num" style="background:linear-gradient(135deg,#f59e0b,#d97706);">4</div><div><div class="sprint-title">Shared graph context fetcher (Layers 2 &amp; 7)</div><div class="sprint-sub">One Neo4j round-trip per batch instead of one per item.</div></div></div>
+    <ul class="blist">
+      <li><code>fetch_graph_snapshot(entity_names: list[str]) → str</code> — 1-hop subgraph only, via existing <code>graph_store.py</code></li>
+      <li>Cache key: <code>graph_ctx:{hash(sorted(entity_names))}</code>, Redis TTL 1h</li>
+      <li>Reused across every batch in the same hourly cycle (Layer 7) — check cache before hitting Neo4j</li>
+      <li>Graceful degradation: if Redis is unreachable, fetch directly and skip caching (log a warning, don't fail the cycle)</li>
+    </ul>
+  </div>
+
+  <div class="sprint">
+    <div class="sprint-hdr"><div class="sprint-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">5</div><div><div class="sprint-title">Few-shot example cache (Layer 3)</div><div class="sprint-sub">Retrieved once per evaluation cycle, not once per batch.</div></div></div>
+    <ul class="blist">
+      <li><code>get_few_shot_examples(feedback_type) → str</code>, Redis key <code>few_shot:{feedback_type}</code>, TTL 24h</li>
+      <li>Seed the cache with a curated set of 2–3 hand-written correction examples per <code>FeedbackType</code> (one-time backfill script)</li>
+      <li>On cache miss, fall back to a static in-repo JSON fixture so the engine never blocks on Redis availability</li>
+    </ul>
+  </div>
+
+  <div class="sprint">
+    <div class="sprint-hdr"><div class="sprint-num" style="background:linear-gradient(135deg,#ec4899,#db2777);">6</div><div><div class="sprint-title">Prompt assembler (Layers 1 &amp; 4)</div><div class="sprint-sub">One system prompt, one JSON schema, amortised across all 25 items in the batch.</div></div></div>
+    <ul class="blist">
+      <li>Template: system instructions + <code>{graph_snapshot}</code> + <code>{few_shot_examples}</code> + <code>{batch_as_json_array}</code></li>
+      <li>Call <code>LLMClient.complete_structured()</code> with the <code>CorrectionRecommendation</code> JSON schema — structured output means no markdown/prose filler in the response</li>
+    </ul>
+    <div class="codeblock"><pre><span class="ck">async def</span> <span class="cn">_build_prompt</span>(self, items: list[<span class="ct">BatchEvaluationItem</span>]) -> <span class="ct">str</span>:
+    entities = self._collect_entities(items)
+    graph_ctx = <span class="ck">await</span> self.graph_ctx_cache.get_or_fetch(entities)
+    few_shot = <span class="ck">await</span> self.few_shot_cache.get(items[<span class="cn">0</span>].feedback_type)
+    <span class="ck">return</span> self.template.render(
+        graph_snapshot=graph_ctx,
+        few_shot_examples=few_shot,
+        batch_items=[i.model_dump() <span class="ck">for</span> i <span class="ck">in</span> items],
+    )</pre></div>
+  </div>
+
+  <div class="sprint">
+    <div class="sprint-hdr"><div class="sprint-num" style="background:linear-gradient(135deg,#7c3aed,#6c63ff);">7</div><div><div class="sprint-title">Core orchestration loop</div><div class="sprint-sub">BatchEvaluationEngine.evaluate_batch() — ties steps 2–6 together with retry logic.</div></div></div>
+    <ul class="blist">
+      <li>Route (step 2) → dedup/batch (step 3, upstream) → assemble prompt (step 6) → call LLM → parse JSON</li>
+      <li>Malformed JSON response → retry once with <code>temperature=0</code>; second failure → route items to human-review queue</li>
+      <li>Async, batched via <code>asyncio.gather</code> across independent batches (bounded concurrency — respect LLM rate limits)</li>
+    </ul>
+  </div>
+
+  <div class="sprint">
+    <div class="sprint-hdr"><div class="sprint-num" style="background:linear-gradient(135deg,#ef4444,#dc2626);">8</div><div><div class="sprint-title">Cypher safety validator</div><div class="sprint-sub">Runs on every non-null cypher_mutation before it's ever persisted.</div></div></div>
+    <ul class="blist">
+      <li>Deny-list check (case-insensitive, token-boundary aware — not naive substring match): <code>DROP</code>, <code>CREATE INDEX</code>, <code>CREATE CONSTRAINT</code></li>
+      <li>Reject any <code>DELETE</code> not preceded by a <code>MATCH</code> clause in the same statement</li>
+      <li>Reject <code>REMOVE</code> on any node/property flagged compliance-sensitive in the taxonomy (risk category, jurisdiction, regulatory text)</li>
+      <li>On rejection: mark the recommendation <code>verdict = insufficient_evidence</code>, log the rejected mutation for audit — never silently drop it</li>
+    </ul>
+  </div>
+
+  <div class="sprint">
+    <div class="sprint-hdr"><div class="sprint-num" style="background:linear-gradient(135deg,#14b8a6,#0d9488);">9</div><div><div class="sprint-title">Confidence merge + persistence</div><div class="sprint-sub">Final scoring and the write path into PostgreSQL.</div></div></div>
+    <ul class="blist">
+      <li><code>final_confidence = llm_confidence × inter_annotator_agreement</code></li>
+      <li>Every item is stored in <code>correction_recommendations</code> with <code>status = pending</code>, regardless of confidence — the confidence gate is applied later, at application time, not here</li>
+      <li>Use the new <code>PostgreSQLFeedbackClient.insert_correction_recommendation()</code> (bulk insert for the batch)</li>
+    </ul>
+  </div>
+
+  <div class="sprint">
+    <div class="sprint-hdr"><div class="sprint-num" style="background:linear-gradient(135deg,#94a3b8,#64748b);">10</div><div><div class="sprint-title">Wire in and test</div><div class="sprint-sub">Integration into the orchestrator, plus the test suite that protects the token budget and safety guarantees.</div></div></div>
+    <ul class="blist">
+      <li>Call from <code>evaluation_orchestrator.py</code>'s hourly cycle, after routing produces the "needs evaluation" set</li>
+      <li>Add <code>evaluation_batch_size</code>, <code>auto_apply_threshold</code>, <code>auto_reject_threshold</code> to <code>config.py</code> if not already present</li>
+      <li>Tests: token-count assertions per band (B1 ≤250, B2 ≤500, B3 ≤800), Cypher-safety adversarial cases, malformed-JSON retry path, Redis-unavailable degradation</li>
+    </ul>
+  </div>
+
+  <div class="callout ok"><span class="ci">✅</span><div class="cb"><b>Definition of done:</b> a batch of 25 synthetic feedback items runs end-to-end — routed, deduplicated, evaluated in one LLM call, Cypher-validated, and persisted — with average tokens/item inside the B1–B3 bands and zero unsafe mutations reaching storage.</div></div>
+</section>
+
+<!-- ══════════════════════════════ TIERED EVALUATOR ══════════════════════════════ -->
+<section id="tiered" class="section">
+  <div class="pg-title">3.7 — Tiered Evaluation Engine (HITL Path) <span class="badge b-red" style="font-size:13px;">Implementation Steps</span></div>
+  <div class="pg-sub">Build order for the four-tier ladder — routes each feedback claim to the cheapest tier that can resolve it, escalating only when necessary. Steps 1–2 and 4–6 are Phase-2-ready; Tier 1B (GNN) has two build paths, detailed at the end of this section.</div>
+
+  <div class="sprint">
+    <div class="sprint-hdr"><div class="sprint-num" style="background:linear-gradient(135deg,#6c63ff,#4f46e5);">1</div><div><div class="sprint-title">Shared tier contract</div><div class="sprint-sub">Every tier — rule, GNN, NLI, LLM — returns the same shape so the orchestrator doesn't special-case any of them.</div></div></div>
+    <div class="codeblock"><pre><span class="ck">class</span> <span class="cn">TierResult</span>(<span class="ct">BaseModel</span>):
+    tier: <span class="ct">Literal</span>[<span class="cs">"1a_rule"</span>, <span class="cs">"1b_gnn"</span>, <span class="cs">"2_nli"</span>, <span class="cs">"3_llm"</span>]
+    verdict: <span class="ct">Literal</span>[<span class="cs">"resolved"</span>, <span class="cs">"escalate"</span>]
+    confidence: <span class="ct">float</span>
+    evidence_ref: <span class="ct">str | None</span> = <span class="ck">None</span>
+    detail: <span class="ct">dict</span> = {}</pre></div>
+    <p style="margin-top:-4px;">Also define an <code>EvaluationTrail</code> that accumulates every tier's <code>TierResult</code> for a claim — this is what gets written to <code>evaluation_records</code> for audit.</p>
+  </div>
+
+  <div class="tier t0">
+    <div class="tier-hdr"><span class="tier-lbl">STEP 2 — TIER 1A · Rule Registry</span><span class="tier-cost">0 LLM tokens · runs first, always</span></div>
+    <ul class="blist">
+      <li>Each of the 9 categories (Schema/Type, Cardinality, Referential, Temporal, Numeric, Cross-Source, Duplicate, Hierarchy, Jurisdiction) is a pure function: <code>(claim, graph_store) → TierResult</code></li>
+      <li>Register them in a simple list/decorator-based registry so adding a 10th rule later is a one-line change</li>
+      <li>Run all 9 (not short-circuit) — a single fail is enough to escalate, but the full set of evidence is useful downstream</li>
+      <li>Reuse existing <code>graph_store.py</code> and <code>entity_resolver.py</code> — no new infrastructure</li>
+    </ul>
+  </div>
+
+  <div class="tier t1">
+    <div class="tier-hdr"><span class="tier-lbl">STEP 3 — TIER 1B · GNN Structural Plausibility</span><span class="tier-cost">0 LLM tokens · frozen model · see GNN options below</span></div>
+    <ul class="blist">
+      <li>Define the interface first, regardless of which GNN option you pick: <code>GNNPlausibilityScorer.score(subject, predicate, object, subgraph) → float</code></li>
+      <li><b>Ship the stub now</b> — return a constant <code>0.5</code> so Tiers 2/3 and the orchestrator can be built and tested without blocking on GNN training</li>
+      <li>Swap the stub for a real implementation using <b>Option 1</b> or <b>Option 2</b> below — the interface contract doesn't change either way</li>
+    </ul>
+  </div>
+
+  <div class="tier t2">
+    <div class="tier-hdr"><span class="tier-lbl">STEP 4 — TIER 2 · NLI Evaluator</span><span class="tier-cost">~0 generative tokens · local model</span></div>
+    <ul class="blist">
+      <li>Load <code>cross-encoder/nli-deberta-v3-small</code> once, as a singleton on <code>Container</code> in <code>deps.py</code> — never per-request</li>
+      <li><code>sentence-transformers</code> is sync — wrap the inference call in <code>asyncio.get_event_loop().run_in_executor()</code> so it doesn't block the FastAPI event loop</li>
+      <li>Premise = relevant chunks from the frozen <code>interaction_evidence</code> snapshot; hypothesis = the feedback claim, normalised to a declarative sentence</li>
+      <li>Routing: entailment &gt; 0.7 → resolved (PARTIALLY_VALID); contradiction &gt; 0.7 or neutral &gt; 0.7 → escalate to Tier 3</li>
+    </ul>
+  </div>
+
+  <div class="tier t3">
+    <div class="tier-hdr"><span class="tier-lbl">STEP 5 — TIER 3 · LLM / Agent Evaluator</span><span class="tier-cost">controlled tokens · last resort</span></div>
+    <ul class="blist">
+      <li>Build a minimal <code>EvaluationPacket</code>: disputed claim + top-2 evidence chunks + inconclusive rule findings + NLI score and reason — never the full conversation or full evidence set</li>
+      <li>Call <code>LLMClient.complete_structured()</code> — same call shape as <code>batch_evaluation.py</code>, single-item instead of batched</li>
+      <li>Escalate to human review when: all three tiers return confidence &lt; <code>human_review_threshold</code> (0.60), the attribute is compliance-sensitive, or two authoritative sources conflict</li>
+    </ul>
+  </div>
+
+  <div class="sprint">
+    <div class="sprint-hdr"><div class="sprint-num" style="background:linear-gradient(135deg,#94a3b8,#64748b);">6</div><div><div class="sprint-title">Orchestrator + wiring + tests</div><div class="sprint-sub">TieredEvaluationEngine.evaluate() ties the ladder together.</div></div></div>
+    <ul class="blist">
+      <li>Sequential execution, stop at first <code>resolved</code> verdict — never run a more expensive tier once a cheaper one is confident</li>
+      <li>Persist the full <code>EvaluationTrail</code> to <code>evaluation_records</code> regardless of which tier resolved it (audit requirement)</li>
+      <li>Call from the hourly orchestration cycle for the active HITL path, and from the passive path once auto-signals escalate an item</li>
+      <li>Tests: one unit test per rule category, NLI threshold boundary tests, Tier-3-escalation integration test, full-ladder golden-set regression</li>
+    </ul>
+  </div>
+
+  <h2>GNN Implementation Options (feeds Tier 1B and §4.6)</h2>
+  <div class="callout note"><span class="ci">🎯</span><div class="cb">Both options implement the exact same <code>GNNPlausibilityScorer.score()</code> interface, so the choice is an internal swap — nothing downstream (Tier 1A/2/3, the orchestrator, the structural sweep) needs to know which one is running. Both are free to run on your existing AWS footprint — no new paid Neo4j tier or third-party ML service required.</div></div>
+
+  <div class="opt-hdr" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">OPTION 1 — Python R-GCN via PyTorch Geometric (more control)</div>
+  <div class="opt-box">
+    <p>Full custom relational-GCN, trained and served outside Neo4j. Best if you want control over the architecture, negative sampling strategy, and the ability to add features beyond graph topology later (e.g. text embeddings on nodes).</p>
+    <ol style="margin:8px 0 4px 18px;font-size:12.5px;color:var(--muted);line-height:1.9;">
+      <li><b>Dependencies:</b> add <code>torch</code> and <code>torch-geometric</code> to <code>requirements.txt</code> (Phase 3 only — keep out of the Phase 2 install to avoid bloating that deploy)</li>
+      <li><b>Export training data from Neo4j:</b> positive triples via a Cypher pull of all typed relationships; negative triples via random head/tail corruption plus any confirmed-rejected corrections accumulated in <code>correction_execution_history</code></li>
+      <li><b>Build vocab + tensors:</b> entity2id / relation2id mappings, then <code>edge_index</code> / <code>edge_type</code> tensors for <code>RGCNConv</code></li>
+      <li><b>Model:</b> 2–3 layer R-GCN encoder + a DistMult (or similar) scoring head over the final entity embeddings</li>
+      <li><b>Train:</b> binary cross-entropy over positive vs. corrupted triples, held-out validation split, early stopping — this runs as an offline job, not inside the request path</li>
+      <li><b>Freeze &amp; serialize:</b> save weights to <code>gnn_model_path</code> (<code>./data/models/gnn_plausibility.pt</code>); <code>GNNPlausibilityScorer</code> loads this file once at process startup and never updates mid-run</li>
+      <li><b>Inference:</b> at score time, pull the 2-hop subgraph for the candidate triple from Neo4j (existing driver in <code>graph_store.py</code>), map to tensors, forward pass, sigmoid → 0–1 score</li>
+      <li><b>A/B gate + schedule:</b> new weights are compared against the current model on a held-out eval set before promotion; <code>GNNRefreshJob</code> (APScheduler) triggers weekly full retrain + daily incremental, fired by the canonical-KG-update event</li>
+    </ol>
+    <div class="codeblock"><pre><span class="ck">class</span> <span class="cn">RGCNEncoder</span>(torch.nn.Module):
+    <span class="ck">def</span> <span class="cn">__init__</span>(self, num_entities, num_relations, hidden_dim=<span class="cn">128</span>):
+        super().__init__()
+        self.emb = torch.nn.Embedding(num_entities, hidden_dim)
+        self.conv1 = RGCNConv(hidden_dim, hidden_dim, num_relations)
+        self.conv2 = RGCNConv(hidden_dim, hidden_dim, num_relations)
+
+    <span class="ck">def</span> <span class="cn">forward</span>(self, edge_index, edge_type):
+        x = self.emb.weight
+        x = F.relu(self.conv1(x, edge_index, edge_type))
+        <span class="ck">return</span> self.conv2(x, edge_index, edge_type)</pre></div>
+    <div class="callout warn"><span class="ci">⚠️</span><div class="cb">Needs a compute target for the offline training job — a scheduled batch task on the same EC2/ECS fleet you already run on AWS is enough at AMC entity-graph scale; a GPU is a nice-to-have, not a requirement.</div></div>
+  </div>
+
+  <div class="opt-hdr" style="background:linear-gradient(135deg,#10b981,#059669);">OPTION 2 — Neo4j GDS (GraphSAGE + Link Prediction pipeline)</div>
+  <div class="opt-box">
+    <p>Uses the free, open-source <b>Community Edition</b> of the Neo4j Graph Data Science library, installed as a plugin on your self-managed Neo4j-on-AWS instance. No PyTorch, no separate training infra, no Neo4j license upgrade — everything runs as Cypher procedures against the graph you already have.</p>
+    <ol style="margin:8px 0 4px 18px;font-size:12.5px;color:var(--muted);line-height:1.9;">
+      <li><b>Install GDS Community (free):</b> drop the GDS <code>.jar</code> into the Neo4j <code>plugins/</code> directory on the EC2 instance, allowlist it in <code>neo4j.conf</code> (<code>dbms.security.procedures.unrestricted=gds.*</code>), restart Neo4j. No license key needed for Community Edition — it's open-source. (Note: this requires a self-managed instance; GDS Community isn't installable on AuraDB Free/Professional.)</li>
+      <li><b>Project the graph in-memory:</b> <code>gds.graph.project()</code> over the relevant node labels and relationship types, <code>UNDIRECTED</code> orientation (required by the link-prediction pipelines)</li>
+      <li><b>Build a Link Prediction pipeline:</b> <code>gds.beta.pipeline.linkPrediction.create</code> → add a node-property step for <code>GraphSAGE</code> (or <code>FastRP</code> as a lighter-weight fallback) → add a link-feature step (e.g. Hadamard product of the two node embeddings) → configure the train/test split</li>
+      <li><b>Train:</b> <code>gds.beta.pipeline.linkPrediction.train</code> — positive examples are existing relationships, negatives are sampled non-adjacent node pairs (mirrors the R-GCN corruption strategy); the trained model lands in the GDS in-memory model catalog</li>
+      <li><b>Score a candidate triple:</b> <code>gds.beta.pipeline.linkPrediction.predict.stream</code> against the specific node pair → probability, which maps directly onto the 0–1 output <code>GNNPlausibilityScorer.score()</code> already expects</li>
+      <li><b>Wrap it:</b> <code>GNNPlausibilityScorer</code> calls these procedures through the same Neo4j Python driver session <code>graph_store.py</code> already uses — no new client library</li>
+      <li><b>Retraining cadence:</b> Community Edition's model catalog is in-memory only (not persisted across a Neo4j restart), so schedule <code>GNNRefreshJob</code> to re-project + retrain on the same weekly/daily cadence as Option 1, rather than loading a serialized weights file</li>
+    </ol>
+    <div class="codeblock"><pre><span class="cc">// Project + build pipeline (run once per (re)training cycle)</span>
+CALL gds.graph.project(<span class="cs">'amc-graph'</span>, <span class="cs">'*'</span>, <span class="cs">'*'</span>)
+
+CALL gds.beta.pipeline.linkPrediction.create(<span class="cs">'plausibility-pipe'</span>)
+CALL gds.beta.pipeline.linkPrediction.addNodeProperty(
+  <span class="cs">'plausibility-pipe'</span>, <span class="cs">'graphSage'</span>, {mutateProperty: <span class="cs">'emb'</span>}
+)
+CALL gds.beta.pipeline.linkPrediction.addFeature(
+  <span class="cs">'plausibility-pipe'</span>, <span class="cs">'hadamard'</span>, {nodeProperties: [<span class="cs">'emb'</span>]}
+)
+CALL gds.beta.pipeline.linkPrediction.train(
+  <span class="cs">'amc-graph'</span>, {pipeline: <span class="cs">'plausibility-pipe'</span>, modelName: <span class="cs">'plausibility-model'</span>}
+)
+
+<span class="cc">// Score one candidate triple at inference time</span>
+CALL gds.beta.pipeline.linkPrediction.predict.stream(
+  <span class="cs">'amc-graph'</span>, {modelName: <span class="cs">'plausibility-model'</span>,
+   sourceNode: $subject_id, targetNode: $object_id}
+)</pre></div>
+    <div class="callout warn"><span class="ci">⚠️</span><div class="cb">Community Edition caps GDS algorithm execution at 4 CPU cores and doesn't include the "optimized graph implementation" that Enterprise gets — fine at AMC entity-graph scale, but worth flagging as a constraint if the graph grows sharply.</div></div>
+  </div>
+
+  <h2>Which Option to Pick</h2>
+  <table class="tbl">
+    <thead><tr><th>Dimension</th><th>Option 1 — Python R-GCN</th><th>Option 2 — Neo4j GDS</th></tr></thead>
+    <tbody>
+      <tr><td>Cost</td><td>Free (open-source libs)</td><td>Free (GDS Community Edition, self-managed)</td></tr>
+      <tr><td>New infra</td><td>New Python ML dependency + offline training job</td><td>None — runs inside Neo4j you already operate on AWS</td></tr>
+      <tr><td>Control</td><td>Full — custom architecture, features, loss, sampling</td><td>Bounded to what the GDS pipeline API exposes</td></tr>
+      <tr><td>Model persistence</td><td>Serialized <code>.pt</code> file, survives restarts</td><td>In-memory catalog on Community Edition — retrain on schedule instead of reload</td></tr>
+      <tr><td>Team lift</td><td>Requires PyTorch/PyG familiarity</td><td>Requires Cypher + GDS pipeline familiarity — smaller new-tool surface if the team already knows Cypher</td></tr>
+      <tr><td>Good fit when</td><td>You expect to extend the model (text features, custom loss) later</td><td>You want the fastest path to a working scorer with zero new runtime dependencies</td></tr>
+    </tbody>
+  </table>
+  <div class="callout ok"><span class="ci">✅</span><div class="cb"><b>Recommendation:</b> since both share the same <code>GNNPlausibilityScorer</code> interface, it's low-risk to start with <b>Option 2 (GDS)</b> to unblock Tier 1B and the structural sweep quickly with zero new infra, then swap in <b>Option 1 (R-GCN)</b> later if you need finer control — the swap is contained entirely inside <code>gnn_plausibility.py</code>.</div></div>
+</section>
+
+</main>
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); s.style.display='none'; });
+  document.querySelectorAll('.nav-item').forEach(function(b){ b.classList.remove('active'); });
+  var sec = document.getElementById(id);
+  if (sec) { sec.style.display = 'block'; sec.classList.add('active'); }
+  if (btn) btn.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.section').forEach(function(s){ s.style.display='none'; });
+  document.getElementById('batch').style.display = 'block';
+});
+var TABS = ['batch','tiered'];
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  var active = document.querySelector('.section[style*="block"]');
+  if (!active) return;
+  var idx = TABS.indexOf(active.id);
+  var next = e.key === 'ArrowRight' ? idx + 1 : idx - 1;
+  if (next < 0 || next >= TABS.length) return;
+  var btn = document.querySelector('button[onclick*="' + TABS[next] + '"]');
+  show(TABS[next], btn);
+});
+</script>
+</body>
+</html>

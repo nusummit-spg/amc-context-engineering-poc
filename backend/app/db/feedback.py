@@ -225,6 +225,42 @@ class FeedbackStore:
                 ).fetchall()
                 return [self._row_to_dict(r) for r in rows]
 
+    def get_interaction(self, session_id: str, response_id: str) -> Optional[Dict[str, Any]]:
+        with self._lock:
+            with self.get_connection() as conn:
+                row = conn.execute(
+                    "SELECT * FROM response_feedback WHERE session_id = ? AND response_id = ? ORDER BY updated_at DESC LIMIT 1",
+                    (session_id, response_id),
+                ).fetchone()
+                if row:
+                    return self._row_to_dict(row)
+                # Fallback: check by response_id alone
+                row2 = conn.execute(
+                    "SELECT * FROM response_feedback WHERE response_id = ? ORDER BY updated_at DESC LIMIT 1",
+                    (response_id,),
+                ).fetchone()
+                return self._row_to_dict(row2) if row2 else None
+
+    def update_interaction_feedback(
+        self,
+        session_id: str,
+        response_id: str,
+        feedback_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Update or insert feedback for a specific interaction."""
+        return self.upsert_feedback(
+            response_id=response_id,
+            interaction_id=feedback_data.get("interaction_id", f"inter_{uuid.uuid4().hex[:8]}"),
+            session_id=session_id,
+            turn_number=feedback_data.get("turn_number", 1),
+            selected_categories=feedback_data.get("selected_categories", ["F08"]),
+            query_text=feedback_data.get("query_text"),
+            actor_id=feedback_data.get("actor_id", "system_followup_detector"),
+            actor_role=feedback_data.get("actor_role", "Compliance & Regulatory Officer"),
+            free_text=feedback_data.get("feedback_text") or json.dumps(feedback_data.get("structured_claim", {})),
+            client_timestamp=feedback_data.get("client_timestamp"),
+        )
+
 
 _store_instance: Optional[FeedbackStore] = None
 

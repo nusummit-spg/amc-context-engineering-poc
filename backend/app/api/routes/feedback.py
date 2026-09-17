@@ -87,6 +87,36 @@ def submit_feedback(
         result["priority_tier"] = quality_eval.priority_tier
         result["signal_quality_score"] = quality_eval.signal_quality_score
 
+        # Track 8 + Track 6: Extract structured claims and register shadow patch
+        if free_text_clean:
+            try:
+                from app.feedback import get_ner_pipeline
+                from app.graph.correction_patch_layer import get_correction_patch_layer
+                ner = get_ner_pipeline()
+                claim = ner.extract_structured_claim(
+                    feedback_text=free_text_clean,
+                    original_query=payload.query_text
+                )
+                if claim and claim.resolved_entity_id and claim.attribute and claim.asserted_value:
+                    patch_layer = get_correction_patch_layer()
+                    patch_layer.add_correction(
+                        entity_id=claim.resolved_entity_id,
+                        attribute=claim.attribute,
+                        canonical_value=claim.rejected_value or "canonical",
+                        corrected_value=claim.asserted_value,
+                        confidence=claim.confidence,
+                        provenance={
+                            "feedback_id": result["feedback_id"],
+                            "actor_id": payload.actor_id,
+                            "source": "User Feedback Submission"
+                        },
+                        approved=False
+                    )
+                    logger.info("Auto-registered correction patch for %s.%s = %s",
+                                claim.resolved_entity_id, claim.attribute, claim.asserted_value)
+            except Exception as claim_exc:
+                logger.debug("Structured claim extraction notice: %s", claim_exc)
+
         return result
     except Exception as exc:
         logger.error("Failed to store response feedback: %s", exc, exc_info=True)
@@ -213,6 +243,100 @@ def update_feedback_quality_assessment(
             detail=f"Feedback quality record not found for feedback ID: {feedback_id}"
         )
     return updated
+
+
+class FollowUpDetectionIn(BaseModel):
+    session_id: str = Field(..., description="Session identifier")
+    previous_response_id: str = Field(..., description="Response ID being corrected")
+    follow_up_query: str = Field(..., min_length=1, description="User's follow-up query text")
+    original_response: Optional[str] = Field(None, description="Original response text if available")
+    original_query: Optional[str] = Field(None, description="Original query text if available")
+
+
+_dissatisfaction_detector = None
+
+
+def get_dissatisfaction_detector():
+    global _dissatisfaction_detector
+    if _dissatisfaction_detector is None:
+        from app.feedback.dissatisfaction_detector import DissatisfactionDetector
+        _dissatisfaction_detector = DissatisfactionDetector()
+    return _dissatisfaction_detector
+
+
+@router.post("/follow-up-detection", response_model=Dict[str, Any])
+def detect_follow_up_correction(
+    payload: FollowUpDetectionIn,
+    current_role: Role = Depends(get_client_role)
+) -> Dict[str, Any]:
+    """
+    Detect if a follow-up query is actually an implicit correction attempt.
+    If detected, auto-creates structured feedback in the feedback store.
+    """
+    store = get_feedback_store()
+    prev_interaction = store.get_interaction(payload.session_id, payload.previous_response_id)
+
+    original_query = payload.original_query or (prev_interaction.get("query_text") if prev_interaction else "") or ""
+    original_response = payload.original_response or (prev_interaction.get("free_text") if prev_interaction else "") or ""
+
+    detector = get_dissatisfaction_detector()
+    try:
+        is_correction, claim = detector.is_correction_attempt(
+            follow_up_query=payload.follow_up_query,
+            original_response=original_response,
+            original_query=original_query
+        )
+    except Exception as exc:
+        logger.error("Dissatisfaction detection failed: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Dissatisfaction detection service error"
+        )
+
+    if is_correction and claim:
+        claim_dict = {
+            "entity_id": claim.entity_id,
+            "entity_name": claim.entity_name,
+            "attribute": claim.attribute,
+            "asserted_value": claim.asserted_value,
+            "rejected_value": claim.rejected_value,
+            "raw_text": claim.raw_text,
+            "confidence": claim.confidence
+        }
+        try:
+            feedback_result = store.update_interaction_feedback(
+                session_id=payload.session_id,
+                response_id=payload.previous_response_id,
+                feedback_data={
+                    "feedback_type": "dissatisfaction_followup",
+                    "feedback_text": claim.raw_text,
+                    "selected_categories": ["F08"],
+                    "structured_claim": claim_dict,
+                    "actor_id": current_role.value,
+                    "actor_role": current_role.value,
+                    "query_text": original_query
+                }
+            )
+            return {
+                "correction_detected": True,
+                "feedback_created": True,
+                "feedback_id": feedback_result.get("feedback_id"),
+                "claim": claim_dict
+            }
+        except Exception as exc:
+            logger.error("Failed to auto-create feedback record: %s", exc, exc_info=True)
+            return {
+                "correction_detected": True,
+                "feedback_created": False,
+                "claim": claim_dict,
+                "error": str(exc)
+            }
+
+    return {
+        "correction_detected": False,
+        "feedback_created": False,
+        "claim": None
+    }
 
 
 
