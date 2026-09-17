@@ -11,12 +11,12 @@ from fastapi import APIRouter, Depends, Query
 from app.api.deps import Container, get_container
 from app.core.errors import NotFoundError
 from app.graph import cypher_library as cql
-from app.schemas.api import (
+from app.models.api import (
     TaxonomyNodeDocsResponse,
     TaxonomyNodeOut,
     TaxonomyTreeResponse,
 )
-from app.schemas.taxonomy import TaxonomyNode
+from app.models.taxonomy import TaxonomyNode
 
 router = APIRouter(prefix="/taxonomy", tags=["taxonomy"])
 

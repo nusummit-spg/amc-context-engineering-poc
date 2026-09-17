@@ -28,7 +28,7 @@ from typing import Any, Dict, List, Optional
 
 from app.db.review_queue_repository import ReviewQueueRepository, get_review_queue_repo
 from app.evaluation.patch_generator import PatchGenerator
-from app.schemas.review_queue import ReviewQueueItem, Verdict
+from app.models.review_queue import ReviewQueueItem, Verdict
 
 logger = logging.getLogger("app.tasks.governance_batch")
 

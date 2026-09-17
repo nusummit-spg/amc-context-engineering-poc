@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.deps import Container, get_container
 from app.core.errors import NotFoundError
-from app.schemas.api import DocumentDetailOut, DocumentSummaryOut
+from app.models.api import DocumentDetailOut, DocumentSummaryOut
 
 router = APIRouter(prefix="/docs", tags=["docs"])
 

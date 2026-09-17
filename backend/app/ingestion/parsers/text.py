@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 
 from app.ingestion.parsers.base import BaseParser
-from app.schemas.documents import Document, DocumentType, Section
+from app.models.documents import Document, DocumentType, Section
 
 _MD_HEADING_RE = re.compile(r"^(#{1,4})\s+(.*)$", re.MULTILINE)
 

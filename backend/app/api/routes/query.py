@@ -29,8 +29,8 @@ from app.api.routes.files import get_pdf_url
 from app.engine import config as engine_config
 from app.engine import faiss_store as engine_faiss
 from app.engine import graph_store, retrieval
-from app.schemas.api import QueryRequest, QueryResponse, TraditionalResult
-from app.schemas.query import SourceAttribution, SynthesisOutput
+from app.models.api import QueryRequest, QueryResponse, TraditionalResult
+from app.models.query import SourceAttribution, SynthesisOutput
 
 router = APIRouter(prefix="/query", tags=["query"])
 

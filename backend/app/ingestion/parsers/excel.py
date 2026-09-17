@@ -11,7 +11,7 @@ from pathlib import Path
 import openpyxl
 
 from app.ingestion.parsers.base import BaseParser
-from app.schemas.documents import Document, DocumentType, Section
+from app.models.documents import Document, DocumentType, Section
 
 
 class ExcelParser(BaseParser):

@@ -9,7 +9,7 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from app.schemas.documents import Document
+from app.models.documents import Document
 
 
 class BaseParser(ABC):

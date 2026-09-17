@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import Container, get_container
 from app.core.errors import NotFoundError
-from app.schemas.api import GraphEdgeOut, GraphNodeOut, GraphResponse
+from app.models.api import GraphEdgeOut, GraphNodeOut, GraphResponse
 
 router = APIRouter(prefix="/graph", tags=["graph"])
 

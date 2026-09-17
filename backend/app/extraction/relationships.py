@@ -17,9 +17,9 @@ import re
 
 from app.core.llm import LLMClient
 from app.prompts import get_prompt
-from app.schemas.documents import Document
-from app.schemas.entities import BaseEntity, EntityType
-from app.schemas.relationships import Relationship, RelationshipType
+from app.models.documents import Document
+from app.models.entities import BaseEntity, EntityType
+from app.models.relationships import Relationship, RelationshipType
 
 logger = logging.getLogger("extraction")
 

@@ -31,8 +31,8 @@ from app.contracts.identity import (
 from app.extraction.resolver import EntityResolver
 from app.graph.client import GraphClient
 from app.ingestion.ledger import IngestionLedger, IngestionStage
-from app.schemas.documents import Chunk, Document, DocumentCategory, DocumentType, Section
-from app.schemas.entities import BaseEntity
+from app.models.documents import Chunk, Document, DocumentCategory, DocumentType, Section
+from app.models.entities import BaseEntity
 from app.vector.client import VectorStore
 
 logging.basicConfig(level=logging.INFO)

@@ -30,7 +30,7 @@ from app.api.routes.query import (
 )
 from app.engine import context_memory, graph_store, retrieval
 from app.retrieval.query_evidence_recorder import get_recorder as get_query_evidence_recorder
-from app.schemas.api import ChatRequest, ChatResponse, ChatTitleRequest, ChatTitleResponse, QueryRequest
+from app.models.api import ChatRequest, ChatResponse, ChatTitleRequest, ChatTitleResponse, QueryRequest
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -55,7 +55,7 @@ async def _run_v2_chat(request: ChatRequest, container: Container) -> ChatRespon
     trad_result = None
     if request.mode in ("traditional", "both"):
         hits = await container.orchestrator.traditional_search(query)
-        from app.schemas.api import TraditionalResult
+        from app.models.api import TraditionalResult
         trad_result = TraditionalResult(
             files=[{
                 "name": h.get("document_title") or h.get("filename") or h.get("document_id"),
@@ -80,7 +80,7 @@ async def _run_v2_chat(request: ChatRequest, container: Container) -> ChatRespon
             "url": get_pdf_url(s.document_title or s.document_id, getattr(s, "page", None)),
         }
         for s in context.sources
-    ] if context.sources else [
+    ] if context and context.sources else [
         {
             "source_index": i + 1,
             "document_id": c.document_id,
@@ -89,11 +89,12 @@ async def _run_v2_chat(request: ChatRequest, container: Container) -> ChatRespon
             "page": getattr(c, "page", None),
             "url": get_pdf_url(c.document_title or c.document_id, getattr(c, "page", None)),
         }
-        for i, c in enumerate(retrieval_res.chunks[:5])
+        for i, c in enumerate((retrieval_res.chunks if retrieval_res else [])[:5])
     ]
 
-    graph_nodes = sorted({f.subject for f in retrieval_res.graph_facts} | {f.object for f in retrieval_res.graph_facts})
-    graph_rels = sorted({f.predicate for f in retrieval_res.graph_facts})
+    graph_facts = retrieval_res.graph_facts if retrieval_res else []
+    graph_nodes = sorted({f.subject for f in graph_facts} | {f.object for f in graph_facts})
+    graph_rels = sorted({f.predicate for f in graph_facts})
 
     response_id = f"resp_{uuid.uuid4().hex[:12]}"
     interaction_id = f"int_{uuid.uuid4().hex[:12]}"

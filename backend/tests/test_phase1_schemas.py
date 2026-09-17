@@ -20,12 +20,12 @@ Unit tests for the 6 Phase 1 Foundation Layer Pydantic schemas:
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.regulatory_metadata import RegulatoryMetadata
-from app.schemas.fund_metadata import FundAuditMetadata
-from app.schemas.remediation_metrics import RemediationMetrics
-from app.schemas.feedback_quality import FeedbackQualityMetrics
-from app.schemas.feedback_analytics import FeedbackCategoryAnalytics
-from app.schemas.response_quality import ResponseQualityMetrics
+from app.models.regulatory_metadata import RegulatoryMetadata
+from app.models.fund_metadata import FundAuditMetadata
+from app.models.remediation_metrics import RemediationMetrics
+from app.models.feedback_quality import FeedbackQualityMetrics
+from app.models.feedback_analytics import FeedbackCategoryAnalytics
+from app.models.response_quality import ResponseQualityMetrics
 
 
 # ---------------------------------------------------------------------------

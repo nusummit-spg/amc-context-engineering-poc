@@ -13,11 +13,11 @@ import pytest
 
 from app.api.deps import load_taxonomy
 from app.prompts import get_prompt, list_prompts
-from app.schemas.api import QueryRequest, QueryResponse
-from app.schemas.documents import Chunk, Document, DocumentType, Section
-from app.schemas.entities import EntityType, Scheme
-from app.schemas.query import GraphFact, QueryIntent, QueryType, RetrievalResult
-from app.schemas.relationships import Relationship, RelationshipType
+from app.models.api import QueryRequest, QueryResponse
+from app.models.documents import Chunk, Document, DocumentType, Section
+from app.models.entities import EntityType, Scheme
+from app.models.query import GraphFact, QueryIntent, QueryType, RetrievalResult
+from app.models.relationships import Relationship, RelationshipType
 
 
 def test_document_schema_roundtrip():

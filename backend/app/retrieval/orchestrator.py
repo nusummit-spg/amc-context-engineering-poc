@@ -21,8 +21,8 @@ from app.retrieval.intent import IntentClassifier
 from app.retrieval.planner import ExecutionPlan, get_planner
 from app.retrieval.synthesizer import Synthesizer
 from app.retrieval.traversal import GraphTraversal
-from app.schemas.entities import BaseEntity
-from app.schemas.query import (
+from app.models.entities import BaseEntity
+from app.models.query import (
     AssembledContext,
     GraphFact,
     QueryIntent,
@@ -296,7 +296,7 @@ class RetrievalOrchestrator:
                 provenance=cached_entry.get("provenance", []),
                 structured_rows=cached_entry.get("structured_rows", []),
             )
-            from app.schemas.query import Citation, GraphFact, SourceAttribution
+            from app.models.query import Citation, GraphFact, SourceAttribution
             cached_sources = [
                 SourceAttribution(**s) if isinstance(s, dict) else s
                 for s in cached_entry.get("sources", [])
@@ -655,7 +655,7 @@ class RetrievalOrchestrator:
         if critic_escalated or synthesis.confidence == "low" or (context.quality_score < 0.40):
             try:
                 from app.db.review_queue_repository import get_review_queue_repo
-                from app.schemas.review_queue import ReviewQueueItem, ReviewReason
+                from app.models.review_queue import ReviewQueueItem, ReviewReason
                 repo = get_review_queue_repo()
 
                 if critic_escalated:

@@ -27,8 +27,8 @@ from app.config import get_settings
 from app.engine import config
 from app.graph import cypher_library as cql
 from app.graph.client import GraphClient
-from app.schemas.entities import BaseEntity, EntityType, IssuerGroup
-from app.schemas.query import GraphFact, QueryIntent, QueryType
+from app.models.entities import BaseEntity, EntityType, IssuerGroup
+from app.models.query import GraphFact, QueryIntent, QueryType
 
 logger = logging.getLogger("retrieval")
 

@@ -13,7 +13,7 @@ except ImportError:
     import fitz
 
 from app.ingestion.parsers.base import BaseParser
-from app.schemas.documents import Document, DocumentType, Section
+from app.models.documents import Document, DocumentType, Section
 
 # Lines that look like section headings in scheme documents / circulars,
 # e.g. "--- Section 4.2: Portfolio Holdings ---", "SECTION 9: EXIT LOAD", "4.2 Portfolio Holdings"

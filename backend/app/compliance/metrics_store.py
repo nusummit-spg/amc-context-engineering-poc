@@ -35,27 +35,27 @@ import uuid
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes, serialization
 
-from app.schemas.compliance_alert import ComplianceAlert, AlertSeverity, AlertStatus, EscalationTier
+from app.models.compliance_alert import ComplianceAlert, AlertSeverity, AlertStatus, EscalationTier
 
 
 
-from app.schemas.regulatory_metadata import RegulatoryMetadata
-from app.schemas.fund_metadata import FundAuditMetadata
-from app.schemas.remediation_metrics import RemediationMetrics
-from app.schemas.feedback_quality import FeedbackQualityMetrics
-from app.schemas.feedback_analytics import FeedbackCategoryAnalytics
-from app.schemas.response_quality import ResponseQualityMetrics
+from app.models.regulatory_metadata import RegulatoryMetadata
+from app.models.fund_metadata import FundAuditMetadata
+from app.models.remediation_metrics import RemediationMetrics
+from app.models.feedback_quality import FeedbackQualityMetrics
+from app.models.feedback_analytics import FeedbackCategoryAnalytics
+from app.models.response_quality import ResponseQualityMetrics
 
 # Phase 2 Analysis Schemas
-from app.schemas.root_cause_analysis import RootCauseAnalysis
-from app.schemas.violation_cluster import ViolationCluster
-from app.schemas.evidence_metadata import EvidenceMetadata
-from app.schemas.fund_family_analysis import FundFamilyAnalysis
+from app.models.root_cause_analysis import RootCauseAnalysis
+from app.models.violation_cluster import ViolationCluster
+from app.models.evidence_metadata import EvidenceMetadata
+from app.models.fund_family_analysis import FundFamilyAnalysis
 
 # Phase 3 Dashboard Schemas
-from app.schemas.audit_trail_access import AuditTrailAccessMetrics
-from app.schemas.realtime_monitoring import RealTimeMonitoringMetrics
-from app.schemas.compliance_dashboard_kpis import ComplianceDashboardKPIs
+from app.models.audit_trail_access import AuditTrailAccessMetrics
+from app.models.realtime_monitoring import RealTimeMonitoringMetrics
+from app.models.compliance_dashboard_kpis import ComplianceDashboardKPIs
 
 
 class MetricsStore:
@@ -766,12 +766,12 @@ class MetricsStore:
         self,
         feedback_id: str,
         response_id: str,
-        free_text: Optional[str] = None,
+        feedback_text: Optional[str] = None,
         selected_categories: Optional[List[str]] = None,
         actor_role: Optional[str] = "Compliance Officer",
     ) -> FeedbackQualityMetrics:
         """Automated evaluator scoring feedback clarity, actionability, and priority."""
-        text = (free_text or "").strip()
+        text = (feedback_text or "").strip()
         cats = selected_categories or []
         
         # Detail score based on text length & specificity
@@ -874,7 +874,7 @@ class MetricsStore:
             cats = fb.get("selected_categories", [])
             flagged_cats.extend(cats)
 
-        neg_count = sum(1 for fb in feedbacks if fb.get("selected_categories") or fb.get("free_text"))
+        neg_count = sum(1 for fb in feedbacks if fb.get("selected_categories") or fb.get("feedback_text"))
         pos_count = max(0, total_fb - neg_count)
 
         # Accuracy & compliance scores
@@ -1737,17 +1737,20 @@ class MetricsStore:
             success = False
 
             if item_type == "RemediationMetrics":
-                r = self.get_remediation_metrics(item_id)
-                if r:
-                    success = await self.persist_remediation_to_neo4j(r, graph_client=client)
+                if isinstance(item_id, str):
+                    r = self.get_remediation_metrics(item_id)
+                    if r:
+                        success = await self.persist_remediation_to_neo4j(r, graph_client=client)
             elif item_type == "FeedbackQualityMetrics":
-                f = self.get_feedback_quality_metrics(item_id)
-                if f:
-                    success = await self.persist_feedback_quality_to_neo4j(f, graph_client=client)
+                if isinstance(item_id, str):
+                    f = self.get_feedback_quality(item_id)
+                    if f:
+                        success = await self.persist_feedback_quality_to_neo4j(f, graph_client=client)
             elif item_type == "RootCauseAnalysis":
-                rca = self.get_root_cause_analysis(item_id)
-                if rca:
-                    success = await self.persist_root_cause_to_neo4j(rca, graph_client=client)
+                if isinstance(item_id, str):
+                    rca = self.get_root_cause_analysis(item_id)
+                    if rca:
+                        success = await self.persist_root_cause_to_neo4j(rca, graph_client=client)
 
             if success:
                 replayed_count += 1
@@ -1833,6 +1836,11 @@ class MetricsStore:
                         sla_variance_hours=round(overdue_hours, 2),
                         triggered_at=now.isoformat(),
                         suppression_window_minutes=15,
+                        acknowledged_at=None,
+                        acknowledged_by_user_id=None,
+                        resolved_at=None,
+                        resolved_by_user_id=None,
+                        resolution_notes=None,
                     )
                     self._alerts[alert_id] = alert
                     self._last_alert_time_by_violation[r.violation_id] = now

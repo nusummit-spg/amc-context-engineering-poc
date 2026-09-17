@@ -27,8 +27,8 @@ from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 import re
 
-from app.schemas.documents import IngestionJob, IngestionStatus
-from app.schemas.query import (
+from app.models.documents import IngestionJob, IngestionStatus
+from app.models.query import (
     AssembledContext,
     QueryIntent,
     QueryTrace,
@@ -156,7 +156,9 @@ class ChatRequest(BaseModel):
     @field_validator("session_id")
     @classmethod
     def check_session_id(cls, v: str) -> str:
-        return validate_session_id(v)
+        validated = validate_session_id(v)
+        assert validated is not None
+        return validated
 
 
 class ChatResponse(BaseModel):

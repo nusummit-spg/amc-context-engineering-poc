@@ -23,7 +23,7 @@ from typing import Callable, Dict, List, Optional
 
 from fastapi import Header, HTTPException, Request, status
 
-from app.schemas.compliance_models import Role
+from app.models.compliance_models import Role
 
 
 # ── Sliding Window Rate Limiter ────────────────────────────────────────

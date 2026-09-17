@@ -17,7 +17,7 @@ from app.config import Settings
 from app.core.llm import LLMClient
 from app.retrieval.cache import SemanticQueryCache
 from app.retrieval.orchestrator import RetrievalOrchestrator
-from app.schemas.api import QueryRequest
+from app.models.api import QueryRequest
 
 
 @pytest.mark.asyncio

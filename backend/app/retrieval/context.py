@@ -33,7 +33,7 @@ import logging
 
 from app.config import get_settings
 from app.ingestion.chunker import approx_tokens
-from app.schemas.query import (
+from app.models.query import (
     AssembledContext,
     QueryType,
     RetrievalResult,

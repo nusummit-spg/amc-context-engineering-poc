@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 import pytest
 from pydantic import ValidationError
 
-from app.schemas import EvidenceChunk, EvidencePack
+from app.models import EvidenceChunk, EvidencePack
 
 
 # ---------------------------------------------------------------------------

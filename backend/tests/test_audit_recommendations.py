@@ -23,11 +23,11 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.compliance.metrics_store import get_metrics_store
-from app.schemas.audit_trail_access import AuditTrailAccessMetrics
-from app.schemas.remediation_metrics import RemediationMetrics
-from app.schemas.regulatory_metadata import RegulatoryMetadata
-from app.schemas.fund_metadata import FundAuditMetadata
-from app.schemas.realtime_monitoring import RealTimeMonitoringMetrics
+from app.models.audit_trail_access import AuditTrailAccessMetrics
+from app.models.remediation_metrics import RemediationMetrics
+from app.models.regulatory_metadata import RegulatoryMetadata
+from app.models.fund_metadata import FundAuditMetadata
+from app.models.realtime_monitoring import RealTimeMonitoringMetrics
 from pydantic import ValidationError
 
 
@@ -163,7 +163,7 @@ def test_update_feedback_quality_endpoint(client):
         "actor_id": "analyst_1",
         "actor_role": "Analyst",
         "selected_categories": ["F08"],
-        "free_text": "TER percentage calculation mismatch in note 4",
+        "feedback_text": "TER percentage calculation mismatch in note 4",
     }
     submit_res = client.post("/api/feedback", json=fb_payload)
     assert submit_res.status_code == 201

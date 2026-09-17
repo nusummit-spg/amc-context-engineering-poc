@@ -22,7 +22,7 @@ import threading
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from app.schemas.review_queue import ReviewQueueItem, ReviewReason, ReviewStatus
+from app.models.review_queue import ReviewQueueItem, ReviewReason, ReviewStatus
 
 logger = logging.getLogger("review_queue_repo")
 
@@ -38,7 +38,9 @@ class ReviewQueueRepository:
     def __init__(self, db_or_path: Optional[Any] = None):
         self._lock = threading.Lock()
         self._is_mongo = False
-        self._mongo_col = None
+        # Assigned to a Mongo collection only when Mongo mode is enabled.
+        # Explicitly annotate it so static type checkers do not infer `None`.
+        self._mongo_col: Any = None
 
         # Detect if Mongo client/collection passed
         if db_or_path is not None and hasattr(db_or_path, "review_queue"):

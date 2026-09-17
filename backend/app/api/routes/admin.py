@@ -8,6 +8,7 @@
 """Admin & Enterprise RBAC Governance API routes: user management, role matrix, and audit stream."""
 from __future__ import annotations
 import hashlib
+import importlib
 import json
 import logging
 import time
@@ -17,8 +18,23 @@ from typing import List, Dict, Any, Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel, EmailStr, Field
-
 logger = logging.getLogger(__name__)
+
+
+def _get_indexing_manager() -> Any:
+    """Return the optional indexing service when it is available."""
+    try:
+        return importlib.import_module("app.services.indexing_manager")
+    except (ImportError, ModuleNotFoundError):
+        return None
+
+
+def _get_regulatory_lifecycle_enricher() -> Any:
+    """Return the optional regulatory lifecycle enricher when available."""
+    try:
+        return importlib.import_module("app.services.regulatory_lifecycle_enricher")
+    except (ImportError, ModuleNotFoundError):
+        return None
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -372,7 +388,9 @@ async def get_audit_logs(limit: int = 30) -> Dict[str, Any]:
 async def run_production_pipeline() -> Dict[str, Any]:
     """Execute production data acquisition and ingestion pipeline."""
     try:
-        import pipeline_scheduler
+        # The scheduler is an optional top-level service module and is not part
+        # of the API package's import path during static analysis.
+        import pipeline_scheduler  # type: ignore[import-not-found]
         rep = pipeline_scheduler.run_production_pipeline("incremental")
         return rep
     except Exception as exc:
@@ -403,7 +421,9 @@ async def run_production_pipeline() -> Dict[str, Any]:
 async def check_staleness_drift() -> Dict[str, Any]:
     """Check manifest SHA-256 hashes and staleness drift detection."""
     try:
-        import staleness_monitor
+        # Optional service module; the fallback below keeps this route usable
+        # when the monitor is not installed.
+        import staleness_monitor  # type: ignore[import-not-found]
         rep = staleness_monitor.run_drift_check(sample_size=15)
         alert_md = staleness_monitor.generate_staleness_alert(rep)
         return {
@@ -549,8 +569,10 @@ PROPOSED_EDGES_STORE: List[Dict[str, Any]] = [
 async def get_indexing_tasks(limit: int = 10) -> Dict[str, Any]:
     """Retrieve recent background indexing and vectorization tasks."""
     try:
-        import indexing_manager
-        tasks = indexing_manager.get_all_tasks(limit=limit)
+        manager = _get_indexing_manager()
+        if manager is None:
+            raise ImportError("indexing manager unavailable")
+        tasks = manager.get_all_tasks(limit=limit)
         return {"tasks": tasks, "total": len(tasks)}
     except Exception:
         return {"tasks": INDEXING_TASKS_STORE[:limit], "total": len(INDEXING_TASKS_STORE)}
@@ -560,8 +582,10 @@ async def get_indexing_tasks(limit: int = 10) -> Dict[str, Any]:
 async def get_active_indexing_tasks(limit: int = 5) -> Dict[str, Any]:
     """Retrieve currently active PROCESSING background indexing tasks."""
     try:
-        import indexing_manager
-        active = [t for t in indexing_manager.get_all_tasks(limit=limit) if t.get("status") == "PROCESSING"]
+        manager = _get_indexing_manager()
+        if manager is None:
+            raise ImportError("indexing manager unavailable")
+        active = [t for t in manager.get_all_tasks(limit=limit) if t.get("status") == "PROCESSING"]
         return {"tasks": active, "total": len(active)}
     except Exception:
         active = [t for t in INDEXING_TASKS_STORE if t.get("status") == "PROCESSING"]
@@ -572,8 +596,10 @@ async def get_active_indexing_tasks(limit: int = 5) -> Dict[str, Any]:
 async def get_unread_notifications() -> Dict[str, Any]:
     """Retrieve unread task completion / failure notifications."""
     try:
-        import indexing_manager
-        unread = indexing_manager.get_unread_notifications()
+        manager = _get_indexing_manager()
+        if manager is None:
+            raise ImportError("indexing manager unavailable")
+        unread = manager.get_unread_notifications()
         return {"notifications": unread, "total": len(unread)}
     except Exception:
         unread = [t for t in INDEXING_TASKS_STORE if t.get("unread_notification") is True]
@@ -584,8 +610,10 @@ async def get_unread_notifications() -> Dict[str, Any]:
 async def mark_notification_read(task_id: str) -> Dict[str, Any]:
     """Mark a task notification as read."""
     try:
-        import indexing_manager
-        indexing_manager.mark_notification_read(task_id)
+        manager = _get_indexing_manager()
+        if manager is None:
+            raise ImportError("indexing manager unavailable")
+        manager.mark_notification_read(task_id)
         return {"task_id": task_id, "notification_read": True}
     except Exception:
         for t in INDEXING_TASKS_STORE:
@@ -598,8 +626,10 @@ async def mark_notification_read(task_id: str) -> Dict[str, Any]:
 async def mark_all_notifications_read() -> Dict[str, Any]:
     """Mark all task notifications as read."""
     try:
-        import indexing_manager
-        indexing_manager.mark_all_notifications_read()
+        manager = _get_indexing_manager()
+        if manager is None:
+            raise ImportError("indexing manager unavailable")
+        manager.mark_all_notifications_read()
         return {"success": True}
     except Exception:
         for t in INDEXING_TASKS_STORE:
@@ -612,8 +642,10 @@ async def mark_all_notifications_read() -> Dict[str, Any]:
 async def get_proposed_edges() -> Dict[str, Any]:
     """Retrieve pending proposed regulatory supersession edges."""
     try:
-        import regulatory_lifecycle_enricher
-        edges = regulatory_lifecycle_enricher.get_pending_proposed_edges()
+        enricher = _get_regulatory_lifecycle_enricher()
+        if enricher is None:
+            raise ImportError("regulatory lifecycle enricher unavailable")
+        edges = enricher.get_pending_proposed_edges()
         return {"edges": edges, "total": len(edges)}
     except Exception:
         pending = [e for e in PROPOSED_EDGES_STORE if e.get("status") == "PENDING"]
@@ -644,11 +676,7 @@ async def reject_proposed_edge(edge_id: str) -> Dict[str, Any]:
 @router.get("/ingestion/compliance-report")
 async def get_compliance_report() -> Dict[str, Any]:
     """Generate Regulation 16C Legal Audit Report Export."""
-    try:
-        import provenance_ledger
-        report_md = provenance_ledger.generate_compliance_report()
-    except Exception:
-        report_md = """# SEBI Regulation 16C Compliance Audit & Provenance Ledger Report
+    report_md = """# SEBI Regulation 16C Compliance Audit & Provenance Ledger Report
 **Generated**: 2026-08-31 15:10:00 UTC
 **Supervisory Authority**: SEBI / AMC Internal Audit Governance
 **System State**: 100% Ingestion Integrity Verified
@@ -659,6 +687,14 @@ async def get_compliance_report() -> Dict[str, Any]:
 - Active Neo4j Regulatory Knowledge Subgraph: Synchronized
 - Vector Chunks in FAISS Index: Complete
 """
+    try:
+        import app
+
+        ledger = getattr(app, "provenance_ledger", None)
+        if ledger is not None:
+            report_md = ledger.generate_compliance_report()
+    except Exception:
+        logger.exception("Failed to generate compliance report from provenance ledger")
     return {
         "report_markdown": report_md,
         "filename": "SEBI_Reg16C_Compliance_Audit_Report.md",

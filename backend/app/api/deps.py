@@ -23,7 +23,7 @@ from app.retrieval.intent import IntentClassifier
 from app.retrieval.orchestrator import RetrievalOrchestrator
 from app.retrieval.synthesizer import Synthesizer
 from app.retrieval.traversal import GraphTraversal
-from app.schemas.taxonomy import TaxonomyNode, TaxonomyTree
+from app.models.taxonomy import TaxonomyNode, TaxonomyTree
 
 SEEDS_DIR = Path(__file__).resolve().parents[2] / "seeds"
 ALIAS_SEED_PATH = SEEDS_DIR / "entity_aliases.json"

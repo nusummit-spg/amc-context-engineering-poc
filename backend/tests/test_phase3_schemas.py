@@ -17,9 +17,9 @@ Unit tests for the 3 Phase 3 Dashboard Layer Pydantic schemas:
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.audit_trail_access import AuditTrailAccessMetrics
-from app.schemas.realtime_monitoring import RealTimeMonitoringMetrics
-from app.schemas.compliance_dashboard_kpis import ComplianceDashboardKPIs
+from app.models.audit_trail_access import AuditTrailAccessMetrics
+from app.models.realtime_monitoring import RealTimeMonitoringMetrics
+from app.models.compliance_dashboard_kpis import ComplianceDashboardKPIs
 
 
 # ---------------------------------------------------------------------------

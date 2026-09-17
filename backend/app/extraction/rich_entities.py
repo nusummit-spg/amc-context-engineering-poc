@@ -21,8 +21,8 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from app.schemas.documents import Document, Section
-from app.schemas.entities import (
+from app.models.documents import Document, Section
+from app.models.entities import (
     BaseEntity, EntityType, RegulatoryCircular, DocumentNode
 )
 

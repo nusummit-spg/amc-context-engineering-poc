@@ -23,12 +23,12 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.db.review_queue_repository import ReviewQueueRepository
-from app.schemas.review_queue import ReviewQueueItem, ReviewReason, ReviewStatus, Verdict
+from app.models.review_queue import ReviewQueueItem, ReviewReason, ReviewStatus, Verdict
 from app.evaluation.nli_evaluator import NLIEvaluator
 from app.evaluation.verdict_generator import VerdictGenerator
 from app.tasks.scheduler import TaskScheduler
 from app.core.rate_limiter import SlidingWindowRateLimiter, UserQuotaTracker
-from app.schemas.api import QueryRequest
+from app.models.api import QueryRequest
 
 
 @pytest.fixture

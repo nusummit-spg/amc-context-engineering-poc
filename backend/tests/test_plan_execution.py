@@ -22,8 +22,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.engine import config
-from app.schemas.entities import BaseEntity, EntityType
-from app.schemas.query import (
+from app.models.entities import BaseEntity, EntityType
+from app.models.query import (
     AssembledContext, GraphFact, QueryIntent, QueryType, SynthesisOutput,
 )
 

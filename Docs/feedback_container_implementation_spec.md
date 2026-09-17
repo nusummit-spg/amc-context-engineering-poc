@@ -250,7 +250,7 @@ function CitationLink({ index, title, url }: CitationLinkProps) {
   "actor_id": "sarah_compliance",
   "actor_role": "Compliance & Regulatory Officer",
   "selected_categories": ["F06", "F09"],
-  "free_text": "Citation [2] doesn't actually cover the debt-instrument clause; feels padded with unrelated risk-ratio content.",
+  "feedback_text": "Citation [2] doesn't actually cover the debt-instrument clause; feels padded with unrelated risk-ratio content.",
   "client_timestamp": "2026-09-01T11:52:03.421+05:30"
 }
 ```
@@ -258,7 +258,7 @@ function CitationLink({ index, title, url }: CitationLinkProps) {
 Notes:
 - `selected_categories` is an array of zero-or-more codes from `F01`–`F12`; validate server-side against the fixed set (§3).
 - `actor_id`/`actor_role` should be populated from the active "Active User Profile (RBAC)" selection already shown in the app shell.
-- At least one of `selected_categories` (non-empty) or `free_text` (non-empty, trimmed) is required — return `422` otherwise.
+- At least one of `selected_categories` (non-empty) or `feedback_text` (non-empty, trimmed) is required — return `422` otherwise.
 
 **Response (201 Created / 200 OK on upsert):**
 
@@ -278,7 +278,7 @@ Notes:
 
 ### 5.2 Idempotency / upsert key
 
-Treat `(response_id, actor_id)` as the natural key. If a POST arrives for a key that already has a row, **update** that row (new `selected_categories`, `free_text`, `updated_at`) rather than inserting a duplicate. This lets a reviewer revise their feedback on the same answer without creating noise.
+Treat `(response_id, actor_id)` as the natural key. If a POST arrives for a key that already has a row, **update** that row (new `selected_categories`, `feedback_text`, `updated_at`) rather than inserting a duplicate. This lets a reviewer revise their feedback on the same answer without creating noise.
 
 ### 5.3 `GET /api/feedback?response_id=...` (optional, for Admin & Governance tab)
 
@@ -307,7 +307,7 @@ CREATE TABLE IF NOT EXISTS response_feedback (
     actor_id              TEXT,
     actor_role            TEXT,
     selected_categories   TEXT NOT NULL,        -- JSON array of codes, e.g. '["F06","F09"]'
-    free_text             TEXT,
+    feedback_text             TEXT,
     client_timestamp      TEXT,
     created_at            TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at            TEXT NOT NULL DEFAULT (datetime('now')),
@@ -342,7 +342,7 @@ class FeedbackIn(BaseModel):
     actor_id: str | None = None
     actor_role: str | None = "compliance_officer"
     selected_categories: list[str] = Field(default_factory=list)
-    free_text: str | None = None
+    feedback_text: str | None = None
     client_timestamp: str | None = None
 
     @field_validator("selected_categories")
@@ -355,7 +355,7 @@ class FeedbackIn(BaseModel):
 
 @router.post("/feedback", status_code=201)
 def submit_feedback(payload: FeedbackIn):
-    if not payload.selected_categories and not (payload.free_text or "").strip():
+    if not payload.selected_categories and not (payload.feedback_text or "").strip():
         raise HTTPException(422, "Submit at least one category or a comment.")
 
     actor_id = payload.actor_id or payload.session_id
@@ -371,21 +371,21 @@ def submit_feedback(payload: FeedbackIn):
         feedback_id = existing["feedback_id"]
         conn.execute(
             """UPDATE response_feedback
-               SET selected_categories=?, free_text=?, updated_at=?
+               SET selected_categories=?, feedback_text=?, updated_at=?
                WHERE feedback_id=?""",
-            (json.dumps(payload.selected_categories), payload.free_text, now, feedback_id),
+            (json.dumps(payload.selected_categories), payload.feedback_text, now, feedback_id),
         )
     else:
         feedback_id = f"fb_{uuid.uuid4().hex[:12]}"
         conn.execute(
             """INSERT INTO response_feedback
                (feedback_id, response_id, interaction_id, session_id, turn_number,
-                query_text, actor_id, actor_role, selected_categories, free_text,
+                query_text, actor_id, actor_role, selected_categories, feedback_text,
                 client_timestamp, created_at, updated_at)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (feedback_id, payload.response_id, payload.interaction_id, payload.session_id,
              payload.turn_number, payload.query_text, actor_id, payload.actor_role,
-             json.dumps(payload.selected_categories), payload.free_text,
+             json.dumps(payload.selected_categories), payload.feedback_text,
              payload.client_timestamp, now, now),
         )
     conn.commit()
@@ -476,4 +476,4 @@ Match the existing visual language from the screenshots (rounded-corner white ca
 - [ ] Resubmitting on the same answer updates the existing row instead of creating a duplicate.
 - [ ] A new turn renders a fresh, empty feedback container.
 - [ ] Every SOURCES entry in the ContextGraph panel opens the correct PDF in a new tab; a source with no resolvable file shows the "unavailable" state instead of a dead link.
-- [ ] Feedback rows are queryable in SQLite with correct `session_id`, `turn_number`, `selected_categories` (valid JSON array), `actor_id`, and `free_text`.
+- [ ] Feedback rows are queryable in SQLite with correct `session_id`, `turn_number`, `selected_categories` (valid JSON array), `actor_id`, and `feedback_text`.

@@ -17,7 +17,7 @@ from pydantic import ValidationError
 
 from app.api import deps
 from app.main import create_app
-from app.schemas.compliance_models import (
+from app.models.compliance_models import (
     AuditFundRequest,
     AuditBatchRequest,
     ResolveViolationRequest,

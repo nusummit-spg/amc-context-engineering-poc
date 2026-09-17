@@ -76,7 +76,7 @@ export default function FeedbackContainer({
       actor_id: effectiveActorId,
       actor_role: effectiveActorRole,
       selected_categories: Array.from(selectedCodes),
-      free_text: freeText.trim() || null,
+      feedback_text: freeText.trim() || null,
       client_timestamp: new Date().toISOString(),
     };
 

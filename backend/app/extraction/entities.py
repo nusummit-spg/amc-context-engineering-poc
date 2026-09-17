@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from app.core.llm import LLMClient
 from app.prompts import get_prompt
-from app.schemas.documents import Document
+from app.models.documents import Document
 
 logger = logging.getLogger("extraction")
 

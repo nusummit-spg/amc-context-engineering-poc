@@ -37,7 +37,7 @@ def test_evaluate_feedback_p0_regulatory_tier():
     metrics = store.evaluate_feedback_quality(
         feedback_id="FB_P0_TEST",
         response_id="RESP_P0_TEST",
-        free_text="SEBI statutory breach: Response advised a guaranteed annual return of 12% in scheme prospectus.",
+        feedback_text="SEBI statutory breach: Response advised a guaranteed annual return of 12% in scheme prospectus.",
         selected_categories=["F12"],
         actor_role="Chief Compliance Officer",
     )
@@ -52,7 +52,7 @@ def test_evaluate_feedback_p1_accuracy_tier():
     metrics = store.evaluate_feedback_quality(
         feedback_id="FB_P1_TEST",
         response_id="RESP_P1_TEST",
-        free_text="Expense ratio shows 1.25% but latest SID table on page 42 shows 1.45%. Expected 1.45% instead.",
+        feedback_text="Expense ratio shows 1.25% but latest SID table on page 42 shows 1.45%. Expected 1.45% instead.",
         selected_categories=["F08"],
         actor_role="Research Analyst",
     )
@@ -66,7 +66,7 @@ def test_evaluate_feedback_p3_minor_tier():
     metrics = store.evaluate_feedback_quality(
         feedback_id="FB_P3_TEST",
         response_id="RESP_P3_TEST",
-        free_text="Font formatting was slightly difficult to read.",
+        feedback_text="Font formatting was slightly difficult to read.",
         selected_categories=[],
         actor_role="Client",
     )
@@ -85,7 +85,7 @@ def test_feedback_rbac_viewer_blocked_from_submit(client):
         "actor_id": "viewer_user",
         "actor_role": "Viewer",
         "selected_categories": ["F01"],
-        "free_text": "Viewer commentary",
+        "feedback_text": "Viewer commentary",
     }
     # Pass viewer role header
     res = client.post("/api/feedback", json=fb_payload, headers={"X-User-Role": "viewer"})
@@ -104,7 +104,7 @@ def test_feedback_rbac_compliance_officer_allowed_to_submit(client):
         "actor_id": "compliance_user",
         "actor_role": "Compliance Officer",
         "selected_categories": ["F05"],
-        "free_text": "Outdated circular version referenced in answer.",
+        "feedback_text": "Outdated circular version referenced in answer.",
     }
     res = client.post("/api/feedback", json=fb_payload, headers={"X-User-Role": "compliance_officer"})
     assert res.status_code == 201

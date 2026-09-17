@@ -11,7 +11,7 @@ from pathlib import Path
 from app.api.deps import ALIAS_SEED_PATH
 from app.ingestion.chunker import approx_tokens, chunk_document
 from app.ingestion.pii import PiiScrubber
-from app.schemas.documents import Document, DocumentType, Section
+from app.models.documents import Document, DocumentType, Section
 
 
 def _make_doc(texts: list[str]) -> Document:
