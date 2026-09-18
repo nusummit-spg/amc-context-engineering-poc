@@ -9,7 +9,7 @@
 fastapi>=0.115
 uvicorn[standard]>=0.30
 python-multipart>=0.0.9
-pydantic>=2.8
+pydantic==2.7.1
 pydantic-settings>=2.4
 
 # --- LLM (shared client wrapper) ---
@@ -35,7 +35,7 @@ markdown-it-py>=3.0
 # --- Context-engineering engine (merged: app/engine) ---
 sentence-transformers>=3.0   # query embedding (paraphrase-multilingual-MiniLM)
 gliner>=0.2                   # zero-shot NER (Layer B)
-spacy>=3.7                    # NER Layer A (blank pipeline)
+spacy==3.7.4                    # NER Layer A (blank pipeline)
 easyocr>=1.7                 # PDF image OCR (index-time only)
 pillow>=10.0
 python-dotenv>=1.0
@@ -56,4 +56,4 @@ apscheduler>=3.10.4
 truststore==0.10.4
 
 # --- Human feedback loop ---
-human-feedback-loop @ git+https://github.com/nusummit-spg/human-feedback-loop.git@repo-join
+#human-feedback-loop @ git+https://github.com/nusummit-spg/human-feedback-loop@v0.1.0

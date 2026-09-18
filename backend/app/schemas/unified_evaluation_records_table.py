@@ -105,7 +105,7 @@ class UnifiedEvaluationRecord(Base):
             "(repair = 0 AND repair_target IS NULL) OR (repair = 1 AND repair_target IS NOT NULL)",
             name="ck_uer_repair_target_consistency",
         ),
-        PrimaryKeyConstraint("session_id", "response_id", name="pk_unified_session_response"),
+        PrimaryKeyConstraint("session_id", "response_id", name="pk_unified_evaluation_records"),
         Index("idx_unified_entry_route", "entry_route"),
         Index("idx_unified_root_cause", "root_cause"),
         Index("idx_unified_severity", "severity"),
