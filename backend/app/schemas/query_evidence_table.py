@@ -17,6 +17,7 @@ from sqlalchemy import (
     Boolean,
     func,
     cast,
+    PrimaryKeyConstraint
 )
 from sqlalchemy.orm import Mapped, mapped_column
 from app.schemas.models import (
@@ -27,7 +28,7 @@ from app.schemas.models import (
 class QueryEvidence(Base):
     __tablename__ = "query_evidence"
 
-    response_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    response_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     session_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
@@ -56,8 +57,8 @@ class QueryEvidence(Base):
     )
     linked_violations_json: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
-    has_feedback: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
-    feedback_summary_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    # has_feedback: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    # feedback_summary_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
 
     created_at: Mapped[str] = mapped_column(String(40), nullable=False, default=_now_iso, index=True)
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -82,6 +83,7 @@ class QueryEvidence(Base):
             "confidence_level IN ('high','medium','low') OR confidence_level IS NULL",
             name="ck_query_confidence_level",
         ),
+        PrimaryKeyConstraint("session_id", "response_id", name="pk_query_evidence"),
         Index("idx_query_evidence_entry_route", "entry_route"),
         Index("idx_query_evidence_root_cause", "root_cause"),
         Index("idx_query_evidence_unified_ref", "unified_record_ref"),

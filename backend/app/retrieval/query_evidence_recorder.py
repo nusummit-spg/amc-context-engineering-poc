@@ -257,10 +257,10 @@ def build_synthesis_output_json(
         src = c.get("source") if isinstance(c.get("source"), Mapping) else c
         flat_citations.append({
             "source_index": _as_int_ms(c.get("marker")) or c.get("source_index") or i + 1,
-            "document_id": src.get("document_id") or src.get("document_name"),
-            "document_title": src.get("document_name") or src.get("document_title"),
-            "page_number": src.get("page_number", src.get("page")),
-            "verbatim_text": src.get("verbatim_text") or src.get("snippet") or "",
+            "document_id": src.get("document_id") or src.get("document_name"), # type: ignore
+            "document_title": src.get("document_name") or src.get("document_title"), # type: ignore
+            "page_number": src.get("page_number", src.get("page")), # type: ignore
+            "verbatim_text": src.get("verbatim_text") or src.get("snippet") or "", # type: ignore
         })
 
     return {
@@ -398,7 +398,7 @@ class QueryEvidenceRecorder:
             )
 
             return self.record(
-                response_id=hybrid.get("response_id"),
+                response_id=hybrid.get("response_id"), # type: ignore
                 session_id=session_id,
                 request_id=request_id or hybrid.get("interaction_id"),
                 query_text=query_text,
@@ -417,9 +417,9 @@ class QueryEvidenceRecorder:
                     compliance_note=result.get("confidence_reason") or "",
                 ),
                 graph_highlight_json=build_graph_highlight_json(hybrid.get("graph_highlight")),
-                latency_ms=total_ms,
-                retrieval_latency_ms=retrieval_ms,
-                synthesis_latency_ms=synthesis_ms,
+                latency_ms=total_ms,# type: ignore
+                retrieval_latency_ms=retrieval_ms,# type: ignore
+                synthesis_latency_ms=synthesis_ms, # type: ignore
                 quality_score=quality_score,
                 confidence_level=confidence,
                 audit_id=audit_id,
@@ -463,7 +463,7 @@ class QueryEvidenceRecorder:
             )
 
             return self.record(
-                response_id=hybrid.get("response_id"),
+                response_id=hybrid.get("response_id"), # type: ignore
                 session_id=session_id,
                 request_id=tr.get("request_id") or hybrid.get("interaction_id"),
                 query_text=query_text,
@@ -479,9 +479,9 @@ class QueryEvidenceRecorder:
                 ),
                 synthesis_output_json=build_synthesis_output_json(answer, confidence=confidence),
                 graph_highlight_json=build_graph_highlight_json(hybrid.get("graph_highlight")),
-                latency_ms=total_ms,
-                retrieval_latency_ms=retrieval_ms,
-                synthesis_latency_ms=synthesis_ms,
+                latency_ms=total_ms,# type: ignore
+                retrieval_latency_ms=retrieval_ms,# type: ignore
+                synthesis_latency_ms=synthesis_ms,# type: ignore
                 quality_score=quality_score,
                 confidence_level=confidence,
                 audit_id=audit_id,

@@ -18,6 +18,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    PrimaryKeyConstraint
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -28,9 +29,7 @@ from app.schemas.models import _now_iso
 class ResponseFeedback(Base):
     __tablename__ = "response_feedback"
 
-    feedback_id: Mapped[str] = mapped_column(
-        String(64), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    feedback_id: Mapped[str] = mapped_column(String(64), default=lambda: str(uuid.uuid4()))
     response_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     interaction_id: Mapped[str] = mapped_column(String(64), nullable=False)
     session_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
@@ -106,6 +105,7 @@ class ResponseFeedback(Base):
             "automated_confidence IS NULL OR (automated_confidence BETWEEN 0.0 AND 1.0)",
             name="ck_feedback_automated_confidence",
         ),
+        PrimaryKeyConstraint("session_id", "interaction_id", name="pk_response_feedback"),
         Index("idx_response_feedback_unified_ref", "unified_record_ref"),
         Index("idx_response_feedback_root_cause", "root_cause"),
         Index("idx_response_feedback_response_text_len", func.length(response_text)),
