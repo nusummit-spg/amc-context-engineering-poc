@@ -20,6 +20,7 @@ neo4j>=5.24
 faiss-cpu>=1.8
 fastembed>=0.3
 sqlalchemy>=2.0
+redis>=5.0
 
 # --- AWS (prod: SSM secret load) ---
 boto3>=1.34
@@ -31,6 +32,10 @@ python-pptx>=1.0
 extract-msg>=0.48
 openpyxl>=3.1
 markdown-it-py>=3.0
+markdown>=3.6
+feedparser>=6.0
+PyYAML>=6.0
+requests>=2.31
 
 # --- Context-engineering engine (merged: app/engine) ---
 sentence-transformers>=3.0   # query embedding (paraphrase-multilingual-MiniLM)
@@ -39,14 +44,33 @@ spacy==3.7.4                    # NER Layer A (blank pipeline)
 easyocr>=1.7                 # PDF image OCR (index-time only)
 pillow>=10.0
 python-dotenv>=1.0
+numpy>=1.26
+pandas>=2.2
+scikit-learn>=1.4
+rapidfuzz>=3.0
+vaderSentiment>=3.3
+
+# --- Security, validation, and operational monitoring ---
+cryptography>=42.0
+email-validator>=2.0
+psutil>=5.9
+watchdog>=4.0
 
 # --- Utilities ---
 httpx>=0.27
-tenacity>=9.0
+tenacity==8.3.0
 
 # --- Dev / test ---
 pytest>=8.0
 pytest-asyncio>=0.24
+locust>=2.31
+
+# --- Model evaluation / fine-tuning scripts ---
+# These are also transitive dependencies of sentence-transformers and GLiNER,
+# but listing them keeps standalone training and evaluation scripts reproducible.
+torch>=2.2
+transformers>=4.41
+datasets>=2.19
 
 # --- Phase 0 Task 0.3: background scheduler ---
 # Optional but recommended: without it TaskScheduler falls back to a stdlib

@@ -20,8 +20,11 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
+import uuid
+import json
+from datetime import datetime, timezone
+
 from app.compliance.failure_taxonomy import FAILURE_TAXONOMY, VALID_CODES
-from app.db.feedback import get_feedback_store
 from app.models.feedback_quality import FeedbackQualityMetrics
 from app.models.feedback_analytics import FeedbackCategoryAnalytics
 from app.models.response_quality import ResponseQualityMetrics
@@ -29,6 +32,9 @@ from app.models.compliance_models import Role
 from app.models.feedback import FeedbackIn, FeedbackOut
 from app.compliance.metrics_store import get_metrics_store
 from app.compliance.security import get_client_role, require_roles
+from app.core.database import SessionLocal
+from app.schemas.response_feedback_table import ResponseFeedback
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger("app.api.feedback")
 
@@ -51,7 +57,7 @@ def submit_feedback(
     """
     Record or update human failure taxonomy feedback for an LLM response.
     Requires at least one failure code OR non-empty commentary.
-    Upserts by (response_id, actor_id) and evaluates signal quality.
+    Upserts by (response_id, actor_id) directly to data.db (single source of truth).
     """
     feedback_text_clean = (payload.feedback_text or "").strip()
     if not payload.selected_categories and not feedback_text_clean:
@@ -60,25 +66,60 @@ def submit_feedback(
             detail="Submit at least one category or a comment.",
         )
 
+    db = SessionLocal()
     try:
-        store = get_feedback_store()
-        result = store.upsert_feedback(
-            response_id=payload.response_id,
-            interaction_id=payload.interaction_id,
-            session_id=payload.session_id,
-            turn_number=payload.turn_number,
-            selected_categories=payload.selected_categories,
-            query_text=payload.query_text,
-            actor_id=payload.actor_id,
-            actor_role=payload.actor_role,
-            feedback_text=feedback_text_clean if feedback_text_clean else None,
-            client_timestamp=payload.client_timestamp,
-        )
+        # Check if feedback already exists for this (response_id, actor_id) pair
+        existing = db.query(ResponseFeedback).filter(
+            (ResponseFeedback.response_id == payload.response_id) &
+            (ResponseFeedback.actor_id == payload.actor_id)
+        ).first()
+        
+        now_iso = datetime.now(timezone.utc).isoformat()
+        feedback_id = existing.feedback_id if existing else f"fb_{uuid.uuid4().hex[:12]}"
+        
+        if existing:
+            # Update existing feedback
+            existing.interaction_id = payload.interaction_id
+            existing.session_id = payload.session_id
+            existing.turn_number = payload.turn_number
+            existing.query_text = payload.query_text or existing.query_text
+            existing.selected_categories = payload.selected_categories
+            existing.feedback_text = feedback_text_clean if feedback_text_clean else existing.feedback_text
+            existing.actor_role = payload.actor_role or existing.actor_role
+            existing.client_timestamp = payload.client_timestamp or existing.client_timestamp
+            existing.updated_at = now_iso
+        else:
+            # Create new feedback record
+            new_feedback = ResponseFeedback(
+                feedback_id=feedback_id,
+                response_id=payload.response_id,
+                interaction_id=payload.interaction_id,
+                session_id=payload.session_id,
+                turn_number=payload.turn_number,
+                query_text=payload.query_text,
+                actor_id=payload.actor_id,
+                actor_role=payload.actor_role,
+                selected_categories=payload.selected_categories,
+                feedback_text=feedback_text_clean if feedback_text_clean else None,
+                client_timestamp=payload.client_timestamp,
+                created_at=now_iso,
+                updated_at=now_iso,
+            )
+            db.add(new_feedback)
+        
+        db.commit()
+        
+        result = {
+            "feedback_id": feedback_id,
+            "response_id": payload.response_id,
+            "stored_at": now_iso,
+            "status": "recorded",
+        }
 
         # Automatically score feedback quality and assign priority tier
         metrics_store = get_metrics_store()
         quality_eval = metrics_store.evaluate_feedback_quality(
-            feedback_id=result["feedback_id"],
+            feedback_id=feedback_id,
             response_id=payload.response_id,
             feedback_text=feedback_text_clean,
             selected_categories=payload.selected_categories,
@@ -88,13 +129,13 @@ def submit_feedback(
         result["signal_quality_score"] = quality_eval.signal_quality_score
 
         # Track 8 + Track 6: Extract structured claims and register shadow patch
-        if free_text_clean:
+        if feedback_text_clean:
             try:
                 from app.feedback import get_ner_pipeline
                 from app.graph.correction_patch_layer import get_correction_patch_layer
                 ner = get_ner_pipeline()
                 claim = ner.extract_structured_claim(
-                    feedback_text=free_text_clean,
+                    feedback_text=feedback_text_clean,
                     original_query=payload.query_text
                 )
                 if claim and claim.resolved_entity_id and claim.attribute and claim.asserted_value:
@@ -106,7 +147,7 @@ def submit_feedback(
                         corrected_value=claim.asserted_value,
                         confidence=claim.confidence,
                         provenance={
-                            "feedback_id": result["feedback_id"],
+                            "feedback_id": feedback_id,
                             "actor_id": payload.actor_id,
                             "source": "User Feedback Submission"
                         },
@@ -119,11 +160,14 @@ def submit_feedback(
 
         return result
     except Exception as exc:
+        db.rollback()
         logger.error("Failed to store response feedback: %s", exc, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to record feedback in database. Please retry.",
         )
+    finally:
+        db.close()
 
 
 @router.get("", response_model=List[Dict[str, Any]])
@@ -133,21 +177,46 @@ def get_feedback(
     limit: int = Query(50, ge=1, le=500),
 ) -> List[Dict[str, Any]]:
     """
-    Retrieve stored feedback records, optionally filtered by response_id or session_id.
+    Retrieve stored feedback records from data.db, optionally filtered by response_id or session_id.
     """
+    db = SessionLocal()
     try:
-        store = get_feedback_store()
+        query = db.query(ResponseFeedback)
+        
         if response_id:
-            return store.get_by_response_id(response_id)
-        if session_id:
-            return store.get_by_session_id(session_id)
-        return store.list_all(limit=limit)
+            query = query.filter(ResponseFeedback.response_id == response_id)
+        elif session_id:
+            query = query.filter(ResponseFeedback.session_id == session_id)
+        
+        results = query.order_by(ResponseFeedback.updated_at.desc()).limit(limit).all()
+        
+        feedback_list = []
+        for fb in results:
+            feedback_list.append({
+                "feedback_id": fb.feedback_id,
+                "response_id": fb.response_id,
+                "interaction_id": fb.interaction_id,
+                "session_id": fb.session_id,
+                "turn_number": fb.turn_number,
+                "query_text": fb.query_text,
+                "actor_id": fb.actor_id,
+                "actor_role": fb.actor_role,
+                "selected_categories": fb.selected_categories,
+                "feedback_text": fb.feedback_text,
+                "client_timestamp": fb.client_timestamp,
+                "created_at": fb.created_at,
+                "updated_at": fb.updated_at,
+            })
+        
+        return feedback_list
     except Exception as exc:
         logger.error("Failed to query feedback: %s", exc, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve feedback records.",
         )
+    finally:
+        db.close()
 
 
 # =============================================================================
@@ -271,72 +340,99 @@ def detect_follow_up_correction(
 ) -> Dict[str, Any]:
     """
     Detect if a follow-up query is actually an implicit correction attempt.
-    If detected, auto-creates structured feedback in the feedback store.
+    If detected, auto-creates structured feedback in data.db (single source of truth).
     """
-    store = get_feedback_store()
-    prev_interaction = store.get_interaction(payload.session_id, payload.previous_response_id)
-
-    original_query = payload.original_query or (prev_interaction.get("query_text") if prev_interaction else "") or ""
-    original_response = payload.original_response or (prev_interaction.get("free_text") if prev_interaction else "") or ""
-
-    detector = get_dissatisfaction_detector()
+    db = SessionLocal()
     try:
-        is_correction, claim = detector.is_correction_attempt(
-            follow_up_query=payload.follow_up_query,
-            original_response=original_response,
-            original_query=original_query
-        )
-    except Exception as exc:
-        logger.error("Dissatisfaction detection failed: %s", exc, exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail="Dissatisfaction detection service error"
-        )
+        # Retrieve previous interaction from data.db
+        prev_interaction = db.query(ResponseFeedback).filter(
+            (ResponseFeedback.response_id == payload.previous_response_id) &
+            (ResponseFeedback.session_id == payload.session_id)
+        ).order_by(ResponseFeedback.updated_at.desc()).first()
 
-    if is_correction and claim:
-        claim_dict = {
-            "entity_id": claim.entity_id,
-            "entity_name": claim.entity_name,
-            "attribute": claim.attribute,
-            "asserted_value": claim.asserted_value,
-            "rejected_value": claim.rejected_value,
-            "raw_text": claim.raw_text,
-            "confidence": claim.confidence
-        }
+        original_query = payload.original_query or (prev_interaction.query_text if prev_interaction else "") or ""
+        original_response = payload.original_response or (prev_interaction.feedback_text if prev_interaction else "") or ""
+
+        detector = get_dissatisfaction_detector()
         try:
-            feedback_result = store.update_interaction_feedback(
-                session_id=payload.session_id,
-                response_id=payload.previous_response_id,
-                feedback_data={
-                    "feedback_type": "dissatisfaction_followup",
-                    "feedback_text": claim.raw_text,
-                    "selected_categories": ["F08"],
-                    "structured_claim": claim_dict,
-                    "actor_id": current_role.value,
-                    "actor_role": current_role.value,
-                    "query_text": original_query
-                }
+            is_correction, claim = detector.is_correction_attempt(
+                follow_up_query=payload.follow_up_query,
+                original_response=original_response,
+                original_query=original_query
             )
-            return {
-                "correction_detected": True,
-                "feedback_created": True,
-                "feedback_id": feedback_result.get("feedback_id"),
-                "claim": claim_dict
-            }
         except Exception as exc:
-            logger.error("Failed to auto-create feedback record: %s", exc, exc_info=True)
-            return {
-                "correction_detected": True,
-                "feedback_created": False,
-                "claim": claim_dict,
-                "error": str(exc)
-            }
+            logger.error("Dissatisfaction detection failed: %s", exc, exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail="Dissatisfaction detection service error"
+            )
 
-    return {
-        "correction_detected": False,
-        "feedback_created": False,
-        "claim": None
-    }
+        if is_correction and claim:
+            claim_dict = {
+                "entity_id": claim.entity_id,
+                "entity_name": claim.entity_name,
+                "attribute": claim.attribute,
+                "asserted_value": claim.asserted_value,
+                "rejected_value": claim.rejected_value,
+                "raw_text": claim.raw_text,
+                "confidence": claim.confidence
+            }
+            try:
+                # Check if feedback already exists
+                now_iso = datetime.now(timezone.utc).isoformat()
+                existing = db.query(ResponseFeedback).filter(
+                    (ResponseFeedback.response_id == payload.previous_response_id) &
+                    (ResponseFeedback.actor_id == current_role.value)
+                ).first()
+                
+                feedback_id = existing.feedback_id if existing else f"fb_{uuid.uuid4().hex[:12]}"
+                
+                if existing:
+                    existing.selected_categories = ["F08"]
+                    existing.feedback_text = claim.raw_text
+                    existing.updated_at = now_iso
+                else:
+                    new_feedback = ResponseFeedback(
+                        feedback_id=feedback_id,
+                        response_id=payload.previous_response_id,
+                        interaction_id=f"inter_{uuid.uuid4().hex[:8]}",
+                        session_id=payload.session_id,
+                        turn_number=prev_interaction.turn_number if prev_interaction else 1,
+                        query_text=original_query,
+                        actor_id=current_role.value,
+                        actor_role=current_role.value,
+                        selected_categories=["F08"],
+                        feedback_text=claim.raw_text,
+                        created_at=now_iso,
+                        updated_at=now_iso,
+                    )
+                    db.add(new_feedback)
+                
+                db.commit()
+                
+                return {
+                    "correction_detected": True,
+                    "feedback_created": True,
+                    "feedback_id": feedback_id,
+                    "claim": claim_dict
+                }
+            except Exception as exc:
+                db.rollback()
+                logger.error("Failed to auto-create feedback record: %s", exc, exc_info=True)
+                return {
+                    "correction_detected": True,
+                    "feedback_created": False,
+                    "claim": claim_dict,
+                    "error": str(exc)
+                }
+
+        return {
+            "correction_detected": False,
+            "feedback_created": False,
+            "claim": None
+        }
+    finally:
+        db.close()
 
 
 

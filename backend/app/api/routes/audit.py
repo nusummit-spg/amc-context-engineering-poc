@@ -215,6 +215,7 @@ def list_fund_schemes(limit: int = Query(50, ge=1, le=500), db: Session = Depend
 # ---------------------------------------------------------
 
 @router.post("/chat_sessions", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post("/chat-sessions", response_model=dict, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 def create_session(payload: ChatSessionCreate, db: Session = Depends(get_db)):
     data = payload.model_dump(exclude_none=True)
     row = _create_row(db, ChatSession, data)
@@ -222,6 +223,7 @@ def create_session(payload: ChatSessionCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/chat_sessions", response_model=List[dict])
+@router.get("/chat-sessions", response_model=List[dict], include_in_schema=False)
 def list_sessions(limit: int = Query(50, ge=1, le=500), db: Session = Depends(get_db)):
     rows = db.query(ChatSession).order_by(ChatSession.created_at.desc()).limit(limit).all()
     return [_row_to_dict(r) for r in rows]

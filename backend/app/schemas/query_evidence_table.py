@@ -17,7 +17,8 @@ from sqlalchemy import (
     Boolean,
     func,
     cast,
-    PrimaryKeyConstraint
+    PrimaryKeyConstraint,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 from app.schemas.models import (
@@ -57,8 +58,8 @@ class QueryEvidence(Base):
     )
     linked_violations_json: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
-    # has_feedback: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
-    # feedback_summary_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    has_feedback: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    feedback_summary_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
 
     created_at: Mapped[str] = mapped_column(String(40), nullable=False, default=_now_iso, index=True)
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -79,6 +80,7 @@ class QueryEvidence(Base):
     )
 
     __table_args__ = (
+        UniqueConstraint("response_id", name="uq_query_evidence_response_id"),
         CheckConstraint(
             "confidence_level IN ('high','medium','low') OR confidence_level IS NULL",
             name="ck_query_confidence_level",

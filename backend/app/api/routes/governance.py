@@ -28,7 +28,7 @@ from pydantic import BaseModel, Field
 
 from app.compliance.security import get_client_role, require_roles
 from app.graph.correction_patch_layer import CorrectionPatch, get_correction_patch_layer
-from app.schemas.compliance_models import Role
+from app.models.compliance_models import Role
 
 logger = logging.getLogger("app.api.governance")
 

@@ -4,9 +4,11 @@
 # Author: NuSummit Developers
 #
 # ===========================================================================
-import truststore
-
-truststore.inject_into_ssl()
+try:
+    import truststore
+    truststore.inject_into_ssl()
+except ImportError:
+    pass
 
 """WS3 — FastAPI application: routing, CORS, structured errors, request logging,
 startup wiring (DI container, Qdrant collection, Neo4j schema, ingest worker).
@@ -29,7 +31,7 @@ from app.api.routes import (
 from app.config import get_settings
 from app.core.errors import AppError, app_error_handler
 from app.core.logging import RequestLoggingMiddleware, setup_logging
-from app.db.feedback import get_feedback_store
+
 from app.graph.schema import apply_schema
 from app.tasks.queue import ingest_queue
 from app.tasks.scheduler import get_scheduler
@@ -110,8 +112,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize feedback store schema
     try:
-        get_feedback_store().init_db()
-        logger.info("Feedback SQLite store ready")
+        logger.info("Feedback store now uses centralized data.db (single source of truth)")
     except Exception as exc:
         logger.warning("Could not initialize feedback store: %s", exc)
 
@@ -216,6 +217,8 @@ def create_app() -> FastAPI:
         # so API endpoints are not shadowed by this handler.
         @app.get("/{full_path:path}", include_in_schema=False)
         async def serve_spa(full_path: str):
+            if full_path.startswith("api/") or full_path == "api":
+                return JSONResponse(status_code=404, content={"detail": f"API endpoint /{full_path} not found"})
             # Serve actual files from the frontend dist directory if they exist
             file_path = frontend_dir / full_path
             if file_path.exists() and file_path.is_file():

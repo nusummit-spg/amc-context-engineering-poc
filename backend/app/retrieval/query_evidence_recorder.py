@@ -324,7 +324,7 @@ class QueryEvidenceRecorder:
         linked_violations: Optional[Iterable[str]] = None,
         user_id: Optional[str] = None,
     ) -> Optional[dict[str, Any]]:
-        """Write one query_evidence record. Returns it, or None if not recorded.
+        """Write one query_evidence record to both JSON logs and data.db. Returns it, or None if not recorded.
 
         Never raises: audit logging must not fail a chat turn.
         """
@@ -360,7 +360,16 @@ class QueryEvidenceRecorder:
                 "archived": False,
             }
             record = {k: record[k] for k in QUERY_EVIDENCE_COLUMNS}
+            
+            # Write to JSON logs (legacy)
             self._append(record, user_id=user_id)
+            
+            # Also write to data.db (single source of truth)
+            try:
+                self._write_to_data_db(record)
+            except Exception as db_exc:
+                logger.debug("Could not write QueryEvidence to data.db (not critical): %s", db_exc)
+            
             return record
         except Exception as exc:  # pragma: no cover - defensive
             logger.warning("query_evidence recording skipped: %s", exc)
@@ -581,6 +590,59 @@ class QueryEvidenceRecorder:
             "query_evidence recorded response_id=%s session=%s -> %s",
             record.get("response_id"), record.get("session_id"), path.name,
         )
+
+    def _write_to_data_db(self, record: Mapping[str, Any]) -> None:
+        """Write query_evidence record to data.db (single source of truth).
+        
+        This ensures QueryEvidence is immediately available in data.db when a response
+        is generated, without waiting for sync from JSON logs.
+        """
+        try:
+            from app.core.database import SessionLocal
+            from app.schemas.query_evidence_table import QueryEvidence
+            
+            db = SessionLocal()
+            try:
+                # Check if record already exists
+                existing = db.query(QueryEvidence).filter_by(
+                    response_id=record.get("response_id")
+                ).first()
+                
+                if not existing:
+                    # Create new QueryEvidence record in data.db
+                    qe = QueryEvidence(
+                        response_id=record.get("response_id"),
+                        session_id=record.get("session_id"),
+                        request_id=record.get("request_id"),
+                        query_text=record.get("query_text"),
+                        query_type=record.get("query_type"),
+                        query_intent=record.get("query_intent"),
+                        retrieval_mode=record.get("retrieval_mode", "contextgraph"),
+                        serving_engine=record.get("serving_engine"),
+                        assembled_context_json=record.get("assembled_context_json"),
+                        synthesis_output_json=record.get("synthesis_output_json"),
+                        graph_highlight_json=record.get("graph_highlight_json"),
+                        traditional_result_json=record.get("traditional_result_json"),
+                        latency_ms=record.get("latency_ms"),
+                        retrieval_latency_ms=record.get("retrieval_latency_ms"),
+                        synthesis_latency_ms=record.get("synthesis_latency_ms"),
+                        quality_score=record.get("quality_score"),
+                        confidence_level=record.get("confidence_level"),
+                        audit_id=record.get("audit_id"),
+                        linked_violations_json=record.get("linked_violations_json"),
+                        has_feedback=False,
+                        feedback_summary_json=None,
+                        created_at=record.get("created_at"),
+                        archived=False,
+                    )
+                    db.add(qe)
+                    db.commit()
+                    logger.debug("QueryEvidence written to data.db: response_id=%s", record.get("response_id"))
+            finally:
+                db.close()
+        except Exception as exc:
+            logger.debug("Could not write QueryEvidence to data.db: %s", exc)
+
 
 
 # ─────────────────────────────────────────────────────────────────────────

@@ -120,6 +120,53 @@ async def _run_v2_chat(request: ChatRequest, container: Container) -> ChatRespon
             trace=trace,
             serving_engine="v2",
         )
+        
+        # Create skeleton ResponseFeedback record for immediate availability in data.db
+        try:
+            from app.core.database import SessionLocal
+            from app.schemas.response_feedback_table import ResponseFeedback
+            from app.schemas.chat_sessions_table import ChatSession
+            from datetime import datetime, timezone
+            
+            db = SessionLocal()
+            try:
+                # Ensure ChatSession exists
+                session = db.query(ChatSession).filter_by(session_id=session_id).first()
+                if not session:
+                    session = ChatSession(session_id=session_id)
+                    db.add(session)
+                    db.commit()
+                
+                # Check if skeleton feedback already exists
+                existing = db.query(ResponseFeedback).filter_by(
+                    response_id=response_id
+                ).first()
+                
+                if not existing:
+                    # Create skeleton ResponseFeedback record
+                    now_iso = datetime.now(timezone.utc).isoformat()
+                    feedback_id = f"fb_{uuid.uuid4().hex[:12]}"
+                    skeleton_feedback = ResponseFeedback(
+                        feedback_id=feedback_id,
+                        response_id=response_id,
+                        interaction_id=interaction_id,
+                        session_id=session_id,
+                        turn_number=turn_index,
+                        query_text=query,
+                        actor_id=None,  # Will be filled when user submits feedback
+                        actor_role=None,
+                        selected_categories=[],  # Empty initially
+                        feedback_text=None,
+                        created_at=now_iso,
+                        updated_at=now_iso,
+                    )
+                    db.add(skeleton_feedback)
+                    db.commit()
+                    logger.debug("Skeleton ResponseFeedback created: feedback_id=%s, response_id=%s", feedback_id, response_id)
+            finally:
+                db.close()
+        except Exception as exc:
+            logger.debug("Could not create skeleton ResponseFeedback: %s", exc)
 
     return ChatResponse(
         query=query,

@@ -88,6 +88,7 @@ class ResponseFeedback(Base):
     )
 
     __table_args__ = (
+        UniqueConstraint("feedback_id", name="uq_response_feedback_id"),
         UniqueConstraint("response_id", "actor_id", name="uq_feedback_response_actor"),
         CheckConstraint(
             "answer_relevance_score IS NULL OR (answer_relevance_score BETWEEN 1 AND 5)",

@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.graph.correction_patch_layer import get_correction_patch_layer
-from app.schemas.compliance_models import Role
+from app.models.compliance_models import Role
 
 
 @pytest.fixture

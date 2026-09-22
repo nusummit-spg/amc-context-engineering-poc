@@ -40,3 +40,9 @@ def init_db():
     from app import schemas
 
     Base.metadata.create_all(bind=engine)
+    try:
+        from app.db.migrate_data import populate_data_db
+        populate_data_db()
+    except Exception as e:
+        import logging
+        logging.getLogger("app.core.database").warning("Failed to auto-populate data.db: %s", e)

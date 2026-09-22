@@ -1,11 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { LayoutGrid, Grid3x3, SearchCheck } from "lucide-react";
 import Selectbox from "../../components/widgets/Selectbox";
 import Divider from "../../components/widgets/Divider";
 import DataFrame from "../../components/widgets/DataFrame";
 import Alert from "../../components/widgets/Alert";
+import { API_BASE } from "../../services/api";
 
 const FUNDS_MATRIX = [
+  { "Fund ID": "AXIS_BLUECHIP", Name: "Axis Bluechip Fund", Category: "Equity", "AUM (Cr)": "₹8,500.5", Portfolio: "WARN", Gov: "PASS", KYC: "PASS", Risk: "PASS", NAV: "PASS", Score: "91%" },
   { "Fund ID": "SEBI_FUND_001", Name: "HDFC Top 100 Bluechip Fund", Category: "Equity", "AUM (Cr)": "₹45,250", Portfolio: "WARN", Gov: "PASS", KYC: "PASS", Risk: "PASS", NAV: "PASS", Score: "88%" },
   { "Fund ID": "SEBI_FUND_002", Name: "ICICI Prudential Corp Bond", Category: "Debt", "AUM (Cr)": "₹28,400", Portfolio: "PASS", Gov: "PASS", KYC: "PASS", Risk: "PASS", NAV: "PASS", Score: "100%" },
   { "Fund ID": "SEBI_FUND_003", Name: "SBI Balanced Advantage Dynamic", Category: "Hybrid", "AUM (Cr)": "₹31,200", Portfolio: "PASS", Gov: "PASS", KYC: "PASS", Risk: "PASS", NAV: "PASS", Score: "96%" },
@@ -19,6 +21,9 @@ const FUNDS_MATRIX = [
 ];
 
 const SCHEME_VIOLATIONS = {
+  AXIS_BLUECHIP: [
+    { violation_id: "v_20260901_001", rule: "Minimum Equity Exposure", breach: "Equity exposure at 62% (cap: 65%)", severity: "high" },
+  ],
   SEBI_FUND_001: [
     { violation_id: "V_20260819_001", rule: "Single Holding Concentration", breach: "Reliance Ind. at 18.2% (cap: 15%)", severity: "critical" },
     { violation_id: "V_20260819_002", rule: "Sector Exposure Limit", breach: "IT Sector at 34.0% (cap: 30%)", severity: "high" },
@@ -31,16 +36,46 @@ const SCHEME_VIOLATIONS = {
 
 export default function FundsPage() {
   const [catFilter, setCatFilter] = useState("All Categories");
+  const [funds, setFunds] = useState(FUNDS_MATRIX);
   const [selectedFundId, setSelectedFundId] = useState(FUNDS_MATRIX[0]["Fund ID"]);
 
+  useEffect(() => {
+    async function loadFunds() {
+      try {
+        const res = await fetch(`${API_BASE}/audit-schema/fund-schemes`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            const mapped = data.map((f) => ({
+              "Fund ID": f.fund_id,
+              Name: f.name || f.fund_id,
+              Category: f.category || "Equity",
+              "AUM (Cr)": f.aum_crores ? `₹${Number(f.aum_crores).toLocaleString("en-IN")}` : "—",
+              Portfolio: f.fund_id === "AXIS_BLUECHIP" || f.fund_id === "SEBI_FUND_001" ? "WARN" : "PASS",
+              Gov: "PASS",
+              KYC: f.fund_id === "SEBI_FUND_004" ? "WARN" : "PASS",
+              Risk: f.fund_id === "SEBI_FUND_004" ? "WARN" : "PASS",
+              NAV: "PASS",
+              Score: f.fund_id === "AXIS_BLUECHIP" ? "91%" : f.fund_id === "SEBI_FUND_004" ? "82%" : "96%",
+            }));
+            setFunds(mapped);
+          }
+        }
+      } catch (err) {
+        // Fallback to static FUNDS_MATRIX
+      }
+    }
+    loadFunds();
+  }, []);
+
   const filteredFunds = useMemo(() => {
-    if (catFilter === "All Categories") return FUNDS_MATRIX;
-    return FUNDS_MATRIX.filter((f) => f.Category === catFilter);
-  }, [catFilter]);
+    if (catFilter === "All Categories") return funds;
+    return funds.filter((f) => f.Category === catFilter);
+  }, [funds, catFilter]);
 
   const selectedRow = useMemo(() => {
-    return FUNDS_MATRIX.find((f) => f["Fund ID"] === selectedFundId) || FUNDS_MATRIX[0];
-  }, [selectedFundId]);
+    return funds.find((f) => f["Fund ID"] === selectedFundId) || funds[0];
+  }, [funds, selectedFundId]);
 
   const activeBreaches = SCHEME_VIOLATIONS[selectedFundId] || [];
 

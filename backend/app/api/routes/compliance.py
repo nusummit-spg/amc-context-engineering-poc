@@ -749,6 +749,37 @@ async def get_rule_regulatory_metadata(rule_id: str):
     return meta
 
 
+@router.get("/funds")
+async def list_compliance_funds(region: Optional[str] = None):
+    """
+    List fund schemes from data.db with scheme metadata and AUM.
+    """
+    from app.core.database import SessionLocal
+    from app.schemas.fund_schemes_table import FundScheme
+    db = SessionLocal()
+    try:
+        query = db.query(FundScheme)
+        if region:
+            query = query.filter(FundScheme.region == region.upper())
+        funds = query.all()
+        return [
+            {
+                "fund_id": f.fund_id,
+                "name": f.name,
+                "isin": f.isin,
+                "category": f.category,
+                "fund_house": f.fund_house,
+                "aum_crores": f.aum_crores,
+                "region": f.region,
+                "mandate": f.mandate,
+                "risk_profile": f.risk_profile,
+            }
+            for f in funds
+        ]
+    finally:
+        db.close()
+
+
 @router.get("/funds/{fund_id}/audit-metadata", response_model=FundAuditMetadata)
 async def get_fund_audit_metadata(fund_id: str):
     """

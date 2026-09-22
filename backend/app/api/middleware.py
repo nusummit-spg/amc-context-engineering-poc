@@ -54,6 +54,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if request.client and request.client.host:
             client_ip = request.client.host
 
+        # Loopback / local development traffic is exempt from strict IP rate limiting
+        if client_ip in ("127.0.0.1", "::1", "localhost", "testclient"):
+            return await call_next(request)
+
         ip_limiter = get_ip_rate_limiter()
         allowed_ip, remaining = ip_limiter.is_allowed(client_ip)
         if not allowed_ip:
