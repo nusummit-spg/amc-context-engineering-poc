@@ -71,6 +71,26 @@ async def _run_v2_chat(request: ChatRequest, container: Container) -> ChatRespon
                 "docs_returned": len(hits),
                 "retrieve_ms": int(trace.vector_ms if trace else 0),
                 "llm_ms": int(trace.generation_ms if trace else 0),
+                "input_tokens": trace.input_tokens if trace else 0,
+                "output_tokens": trace.output_tokens if trace else 0,
+                "total_tokens": (trace.input_tokens + trace.output_tokens) if trace else 0,
+                # Build telemetry_breakdown in legacy key format so the frontend
+                # _adapt_traditional() and _render_telemetry_card() functions work.
+                "telemetry_breakdown": {
+                    "latency_vector_db_ms": round(trace.vector_ms, 1) if trace else 0.0,
+                    "latency_rerank_ms": round(trace.rerank_ms, 1) if trace else 0.0,
+                    "latency_graph_db_ms": round(trace.graph_ms, 1) if trace else 0.0,
+                    "latency_ner_processing_ms": round(trace.ner_ms, 1) if trace else 0.0,
+                    "latency_llm_generation_ms": round(trace.generation_ms, 1) if trace else 0.0,
+                    "latency_post_retrieval_processing_ms": round(trace.assembly_ms, 1) if trace else 0.0,
+                    "latency_total_pipeline_ms": round(trace.request_total_ms, 1) if trace else 0.0,
+                    "tokens_input": trace.input_tokens if trace else 0,
+                    "tokens_output": trace.output_tokens if trace else 0,
+                    "tokens_total": (trace.input_tokens + trace.output_tokens) if trace else 0,
+                    "db_candidates_surfaced": len(hits),
+                    "vector_bypassed": False,
+                    "pipeline_mode": "Traditional Vector RAG (v2)",
+                } if trace else {},
             },
         )
 
@@ -96,16 +116,130 @@ async def _run_v2_chat(request: ChatRequest, container: Container) -> ChatRespon
     graph_nodes = sorted({f.subject for f in graph_facts} | {f.object for f in graph_facts})
     graph_rels = sorted({f.predicate for f in graph_facts})
 
+    # Build graph edge objects in the legacy {s, rel, o, conf} shape so the
+    # frontend _render_mini_graph() SVG renderer and triplet inspector work.
+    graph_edges = [
+        {"s": f.subject, "rel": f.predicate, "o": f.object, "conf": f.properties.get("confidence", 1.0)}
+        for f in graph_facts
+    ]
+
+    # Derive entity names and active labels from intent + graph facts.
+    matched_entity_texts = sorted(set(intent.entities_mentioned)) if intent else []
+    # Collect unique entity-type labels from graph fact properties when available.
+    active_labels = sorted({
+        f.properties.get("entity_type") or ""
+        for f in graph_facts
+        if f.properties.get("entity_type")
+    })
+
+    # Build a minimal entity_summary list (ontology tree) from the graph facts.
+    # Group node names by their entity_type property; fall back to a single
+    # "Entity" bucket when no type info is present.
+    from collections import defaultdict
+    label_counts: dict[str, int] = defaultdict(int)
+    for f in graph_facts:
+        etype = f.properties.get("entity_type") or "Entity"
+        label_counts[etype] += 1
+    entity_summary = [
+        {"label": lbl, "count": cnt, "active": True}
+        for lbl, cnt in sorted(label_counts.items())
+    ] if label_counts else []
+
+    # Build provenance rows from context sources (same structure as legacy provenance_list).
+    provenance_list: list[dict] = []
+    if context and context.sources:
+        for i, src in enumerate(context.sources):
+            page_num = getattr(src, "page_number", None) or getattr(src, "page", None)
+            page_label = getattr(src, "page_label", None) or (f"p. {page_num}" if page_num else "—")
+            verbatim = getattr(src, "verbatim_text", None) or src.snippet or ""
+            doc_name = src.document_title or src.document_id
+            provenance_list.append({
+                "doc": doc_name,
+                "document_title": doc_name,
+                "name": doc_name,
+                "page": page_num or 1,
+                "page_number": page_num,
+                "page_label": page_label,
+                "chunk_id": src.chunk_id or f"p.{page_num or 1}",
+                "snippet": src.snippet or (verbatim[:200] if verbatim else ""),
+                "verbatim_text": verbatim,
+                "score": getattr(src, "score", 0.9),
+                "url": get_pdf_url(doc_name, page_num),
+                "source_url": get_pdf_url(doc_name, page_num),
+            })
+
+    # Token counts
+    total_tokens = (trace.input_tokens + trace.output_tokens) if trace else 0
+
+    # Build telemetry_breakdown in the legacy key names so _render_telemetry_card()
+    # and all frontend stat panels display correctly.
+    telemetry_breakdown = {
+        "latency_vector_db_ms": round(trace.vector_ms, 1) if trace else 0.0,
+        "latency_rerank_ms": round(trace.rerank_ms, 1) if trace else 0.0,
+        "latency_graph_db_ms": round(trace.graph_ms, 1) if trace else 0.0,
+        "latency_ner_processing_ms": round(trace.ner_ms, 1) if trace else 0.0,
+        "latency_llm_generation_ms": round(trace.generation_ms, 1) if trace else 0.0,
+        "latency_post_retrieval_processing_ms": round(trace.assembly_ms, 1) if trace else 0.0,
+        "latency_total_pipeline_ms": round(trace.request_total_ms, 1) if trace else 0.0,
+        "tokens_input": trace.input_tokens if trace else 0,
+        "tokens_output": trace.output_tokens if trace else 0,
+        "tokens_total": total_tokens,
+        "db_candidates_surfaced": len(graph_nodes),
+        "vector_bypassed": False,
+        "pipeline_mode": "ContextGraph Hybrid RAG (v2)",
+        # Cache savings fields — populated when trace indicates a cache hit.
+        "cache_hit": trace.cache_hit if trace else False,
+        "tokens_saved": trace.tokens_saved if trace else 0,
+        "tokens_cold_equivalent": trace.cold_equivalent_tokens if trace else 0,
+    } if trace else {}
+
+    # Derive confidence_label in the legacy display format.
+    conf_str = (synthesis.confidence if synthesis else "high") or "high"
+    conf_label_map = {"high": "✓ High confidence", "medium": "⚠ Medium confidence", "low": "✗ Low confidence"}
+    confidence_label = conf_label_map.get(conf_str.lower(), f"✓ {conf_str.capitalize()} confidence")
+
+    # query_type string for the frontend badge
+    query_type_str = intent.query_type.value if intent and intent.query_type else None
+
     response_id = f"resp_{uuid.uuid4().hex[:12]}"
     interaction_id = f"int_{uuid.uuid4().hex[:12]}"
 
+    # Build the hybrid dict in the exact legacy-compatible shape so the
+    # frontend _adapt_hybrid() / _to_hybrid() adapters need no changes.
     hybrid_data = {
         "response_id": response_id,
         "interaction_id": interaction_id,
-        "answer": synthesis.model_dump() if synthesis else None,
+        # answer block — match legacy SynthesisOutput field names expected by adapters
+        "answer": {
+            **(synthesis.model_dump() if synthesis else {}),
+            # Ensure compliance_note + confidence surface correctly regardless of
+            # whether the adapter reads .compliance_note or .confidence.
+            "compliance_note": confidence_label,
+            "confidence": conf_str,
+        },
+        # sources list — one entry per context source
         "sources": sources,
-        "graph_highlight": {"node_names": graph_nodes, "relationships": graph_rels},
+        # graph_highlight — full legacy-compatible dict; adapters read everything from here
+        "graph_highlight": {
+            "node_names": graph_nodes,
+            "relationships": graph_rels,
+            "entities": matched_entity_texts,
+            "labels": active_labels,
+            "edges": graph_edges,
+            "edges_used_in_prompt": graph_edges,   # V2 doesn't separate "used" vs "all"; expose all
+            "entity_summary": entity_summary,
+            "query_type": query_type_str,
+            "graph_matched_by": "graph_facts" if graph_facts else None,
+            "used_verified_aggregate": False,
+            "used_comparison_mode": False,
+            "total_tokens": total_tokens,
+            "telemetry_breakdown": telemetry_breakdown,
+            "provenance": provenance_list,
+        },
         "latency_ms": int(trace.request_total_ms if trace else 0),
+        "confidence_label": confidence_label,
+        "confidence_reason": synthesis.compliance_note if synthesis else "",
+        "telemetry_breakdown": telemetry_breakdown,
         "trace": trace.model_dump() if trace else None,
     }
 
@@ -340,24 +474,41 @@ async def _chat_stream_generator(request: "ChatRequest", container: Container):
                     answer_parts.append(event.get("text", ""))
                     yield _format_sse("chunk", event)
                 elif event_type == "complete":
+                    # Build proper hybrid data structure from the enriched complete event
+                    complete_trace = event.get("trace", {})
+                    complete_answer = event.get("answer", {})
+                    complete_graph_facts = event.get("graph_facts", [])
+                    complete_sources = event.get("context_sources", stream_sources)
+                    
+                    hybrid_data_complete = {
+                        "response_id": event.get("response_id"),
+                        "interaction_id": event.get("response_id"),  # Use response_id as interaction_id
+                        "answer": complete_answer if complete_answer else {
+                            "answer": "".join(answer_parts).strip(),
+                            "confidence": "high",
+                            "compliance_note": None,
+                            "citations": [],
+                            "structured_rows": [],
+                        },
+                        "sources": complete_sources if complete_sources else stream_sources,
+                        "graph_highlight": {
+                            "node_names": event.get("graph_nodes", []),
+                            "relationships": event.get("graph_relationships", []),
+                            "entities": stream_meta.get("entities") or [],
+                        },
+                        "latency_ms": complete_trace.get("request_total_ms"),
+                    }
+                    
                     await asyncio.to_thread(
                         get_query_evidence_recorder().record_v2_contextgraph_turn,
                         session_id=request.session_id,
                         query_text=request.query,
-                        hybrid={
-                            "response_id": event.get("response_id"),
-                            "answer": {
-                                "answer": "".join(answer_parts).strip(),
-                                "confidence": stream_meta.get("confidence"),
-                            },
-                            "sources": stream_sources,
-                            "graph_highlight": {
-                                "entities": stream_meta.get("entities") or [],
-                            },
-                            "latency_ms": (event.get("trace") or {}).get("request_total_ms"),
+                        hybrid=hybrid_data_complete,
+                        intent={
+                            "query_type": stream_meta.get("intent"),
+                            "entities_mentioned": stream_meta.get("entities") or [],
                         },
-                        intent={"query_type": stream_meta.get("intent")},
-                        trace=event.get("trace") or {},
+                        trace=complete_trace,
                         serving_engine="v2-stream",
                     )
                     yield _format_sse("done", event)

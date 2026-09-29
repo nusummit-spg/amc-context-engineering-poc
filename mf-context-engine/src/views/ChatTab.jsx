@@ -11,11 +11,30 @@ import OntologyModal from "./chat/OntologyModal";
 import FeedbackModal from "./chat/FeedbackModal";
 import { sendChatStream, adaptHybridResponse } from "../services/api";
 
-const STARTER_PROMPTS = [
-  "Which schemes breached SEBI exposure limits this quarter?",
-  "Summarise our ESG disclosure obligations",
-  "What remediation items are past their SLA?",
+const CANDIDATE_STARTER_PROMPTS = [
+  "What are the key ESG initiatives wrt climate change adaptation and what are the benefits that we can see?",
+  "Can you give me the characteristics of the liquid fund",
+  "Which mine is running in Australia and specify the variation that we can see in mine production",
+  "How does the 2026 SEBI circular change the categorization of Solution Oriented Schemes and the 'Other Schemes' section?",
+  "How exactly is the 50% portfolio overlap calculated? Is it based on daily or quarterly weightages?",
+  "What happens to the existing thematic fund if they fail to meet the 50% overlap criteria at the end of the 3-year transition period?",
+  "Who is Pranav Adani and which company is he associated with?",
+  "Tell me about other executives at Adani Enterprises Limited",
+  "What are SEBI's borrowing limits for mutual funds?",
+  "Changes in SEBI circular guidelines on scheme categorization",
+  "Index Funds and ETFs",
+  "What are the general guidelines for mutual fund categorization?",
+  "Who are the key executives or directors of Adani Enterprises?",
 ];
+
+function getRandomStarterPrompts(count = 3) {
+  const pool = [...CANDIDATE_STARTER_PROMPTS];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, count);
+}
 
 export default function ChatTab() {
   const {
@@ -28,10 +47,13 @@ export default function ChatTab() {
   } = useAppState();
   const pushToast = useToast();
 
+  const [starterPrompts, setStarterPrompts] = useState(() => getRandomStarterPrompts(3));
+  const prevSessionIdRef = useRef(chatSessionId);
+
   // ── Streaming state ──────────────────────────────────────────────────────
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingAnswer, setStreamingAnswer] = useState("");
-  const [streamMetadata, setStreamMetadata] = useState(null);
+  const [_streamMetadata, setStreamMetadata] = useState(null);
   const [progressiveSources, setProgressiveSources] = useState([]);
   const abortControllerRef = useRef(null);
 
@@ -59,6 +81,15 @@ export default function ChatTab() {
   }, []);
 
   const history = getChatHistory(chatSessionId);
+
+  useEffect(() => {
+    if (prevSessionIdRef.current !== chatSessionId) {
+      prevSessionIdRef.current = chatSessionId;
+      if (history.length === 0) {
+        setStarterPrompts(getRandomStarterPrompts(3));
+      }
+    }
+  }, [chatSessionId, history.length]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -234,7 +265,7 @@ export default function ChatTab() {
               and follow-up questions keep the context of this conversation.
             </div>
             <div className="cg-chat-starters">
-              {STARTER_PROMPTS.map((p) => (
+              {starterPrompts.map((p) => (
                 <button
                   key={p}
                   type="button"

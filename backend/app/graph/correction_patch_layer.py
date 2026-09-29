@@ -309,6 +309,28 @@ class CorrectionPatchLayer:
         logger.info("Deleted patch %s (%s)", patch_id, patch_key)
         return True
 
+    def clear_all(self) -> None:
+        """Clears all patches from memory and Redis (useful for test isolation)."""
+        with self._lock:
+            self._mem_store.clear()
+        if self.redis is not None:
+            try:
+                for k in self.redis.scan_iter("patch:*"):
+                    self.redis.delete(k)
+            except Exception:
+                pass
+
+    def approve_patch(self, patch_id: str, neo4j_session: Any = None) -> bool:
+        """Alias for promote_to_permanent."""
+        return self.promote_to_permanent(patch_id, neo4j_session=neo4j_session)
+
+    def get_active_patches(self, entity_id: Optional[str] = None) -> List[CorrectionPatch]:
+        """Returns all non-expired patches, optionally filtered by entity_id."""
+        patches = self.get_all_patches()
+        if entity_id:
+            patches = [p for p in patches if p.entity_id == entity_id.strip()]
+        return patches
+
 
 _global_patch_layer: Optional[CorrectionPatchLayer] = None
 _layer_lock = threading.Lock()

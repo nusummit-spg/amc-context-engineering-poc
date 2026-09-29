@@ -292,6 +292,15 @@ class FundNameMatcher:
 
         return None
 
+    def match_fund(
+        self,
+        fund_name: str,
+        user_context: Optional[Dict[str, Any]] = None,
+        top_k: int = 3
+    ) -> Optional[Dict[str, Any]]:
+        """Alias for resolve() method."""
+        return self.resolve(fund_name, user_context=user_context, top_k=top_k)
+
 
 _global_fund_matcher = None
 

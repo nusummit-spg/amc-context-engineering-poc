@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "amc-feedback-loop"
+version = "0.1.0"
+description = "Reusable feedback loop for RAG systems with NER, entity resolution, and correction extraction"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Proprietary"}
+authors = [
+    {name = "NuSummit Technologies", email = "dev@nusummit.com"}
+]
+dependencies = [
+    "pydantic>=2.7",
+    "pydantic-settings>=2.4",
+    "spacy>=3.7",
+    "gliner>=0.2",
+    "rapidfuzz>=3.0",
+    "sqlalchemy>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/amc_feedback"]

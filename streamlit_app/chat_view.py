@@ -107,7 +107,32 @@ def render_session_sidebar():
 
 def _adapt_traditional(t: dict) -> dict:
     m = t.get("metrics") or {}
-    tb = m.get("telemetry_breakdown", {})
+    tb = m.get("telemetry_breakdown") or {}
+
+    # If telemetry_breakdown is absent (e.g. legacy fallback paths), synthesize
+    # one from the individual timing/token keys that all paths do populate.
+    if not tb:
+        retrieve_ms = m.get("retrieve_ms", 0) or 0
+        llm_ms = m.get("llm_ms", 0) or 0
+        inp = m.get("input_tokens", 0) or 0
+        out = m.get("output_tokens", 0) or 0
+        total_tok = m.get("total_tokens", 0) or (inp + out)
+        tb = {
+            "latency_vector_db_ms": float(retrieve_ms),
+            "latency_llm_generation_ms": float(llm_ms),
+            "latency_total_pipeline_ms": float(retrieve_ms + llm_ms),
+            "latency_graph_db_ms": 0.0,
+            "latency_ner_processing_ms": 0.0,
+            "latency_post_retrieval_processing_ms": 0.0,
+            "latency_rerank_ms": 0.0,
+            "tokens_input": inp,
+            "tokens_output": out,
+            "tokens_total": total_tok,
+            "db_candidates_surfaced": m.get("docs_returned", 0) or 0,
+            "vector_bypassed": False,
+            "pipeline_mode": m.get("note", "Traditional Vector RAG"),
+        }
+
     return {
         "answer": t.get("snippet") or "",
         "docs": [{
@@ -115,7 +140,7 @@ def _adapt_traditional(t: dict) -> dict:
             "page": f.get("page"), "snippet": f.get("snippet") or "",
             "full_text": f.get("full_text") or "",
         } for f in t.get("files", [])],
-        "total_tokens": m.get("total_tokens", 0),
+        "total_tokens": m.get("total_tokens", 0) or tb.get("tokens_total", 0),
         # ChatResponse.traditional has no top-level latency_ms the way
         # QueryResponse does (that's what app.py's Compare-tab adapter reads)
         # - use the true pipeline total from telemetry_breakdown instead of

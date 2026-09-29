@@ -97,8 +97,9 @@ def init_container() -> Container:
 
 
 def get_container() -> Container:
+    global _container
     if _container is None:
-        raise RuntimeError("Container not initialized — app startup did not run")
+        _container = init_container()
     return _container
 
 

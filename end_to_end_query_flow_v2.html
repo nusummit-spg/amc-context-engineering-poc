@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>V2 Agentic Retrieval Orchestrator — End-to-End Query Execution Flow (query_engine = "v2")</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        securityLevel: 'loose',
+        flowchart: { curve: 'basis' }
+      });
+    });
+  </script>
+  <style>
+    :root {
+      --bg-body: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-code: #f8fafc;
+      --border-color: #e2e8f0;
+      --border-focus: #94a3b8;
+      
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-subtle: #64748b;
+      
+      --v2-primary: #6366f1;
+      --v2-primary-light: #eef2ff;
+      --v2-primary-border: #c7d2fe;
+      
+      --blue: #2563eb;
+      --blue-light: #eff6ff;
+      --blue-border: #bfdbfe;
+
+      --emerald: #059669;
+      --emerald-light: #ecfdf5;
+      --emerald-border: #a7f3d0;
+      
+      --amber: #d97706;
+      --amber-light: #fffbeb;
+      --amber-border: #fde68a;
+      
+      --purple: #7c3aed;
+      --purple-light: #f5f3ff;
+      --purple-border: #ddd6fe;
+
+      --cyan: #0891b2;
+      --cyan-light: #ecfeff;
+      --cyan-border: #a5f3fc;
+      
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.03);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Top Sticky Header */
+    header.top-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .header-container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 0.85rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-badge {
+      background: var(--v2-primary);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 0.5rem;
+      list-style: none;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      transition: all 0.15s ease-in-out;
+    }
+
+    .nav-links a:hover {
+      background: var(--bg-subtle);
+      color: var(--v2-primary);
+    }
+
+    .btn-pill {
+      background: var(--v2-primary-light);
+      color: var(--v2-primary) !important;
+      border: 1px solid var(--v2-primary-border);
+      font-weight: 600 !important;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1440px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+    }
+
+    /* Hero Banner */
+    .hero {
+      background: linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%);
+      border: 1px solid var(--purple-border);
+      border-radius: 12px;
+      padding: 2.5rem 2rem;
+      margin-bottom: 2.5rem;
+      box-shadow: var(--shadow-md);
+    }
+
+    .hero-badge-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .hero-tag {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+    }
+    .hero-tag-v2 { background: var(--purple-light); color: var(--purple); border: 1px solid var(--purple-border); }
+    .hero-tag-mode { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+
+    .hero h1 {
+      font-size: 2.35rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.025em;
+    }
+
+    .hero p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 1000px;
+      margin-bottom: 1.5rem;
+    }
+
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .kpi-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .kpi-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--purple);
+      margin-top: 0.25rem;
+      word-break: break-all;
+    }
+
+    /* Section Styles */
+    section {
+      margin-bottom: 3.5rem;
+      scroll-margin-top: 5rem;
+    }
+
+    .section-title {
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .section-subtitle {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin-bottom: 1.75rem;
+    }
+
+    /* Diagram Card */
+    .diagram-wrapper {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      overflow-x: auto;
+      margin-bottom: 2rem;
+    }
+
+    /* Navigation Tabs */
+    .tab-bar {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: var(--purple);
+      border-bottom-color: var(--purple);
+      background: var(--purple-light);
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+    }
+
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Step Timeline */
+    .timeline {
+      position: relative;
+      padding-left: 2rem;
+      margin-left: 1rem;
+      border-left: 2px solid #cbd5e1;
+    }
+
+    .step-card {
+      position: relative;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+
+    .step-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--border-focus);
+    }
+
+    .step-bullet {
+      position: absolute;
+      left: -2.85rem;
+      top: 1.5rem;
+      width: 1.7rem;
+      height: 1.7rem;
+      border-radius: 50%;
+      background: var(--purple);
+      color: #ffffff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 0 4px #ffffff;
+    }
+
+    .step-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .step-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .step-number {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--purple);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .step-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .badges {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-purple { background: var(--purple-light); color: var(--purple); border: 1px solid var(--purple-border); }
+    .badge-blue { background: var(--blue-light); color: var(--blue); border: 1px solid var(--blue-border); }
+    .badge-emerald { background: var(--emerald-light); color: var(--emerald); border: 1px solid var(--emerald-border); }
+    .badge-amber { background: var(--amber-light); color: var(--amber); border: 1px solid var(--amber-border); }
+    .badge-cyan { background: var(--cyan-light); color: var(--cyan); border: 1px solid var(--cyan-border); }
+    .badge-gray { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+
+    /* Metadata Grid */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 0.75rem;
+      background: var(--bg-subtle);
+      border-radius: 8px;
+      padding: 0.9rem;
+      margin-bottom: 1.2rem;
+      font-size: 0.85rem;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .meta-label {
+      font-weight: 600;
+      color: var(--text-subtle);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .meta-value {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-main);
+      font-weight: 500;
+      word-break: break-all;
+    }
+
+    .step-desc {
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      font-size: 0.95rem;
+    }
+
+    .step-desc ul {
+      margin-left: 1.25rem;
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .step-desc li {
+      margin-bottom: 0.25rem;
+    }
+
+    /* I/O Blocks */
+    .io-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    @media (max-width: 900px) {
+      .io-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .io-box {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-card);
+      overflow: hidden;
+    }
+
+    .io-header {
+      background: var(--bg-subtle);
+      padding: 0.45rem 0.85rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .io-header.in { color: var(--purple); }
+    .io-header.out { color: var(--emerald); }
+
+    pre.code-block {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      padding: 0.85rem;
+      background: var(--bg-code);
+      color: #1e293b;
+      overflow-x: auto;
+      max-height: 260px;
+      line-height: 1.45;
+    }
+
+    /* Table Styles */
+    .table-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      box-shadow: var(--shadow-sm);
+      overflow-x: auto;
+      margin-bottom: 2rem;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+      text-align: left;
+    }
+
+    table.data-table th {
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    table.data-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: top;
+      color: var(--text-muted);
+    }
+
+    table.data-table tr:hover td {
+      background-color: #f8fafc;
+    }
+
+    .code-pill {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-subtle);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      color: #0f172a;
+      border: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+
+    /* Callout */
+    .callout {
+      border-left: 4px solid var(--purple);
+      background: var(--purple-light);
+      padding: 1rem 1.25rem;
+      border-radius: 0 8px 8px 0;
+      margin: 1.25rem 0;
+      font-size: 0.95rem;
+      color: #4c1d95;
+    }
+    .callout-title {
+      font-weight: 700;
+      margin-bottom: 0.3rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    footer {
+      border-top: 1px solid var(--border-color);
+      background: #ffffff;
+      padding: 2rem 0;
+      text-align: center;
+      color: var(--text-subtle);
+      font-size: 0.875rem;
+      margin-top: 4rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky Top Header -->
+  <header class="top-header">
+    <div class="header-container">
+      <div class="brand">
+        <span class="brand-badge">V2 ENGINE</span>
+        <span class="brand-title">RetrievalOrchestrator Architecture</span>
+      </div>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="#overview">Overview</a></li>
+          <li><a href="#v2-sequence">V2 Sequence Diagram</a></li>
+          <li><a href="#v2-steps">Streaming Trace</a></li>
+          <li><a href="#v2-sync">Synchronous Flow</a></li>
+          <li><a href="#v2-matrix">Method Matrix</a></li>
+          <li><a href="#v2-models">Data Models</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Hero Header -->
+    <div class="hero" id="overview">
+      <div class="hero-badge-row">
+        <span class="hero-tag hero-tag-v2">query_engine = "v2"</span>
+        <span class="hero-tag hero-tag-mode">Agentic Retrieval Pipeline</span>
+        <span class="hero-tag hero-tag-mode">Parallelized Execution</span>
+      </div>
+      <h1>V2 Agentic Orchestrator: Complete End-to-End Query Trace</h1>
+      <p>
+        Detailed code execution flow for the modular V2 retrieval engine.
+        When configured with <code>QUERY_ENGINE="v2"</code>, requests bypass the monolithic legacy route
+        and enter the dependency-injected <code>RetrievalOrchestrator</code>, executing structured intent classification,
+        multi-surface entity resolution, HyDE document expansion, topological task planning, concurrent Neo4j graph traversal,
+        scoped vector search, context assembly with quality gating, and Groq streaming synthesis.
+      </p>
+
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-label">Core Class</div>
+          <div class="kpi-value">RetrievalOrchestrator</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Streaming Generator</div>
+          <div class="kpi-value">answer_stream()</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Synchronous Entry</div>
+          <div class="kpi-value">answer()</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Primary Orchestrator File</div>
+          <div class="kpi-value" style="font-size: 0.95rem;">retrieval/orchestrator.py</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sequence Diagram Section -->
+    <section id="v2-sequence">
+      <h2 class="section-title">📊 V2 Orchestrator Sequence Diagram</h2>
+      <p class="section-subtitle">Visual execution timeline of the V2 retrieval pipeline from client dispatch to streamed tokens.</p>
+
+      <div class="diagram-wrapper">
+        <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as 👤 User
+    participant Frontend as 🖥️ ChatTab.jsx / api.js
+    participant Route as ⚡ chat.py (chat_stream)
+    participant Orchestrator as 🎯 orchestrator.py (answer_stream)
+    participant Cache as ⚡ cache.py (SemanticQueryCache)
+    participant Guardrail as 🛡️ Pre-Retrieval Guardrail
+    participant Intent as 🧠 intent.py (IntentClassifier)
+    participant Resolver as 🏷️ resolver.py (EntityResolver)
+    participant Planner as 🗺️ planner.py (QueryPlanner)
+    participant HyDE as 📝 hyde.py (HyDE Generator)
+    participant Traversal as 🕸️ traversal.py (GraphTraversal)
+    participant Vector as 📚 vector/client.py (VectorStore)
+    participant Assembler as 🧩 context.py (ContextAssembler)
+    participant Synthesizer as 🤖 synthesizer.py (LLM Client)
+    participant Audit as 📜 query_evidence_recorder.py
+
+    User->>Frontend: Types query (e.g. "What are the rules for Exit Load in Category III AIF?")
+    Frontend->>Route: POST /api/chat/stream
+    Route->>Orchestrator: container.orchestrator.answer_stream(query, history, session_id)
+
+    rect rgb(245, 243, 255)
+    Note over Orchestrator,Audit: Inside RetrievalOrchestrator.answer_stream()
+    
+    Orchestrator->>Orchestrator: Step 0: Multi-turn Query Rewrite (Pronoun Resolution)
+    
+    Orchestrator->>Guardrail: Step 0.5: Check illegal promises (SEBI guarantee refusal)
+    alt Triggers Statutory Refusal
+        Guardrail-->>Orchestrator: Regulatory refusal text
+        Orchestrator-->>Route: Yield refusal chunks directly
+    end
+
+    Orchestrator->>Cache: Step 1: Semantic Cache lookup(effective_query)
+    alt Cache Hit (>= 0.95 similarity)
+        Cache-->>Orchestrator: cached_entry (metadata, sources, answer)
+        Orchestrator-->>Route: Stream metadata + cached answer tokens
+    end
+
+    Orchestrator->>Intent: Step 2: IntentClassifier.classify(effective_query)
+    Intent-->>Orchestrator: QueryIntent (query_type, entities_mentioned, requires_graph, requires_vector)
+    Orchestrator-->>Route: SSE event: metadata
+
+    Orchestrator->>Resolver: Step 3: EntityResolver.resolve_surface_form() [asyncio.gather]
+    Resolver-->>Orchestrator: resolved_entities: list[BaseEntity]
+
+    opt Query Decomposition Active
+        Orchestrator->>Planner: Step 3.6: QueryPlanner.plan(effective_query)
+        Planner-->>Orchestrator: ExecutionPlan (sub_tasks, parallel_groups)
+    end
+
+    opt HyDE Expansion Active
+        Orchestrator->>HyDE: Step 4.5: generate_hypothetical_document(effective_query)
+        HyDE-->>Orchestrator: hyde_doc (hypothetical regulatory snippet)
+    end
+
+    par Parallel Subgraph Traversal & Vector Search (asyncio.gather)
+        Orchestrator->>Traversal: Step 4: GraphTraversal.traverse(intent, resolved_entities)
+        Traversal-->>Orchestrator: facts (GraphFact), traversal_paths, cyphers
+    and Taxonomy Scoped Vector Retrieval
+        Orchestrator->>Vector: Step 5: _execute_plan_retrieval(search_query + hyde_doc)
+        Vector-->>Orchestrator: chunks: list[RetrievedChunk]
+    end
+
+    Orchestrator-->>Route: SSE event: sources (with PDF page citations)
+    Route-->>Frontend: onSources callback -> Render document cards
+
+    Orchestrator->>Assembler: Step 7: ContextAssembler.assemble(retrieval)
+    Assembler-->>Orchestrator: AssembledContext (context_text, quality_score, quota budgeting)
+
+    Orchestrator->>Synthesizer: Step 8: complete_stream(prompt, system=synthesis_system)
+    loop Token by Token Stream
+        Synthesizer-->>Orchestrator: text_chunk
+        Orchestrator-->>Route: SSE event: chunk (answer_chunk)
+        Route-->>Frontend: onChunk callback -> Progressive typing effect
+    end
+
+    Orchestrator->>Cache: Cache answer into SemanticQueryCache
+    Orchestrator->>Orchestrator: Record ComponentMetric & QueryMetrics
+    Orchestrator-->>Route: SSE event: done (complete)
+    end
+
+    Route->>Audit: record_v2_contextgraph_turn(session_id, hybrid, trace)
+    Route-->>Frontend: SSE stream closed
+    Frontend-->>User: Interactive Assistant Card with citations & graph chips
+        </pre>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('v2-streaming-tab')">1. V2 Streaming Trace (answer_stream)</button>
+      <button class="tab-btn" onclick="switchTab('v2-sync-tab')">2. V2 Non-Streaming Flow (answer)</button>
+      <button class="tab-btn" onclick="switchTab('v2-matrix-tab')">3. V2 Method & Component Reference</button>
+      <button class="tab-btn" onclick="switchTab('v2-models-tab')">4. V2 Data Models & Contracts</button>
+    </div>
+
+    <!-- TAB 1: STREAMING EXECUTION TRACE -->
+    <div id="v2-streaming-tab" class="tab-content active">
+      <section id="v2-steps">
+        <h2 class="section-title">⚡ Step-by-Step Streaming Execution: RetrievalOrchestrator.answer_stream()</h2>
+        <p class="section-subtitle">Detailed walkthrough of each execution phase in <code>backend/app/retrieval/orchestrator.py</code> (Lines 788 - 1127).</p>
+
+        <div class="timeline">
+
+          <!-- V2 Step 00 -->
+          <div class="step-card">
+            <div class="step-bullet">V0</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Phase 00 • Multi-Turn Coreference</span>
+                <h3 class="step-name">Query Pronoun Resolution & History Rewriting</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-purple">orchestrator.py:818</span>
+                <span class="badge badge-gray">Multi-Turn Context</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">backend/app/retrieval/orchestrator.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Method Name</span>
+                <span class="meta-value">answer_stream() (Lines 818 - 831)</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Trigger</span>
+                <span class="meta-value">Pronoun triggers in query: <em>those, these, them, it, they, that, theirs, this</em></span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              Inspects conversation history turns to detect ambiguous follow-up queries. If the user asks <em>"What is their exit load?"</em>,
+              it extracts the previous user message (e.g. <em>"Kotak Emerging Equity Fund"</em>) and produces a fully grounded query:
+              <code>f"{user_msgs[-1]} — {query}"</code>.
+            </div>
+
+            <div class="io-container">
+              <div class="io-box">
+                <div class="io-header in">Input Arguments</div>
+                <pre class="code-block">
+query: "What is their exit load?"
+history: [
+  {"role": "user", "content": "Tell me about HDFC Top 100 Fund."},
+  {"role": "assistant", "content": "..."}
+]</pre>
+              </div>
+              <div class="io-box">
+                <div class="io-header out">Effective Query Output</div>
+                <pre class="code-block">
+effective_query: "Tell me about HDFC Top 100 Fund. — What is their exit load?"</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- V2 Step 0.5 -->
+          <div class="step-card">
+            <div class="step-bullet">V0.5</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Phase 00.5 • Pre-Retrieval Compliance Guardrail</span>
+                <h3 class="step-name">Statutory Guarantee Refusal Filter</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-amber">Compliance Safety</span>
+                <span class="badge badge-gray">orchestrator.py:833</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              Checks <code>self._settings.enable_pre_retrieval_guardrails</code>. Evaluates incoming query against illegal financial promise keywords
+              (<em>"guarantee", "assured return", "promise return", "guaranteed profit", "15% annual return", "fixed return"</em>).
+              If triggered, streams mandatory SEBI statutory refusal tokens word-by-word and immediately terminates without database or model overhead.
+            </div>
+
+            <div class="io-container">
+              <div class="io-box">
+                <div class="io-header in">Query Match Trigger</div>
+                <pre class="code-block">
+query: "Which mutual fund guarantees a 15% annual return?"</pre>
+              </div>
+              <div class="io-box">
+                <div class="io-header out">Direct Stream Yield</div>
+                <pre class="code-block">
+yield {"type": "answer_chunk", "text": "Under SEBI regulations, mutual fund schemes cannot guarantee returns...", "index": 0}
+_record("compliance_refusal")
+yield {"type": "complete", "response_id": response_id, "trace": {}}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- V2 Step 01 -->
+          <div class="step-card">
+            <div class="step-bullet">V1</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Phase 01 • Semantic Cache</span>
+                <h3 class="step-name">Vector Semantic Cache Lookup</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-emerald">Zero-Token Cache</span>
+                <span class="badge badge-gray">retrieval/cache.py</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">backend/app/retrieval/cache.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Class & Method</span>
+                <span class="meta-value">SemanticQueryCache.lookup(query, corpus_version)</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Similarity Threshold</span>
+                <span class="meta-value">&ge; 0.95 Cosine Similarity (via FastEmbed BGE)</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              Calls <code>get_semantic_cache().lookup(...)</code>. Embeds query using <code>BAAI/bge-small-en-v1.5</code> and compares against FAISS in-memory index.
+              If a match exists within TTL and matching the active <code>corpus_version</code>:
+              <ol>
+                <li>Yields <code>event: metadata</code> with cached intent and confidence.</li>
+                <li>Yields <code>event: sources</code> with pre-recorded citations.</li>
+                <li>Splits cached answer into tokens and yields <code>answer_chunk</code> events.</li>
+                <li>Yields <code>event: done</code> with <code>cache_hit: true</code>.</li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- V2 Step 02 -->
+          <div class="step-card">
+            <div class="step-bullet">V2</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Phase 02 • Structured Intent Classification</span>
+                <h3 class="step-name">LLM Intent Classification & Requirements Extraction</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-purple">IntentClassifier</span>
+                <span class="badge badge-cyan">Structured JSON Schema</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">backend/app/retrieval/intent.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Class & Method</span>
+                <span class="meta-value">IntentClassifier.classify(effective_query)</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Output Schema</span>
+                <span class="meta-value">Pydantic QueryIntent</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              Renders the <code>query_intent</code> prompt with valid taxonomy paths and executes <code>LLMClient.complete_structured(...)</code>.
+              Produces a strongly-typed <code>QueryIntent</code> model containing:
+              <ul>
+                <li><code>query_type</code>: <code>exposure_aggregation</code> | <code>compliance_check</code> | <code>house_view_synthesis</code> | <code>entity_lookup</code> | <code>general</code></li>
+                <li><code>entities_mentioned</code>: list of raw entity names in the query</li>
+                <li><code>taxonomy_paths</code>: validated taxonomy tree branches to constrain vector search</li>
+                <li><code>requires_graph</code> & <code>requires_vector</code>: booleans deciding routing</li>
+                <li><code>requires_cypher</code>: detected via aggregation heuristics (<em>sum, count, avg, ranking</em>)</li>
+              </ul>
+              Yields SSE <code>event: metadata</code> to the frontend.
+            </div>
+
+            <div class="io-container">
+              <div class="io-box">
+                <div class="io-header in">Input Query Text</div>
+                <pre class="code-block">
+effective_query: "What is the total AUM of Category III Long Only AIF schemes?"</pre>
+              </div>
+              <div class="io-box">
+                <div class="io-header out">QueryIntent Model Output</div>
+                <pre class="code-block">
+QueryIntent(
+  query_type=QueryType.EXPOSURE_AGGREGATION,
+  entities_mentioned=["Category III Long Only AIF"],
+  taxonomy_paths=["regulatory/sebi/aif/category_iii"],
+  requires_graph=True,
+  requires_vector=True,
+  requires_cypher=True,
+  aggregation_type="sum"
+)</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- V2 Step 03 -->
+          <div class="step-card">
+            <div class="step-bullet">V3</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Phase 03 • Canonical Entity Resolution</span>
+                <h3 class="step-name">Multi-Surface Entity Resolution via asyncio.gather</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-cyan">EntityResolver</span>
+                <span class="badge badge-gray">extraction/resolver.py</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">backend/app/extraction/resolver.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Class & Method</span>
+                <span class="meta-value">EntityResolver.resolve_surface_form(surface)</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Concurrency</span>
+                <span class="meta-value">asyncio.gather across all entities in parallel</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              Resolves informal user entity mentions to canonical entities using:
+              <ol>
+                <li>Exact and alias matching against <code>seeds/entity_aliases.json</code> and graph nodes.</li>
+                <li>Fuzzy containment resolution.</li>
+                <li>LLM disambiguation if multiple conflicting entity candidates exist.</li>
+              </ol>
+              Returns <code>resolved_entities: list[BaseEntity]</code> and maps raw mentions to canonical names in <code>resolved_map</code>.
+            </div>
+          </div>
+
+          <!-- V2 Step 03.5 & 03.6 -->
+          <div class="step-card">
+            <div class="step-bullet">V3.5</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Phase 03.5 & 03.6 • Cypher & Query Planning</span>
+                <h3 class="step-name">Dynamic Text-to-Cypher & Query Decomposition</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-purple">text_to_cypher.py</span>
+                <span class="badge badge-blue">planner.py</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              <ul>
+                <li><strong>Dynamic Cypher Execution</strong>: If <code>intent.requires_cypher == True</code>, calls <code>text_to_cypher.generate_and_run_with_correction(...)</code>. Executes aggregate Cypher in Neo4j and converts result rows into <code>GraphFact</code> instances with predicate <code>"AGGREGATED_AS"</code>.</li>
+                <li><strong>Query Planner (Decomposition)</strong>: If <code>ENABLE_QUERY_DECOMPOSITION</code> is enabled, <code>self._planner.plan(effective_query)</code> breaks complex questions into dependency-aware <code>SubTask</code> objects executed in topological waves.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- V2 Step 04.5 -->
+          <div class="step-card">
+            <div class="step-bullet">V4.5</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Phase 04.5 • HyDE Document Expansion</span>
+                <h3 class="step-name">Hypothetical Document Embeddings (HyDE)</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-blue">HyDE Generator</span>
+                <span class="badge badge-gray">retrieval/hyde.py</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">backend/app/retrieval/hyde.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Function Name</span>
+                <span class="meta-value">generate_hypothetical_document(effective_query)</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              If <code>ENABLE_HYDE_IN_ORCHESTRATOR</code> is active and vector search is required, a lightweight LLM pre-pass generates
+              a hypothetical regulatory document passage matching the query intent. This expands the search query:
+              <code>search_query = effective_query + "\n\nHYPOTHETICAL DOCUMENT:\n" + hyde_doc</code>, boosting cosine similarity against real indexed provisions.
+            </div>
+          </div>
+
+          <!-- V2 Steps 04 & 05 -->
+          <div class="step-card">
+            <div class="step-bullet">V4-5</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Phase 04 & 05 • Concurrent Graph & Vector Retrieval</span>
+                <h3 class="step-name">Parallel Graph Traversal & Scoped Vector Search</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-purple">Neo4j GraphTraversal</span>
+                <span class="badge badge-blue">VectorStore</span>
+                <span class="badge badge-emerald">asyncio.gather</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">Files</span>
+                <span class="meta-value">retrieval/traversal.py & vector/client.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Concurrent Execution</span>
+                <span class="meta-value">graph_res, vector_res = await asyncio.gather(_stream_graph(), _stream_vector())</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              Orchestrator runs both retrieval engines concurrently:
+              <ol>
+                <li><strong>Graph Traversal (Neo4j)</strong>: Selects strategy based on <code>QueryType</code> (<code>_exposure</code>, <code>_compliance</code>, <code>_house_view</code>, <code>_entity_lookup</code>). Runs parameterised Cypher templates in parallel via <code>_gather_rows()</code>.</li>
+                <li><strong>Vector Search (Qdrant/FAISS)</strong>: Executes <code>_search_chunks()</code> scoped by <code>intent.taxonomy_paths</code> and <code>resolved_entities</code>.</li>
+                <li><strong>Emit Sources Event</strong>: Immediately formats chunks and yields SSE <code>event: sources</code> to the frontend with document title, ID, score, and snippet.</li>
+              </ol>
+            </div>
+
+            <div class="io-container">
+              <div class="io-box">
+                <div class="io-header in">Graph Traversal Output</div>
+                <pre class="code-block">
+facts: [
+  GraphFact(subject="Scheme A", predicate="HOLDS", object="Adani Ports", properties={"pct": 4.2}),
+  GraphFact(subject="Scheme B", predicate="HOLDS", object="Adani Power", properties={"pct": 2.1})
+]
+traversal_paths: ["Scheme->HOLDS->Issuer"]</pre>
+              </div>
+              <div class="io-box">
+                <div class="io-header out">Vector Search Output</div>
+                <pre class="code-block">
+chunks: [
+  RetrievedChunk(document_id="SEBI_CIR_2026_01.pdf", score=0.88, text="..."),
+  RetrievedChunk(document_id="KOTAK_SID_2025.pdf", score=0.82, text="...")
+]</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- V2 Step 07 -->
+          <div class="step-card">
+            <div class="step-bullet">V7</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Phase 07 • Context Assembly & Quality Gate</span>
+                <h3 class="step-name">Context Assembler & Token Quota Manager</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-cyan">ContextAssembler</span>
+                <span class="badge badge-gray">retrieval/context.py</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">backend/app/retrieval/context.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Method Name</span>
+                <span class="meta-value">ContextAssembler.assemble(retrieval: RetrievalResult)</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Quality Gate</span>
+                <span class="meta-value">Query-Type Aware Threshold (0.10 - 0.50)</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              Packages graph facts and vector chunks into bounded context:
+              <ul>
+                <li><strong>Priority 1</strong>: Verified graph facts (capped at <code>graph_fact_quota × token_budget</code>).</li>
+                <li><strong>Priority 2</strong>: Pre-computed markdown exposure tables (for exposure queries).</li>
+                <li><strong>Priority 3</strong>: Vector chunks ordered by relevance score (capped at <code>vector_quota × token_budget</code>).</li>
+                <li><strong>Quality Gate Evaluation</strong>: Calculates <code>quality_score</code> and checks against <code>_QUALITY_THRESHOLDS[query_type]</code>.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- V2 Step 08 -->
+          <div class="step-card">
+            <div class="step-bullet">V8</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Phase 08 • LLM Streaming Synthesis</span>
+                <h3 class="step-name">Synthesizer Stream Completion (Groq API)</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-purple">Synthesizer</span>
+                <span class="badge badge-blue">complete_stream()</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">backend/app/retrieval/synthesizer.py & core/llm.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Method Name</span>
+                <span class="meta-value">self._synthesizer._llm.complete_stream(prompt, system)</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              Retrieves the <code>synthesis_system</code> prompt and invokes the streaming LLM client:
+              <pre class="code-block">
+async for text_chunk in self._synthesizer._llm.complete_stream(
+    prompt=f"Query: {effective_query}\n\nContext:\n{ctx_text}",
+    system=system_prompt,
+):
+    full_answer += text_chunk
+    yield {"type": "answer_chunk", "text": text_chunk, "index": chunk_index}</pre>
+              Each token chunk is yielded as an SSE <code>event: chunk</code> to the browser.
+            </div>
+          </div>
+
+          <!-- V2 Step 09 & 10 -->
+          <div class="step-card">
+            <div class="step-bullet">V9-10</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Phase 09 & 10 • Metrics & Audit Persistence</span>
+                <h3 class="step-name">Semantic Cache Write & Forensic Evidence Audit</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-emerald">Cache Write</span>
+                <span class="badge badge-gray">query_evidence_recorder.py</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              <ol>
+                <li><strong>Cache Write</strong>: <code>cache.store(effective_query, {...})</code> stores the generated answer, citations, and graph facts.</li>
+                <li><strong>Metrics Record</strong>: <code>_record(...)</code> logs latency, entities count, graph edges count, and vector chunk counts into <code>QueryMetrics</code> store.</li>
+                <li><strong>Done Signal</strong>: Yields SSE <code>event: done</code> with response ID and execution trace.</li>
+                <li><strong>Audit Logging</strong>: In [chat.py](file:///C:/Users/Laptopadmin/Desktop/context-engineering/backend/app/api/routes/chat.py#L343), <code>record_v2_contextgraph_turn</code> writes full forensic telemetry to the SQLite database.</li>
+              </ol>
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB 2: NON-STREAMING V2 FLOW -->
+    <div id="v2-sync-tab" class="tab-content">
+      <section id="v2-sync">
+        <h2 class="section-title">🔄 Synchronous V2 Flow: RetrievalOrchestrator.answer()</h2>
+        <p class="section-subtitle">Executed for synchronous REST queries at <code>POST /api/chat/v2</code> or <code>POST /api/query/v2</code>.</p>
+
+        <div class="diagram-wrapper">
+          <pre class="mermaid">
+flowchart TD
+    A["POST /api/chat/v2 (ChatRequest)"] --> B["chat.py: _run_v2_chat()"]
+    B --> C["RetrievalOrchestrator.answer()"]
+    C --> D{"Semantic Cache Hit?"}
+    D -- "Yes" --> E["Return Cached OrchestratorResponse"]
+    D -- "No" --> F["IntentClassifier.classify()"]
+    F --> G["EntityResolver.resolve_surface_form() [Parallel]"]
+    G --> H["QueryPlanner.plan() [Decomposition]"]
+    H --> I["HyDE Document Expansion"]
+    I --> J["Parallel Graph Traversal & Vector Search"]
+    J --> K["ContextAssembler.assemble() & Quality Gate"]
+    K --> L["Synthesizer.synthesize() (JSON Schema Structured Output)"]
+    L --> M["SemanticCache.store() & QueryMetrics.record()"]
+    M --> N["query_evidence_recorder.record_v2_contextgraph_turn()"]
+    N --> O["Return ChatResponse JSON"]
+          </pre>
+        </div>
+
+        <div class="step-card">
+          <div class="step-header">
+            <div class="step-title-group">
+              <span class="step-number">Synchronous Endpoint Function</span>
+              <h3 class="step-name">_run_v2_chat(request: ChatRequest, container: Container) -> ChatResponse</h3>
+            </div>
+            <div class="badges">
+              <span class="badge badge-purple">chat.py:38</span>
+              <span class="badge badge-gray">Non-Streaming</span>
+            </div>
+          </div>
+          <div class="step-desc">
+            In non-streaming mode, <code>container.orchestrator.answer()</code> runs all stages asynchronously and returns an <code>OrchestratorResponse</code>
+            containing <code>(intent, retrieval, context, synthesis, trace, metrics)</code>.
+            It constructs the full <code>ChatResponse</code> object containing <code>traditional</code>, <code>hybrid</code>, <code>graph_highlight</code>,
+            and creates a skeleton <code>ResponseFeedback</code> record in <code>data.db</code> so the user can immediately submit ratings or corrections.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB 3: METHOD MATRIX -->
+    <div id="v2-matrix-tab" class="tab-content">
+      <section id="v2-matrix">
+        <h2 class="section-title">📋 V2 Orchestrator Method & Component Reference Matrix</h2>
+        <p class="section-subtitle">Exhaustive technical inventory of classes, files, inputs, and outputs across the V2 pipeline.</p>
+
+        <div class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Phase</th>
+                <th>Component</th>
+                <th>File Location</th>
+                <th>Method Name</th>
+                <th>Input Types</th>
+                <th>Output Types</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>V0</strong></td>
+                <td><span class="badge badge-purple">Orchestrator</span></td>
+                <td><span class="code-pill">retrieval/orchestrator.py</span></td>
+                <td><code>answer_stream()</code></td>
+                <td><code>query: str, history: list, session_id: str</code></td>
+                <td><code>AsyncGenerator[dict, None]</code></td>
+              </tr>
+              <tr>
+                <td><strong>V1</strong></td>
+                <td><span class="badge badge-emerald">Semantic Cache</span></td>
+                <td><span class="code-pill">retrieval/cache.py</span></td>
+                <td><code>lookup()</code></td>
+                <td><code>query: str, corpus_version: str</code></td>
+                <td><code>dict | None (cached_entry)</code></td>
+              </tr>
+              <tr>
+                <td><strong>V2</strong></td>
+                <td><span class="badge badge-purple">Classifier</span></td>
+                <td><span class="code-pill">retrieval/intent.py</span></td>
+                <td><code>classify()</code></td>
+                <td><code>query: str</code></td>
+                <td><code>QueryIntent (Pydantic model)</code></td>
+              </tr>
+              <tr>
+                <td><strong>V3</strong></td>
+                <td><span class="badge badge-cyan">Entity Resolver</span></td>
+                <td><span class="code-pill">extraction/resolver.py</span></td>
+                <td><code>resolve_surface_form()</code></td>
+                <td><code>surface: str</code></td>
+                <td><code>ResolutionResult(entity, confidence)</code></td>
+              </tr>
+              <tr>
+                <td><strong>V3.5</strong></td>
+                <td><span class="badge badge-purple">Text-to-Cypher</span></td>
+                <td><span class="code-pill">engine/text_to_cypher.py</span></td>
+                <td><code>generate_and_run_with_correction()</code></td>
+                <td><code>query: str, product_names: set</code></td>
+                <td><code>rows: list[dict], usage: dict</code></td>
+              </tr>
+              <tr>
+                <td><strong>V3.6</strong></td>
+                <td><span class="badge badge-blue">Query Planner</span></td>
+                <td><span class="code-pill">retrieval/planner.py</span></td>
+                <td><code>plan()</code></td>
+                <td><code>query: str</code></td>
+                <td><code>ExecutionPlan(sub_tasks, is_complex)</code></td>
+              </tr>
+              <tr>
+                <td><strong>V4.5</strong></td>
+                <td><span class="badge badge-blue">HyDE Generator</span></td>
+                <td><span class="code-pill">retrieval/hyde.py</span></td>
+                <td><code>generate_hypothetical_document()</code></td>
+                <td><code>query: str</code></td>
+                <td><code>hyde_doc: str, latency_ms: float</code></td>
+              </tr>
+              <tr>
+                <td><strong>V4</strong></td>
+                <td><span class="badge badge-purple">Graph Traversal</span></td>
+                <td><span class="code-pill">retrieval/traversal.py</span></td>
+                <td><code>traverse()</code></td>
+                <td><code>intent: QueryIntent, entities: list[BaseEntity]</code></td>
+                <td><code>tuple[list[GraphFact], list[str], list[str]]</code></td>
+              </tr>
+              <tr>
+                <td><strong>V5</strong></td>
+                <td><span class="badge badge-blue">Vector Store</span></td>
+                <td><span class="code-pill">vector/client.py</span></td>
+                <td><code>search()</code></td>
+                <td><code>query: str, top_k: int, taxonomy_paths: list</code></td>
+                <td><code>hits: list[dict]</code></td>
+              </tr>
+              <tr>
+                <td><strong>V7</strong></td>
+                <td><span class="badge badge-cyan">Context Assembler</span></td>
+                <td><span class="code-pill">retrieval/context.py</span></td>
+                <td><code>assemble()</code></td>
+                <td><code>retrieval: RetrievalResult</code></td>
+                <td><code>AssembledContext(context_text, quality_score)</code></td>
+              </tr>
+              <tr>
+                <td><strong>V8</strong></td>
+                <td><span class="badge badge-purple">Synthesizer</span></td>
+                <td><span class="code-pill">retrieval/synthesizer.py</span></td>
+                <td><code>synthesize()</code></td>
+                <td><code>query: str, context: AssembledContext</code></td>
+                <td><code>SynthesisOutput (answer, citations, rows)</code></td>
+              </tr>
+              <tr>
+                <td><strong>V8.stream</strong></td>
+                <td><span class="badge badge-purple">LLM Client</span></td>
+                <td><span class="code-pill">core/llm.py</span></td>
+                <td><code>complete_stream()</code></td>
+                <td><code>prompt: str, system: str</code></td>
+                <td><code>AsyncGenerator[str, None] (tokens)</code></td>
+              </tr>
+              <tr>
+                <td><strong>V9</strong></td>
+                <td><span class="badge badge-emerald">Metrics</span></td>
+                <td><span class="code-pill">core/metrics.py</span></td>
+                <td><code>record()</code></td>
+                <td><code>metrics: QueryMetrics</code></td>
+                <td>Persisted in SQLite / in-memory buffer</td>
+              </tr>
+              <tr>
+                <td><strong>V10</strong></td>
+                <td><span class="badge badge-gray">Evidence Audit</span></td>
+                <td><span class="code-pill">retrieval/query_evidence_recorder.py</span></td>
+                <td><code>record_v2_contextgraph_turn()</code></td>
+                <td><code>session_id: str, hybrid: dict, trace: dict</code></td>
+                <td>Row written to <code>query_evidence</code> table</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB 4: DATA MODELS & CONTRACTS -->
+    <div id="v2-models-tab" class="tab-content">
+      <section id="v2-models">
+        <h2 class="section-title">📦 V2 Core Data Models & Schemas</h2>
+        <p class="section-subtitle">Typed Pydantic contracts passed between pipeline phases in <code>backend/app/models/query.py</code>.</p>
+
+        <div class="io-container">
+          <div class="io-box">
+            <div class="io-header in">QueryIntent Model (retrieval/intent.py)</div>
+            <pre class="code-block">
+class QueryIntent(BaseModel):
+    query_type: QueryType
+    entities_mentioned: list[str] = Field(default_factory=list)
+    taxonomy_paths: list[str] = Field(default_factory=list)
+    requires_graph: bool = True
+    requires_vector: bool = True
+    requires_cypher: bool = False
+    aggregation_type: str = ""
+    reasoning: Optional[str] = None</pre>
+          </div>
+
+          <div class="io-box">
+            <div class="io-header out">AssembledContext Model (retrieval/context.py)</div>
+            <pre class="code-block">
+class AssembledContext(BaseModel):
+    context_text: str
+    sources: list[SourceAttribution] = Field(default_factory=list)
+    quality_score: float = 1.0
+    passed_quality_gate: bool = True
+    graph_fact_count: int = 0
+    chunk_count: int = 0
+    total_tokens: int = 0</pre>
+          </div>
+        </div>
+
+        <div class="io-container" style="margin-top: 1rem;">
+          <div class="io-box">
+            <div class="io-header in">GraphFact Model (models/query.py)</div>
+            <pre class="code-block">
+class GraphFact(BaseModel):
+    statement: str
+    subject: str
+    predicate: str
+    object: str
+    properties: dict[str, Any] = Field(default_factory=dict)
+    confidence: float = 1.0
+    source_document: Optional[str] = None
+    traversal_path: Optional[str] = None</pre>
+          </div>
+
+          <div class="io-box">
+            <div class="io-header out">SynthesisOutput Model (models/query.py)</div>
+            <pre class="code-block">
+class SynthesisOutput(BaseModel):
+    answer: str
+    structured_rows: list[dict[str, Any]] = Field(default_factory=list)
+    compliance_note: Optional[str] = None
+    citations: list[Citation] = Field(default_factory=list)
+    provenance: list[dict[str, Any]] = Field(default_factory=list)
+    confidence: str = "high"</pre>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  </div>
+
+  <footer>
+    <div class="container">
+      <p><strong>NuSummit ContextGraph Engine — V2 Orchestrator Reference</strong></p>
+      <p style="margin-top: 0.35rem; color: #94a3b8;">Generated for <code>query_engine = "v2"</code> architectural pair programming and debugging.</p>
+    </div>
+  </footer>
+
+  <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      const activeContent = document.getElementById(tabId);
+      if (activeContent) {
+        activeContent.classList.add('active');
+      }
+
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

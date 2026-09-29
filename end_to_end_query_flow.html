@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>End-to-End Query Execution Flow — NuSummit ContextGraph Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        securityLevel: 'loose',
+        flowchart: { curve: 'basis' }
+      });
+    });
+  </script>
+  <style>
+    :root {
+      --bg-body: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-code: #f8fafc;
+      --border-color: #e2e8f0;
+      --border-focus: #94a3b8;
+      
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-subtle: #64748b;
+      
+      --primary: #2563eb;
+      --primary-light: #eff6ff;
+      --primary-border: #bfdbfe;
+      
+      --success: #059669;
+      --success-light: #ecfdf5;
+      --success-border: #a7f3d0;
+      
+      --warning: #d97706;
+      --warning-light: #fffbeb;
+      --warning-border: #fde68a;
+      
+      --purple: #7c3aed;
+      --purple-light: #f5f3ff;
+      --purple-border: #ddd6fe;
+
+      --cyan: #0891b2;
+      --cyan-light: #ecfeff;
+      --cyan-border: #a5f3fc;
+      
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.03);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Top Navigation Header */
+    header.top-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .header-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0.85rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-badge {
+      background: var(--primary);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 0.5rem;
+      list-style: none;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      transition: all 0.15s ease-in-out;
+    }
+
+    .nav-links a:hover {
+      background: var(--bg-subtle);
+      color: var(--primary);
+    }
+
+    .btn-action {
+      background: var(--primary);
+      color: #ffffff !important;
+    }
+    .btn-action:hover {
+      background: #1d4ed8 !important;
+      color: #ffffff !important;
+    }
+
+    /* Layout */
+    .container {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+    }
+
+    /* Hero Section */
+    .hero {
+      background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+      border: 1px solid var(--primary-border);
+      border-radius: 12px;
+      padding: 2.5rem 2rem;
+      margin-bottom: 2.5rem;
+      box-shadow: var(--shadow-md);
+    }
+
+    .hero-tag {
+      display: inline-block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid var(--primary-border);
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      margin-bottom: 1rem;
+    }
+
+    .hero h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.025em;
+    }
+
+    .hero p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 950px;
+      margin-bottom: 1.5rem;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: 0.25rem;
+    }
+
+    /* Section Styling */
+    section {
+      margin-bottom: 3.5rem;
+      scroll-margin-top: 5rem;
+    }
+
+    .section-title {
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .section-subtitle {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin-bottom: 1.75rem;
+    }
+
+    /* Diagram Card */
+    .diagram-wrapper {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      overflow-x: auto;
+      margin-bottom: 2rem;
+    }
+
+    /* Tab Controls */
+    .tab-bar {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 1.5rem;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: var(--primary-light);
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Step Timeline Card */
+    .timeline {
+      position: relative;
+      padding-left: 2rem;
+      margin-left: 1rem;
+      border-left: 2px solid #cbd5e1;
+    }
+
+    .step-card {
+      position: relative;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+
+    .step-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--border-focus);
+    }
+
+    .step-bullet {
+      position: absolute;
+      left: -2.85rem;
+      top: 1.5rem;
+      width: 1.7rem;
+      height: 1.7rem;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 0 4px #ffffff;
+    }
+
+    .step-bullet.success { background: var(--success); }
+    .step-bullet.purple { background: var(--purple); }
+    .step-bullet.warning { background: var(--warning); }
+    .step-bullet.cyan { background: var(--cyan); }
+
+    .step-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .step-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .step-number {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .step-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .badges {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-primary { background: var(--primary-light); color: var(--primary); border: 1px solid var(--primary-border); }
+    .badge-success { background: var(--success-light); color: var(--success); border: 1px solid var(--success-border); }
+    .badge-warning { background: var(--warning-light); color: var(--warning); border: 1px solid var(--warning-border); }
+    .badge-purple { background: var(--purple-light); color: var(--purple); border: 1px solid var(--purple-border); }
+    .badge-cyan { background: var(--cyan-light); color: var(--cyan); border: 1px solid var(--cyan-border); }
+    .badge-gray { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+
+    /* Metadata Grid (File, Method, Latency) */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 0.75rem;
+      background: var(--bg-subtle);
+      border-radius: 8px;
+      padding: 0.9rem;
+      margin-bottom: 1.2rem;
+      font-size: 0.85rem;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .meta-label {
+      font-weight: 600;
+      color: var(--text-subtle);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .meta-value {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-main);
+      font-weight: 500;
+      word-break: break-all;
+    }
+
+    .meta-value a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .meta-value a:hover {
+      text-decoration: underline;
+    }
+
+    .step-desc {
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      font-size: 0.95rem;
+    }
+
+    .step-desc ul {
+      margin-left: 1.25rem;
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .step-desc li {
+      margin-bottom: 0.25rem;
+    }
+
+    /* I/O Blocks */
+    .io-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    @media (max-width: 900px) {
+      .io-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .io-box {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-card);
+      overflow: hidden;
+    }
+
+    .io-header {
+      background: var(--bg-subtle);
+      padding: 0.45rem 0.85rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .io-header.in { color: var(--primary); }
+    .io-header.out { color: var(--success); }
+
+    pre.code-block {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      padding: 0.85rem;
+      background: var(--bg-code);
+      color: #1e293b;
+      overflow-x: auto;
+      max-height: 250px;
+      line-height: 1.45;
+    }
+
+    /* Table Styling */
+    .table-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      box-shadow: var(--shadow-sm);
+      overflow-x: auto;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+      text-align: left;
+    }
+
+    table.data-table th {
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    table.data-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: top;
+      color: var(--text-muted);
+    }
+
+    table.data-table tr:hover td {
+      background-color: #f8fafc;
+    }
+
+    .code-pill {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-subtle);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      color: #0f172a;
+      border: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+
+    /* Callout Alert */
+    .callout {
+      border-left: 4px solid var(--primary);
+      background: var(--primary-light);
+      padding: 1rem 1.25rem;
+      border-radius: 0 8px 8px 0;
+      margin: 1.25rem 0;
+      font-size: 0.95rem;
+      color: #1e3a8a;
+    }
+    .callout-title {
+      font-weight: 700;
+      margin-bottom: 0.3rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    footer {
+      border-top: 1px solid var(--border-color);
+      background: #ffffff;
+      padding: 2rem 0;
+      text-align: center;
+      color: var(--text-subtle);
+      font-size: 0.875rem;
+      margin-top: 4rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="top-header">
+    <div class="header-container">
+      <div class="brand">
+        <span class="brand-badge">NuSummit AMC</span>
+        <span class="brand-title">ContextGraph Engine Trace</span>
+      </div>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="#overview">Overview</a></li>
+          <li><a href="#sequence-diagram">Architecture Sequence</a></li>
+          <li><a href="#flow-legacy">Legacy Hybrid Pipeline</a></li>
+          <li><a href="#flow-v2">V2 Orchestrator Pipeline</a></li>
+          <li><a href="#matrix">Master Execution Matrix</a></li>
+          <li><a href="#sse-protocol">SSE Protocol</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container">
+    
+    <!-- Hero Header -->
+    <div class="hero" id="overview">
+      <span class="hero-tag">System Architecture & Codebase Walkthrough</span>
+      <h1>From User Query to Streamed Answer: Complete End-to-End Flow</h1>
+      <p>
+        An exhaustive step-by-step trace of how a question typed into the React frontend travels across network boundaries,
+        through FastAPI streaming routes, down into dual-layer NER, Neo4j knowledge graph traversals, FAISS cross-encoder reranked vector search,
+        and out through Groq LLM token streaming back to the user interface.
+      </p>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Entrypoint Route</div>
+          <div class="stat-value" style="font-size: 1.1rem; word-break: break-all;">POST /api/chat/stream</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Streaming Format</div>
+          <div class="stat-value">SSE (text/event-stream)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Knowledge Store</div>
+          <div class="stat-value">Neo4j + FAISS</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Default LLM</div>
+          <div class="stat-value">Groq Llama-3.3</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sequence Diagram Section -->
+    <section id="sequence-diagram">
+      <h2 class="section-title">📊 Architectural Sequence Diagram</h2>
+      <p class="section-subtitle">Visual timeline of network roundtrips, async worker thread delegation, and Server-Sent Event yields.</p>
+      
+      <div class="diagram-wrapper">
+        <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as 👤 User
+    participant ChatTab as 🖥️ ChatTab.jsx<br/>(React Frontend)
+    participant ApiClient as 🌐 api.js<br/>(Service Client)
+    participant FastAPIRoute as ⚡ chat.py<br/>(chat_stream)
+    participant ContextMem as 🧠 context_memory.py<br/>(Coreference)
+    participant Retrieval as ⚙️ retrieval.py<br/>(hybrid_graphrag)
+    participant IntentCache as ⚡ intent_cache.py<br/>(O(1) & Cosine)
+    participant Neo4j as 🕸️ graph_store.py<br/>(Neo4j UNWIND)
+    participant FAISS as 📚 faiss_store.py<br/>(FAISS + CrossEncoder)
+    participant LLM as 🤖 llm_text_client.py<br/>(Groq Stream)
+    participant Evidence as 🛡️ query_evidence_recorder<br/>(Audit DB)
+
+    User->>ChatTab: Types query (e.g. "What is the exit load for Scheme X?")
+    ChatTab->>ApiClient: sendChatStream({ query, history, session_id, mode })
+    ApiClient->>FastAPIRoute: POST /api/chat/stream (SSE Connection)
+
+    rect rgb(240, 248, 255)
+    Note over FastAPIRoute,Evidence: Backend Execution inside _chat_stream_generator
+    FastAPIRoute->>ContextMem: resolve_coreferences(query, history)
+    ContextMem-->>FastAPIRoute: resolved_query (self-contained prompt)
+
+    FastAPIRoute->>Retrieval: run_worker() in thread -> hybrid_graphrag(...)
+    Retrieval->>IntentCache: fingerprint_probe() / lookup()
+    
+    par Knowledge Graph & Dense Vector Retrieval
+        Retrieval->>Neo4j: get_subgraph_for_query_with_fallback(...)
+        Neo4j-->>Retrieval: graph_result (nodes, edges, matched_by)
+    and Vector Search & Reranking
+        Retrieval->>FAISS: retrieve(query, top_k=5, rerank=True)
+        FAISS-->>Retrieval: hits (dense child search + Cross-Encoder rerank)
+    end
+
+    Retrieval->>Retrieval: Vector Gating (Pillars 1 & 3) + RRF Alignment
+    Retrieval-->>FastAPIRoute: sources_callback(docs)
+    FastAPIRoute-->>ApiClient: SSE event: sources
+    ApiClient-->>ChatTab: onSources -> Renders Document Pills
+
+    Retrieval->>LLM: stream_llm(SYSTEM_SYNTHESIS_PROMPT, user_prompt)
+    loop Token by Token Stream
+        LLM-->>Retrieval: token chunk
+        Retrieval-->>FastAPIRoute: on_chunk(chunk, idx)
+        FastAPIRoute-->>ApiClient: SSE event: chunk (answer_chunk)
+        ApiClient-->>ChatTab: onChunk -> Typewriter live update
+    end
+
+    Retrieval->>Retrieval: cross_validate_answer() (Pillar 5 Grounding)
+    Retrieval->>Evidence: record_contextgraph_turn(...) (Governance Log)
+    Retrieval-->>FastAPIRoute: Done signal (hybrid payload & telemetry)
+    end
+
+    FastAPIRoute-->>ApiClient: SSE event: done (complete)
+    ApiClient-->>ChatTab: onComplete(data) -> adaptHybridResponse()
+    ChatTab-->>User: Complete Assistant Card (Markdown, Citations, Graph Highlights)
+        </pre>
+      </div>
+    </section>
+
+    <!-- Interactive Navigation Tabs -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('tab-legacy')">1. Legacy Hybrid GraphRAG Flow (Default)</button>
+      <button class="tab-btn" onclick="switchTab('tab-v2')">2. V2 Agentic Orchestrator Flow</button>
+      <button class="tab-btn" onclick="switchTab('tab-comparison')">3. Step-by-Step Method Reference Table</button>
+    </div>
+
+    <!-- TAB 1: LEGACY HYBRID FLOW -->
+    <div id="tab-legacy" class="tab-content active">
+      <section id="flow-legacy">
+        <h2 class="section-title">⚡ Detailed Step-by-Step: Legacy Hybrid GraphRAG Engine</h2>
+        <p class="section-subtitle">This is the default production path executed when <code>QUERY_ENGINE="legacy"</code>.</p>
+
+        <div class="timeline">
+
+          <!-- Step 1 -->
+          <div class="step-card">
+            <div class="step-bullet">1</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Step 01 • Client UI</span>
+                <h3 class="step-name">User Query Input & UI State Transition</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-primary">Frontend</span>
+                <span class="badge badge-gray">React</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">mf-context-engine/src/views/ChatTab.jsx</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Function / Handler</span>
+                <span class="meta-value">handleSend()</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Trigger</span>
+                <span class="meta-value">User presses [Enter] or clicks Send</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              When the user enters text in the chat input, <code>handleSend()</code> is called. It verifies the query is not empty,
+              calculates <code>turnIndex = Math.floor(currentHistory.length / 2) + 1</code>, and creates an <code>AbortController</code> instance
+              for cancellation. It appends the user's message and an assistant placeholder with <code>loading: true</code> into the local chat state,
+              then invokes the API streaming client.
+            </div>
+
+            <div class="io-container">
+              <div class="io-box">
+                <div class="io-header in">Input Arguments</div>
+                <pre class="code-block">
+chatQuery: "What is the exit load for Kotak Emerging Equity Fund?"
+chatSessionId: "sess-1727000000"
+history: [
+  { role: "user", content: "Tell me about Kotak Fund" },
+  { role: "assistant", content: "..." }
+]</pre>
+              </div>
+              <div class="io-box">
+                <div class="io-header out">Output / State Updates</div>
+                <pre class="code-block">
+setIsStreaming(true);
+setStreamingAnswer("");
+setProgressiveSources([]);
+setChatHistory(sid, prev => [...prev, userMsg, loadingMsg]);
+// Calls sendChatStream({...})</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="step-card">
+            <div class="step-bullet">2</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Step 02 • Network Transport</span>
+                <h3 class="step-name">HTTP SSE Stream Request & Parser Setup</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-primary">Frontend Service</span>
+                <span class="badge badge-warning">HTTP POST</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">mf-context-engine/src/services/api.js</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Function Name</span>
+                <span class="meta-value">sendChatStream(params) & _parseSSEStream(...)</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Endpoint URL</span>
+                <span class="meta-value">POST /api/chat/stream</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              <code>sendChatStream</code> strips loading messages from history, adds exponential backoff retry handling (1s, 2s, 4s, 8s),
+              and triggers a <code>fetch()</code> request to the FastAPI server. The readable stream body is continuously read
+              by <code>_parseSSEStream</code>, which splits incoming buffers on newline delimiters, parses the <code>data:</code> payload,
+              and fires <code>onChunk</code>, <code>onSources</code>, <code>onMetadata</code>, or <code>onComplete</code> callbacks.
+            </div>
+
+            <div class="io-container">
+              <div class="io-box">
+                <div class="io-header in">HTTP Request Payload</div>
+                <pre class="code-block">
+POST /api/chat/stream HTTP/1.1
+Content-Type: application/json
+
+{
+  "query": "What is the exit load for Kotak Emerging Equity Fund?",
+  "history": [...],
+  "session_id": "sess-1727000000",
+  "mode": "contextgraph"
+}</pre>
+              </div>
+              <div class="io-box">
+                <div class="io-header out">SSE Connection Response</div>
+                <pre class="code-block">
+HTTP/1.1 200 OK
+Content-Type: text/event-stream
+Cache-Control: no-cache
+Connection: keep-alive
+X-Accel-Buffering: no
+
+(Stream remains open for frames)</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="step-card">
+            <div class="step-bullet">3</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Step 03 • API Route & Validation</span>
+                <h3 class="step-name">FastAPI Endpoint & Pydantic Sanitization</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-success">Backend Router</span>
+                <span class="badge badge-gray">FastAPI</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">backend/app/api/routes/chat.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Route Method</span>
+                <span class="meta-value">chat_stream(request: ChatRequest, container)</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Line Number</span>
+                <span class="meta-value">Lines 476 - 494</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              FastAPI matches the route registered in <code>app.main</code> at <code>/api/chat/stream</code>. The incoming JSON is validated
+              using the <code>ChatRequest</code> schema in <code>app.models.api</code>:
+              <ul>
+                <li><code>sanitize_user_query(v)</code> ensures the query text is clean and bounded ($1 \le \text{length} \le 2000$).</li>
+                <li><code>validate_session_id(v)</code> prevents path injection or malformed session identifiers.</li>
+                <li><code>get_container</code> dependency injects the singleton container with database drivers and configuration.</li>
+              </ul>
+              The method returns a <code>StreamingResponse</code> wrapping the asynchronous generator <code>_chat_stream_generator</code>.
+            </div>
+
+            <div class="io-container">
+              <div class="io-box">
+                <div class="io-header in">Validated Pydantic Model</div>
+                <pre class="code-block">
+request: ChatRequest(
+  query="What is the exit load for Kotak Emerging Equity Fund?",
+  session_id="sess-1727000000",
+  history=[...],
+  mode="contextgraph"
+)</pre>
+              </div>
+              <div class="io-box">
+                <div class="io-header out">Returned Object</div>
+                <pre class="code-block">
+StreamingResponse(
+  content=_chat_stream_generator(request, container),
+  media_type="text/event-stream",
+  headers=_STREAM_HEADERS
+)</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4 -->
+          <div class="step-card">
+            <div class="step-bullet">4</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Step 04 • Context Memory</span>
+                <h3 class="step-name">Multi-Turn Coreference Resolution</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-purple">LLM Pre-pass</span>
+                <span class="badge badge-gray">Context Memory</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">backend/app/engine/context_memory.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Function Name</span>
+                <span class="meta-value">resolve_coreferences(query, history)</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Model Used</span>
+                <span class="meta-value">Groq Light Model (llama-3.1-8b-instant)</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              If the request contains conversation history, ambiguous references and pronouns (e.g. <em>"Why is their limit higher?"</em>,
+              <em>"What about it?"</em>) must be resolved into self-contained questions before hitting vector indexes or graphs.
+              The function formats the last 4 turns into a structured prompt and asks the fast LLM to rewrite the query.
+              If no pronouns exist or the query is already explicit, it returns unchanged.
+            </div>
+
+            <div class="io-container">
+              <div class="io-box">
+                <div class="io-header in">Input Ambiguous Query & History</div>
+                <pre class="code-block">
+query: "What is their exit load?"
+history: [
+  {"role": "user", "content": "Tell me about HDFC Top 100 Fund."},
+  {"role": "assistant", "content": "HDFC Top 100 is an open-ended large-cap..."}
+]</pre>
+              </div>
+              <div class="io-box">
+                <div class="io-header out">Output Resolved Query</div>
+                <pre class="code-block">
+resolved_query: "What is the exit load for HDFC Top 100 Fund?"</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 5 -->
+          <div class="step-card">
+            <div class="step-bullet">5</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Step 05 • Async Worker Dispatch</span>
+                <h3 class="step-name">Asyncio Queue & Worker Thread Bridging</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-success">Backend Concurrency</span>
+                <span class="badge badge-gray">Asyncio.Queue</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">backend/app/api/routes/chat.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Function / Closure</span>
+                <span class="meta-value">_chat_stream_generator() -> run_worker()</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Mechanism</span>
+                <span class="meta-value">asyncio.create_task(asyncio.to_thread(run_worker))</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              FastAPI's event loop cannot be blocked by CPU-bound embeddings or synchronous Neo4j queries.
+              <code>_chat_stream_generator</code> creates an <code>asyncio.Queue</code> and passes thread-safe callbacks
+              (<code>on_metadata</code>, <code>on_sources</code>, <code>on_chunk</code>) to <code>run_worker()</code> executing in a background thread.
+              The generator loops on <code>queue.get()</code>, immediately formatting and yielding Server-Sent Event strings.
+            </div>
+          </div>
+
+          <!-- Step 6 -->
+          <div class="step-card">
+            <div class="step-bullet">6</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Step 06 • Retrieval Engine Entry</span>
+                <h3 class="step-name">Intent-Aware Cache Probe (O(1) & Cosine)</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-warning">Zero-Token Cache</span>
+                <span class="badge badge-gray">Intent Cache</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">backend/app/engine/retrieval.py & intent_cache.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Function Name</span>
+                <span class="meta-value">hybrid_graphrag(...) -> icache.fingerprint_probe()</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Latency Impact</span>
+                <span class="meta-value">&lt; 5 ms on cache hit</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              Inside <code>hybrid_graphrag</code>:
+              <ol>
+                <li>Classifies domain intent via <code>classify_domain_intent(query)</code> (e.g. <code>"mutual_fund"</code>, <code>"compliance"</code>).</li>
+                <li><strong>Stage 1 (O(1) Fingerprint Probe)</strong>: Checks SHA-256 normalized hash of the query in memory.</li>
+                <li><strong>Stage 2 (Vector Semantic Lookup)</strong>: If fingerprint misses, generates a query embedding and compares cosine similarity against cached questions ($\text{threshold} \ge 0.94$).</li>
+              </ol>
+              On a hit, it emits cached metadata, sources, and streams cached words instantly without touching Neo4j, FAISS, or Groq.
+            </div>
+          </div>
+
+          <!-- Step 7 -->
+          <div class="step-card">
+            <div class="step-bullet">7</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Step 07 • Entity & Query Classification</span>
+                <h3 class="step-name">Dual-Layer NER & Query Type Taxonomy</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-cyan">Information Extraction</span>
+                <span class="badge badge-gray">NER Pipeline</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Paths</span>
+                <span class="meta-value">backend/app/engine/ner_pipeline.py & query_classifier.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Functions</span>
+                <span class="meta-value">run_layers_ab(query), classify_query(query)</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              When a cache miss occurs, entity extraction and classification execute:
+              <ul>
+                <li><strong>Layer A (Deterministic)</strong>: Fast Trie / Dictionary matcher checks against known AMC schemes, AMC institutions, regulatory bodies (SEBI, AMFI), and statutory limits.</li>
+                <li><strong>Layer B (Semantic / Regex)</strong>: Extracts fuzzy scheme names, numerical thresholds, circular numbers, and financial dates.</li>
+                <li><strong>Query Classifier</strong>: Categorizes query into <code>"aggregation"</code>, <code>"comparison"</code>, <code>"direct_lookup"</code>, or <code>"general"</code>.</li>
+              </ul>
+              Fires <code>metadata_callback</code> to push the first SSE <code>event: metadata</code> to the frontend.
+            </div>
+
+            <div class="io-container">
+              <div class="io-box">
+                <div class="io-header in">Input Query</div>
+                <pre class="code-block">
+query: "Compare expense ratios of Kotak Emerging Equity and HDFC Mid-Cap"</pre>
+              </div>
+              <div class="io-box">
+                <div class="io-header out">Extracted Entities & Classification</div>
+                <pre class="code-block">
+query_entities: [
+  {"text": "Kotak Emerging Equity Fund", "label": "Scheme", "layer": "A"},
+  {"text": "HDFC Mid-Cap Opportunities", "label": "Scheme", "layer": "A"}
+]
+query_type: "comparison"</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 8 -->
+          <div class="step-card">
+            <div class="step-bullet">8</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Step 08 • Knowledge Graph Traversal</span>
+                <h3 class="step-name">Neo4j Relational Subgraph Traversal</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-success">Neo4j</span>
+                <span class="badge badge-gray">Cypher UNWIND</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">backend/app/engine/graph_store.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Function Name</span>
+                <span class="meta-value">get_subgraph_for_query_with_fallback(...)</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Pillar</span>
+                <span class="meta-value">Pillar 2: Single-Shot UNWIND Subgraph Traversal</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              Traverses the knowledge graph in Neo4j using single-shot Cypher queries (avoiding slow iterative N+1 queries):
+              <pre class="code-block" style="margin: 0.5rem 0;">
+MATCH (e:Entity) WHERE e.name IN $entity_names
+OPTIONAL MATCH (e)-[r]-(target:Entity)
+RETURN e.name AS s, type(r) AS rel, target.name AS o, r.confidence AS conf LIMIT 15</pre>
+              Returns structured triples describing facts like <code>[Kotak Emerging Equity] --HAS_EXPENSE_RATIO--> [1.85%]</code>.
+            </div>
+
+            <div class="io-container">
+              <div class="io-box">
+                <div class="io-header in">Input Entities</div>
+                <pre class="code-block">
+entity_names: ["Kotak Emerging Equity Fund"]
+hops: 1, limit: 15</pre>
+              </div>
+              <div class="io-box">
+                <div class="io-header out">Returned Subgraph Result</div>
+                <pre class="code-block">
+graph_result: {
+  "nodes": ["Kotak Emerging Equity Fund", "1.85%", "1% exit load before 1 year"],
+  "edges": [
+    {"s": "Kotak Emerging Equity Fund", "rel": "HAS_TER", "o": "1.85%"},
+    {"s": "Kotak Emerging Equity Fund", "rel": "HAS_EXIT_LOAD", "o": "1% before 1 yr"}
+  ],
+  "matched_by": "entity"
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 9 -->
+          <div class="step-card">
+            <div class="step-bullet">9</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Step 09 • Vector Retrieval & Reranking</span>
+                <h3 class="step-name">FAISS Parent-Child Search & Cross-Encoder Reranking</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-primary">FAISS</span>
+                <span class="badge badge-purple">Cross-Encoder</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">backend/app/engine/faiss_store.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Function Name</span>
+                <span class="meta-value">FAISSStore.retrieve(query, top_k_children=5, rerank=True)</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Models</span>
+                <span class="meta-value">all-MiniLM-L6-v2 (Embedder), ms-marco-MiniLM-L-6-v2 (Reranker)</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              Retrieves regulatory and document prose chunks through a 3-stage pipeline:
+              <ol>
+                <li><strong>Dense Embedding</strong>: Encodes query into a 384-dimensional dense vector.</li>
+                <li><strong>FAISS Search</strong>: Queries index for the nearest child text chunks.</li>
+                <li><strong>Parent Document Resolution</strong>: Looks up parent chunks to ensure surrounding context is not lost.</li>
+                <li><strong>Cross-Encoder Reranking</strong>: Jointly scores <code>(query, passage)</code> pairs with deep cross-attention, returning high-precision ordered hits.</li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- Step 10 -->
+          <div class="step-card">
+            <div class="step-bullet">10</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Step 10 • Fusion & Vector Gating</span>
+                <h3 class="step-name">Intent-Driven Vector Gating & Context Assembly</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-warning">Pillars 1 & 3</span>
+                <span class="badge badge-gray">Context Fusion</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">backend/app/engine/retrieval.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Key Logic</span>
+                <span class="meta-value">Score-Gap Sensitive Vector Pruning & RRF Fusion</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              Applies ContextGraph grounding rules before assembling the LLM prompt:
+              <ul>
+                <li><strong>Pillar 1 (Vector Bypass)</strong>: If Neo4j returned verified structural ground-truth ($\ge 3$ edges) for direct lookup / aggregation, vector search is bypassed to eliminate prose hallucination.</li>
+                <li><strong>Pillar 3 (Strict Vector Gate)</strong>: If `top1_score - top2_score > 0.10`, lower ranked noisy chunks are pruned from top-5 to top-1.</li>
+                <li><strong>RRF Document Alignment</strong>: Vector chunks matching the exact document of cited graph facts receive a $+0.05$ score boost.</li>
+                <li><strong>Emit Sources Event</strong>: Fires <code>sources_callback(docs)</code> which sends <code>event: sources</code> to the browser.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Step 11 -->
+          <div class="step-card">
+            <div class="step-bullet">11</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Step 11 • LLM Synthesis</span>
+                <h3 class="step-name">Streaming Token Generation via Groq API</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-purple">Groq LLM</span>
+                <span class="badge badge-primary">Token Stream</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Path</span>
+                <span class="meta-value">backend/app/engine/llm_text_client.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Function Name</span>
+                <span class="meta-value">stream_llm(system_prompt, user_prompt, model_id)</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Model</span>
+                <span class="meta-value">llama-3.3-70b-versatile or llama-3.1-8b-instant</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              Builds the grounded prompt containing compressed multi-turn history, verified graph facts, and reranked document prose.
+              Invokes the Groq completions endpoint with <code>stream=True</code>. As each token arrives from the Groq API:
+              <ol>
+                <li>Pushes token chunk to <code>stream_callback(chunk, index)</code>.</li>
+                <li>Worker puts <code>("chunk", {"type": "answer_chunk", "text": chunk, "index": index})</code> into <code>asyncio.Queue</code>.</li>
+                <li>Generator formats and yields <code>event: chunk\ndata: {...}\n\n</code> over the HTTP connection.</li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- Step 12 -->
+          <div class="step-card">
+            <div class="step-bullet">12</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Step 12 • Audit & Governance</span>
+                <h3 class="step-name">Grounding Validation & Query Evidence Recording</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-success">Audit Trail</span>
+                <span class="badge badge-gray">SQLite data.db</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Paths</span>
+                <span class="meta-value">backend/app/engine/retrieval.py & app/retrieval/query_evidence_recorder.py</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Functions</span>
+                <span class="meta-value">cross_validate_answer(), record_contextgraph_turn()</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              After LLM generation completes:
+              <ol>
+                <li><strong>Pillar 5 (Cross-Validation)</strong>: Evaluates whether numerical claims and entities in the answer are grounded in the retrieved sources, assigning a badge (<code>SUPPORTED</code> / <code>PARTIALLY_SUPPORTED</code>).</li>
+                <li><strong>Audit Evidence Logging</strong>: <code>record_contextgraph_turn</code> writes full forensic telemetry (response ID, query, retrieved triples, vector hits, token count, latencies) to the persistent database.</li>
+                <li><strong>Cache Indexing</strong>: Stores the response in <code>IntentAwareCache</code>.</li>
+                <li>Pushes <code>event: done</code> frame over SSE with full hybrid telemetry.</li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- Step 13 -->
+          <div class="step-card">
+            <div class="step-bullet">13</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">Step 13 • Final UI Render</span>
+                <h3 class="step-name">Stream Completion & Interactive Card Display</h3>
+              </div>
+              <div class="badges">
+                <span class="badge badge-primary">React UI</span>
+                <span class="badge badge-gray">AssistantMessage.jsx</span>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">File Paths</span>
+                <span class="meta-value">mf-context-engine/src/views/ChatTab.jsx & chat/AssistantMessage.jsx</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Method</span>
+                <span class="meta-value">onComplete(data) -> adaptHybridResponse()</span>
+              </div>
+            </div>
+
+            <div class="step-desc">
+              The browser receives <code>event: done</code>:
+              <ul>
+                <li>The loading skeleton is replaced with the finalized message.</li>
+                <li>Citations (e.g. <code>[1]</code>, <code>[graph]</code>) turn into clickable pills opening the PDF modal at the exact page.</li>
+                <li>Graph highlights render as interactive entity chips.</li>
+                <li>Governance badges (Pillars 1, 2, 5) and latency breakdowns are displayed.</li>
+                <li>Thumbs up/down feedback controls are bound to the unique <code>response_id</code>.</li>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB 2: V2 ORCHESTRATOR FLOW -->
+    <div id="tab-v2" class="tab-content">
+      <section id="flow-v2">
+        <h2 class="section-title">🚀 Detailed Step-by-Step: V2 Agentic Retrieval Orchestrator</h2>
+        <p class="section-subtitle">Executed when <code>QUERY_ENGINE="v2"</code> via <code>container.orchestrator.answer_stream()</code>.</p>
+
+        <div class="timeline">
+
+          <div class="step-card">
+            <div class="step-bullet purple">V1</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">V2 Step 01 • Multi-Turn Rewrite</span>
+                <h3 class="step-name">Query Pronoun Resolution & History Extraction</h3>
+              </div>
+              <div class="badges"><span class="badge badge-purple">orchestrator.py:818</span></div>
+            </div>
+            <div class="step-desc">
+              Extracts prior human messages from history and rewrites pronoun triggers (<em>those, these, them, it, they</em>)
+              into a combined query string: <code>f"{user_msgs[-1]} — {query}"</code>.
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-bullet purple">V2</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">V2 Step 02 • Safety & Compliance Guardrail</span>
+                <h3 class="step-name">Pre-Retrieval SEBI Compliance Filter</h3>
+              </div>
+              <div class="badges"><span class="badge badge-purple">orchestrator.py:833</span></div>
+            </div>
+            <div class="step-desc">
+              Inspects query against illegal promises under SEBI regulations (e.g. <em>"guaranteed return", "15% annual return", "promise return"</em>).
+              If triggered, immediately streams statutory regulatory refusal without executing any vector or graph searches.
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-bullet purple">V3</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">V2 Step 03 • Intent Classification</span>
+                <h3 class="step-name">Deep Intent Analysis & Requirements Identification</h3>
+              </div>
+              <div class="badges"><span class="badge badge-purple">app/retrieval/intent.py</span></div>
+            </div>
+            <div class="step-desc">
+              Calls <code>self._intent.classify(query)</code>. Outputs a Pydantic <code>QueryIntent</code> model specifying:
+              <code>query_type</code>, <code>entities_mentioned</code>, <code>requires_graph</code> (bool), <code>requires_vector</code> (bool),
+              and <code>requires_cypher</code> (bool). Emits SSE <code>event: metadata</code>.
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-bullet purple">V4</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">V2 Step 04 • Surface Form Resolution</span>
+                <h3 class="step-name">Parallelized Entity Resolution</h3>
+              </div>
+              <div class="badges"><span class="badge badge-purple">app/retrieval/entity_resolver.py</span></div>
+            </div>
+            <div class="step-desc">
+              Resolves informal user surface forms (e.g. <em>"HDFC Top 100"</em>) to formal Neo4j entity records using <code>asyncio.gather</code>.
+              Maps canonical IDs and relationships for downstream graph traversal.
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-bullet purple">V5</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">V2 Step 05 • HyDE Query Expansion</span>
+                <h3 class="step-name">Hypothetical Document Embeddings (HyDE)</h3>
+              </div>
+              <div class="badges"><span class="badge badge-purple">app/retrieval/hyde.py</span></div>
+            </div>
+            <div class="step-desc">
+              When vector search is required, calls <code>hyde.generate_hypothetical_document(query)</code>.
+              A fast LLM generates a synthetic regulatory answer snippet, which is concatenated to the vector query to dramatically increase cosine similarity against real scheme documents.
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-bullet purple">V6</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">V2 Step 06 • Concurrent Retrieval</span>
+                <h3 class="step-name">Parallel Graph Traversal & Vector Search</h3>
+              </div>
+              <div class="badges"><span class="badge badge-purple">orchestrator.py:989</span></div>
+            </div>
+            <div class="step-desc">
+              Executes graph traversal and vector retrieval concurrently via:
+              <pre class="code-block">graph_res, vector_res = await asyncio.gather(_stream_graph(), _stream_vector())</pre>
+              If Cypher aggregation is needed, runs auto-correcting text-to-Cypher in parallel.
+              Emits SSE <code>event: sources</code> as soon as vector chunks are ranked.
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-bullet purple">V7</div>
+            <div class="step-header">
+              <div class="step-title-group">
+                <span class="step-number">V2 Step 07 • Context Assembly & Streaming</span>
+                <h3 class="step-name">Context Assembler & LLM Synthesis</h3>
+              </div>
+              <div class="badges"><span class="badge badge-purple">app/retrieval/context_assembler.py</span></div>
+            </div>
+            <div class="step-desc">
+              <code>ContextAssembler.assemble(...)</code> structures graph facts and text chunks within a strict token budget.
+              Streams tokens via <code>self._synthesizer._llm.complete_stream(...)</code>, emitting <code>answer_chunk</code> SSE frames.
+              Logs forensic metrics to <code>query_evidence_recorder.record_v2_contextgraph_turn</code>.
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB 3: METHOD REFERENCE TABLE -->
+    <div id="tab-comparison" class="tab-content">
+      <section id="matrix">
+        <h2 class="section-title">📋 Master Execution Matrix: Step, File, Method, Input & Output</h2>
+        <p class="section-subtitle">Complete reference map across the entire request lifecycle.</p>
+
+        <div class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Step #</th>
+                <th>Layer</th>
+                <th>File Path</th>
+                <th>Method / Function</th>
+                <th>Input Data & Types</th>
+                <th>Output Data & Types</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>01</strong></td>
+                <td><span class="badge badge-primary">Frontend</span></td>
+                <td><span class="code-pill">ChatTab.jsx</span></td>
+                <td><code>handleSend()</code></td>
+                <td><code>chatQuery: string</code>, <code>history: list</code></td>
+                <td>Updates UI state; calls <code>sendChatStream()</code></td>
+              </tr>
+              <tr>
+                <td><strong>02</strong></td>
+                <td><span class="badge badge-primary">Frontend</span></td>
+                <td><span class="code-pill">services/api.js</span></td>
+                <td><code>sendChatStream()</code></td>
+                <td><code>{ query, history, session_id, mode }</code></td>
+                <td>HTTP <code>POST /api/chat/stream</code> (SSE)</td>
+              </tr>
+              <tr>
+                <td><strong>03</strong></td>
+                <td><span class="badge badge-success">API Route</span></td>
+                <td><span class="code-pill">routes/chat.py</span></td>
+                <td><code>chat_stream()</code></td>
+                <td><code>request: ChatRequest</code>, <code>container: Container</code></td>
+                <td><code>StreamingResponse(_chat_stream_generator)</code></td>
+              </tr>
+              <tr>
+                <td><strong>04</strong></td>
+                <td><span class="badge badge-purple">Memory</span></td>
+                <td><span class="code-pill">engine/context_memory.py</span></td>
+                <td><code>resolve_coreferences()</code></td>
+                <td><code>query: str</code>, <code>history: list[dict]</code></td>
+                <td><code>resolved_query: str</code></td>
+              </tr>
+              <tr>
+                <td><strong>05</strong></td>
+                <td><span class="badge badge-warning">Cache</span></td>
+                <td><span class="code-pill">engine/intent_cache.py</span></td>
+                <td><code>fingerprint_probe()</code></td>
+                <td><code>query: str</code>, <code>domain_intent: str</code></td>
+                <td><code>CachedResult | None</code></td>
+              </tr>
+              <tr>
+                <td><strong>06</strong></td>
+                <td><span class="badge badge-cyan">NER</span></td>
+                <td><span class="code-pill">engine/ner_pipeline.py</span></td>
+                <td><code>run_layers_ab()</code></td>
+                <td><code>query: str</code></td>
+                <td><code>list[dict]</code> (Layer A & B entities)</td>
+              </tr>
+              <tr>
+                <td><strong>07</strong></td>
+                <td><span class="badge badge-cyan">Classifier</span></td>
+                <td><span class="code-pill">engine/query_classifier.py</span></td>
+                <td><code>classify_query()</code></td>
+                <td><code>query: str</code></td>
+                <td><code>"aggregation" | "comparison" | ...</code></td>
+              </tr>
+              <tr>
+                <td><strong>08</strong></td>
+                <td><span class="badge badge-success">Graph DB</span></td>
+                <td><span class="code-pill">engine/graph_store.py</span></td>
+                <td><code>get_subgraph_for_query_with_fallback()</code></td>
+                <td><code>entity_names: list</code>, <code>hops: int</code></td>
+                <td><code>{"nodes": list, "edges": list, "matched_by": str}</code></td>
+              </tr>
+              <tr>
+                <td><strong>09</strong></td>
+                <td><span class="badge badge-primary">Vector DB</span></td>
+                <td><span class="code-pill">engine/faiss_store.py</span></td>
+                <td><code>store.retrieve()</code></td>
+                <td><code>query: str</code>, <code>top_k: int</code>, <code>rerank: bool</code></td>
+                <td><code>list[dict]</code> (hits with Cross-Encoder scores)</td>
+              </tr>
+              <tr>
+                <td><strong>10</strong></td>
+                <td><span class="badge badge-purple">Cypher</span></td>
+                <td><span class="code-pill">engine/text_to_cypher.py</span></td>
+                <td><code>generate_and_run_with_correction()</code></td>
+                <td><code>query: str</code>, <code>product_names: set</code></td>
+                <td><code>rows: list[dict]</code>, <code>usage: dict</code></td>
+              </tr>
+              <tr>
+                <td><strong>11</strong></td>
+                <td><span class="badge badge-purple">LLM</span></td>
+                <td><span class="code-pill">engine/llm_text_client.py</span></td>
+                <td><code>stream_llm()</code></td>
+                <td><code>system_prompt: str</code>, <code>user_prompt: str</code></td>
+                <td>Yields token chunks <code>(chunk: str, idx: int)</code></td>
+              </tr>
+              <tr>
+                <td><strong>12</strong></td>
+                <td><span class="badge badge-success">Validation</span></td>
+                <td><span class="code-pill">engine/retrieval.py</span></td>
+                <td><code>cross_validate_answer()</code></td>
+                <td><code>query</code>, <code>answer</code>, <code>docs</code>, <code>triplets</code></td>
+                <td><code>cv_report: dict</code> (Pillar 5 Grounding badge)</td>
+              </tr>
+              <tr>
+                <td><strong>13</strong></td>
+                <td><span class="badge badge-gray">Audit DB</span></td>
+                <td><span class="code-pill">retrieval/query_evidence_recorder.py</span></td>
+                <td><code>record_contextgraph_turn()</code></td>
+                <td><code>session_id</code>, <code>query</code>, <code>hybrid_payload</code></td>
+                <td>Persisted SQLite record in <code>data.db</code></td>
+              </tr>
+              <tr>
+                <td><strong>14</strong></td>
+                <td><span class="badge badge-primary">Frontend</span></td>
+                <td><span class="code-pill">services/api.js</span></td>
+                <td><code>_parseSSEStream()</code></td>
+                <td><code>ReadableStreamDefaultReader</code> chunks</td>
+                <td>Dispatches <code>onChunk</code>, <code>onSources</code>, <code>onComplete</code></td>
+              </tr>
+              <tr>
+                <td><strong>15</strong></td>
+                <td><span class="badge badge-primary">Frontend</span></td>
+                <td><span class="code-pill">chat/AssistantMessage.jsx</span></td>
+                <td><code>AssistantMessage()</code></td>
+                <td><code>message: Message</code>, <code>session_id: str</code></td>
+                <td>Renders Markdown, PDF links, Graph Chips</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- SSE Protocol Section -->
+    <section id="sse-protocol">
+      <h2 class="section-title">📡 Server-Sent Events (SSE) Wire Protocol</h2>
+      <p class="section-subtitle">Real-time event frames streamed over the persistent HTTP connection.</p>
+
+      <div class="io-container">
+        <div class="io-box">
+          <div class="io-header in">Event Type: metadata & sources</div>
+          <pre class="code-block">
+event: metadata
+data: {
+  "type": "metadata",
+  "query_type": "comparison",
+  "entities": ["Kotak Emerging Equity Fund", "HDFC Mid-Cap"],
+  "confidence": "high"
+}
+
+event: sources
+data: {
+  "type": "sources",
+  "sources": [
+    {
+      "name": "KOTAK_EMERGING_EQUITY_SID.pdf",
+      "score": 0.89,
+      "page": 14,
+      "snippet": "Exit load is 1% if redeemed within 1 year...",
+      "url": "/api/files/view?filename=KOTAK_EMERGING_EQUITY_SID.pdf&page=14"
+    }
+  ]
+}</pre>
+        </div>
+
+        <div class="io-box">
+          <div class="io-header out">Event Type: chunk & done</div>
+          <pre class="code-block">
+event: chunk
+data: {
+  "type": "answer_chunk",
+  "text": "The exit load for Kotak Emerging Equity Fund ",
+  "index": 0
+}
+
+event: chunk
+data: {
+  "type": "answer_chunk",
+  "text": "is 1% if redeemed within 365 days [1].",
+  "index": 1
+}
+
+event: done
+data: {
+  "type": "complete",
+  "response_id": "resp_a9b8c7d6e5f4",
+  "interaction_id": "int_1234567890ab",
+  "hybrid": {
+    "answer": { "answer": "...", "confidence": "high confidence" },
+    "sources": [...],
+    "graph_highlight": { "node_names": [...], "relationships": [...] },
+    "telemetry_breakdown": { "latency_total_pipeline_ms": 328.4 }
+  }
+}</pre>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <footer>
+    <div class="container">
+      <p><strong>NuSummit ContextGraph Engine</strong> — Architecture & Codebase Execution Reference</p>
+      <p style="margin-top: 0.35rem; color: #94a3b8;">Generated for pair programming and deep code comprehension.</p>
+    </div>
+  </footer>
+
+  <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      const activeContent = document.getElementById(tabId);
+      if (activeContent) {
+        activeContent.classList.add('active');
+      }
+
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

@@ -15,6 +15,7 @@ Implements Task 1.3 of the Chief Architect Implementation Plan.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from enum import Enum
 import logging
 import re
@@ -29,6 +30,20 @@ class CriticSeverity(str, Enum):
     SAFE = "safe"          # Safe to deliver to user
     WARNING = "warning"    # Deliver with verification disclaimer / lower confidence
     CRITICAL = "critical"  # Direct contradiction / severe compliance violation; escalate to queue
+    NONE = "none"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+@dataclass
+class CritiqueResult:
+    """Structured result from AnswerCritic evaluation."""
+    severity: CriticSeverity
+    confidence: float
+    tokens_used: int = 0
+    issues: List[str] = field(default_factory=list)
+    explanation: str = ""
 
 
 class AnswerCritic:
@@ -50,6 +65,32 @@ class AnswerCritic:
     def __init__(self, nli_evaluator: Optional[NLIEvaluator] = None, llm_client: Optional[Any] = None):
         self.nli_evaluator = nli_evaluator or get_nli_evaluator()
         self.llm_client = llm_client
+
+    async def critique_answer(
+        self,
+        query: str,
+        answer: str,
+        context: str = "",
+        intent: Optional[Any] = None,
+    ) -> CritiqueResult:
+        """
+        Evaluate generated answer and return structured CritiqueResult.
+        Designed for EvaluationRouter Tier 3 integration.
+        """
+        severity, details = await self.critique(query=query, answer=answer, context=context, intent=intent)
+        issues = details.get("issues", [])
+        score = float(details.get("score", 0.9))
+        recommendation = details.get("recommendation", "")
+        explanation = "; ".join(issues) if issues else (recommendation or "Answer verified against source context")
+        tokens_used = int(details.get("tokens_used", 0))
+
+        return CritiqueResult(
+            severity=severity,
+            confidence=score,
+            tokens_used=tokens_used,
+            issues=issues,
+            explanation=explanation,
+        )
 
     async def critique(
         self,

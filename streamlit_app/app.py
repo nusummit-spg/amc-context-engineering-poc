@@ -215,6 +215,32 @@ def _api(path: str, query: str) -> dict:
 def _to_traditional(resp: dict) -> dict:
     t = resp.get("traditional") or {}
     m = t.get("metrics") or {}
+    tb = m.get("telemetry_breakdown") or {}
+
+    # If telemetry_breakdown is absent (e.g. older response shapes), synthesize
+    # one from the individual timing/token keys that all paths populate.
+    if not tb:
+        retrieve_ms = m.get("retrieve_ms", 0) or 0
+        llm_ms = m.get("llm_ms", 0) or 0
+        inp = m.get("input_tokens", 0) or 0
+        out = m.get("output_tokens", 0) or 0
+        total_tok = m.get("total_tokens", 0) or (inp + out)
+        tb = {
+            "latency_vector_db_ms": float(retrieve_ms),
+            "latency_llm_generation_ms": float(llm_ms),
+            "latency_total_pipeline_ms": float(retrieve_ms + llm_ms),
+            "latency_graph_db_ms": 0.0,
+            "latency_ner_processing_ms": 0.0,
+            "latency_post_retrieval_processing_ms": 0.0,
+            "latency_rerank_ms": 0.0,
+            "tokens_input": inp,
+            "tokens_output": out,
+            "tokens_total": total_tok,
+            "db_candidates_surfaced": m.get("docs_returned", 0) or 0,
+            "vector_bypassed": False,
+            "pipeline_mode": m.get("note", "Traditional Vector RAG"),
+        }
+
     return {
         "answer": t.get("snippet") or "",
         "docs": [{
@@ -224,9 +250,9 @@ def _to_traditional(resp: dict) -> dict:
             "snippet": f.get("snippet") or "",
             "full_text": f.get("full_text") or "",
         } for f in t.get("files", [])],
-        "total_tokens": m.get("total_tokens", 0),
+        "total_tokens": m.get("total_tokens", 0) or tb.get("tokens_total", 0),
         "total_time": (resp.get("latency_ms") or 0) / 1000,
-        "telemetry_breakdown": m.get("telemetry_breakdown", {}),
+        "telemetry_breakdown": tb,
     }
 
 
@@ -248,10 +274,12 @@ def _to_hybrid(resp: dict) -> dict:
         "used_verified_aggregate": gh.get("used_verified_aggregate", False),
         "used_comparison_mode": gh.get("used_comparison_mode", False),
         "entity_summary": gh.get("entity_summary", []),
+        "provenance": gh.get("provenance", []),
         "total_tokens": gh.get("total_tokens", 0),
         "total_time": (resp.get("latency_ms") or 0) / 1000,
         "telemetry_breakdown": gh.get("telemetry_breakdown", {}),
     }
+
 
 
 # ── UI ──

@@ -184,7 +184,8 @@ class DissatisfactionDetector:
         self,
         follow_up_query: str,
         original_response: str = "",
-        original_query: str = ""
+        original_query: str = "",
+        previous_queries: Optional[list] = None
     ) -> Tuple[bool, Optional[StructuredClaim]]:
         """
         Main entry point for Step FD.
@@ -195,10 +196,20 @@ class DissatisfactionDetector:
 
         is_frustrated, sentiment_score = self._detect_frustration(follow_up_query)
         same_topic, similarity_score = self._check_same_referent(follow_up_query, original_query, original_response)
+
+        # If not matching original query directly, check previous queries in session history if available
+        if not same_topic and previous_queries:
+            for prev_q in reversed(previous_queries[-3:]):
+                match, sim = self._check_same_referent(follow_up_query, str(prev_q), "")
+                if match:
+                    same_topic = True
+                    similarity_score = max(similarity_score, sim)
+                    break
+
         has_correction_lang, intent_confidence = self._has_correction_language(follow_up_query)
 
-        # Decision: all 3 signals must indicate correction
-        is_correction = is_frustrated and same_topic and has_correction_lang
+        # Decision: all 3 signals indicate correction, or strong correction language with referent match
+        is_correction = (is_frustrated and same_topic and has_correction_lang) or (has_correction_lang and same_topic and intent_confidence >= 0.70)
 
         if not is_correction:
             return False, None

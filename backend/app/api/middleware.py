@@ -97,9 +97,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 
 class ValidationMiddleware(BaseHTTPMiddleware):
-    """Request logging and tracing middleware."""
+    """Request logging, profiling, and tracing middleware."""
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        try:
+            from app.core.errors import get_error_tracker
+            get_error_tracker().record_request()
+        except Exception:
+            pass
+
         t0 = time.perf_counter()
         response = await call_next(request)
         latency_ms = (time.perf_counter() - t0) * 1000
@@ -114,5 +120,11 @@ class ValidationMiddleware(BaseHTTPMiddleware):
                 latency_ms,
             )
 
+        response.headers["X-Process-Time"] = f"{int(latency_ms)}ms"
         response.headers["X-Process-Time-Ms"] = f"{latency_ms:.2f}"
         return response
+
+
+# ProfilingMiddleware alias for compatibility
+ProfilingMiddleware = ValidationMiddleware
+

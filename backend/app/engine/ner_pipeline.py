@@ -129,10 +129,26 @@ def _get_gliner():
     if _gliner_model is None:
         from gliner import GLiNER
         print("  [ner-b] Loading GLiNER…", flush=True)
-        try:
-            _gliner_model = GLiNER.from_pretrained(config.GLINER_MODEL_ID, local_files_only=True)
-        except Exception:
-            _gliner_model = GLiNER.from_pretrained(config.GLINER_MODEL_ID)
+        onnx_file = config.ONNX_GLINER_PATH
+        if config.ENABLE_ONNX_GLINER and onnx_file.exists():
+            try:
+                print(f"  [ner-b] Loading ONNX Quantized GLiNER from {onnx_file}…", flush=True)
+                _gliner_model = GLiNER.from_pretrained(
+                    str(onnx_file.parent),
+                    load_onnx_model=True,
+                    onnx_model_file=onnx_file.name,
+                    local_files_only=True,
+                )
+                print("  [ner-b] ONNX Quantized GLiNER ready.", flush=True)
+            except Exception as e:
+                print(f"  [ner-b] ONNX load failed ({e}), falling back to PyTorch...", flush=True)
+                _gliner_model = None
+
+        if _gliner_model is None:
+            try:
+                _gliner_model = GLiNER.from_pretrained(config.GLINER_MODEL_ID, local_files_only=True)
+            except Exception:
+                _gliner_model = GLiNER.from_pretrained(config.GLINER_MODEL_ID)
     return _gliner_model
 
 
@@ -267,3 +283,10 @@ def run_full_ner_for_chunk_set(children: List[Dict], parents: Dict[str, Dict]) -
         all_relations.extend(rels)
 
     return {"entities": all_entities, "relations": all_relations}
+
+
+def warmup():
+    """Warmup both rule and GLiNER NER models."""
+    _get_nlp()
+    _get_gliner()
+    print("  [NER Warmup] Done — both models cached in memory.", flush=True)

@@ -8,8 +8,9 @@
 """Application settings — loaded from environment / .env (WS1: secrets management)."""
 import logging
 from functools import lru_cache
+from typing import Optional
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger("config")
@@ -22,6 +23,9 @@ class Settings(BaseSettings):
     app_name: str = "NuSummit ContextGraph API"
     environment: str = "local"
     log_level: str = "INFO"
+    log_format: str = "text"                         # "text" | "json"
+    log_file: str = "logs/app.log"
+    enable_file_logging: bool = True
     cors_origins: str = "http://localhost:3000,http://localhost:5173,http://localhost:8080"
     query_engine: str = "legacy"                     # "legacy" | "v2" | "shadow" | "canary"
     canary_percentage: int = 0                       # 0 to 100 for canary traffic routing
@@ -58,6 +62,46 @@ class Settings(BaseSettings):
     # --- Guardrails & Invalidation Controls ---
     enable_pre_retrieval_guardrails: bool = True      # Short-circuits safety refusals in <5ms
     enable_cache_invalidation_on_ingest: bool = True  # Purges cache for target corpus on document activation
+
+    # --- Evaluation Tier Controls ---
+    enable_tier2_nli_evaluation: bool = False         # Master switch for Tier 2 NLI semantic alignment
+    enable_tier3_llm_judge: bool = False               # Master switch for Tier 3 LLM Judge arbitration
+    tier2_nli_confidence_threshold: float = 0.85      # STOP-2 gate confidence threshold
+    tier3_llm_severity_threshold: str = "HIGH"        # Threshold for Tier 3 LLM severity mapping
+
+    # ── Microservices Configuration ──────────────────────────────
+    microservices_mode: bool = Field(
+        default=False,
+        description="Enable microservices mode (separate service communication)"
+    )
+    feedback_service_url: Optional[str] = Field(
+        default=None,
+        description="Feedback Loop Service URL (e.g., http://feedback:8001)"
+    )
+    repair_service_url: Optional[str] = Field(
+        default=None,
+        description="Repair Engine Service URL (e.g., http://repair:8002)"
+    )
+    service_timeout: float = Field(
+        default=30.0,
+        ge=5.0,
+        le=300.0,
+        description="Timeout for inter-service calls (seconds)"
+    )
+    circuit_breaker_enabled: bool = Field(
+        default=True,
+        description="Enable circuit breaker for service calls"
+    )
+    circuit_breaker_failure_threshold: int = Field(
+        default=5,
+        ge=1,
+        description="Number of failures before opening circuit"
+    )
+    circuit_breaker_recovery_timeout: float = Field(
+        default=60.0,
+        ge=10.0,
+        description="Seconds to wait before attempting recovery"
+    )
 
     # --- Neo4j ---
     neo4j_uri: str = "bolt://localhost:7687"

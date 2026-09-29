@@ -17,7 +17,7 @@ Endpoints:
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
 import uuid
@@ -51,6 +51,7 @@ def get_failure_taxonomy() -> Dict[str, Any]:
 @require_roles([Role.REVIEWER, Role.COMPLIANCE_OFFICER, Role.ADMIN])
 def submit_feedback(
     payload: FeedbackIn,
+    background_tasks: BackgroundTasks,
     current_role: Role = Depends(get_client_role),
 ) -> Dict[str, Any]:
 
@@ -157,6 +158,19 @@ def submit_feedback(
                                 claim.resolved_entity_id, claim.attribute, claim.asserted_value)
             except Exception as claim_exc:
                 logger.debug("Structured claim extraction notice: %s", claim_exc)
+
+        # Trigger human-feedback-loop in background
+        try:
+            from app.services.feedback import trigger_feedback_loop
+            background_tasks.add_task(
+                trigger_feedback_loop,
+                feedback_id=feedback_id,
+                session_id=payload.session_id,
+                response_id=payload.response_id,
+                source="active",
+            )
+        except Exception as fb_loop_exc:
+            logger.warning("Could not queue feedback loop task: %s", fb_loop_exc)
 
         return result
     except Exception as exc:
@@ -320,6 +334,10 @@ class FollowUpDetectionIn(BaseModel):
     follow_up_query: str = Field(..., min_length=1, description="User's follow-up query text")
     original_response: Optional[str] = Field(None, description="Original response text if available")
     original_query: Optional[str] = Field(None, description="Original query text if available")
+    session_history: Optional[List[str]] = Field(default=None, description="Optional previous queries in session")
+
+
+FollowUpDetectionRequest = FollowUpDetectionIn
 
 
 _dissatisfaction_detector = None
@@ -336,11 +354,13 @@ def get_dissatisfaction_detector():
 @router.post("/follow-up-detection", response_model=Dict[str, Any])
 def detect_follow_up_correction(
     payload: FollowUpDetectionIn,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     current_role: Role = Depends(get_client_role)
 ) -> Dict[str, Any]:
     """
     Detect if a follow-up query is actually an implicit correction attempt.
-    If detected, auto-creates structured feedback in data.db (single source of truth).
+    If detected, auto-creates structured feedback in data.db and registers a provisional
+    patch in CorrectionPatchLayer (passive self-healing).
     """
     db = SessionLocal()
     try:
@@ -358,7 +378,8 @@ def detect_follow_up_correction(
             is_correction, claim = detector.is_correction_attempt(
                 follow_up_query=payload.follow_up_query,
                 original_response=original_response,
-                original_query=original_query
+                original_query=original_query,
+                previous_queries=payload.session_history or []
             )
         except Exception as exc:
             logger.error("Dissatisfaction detection failed: %s", exc, exc_info=True)
@@ -368,8 +389,21 @@ def detect_follow_up_correction(
             )
 
         if is_correction and claim:
+            target_entity_id = claim.entity_id
+            if not target_entity_id and claim.entity_name:
+                try:
+                    from app.feedback.fund_name_matcher import get_fund_name_matcher
+                    matcher = get_fund_name_matcher()
+                    match_res = matcher.match_fund(claim.entity_name)
+                    if match_res and match_res.get("isin"):
+                        target_entity_id = match_res["isin"]
+                except Exception as match_exc:
+                    logger.debug("Fund matching notice in follow-up: %s", match_exc)
+                if not target_entity_id:
+                    target_entity_id = claim.entity_name
+
             claim_dict = {
-                "entity_id": claim.entity_id,
+                "entity_id": target_entity_id,
                 "entity_name": claim.entity_name,
                 "attribute": claim.attribute,
                 "asserted_value": claim.asserted_value,
@@ -409,27 +443,83 @@ def detect_follow_up_correction(
                     db.add(new_feedback)
                 
                 db.commit()
-                
+
+                # Auto-register provisional correction in CorrectionPatchLayer
+                patch_id = None
+                if target_entity_id and claim.attribute and claim.asserted_value:
+                    try:
+                        from app.graph.correction_patch_layer import get_correction_patch_layer
+                        patch_layer = get_correction_patch_layer()
+                        patch_id = patch_layer.add_correction(
+                            entity_id=target_entity_id,
+                            attribute=claim.attribute,
+                            canonical_value=claim.rejected_value or "canonical",
+                            corrected_value=claim.asserted_value,
+                            confidence=min(claim.confidence * 0.8, 0.75),
+                            provenance={
+                                "source": "passive_followup_detection",
+                                "feedback_id": feedback_id,
+                                "session_id": payload.session_id,
+                            },
+                            approved=False,
+                        )
+                        logger.info("Auto-registered passive patch %s for %s.%s = %s",
+                                    patch_id, target_entity_id, claim.attribute, claim.asserted_value)
+                    except Exception as patch_exc:
+                        logger.warning("Could not auto-register passive patch: %s", patch_exc)
+
+                # Trigger background feedback loop
+                try:
+                    from app.services.feedback import trigger_feedback_loop
+                    background_tasks.add_task(
+                        trigger_feedback_loop,
+                        feedback_id=feedback_id,
+                        session_id=payload.session_id,
+                        response_id=payload.previous_response_id,
+                        source="passive_followup",
+                    )
+                except Exception as fb_exc:
+                    logger.debug("Could not queue feedback loop task: %s", fb_exc)
+
                 return {
+                    "is_correction": True,
                     "correction_detected": True,
                     "feedback_created": True,
+                    "auto_created_feedback": True,
                     "feedback_id": feedback_id,
-                    "claim": claim_dict
+                    "patch_id": patch_id,
+                    "confidence": claim.confidence,
+                    "signals": {
+                        "is_frustrated": True,
+                        "same_referent": True,
+                        "has_correction_lang": True,
+                    },
+                    "structured_claim": claim_dict,
+                    "claim": claim_dict,
                 }
             except Exception as exc:
                 db.rollback()
                 logger.error("Failed to auto-create feedback record: %s", exc, exc_info=True)
                 return {
+                    "is_correction": True,
                     "correction_detected": True,
                     "feedback_created": False,
+                    "auto_created_feedback": False,
                     "claim": claim_dict,
-                    "error": str(exc)
+                    "structured_claim": claim_dict,
+                    "confidence": claim.confidence,
+                    "error": str(exc),
                 }
 
         return {
+            "is_correction": False,
             "correction_detected": False,
             "feedback_created": False,
-            "claim": None
+            "auto_created_feedback": False,
+            "confidence": 0.0,
+            "signals": {},
+            "claim": None,
+            "structured_claim": None,
         }
     finally:
         db.close()

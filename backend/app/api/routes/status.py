@@ -94,3 +94,53 @@ async def data_planes(container: Container = Depends(get_container)) -> DataPlan
         modern_index=modern_stats,
         query_engines_available=["legacy", "v2", "shadow"],
     )
+
+
+@router.get("/health")
+async def health(container: Container = Depends(get_container)):
+    """Comprehensive component health inspection (Phase 1, Task 6)."""
+    neo4j_ok = False
+    try:
+        neo4j_ok = await asyncio.wait_for(container.graph.ping(), timeout=0.8)
+    except Exception:
+        neo4j_ok = False
+
+    vector_ok = False
+    try:
+        vector_ok = container.vector.ping()
+    except Exception:
+        vector_ok = False
+
+    llm_ok = bool(container.settings.groq_api_key)
+
+    scheduler_ok = False
+    try:
+        from app.tasks.scheduler import get_scheduler
+        sched = get_scheduler()
+        scheduler_ok = bool(sched.is_running if hasattr(sched, "is_running") else sched)
+    except Exception:
+        scheduler_ok = False
+
+    db_ok = False
+    try:
+        from app.core.database import SessionLocal
+        from sqlalchemy import text
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+        db_ok = True
+    except Exception:
+        db_ok = False
+
+    status_val = "ok" if (db_ok and (vector_ok or neo4j_ok)) else "degraded"
+    return {
+        "status": status_val,
+        "components": {
+            "database": "ok" if db_ok else "error",
+            "neo4j": "ok" if neo4j_ok else "unavailable",
+            "vector_store": "ok" if vector_ok else "error",
+            "llm": "ok" if llm_ok else "unconfigured",
+            "scheduler": "running" if scheduler_ok else "stopped",
+        },
+        "query_engine": container.settings.query_engine,
+        "environment": container.settings.environment,
+    }

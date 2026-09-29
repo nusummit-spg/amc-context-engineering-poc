@@ -97,6 +97,26 @@ class RetrievalOrchestrator:
         self._corpus_version = getattr(self._settings, "active_corpus_version", "v2_baseline_20260814")
         self._planner = get_planner()
 
+        # Microservices service clients (only if microservices mode enabled)
+        self._repair_client = None
+        self._repair_circuit_breaker = None
+        if getattr(self._settings, "microservices_mode", False):
+            try:
+                from app.services.repair_client import RepairServiceClient
+                from app.services.circuit_breaker import CircuitBreaker
+
+                repair_url = getattr(self._settings, "repair_service_url", None) or "http://repair:8002"
+                self._repair_client = RepairServiceClient(base_url=repair_url)
+
+                if getattr(self._settings, "circuit_breaker_enabled", True):
+                    self._repair_circuit_breaker = CircuitBreaker(
+                        service_name="repair-engine",
+                        failure_threshold=getattr(self._settings, "circuit_breaker_failure_threshold", 5),
+                        recovery_timeout=getattr(self._settings, "circuit_breaker_recovery_timeout", 60.0),
+                    )
+            except Exception as exc:
+                logger.warning("Could not initialize repair service client: %s", exc)
+
     # ------------------------------------------------------------------
     # Vector retrieval helpers (Phase 3 — plan execution & parallelism)
     # ------------------------------------------------------------------
@@ -198,6 +218,104 @@ class RetrievalOrchestrator:
             len(branch_queries), len(merged), len(chunks),
         )
         return chunks
+
+    async def _apply_correction_patches(
+        self,
+        entity_ids: list[str],
+        context_text: str,
+    ) -> tuple[str, list[dict]]:
+        """
+        Apply correction patches (microservices-aware).
+        Tries microservices mode first if enabled, falls back to local.
+        Returns: (modified_context_text, applied_patches_list)
+        """
+        applied: list[dict] = []
+        if not entity_ids:
+            return context_text, applied
+
+        # 1. Microservices mode: call repair service over HTTP
+        if getattr(self._settings, "microservices_mode", False) and self._repair_client:
+            try:
+                if self._repair_circuit_breaker:
+                    patches = await self._repair_circuit_breaker.call(
+                        self._repair_client.get_patches_for_entities,
+                        entity_ids
+                    )
+                else:
+                    patches = await self._repair_client.get_patches_for_entities(
+                        entity_ids
+                    )
+
+                if patches:
+                    correction_blocks = []
+                    for p in patches:
+                        conf = p.get("confidence", 1.0)
+                        if conf >= 0.70:
+                            attr = p.get("attribute", "")
+                            val = p.get("corrected_value", "")
+                            orig = p.get("canonical_value") or p.get("original_value", "")
+                            applied.append({
+                                "entity_id": p.get("entity_id", ""),
+                                "attribute": attr,
+                                "original": orig,
+                                "corrected": val,
+                                "confidence": conf,
+                            })
+                            correction_blocks.append(
+                                f"\n[CORRECTION PATCH APPLIED: {attr} = {val} (supersedes prior context)]\n"
+                            )
+                    if correction_blocks:
+                        context_text = "".join(correction_blocks) + context_text
+                    logger.info("Applied %d patches from repair service", len(applied))
+                    return context_text, applied
+
+            except Exception as exc:
+                from app.services.circuit_breaker import CircuitBreakerOpen
+                if isinstance(exc, CircuitBreakerOpen):
+                    logger.warning("Repair service circuit breaker OPEN, falling back to local")
+                else:
+                    logger.error("Failed to apply patches from repair service: %s, falling back to local", exc)
+
+        # 2. Monolithic mode OR fallback: use local repair engine / patch layer
+        try:
+            from app.adapters_config import get_repair_engine
+            repair_engine = get_repair_engine()
+            all_patches = []
+            for entity_id in entity_ids:
+                patches = await repair_engine.patch_layer.get_patches_for_entity(entity_id)
+                all_patches.extend(patches)
+
+            if all_patches:
+                for p in all_patches:
+                    if p.confidence >= 0.70:
+                        applied.append({
+                            "entity_id": p.entity_id,
+                            "attribute": p.attribute,
+                            "original": p.canonical_value if p.canonical_value is not None else p.original_value,
+                            "corrected": p.corrected_value,
+                            "confidence": p.confidence,
+                        })
+                context_text = await repair_engine.patch_layer.apply_patches_to_context(
+                    entity_ids, context_text
+                )
+                logger.info("Applied %d patches from local repair engine", len(applied))
+                return context_text, applied
+
+        except Exception as exc:
+            logger.debug("Local repair engine patch notice: %s, falling back to shadow graph", exc)
+
+        # 3. Final local fallback: app.graph.correction_patch_layer
+        try:
+            from app.graph.correction_patch_layer import get_correction_patch_layer
+            patch_layer = get_correction_patch_layer()
+            context_text = patch_layer.apply_patches_to_context(
+                entities=entity_ids,
+                retrieval_context=context_text
+            )
+        except Exception as patch_exc:
+            logger.debug("Correction patch layer notice: %s", patch_exc)
+
+        return context_text, applied
 
     async def answer(
         self,
@@ -606,10 +724,8 @@ class RetrievalOrchestrator:
         if metrics:
             metrics.add_component(comp_asm)
 
-        # Step 7.5 — Track 6: Apply Correction Patch Layer (Shadow Graph)
+        # Step 7.5 — Track 6: Apply Correction Patch Layer (Shadow Graph / Microservices)
         try:
-            from app.graph.correction_patch_layer import get_correction_patch_layer
-            patch_layer = get_correction_patch_layer()
             entity_keys = []
             if resolved_entities:
                 for ent in resolved_entities:
@@ -624,9 +740,9 @@ class RetrievalOrchestrator:
             seen_e = set()
             unique_entity_keys = [e for e in entity_keys if e and not (e in seen_e or seen_e.add(e))]
             if unique_entity_keys and context.context_text:
-                context.context_text = patch_layer.apply_patches_to_context(
-                    entities=unique_entity_keys,
-                    retrieval_context=context.context_text
+                context.context_text, applied_corrections = await self._apply_correction_patches(
+                    entity_ids=unique_entity_keys,
+                    context_text=context.context_text
                 )
         except Exception as patch_exc:
             logger.debug("Correction patch layer notice: %s", patch_exc)
@@ -870,10 +986,33 @@ class RetrievalOrchestrator:
                 yield {"type": "answer_chunk", "text": (word + " "), "index": idx}
             _record(cached_intent.get("query_type", "general") if isinstance(cached_intent, dict) else "general",
                     cache_hit=True)
+            
+            cache_total_ms = round((time.perf_counter() - t0) * 1000, 2)
+            cache_quality_score = cached_entry.get("quality_score")
+            cache_quality_gate_passed = cache_quality_score >= 0.3 if cache_quality_score is not None else False
+            
             yield {
                 "type": "complete",
                 "response_id": response_id,
-                "trace": {"cache_hit": True, "request_total_ms": round((time.perf_counter() - t0) * 1000, 2)},
+                "trace": {
+                    "request_id": req_id,
+                    "cache_hit": True,
+                    "request_total_ms": cache_total_ms,
+                    "generation_ms": cache_total_ms,  # Cached response has no computation cost
+                    "quality_score": cache_quality_score,
+                    "quality_gate_passed": cache_quality_gate_passed,
+                },
+                "answer": {
+                    "answer": cached_answer,
+                    "confidence": cached_entry.get("confidence", "high"),
+                    "compliance_note": None,
+                    "citations": cached_entry.get("citations", []),
+                    "structured_rows": [],
+                },
+                "graph_facts": cached_entry.get("graph_facts", []),
+                "graph_nodes": sorted({f.get("subject") if isinstance(f, dict) else getattr(f, "subject", "") for f in cached_entry.get("graph_facts", [])} | {f.get("object") if isinstance(f, dict) else getattr(f, "object", "") for f in cached_entry.get("graph_facts", [])}),
+                "graph_relationships": sorted({f.get("predicate") if isinstance(f, dict) else getattr(f, "predicate", "") for f in cached_entry.get("graph_facts", [])}),
+                "context_sources": cached_sources,
             }
             return
 
@@ -1084,6 +1223,13 @@ class RetrievalOrchestrator:
                 yield {"type": "error", "message": "Unable to generate answer", "recoverable": False}
 
         total_ms = round((time.perf_counter() - t0) * 1000, 2)
+        
+        # ── Compute generation latency ──────────────────────────────────
+        # In streaming mode, we can approximate: total - time spent on retrieval
+        # For now, we estimate based on chunk count and total time
+        generation_ms = total_ms - (context.latency_ms if context and hasattr(context, "latency_ms") else 0)
+        quality_score = context.quality_score if context else None
+        quality_gate_passed = quality_score >= 0.3 if quality_score is not None else False
 
         # ── Cache the streamed answer ─────────────────────────────────────
         if full_answer and context:
@@ -1115,12 +1261,31 @@ class RetrievalOrchestrator:
             vector_chunks_retrieved=len(chunks),
         )
 
+        # ── Build graph node/relationship lists for evidence ──────────────
+        graph_nodes = sorted({f.subject for f in facts} | {f.object for f in facts})
+        graph_relationships = sorted({f.predicate for f in facts})
+
         yield {
             "type": "complete",
             "response_id": response_id,
             "trace": {
+                "request_id": req_id,
                 "cache_hit": False,
                 "request_total_ms": total_ms,
+                "generation_ms": generation_ms,
                 "chunks_streamed": chunk_index,
+                "quality_score": quality_score,
+                "quality_gate_passed": quality_gate_passed,
             },
+            "answer": {
+                "answer": full_answer.strip(),
+                "confidence": "high",
+                "compliance_note": None,
+                "citations": [],
+                "structured_rows": [],
+            },
+            "graph_facts": facts,
+            "graph_nodes": graph_nodes,
+            "graph_relationships": graph_relationships,
+            "context_sources": [s.model_dump() if hasattr(s, "model_dump") else s for s in (context.sources if context else [])],
         }

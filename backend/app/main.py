@@ -18,7 +18,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -29,14 +29,14 @@ from app.api.routes import (
     admin, auth, chat, compliance, docs, feedback, files, governance, graph, ingest, metrics, query, review_queue, sessions, status, taxonomy
 )
 from app.config import get_settings
-from app.core.errors import AppError, app_error_handler
+from app.core.errors import AppError, app_error_handler, unhandled_exception_handler
 from app.core.logging import RequestLoggingMiddleware, setup_logging
 
 from app.graph.schema import apply_schema
 from app.tasks.queue import ingest_queue
 from app.tasks.scheduler import get_scheduler
 from app.core.database import init_db
-#from app.api.routes import feedback_evaluation
+from app.api.routes import feedback_evaluation
 from app.api.routes import audit
 
 
@@ -47,7 +47,12 @@ logger = logging.getLogger("app")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    setup_logging(settings.log_level)
+    setup_logging(
+        level=settings.log_level,
+        log_format=settings.log_format,
+        log_file=settings.log_file,
+        enable_file_logging=settings.enable_file_logging,
+    )
 
     # Initialize SQLite database
     # Creates the tables if they don't exist, and applies any schema migrations
@@ -124,11 +129,28 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Could not start background scheduler: %s", exc)
 
+    # Initialize modular packages (amc-feedback-loop & amc-repair-engine)
+    try:
+        from app.core.adapters import get_feedback_loop, get_repair_engine
+        app.state.feedback_loop = get_feedback_loop()
+        app.state.repair_engine = get_repair_engine()
+        logger.info("Modular packages (amc-feedback-loop, amc-repair-engine) wired into app.state")
+    except Exception as exc:
+        logger.warning("Could not initialize modular packages: %s", exc)
+
     ingest_queue.bind_pipeline(container.pipeline)
     ingest_queue.start()
     logger.info("%s started (env=%s)", settings.app_name, settings.environment)
 
     yield
+
+    try:
+        if hasattr(app.state, "feedback_loop") and app.state.feedback_loop:
+            await app.state.feedback_loop.close()
+        if hasattr(app.state, "repair_engine") and app.state.repair_engine:
+            await app.state.repair_engine.close()
+    except Exception as exc:
+        logger.warning("Error closing modular package adapters: %s", exc)
 
     try:
         scheduler.stop()
@@ -161,12 +183,8 @@ def create_app() -> FastAPI:
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(ValidationMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
-    async def handle_app_error(request: Request, exc: Exception) -> JSONResponse:
-        if not isinstance(exc, AppError):
-            raise exc
-        return await app_error_handler(request, exc)
-
-    app.add_exception_handler(AppError, handle_app_error)
+    app.add_exception_handler(AppError, app_error_handler)
+    app.add_exception_handler(Exception, unhandled_exception_handler)
 
     for router in (auth.router, admin.router, query.router, chat.router, sessions.router, taxonomy.router, graph.router,
                    docs.router, ingest.router, status.router, compliance.router, feedback.router, review_queue.router, governance.router, files.router, metrics.router):
@@ -179,11 +197,22 @@ def create_app() -> FastAPI:
         from app.compliance.metrics_store import get_metrics_store
         return get_metrics_store().get_response_quality(response_id=response_id)
 
+    @app.get("/health", tags=["status"])
+    @app.get("/api/health", tags=["status"])
+    async def root_health(container: deps.Container = Depends(deps.get_container)):
+        from app.api.routes.status import health as status_health
+        return await status_health(container=container)
+
+    @app.get("/metrics/dashboard", tags=["monitoring"], include_in_schema=False)
+    async def root_metrics_dashboard():
+        from app.api.routes.metrics import get_dashboard
+        return await get_dashboard()
+
     # Also register files router at /files for direct links
     app.include_router(files.router, prefix="")
 
 
-    # app.include_router(feedback_evaluation.router, prefix="/api")
+    app.include_router(feedback_evaluation.router, prefix="/api")
     app.include_router(audit.router, prefix="/api")
     
     # Phase 4: Serve React frontend (check mf-context-engine/dist first, then frontend/dist)

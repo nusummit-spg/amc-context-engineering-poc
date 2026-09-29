@@ -231,6 +231,23 @@ async def _run_v2_orchestrator(request: QueryRequest, container: Container) -> Q
                 "output_tokens": trace.output_tokens if trace else 0,
                 "total_tokens": (trace.input_tokens + trace.output_tokens) if trace else 0,
                 "note": "v2 Target Corpus Vector Search Baseline",
+                # Populate telemetry_breakdown in legacy key format so
+                # _render_telemetry_card() works on the Traditional panel.
+                "telemetry_breakdown": {
+                    "latency_vector_db_ms": round(trace.vector_ms, 1) if trace else 0.0,
+                    "latency_rerank_ms": round(trace.rerank_ms, 1) if trace else 0.0,
+                    "latency_graph_db_ms": 0.0,
+                    "latency_ner_processing_ms": round(trace.ner_ms, 1) if trace else 0.0,
+                    "latency_llm_generation_ms": round(trace.generation_ms, 1) if trace else 0.0,
+                    "latency_post_retrieval_processing_ms": round(trace.assembly_ms, 1) if trace else 0.0,
+                    "latency_total_pipeline_ms": round(trace.request_total_ms, 1) if trace else 0.0,
+                    "tokens_input": trace.input_tokens if trace else 0,
+                    "tokens_output": trace.output_tokens if trace else 0,
+                    "tokens_total": (trace.input_tokens + trace.output_tokens) if trace else 0,
+                    "db_candidates_surfaced": len(hits),
+                    "vector_bypassed": False,
+                    "pipeline_mode": "Traditional Vector RAG (v2)",
+                } if trace else {},
             },
         )
 
@@ -258,8 +275,90 @@ async def _run_v2_orchestrator(request: QueryRequest, container: Container) -> Q
         for i, c in enumerate(retrieval_res.chunks[:5])
     ]
 
-    graph_nodes = sorted({f.subject for f in retrieval_res.graph_facts} | {f.object for f in retrieval_res.graph_facts})
-    graph_rels = sorted({f.predicate for f in retrieval_res.graph_facts})
+    graph_facts = retrieval_res.graph_facts if retrieval_res else []
+    graph_nodes = sorted({f.subject for f in graph_facts} | {f.object for f in graph_facts})
+    graph_rels = sorted({f.predicate for f in graph_facts})
+
+    # Build graph edge objects in legacy {s, rel, o, conf} shape for the SVG renderer.
+    graph_edges = [
+        {"s": f.subject, "rel": f.predicate, "o": f.object, "conf": f.properties.get("confidence", 1.0)}
+        for f in graph_facts
+    ]
+
+    # Entities + labels from intent and graph fact properties.
+    matched_entity_texts = sorted(set(intent.entities_mentioned)) if intent else []
+    active_labels = sorted({
+        f.properties.get("entity_type") or ""
+        for f in graph_facts
+        if f.properties.get("entity_type")
+    })
+
+    # Entity-type summary for the ontology view.
+    from collections import defaultdict
+    label_counts: dict[str, int] = defaultdict(int)
+    for f in graph_facts:
+        etype = f.properties.get("entity_type") or "Entity"
+        label_counts[etype] += 1
+    entity_summary = [
+        {"label": lbl, "count": cnt, "active": True}
+        for lbl, cnt in sorted(label_counts.items())
+    ] if label_counts else []
+
+    # Build provenance from context sources (legacy provenance_list shape).
+    provenance_list: list[dict] = []
+    if context and context.sources:
+        for src in context.sources:
+            page_num = getattr(src, "page_number", None) or getattr(src, "page", None)
+            page_label = getattr(src, "page_label", None) or (f"p. {page_num}" if page_num else "—")
+            verbatim = getattr(src, "verbatim_text", None) or src.snippet or ""
+            doc_name = src.document_title or src.document_id
+            provenance_list.append({
+                "doc": doc_name,
+                "document_title": doc_name,
+                "name": doc_name,
+                "page": page_num or 1,
+                "page_number": page_num,
+                "page_label": page_label,
+                "chunk_id": src.chunk_id or f"p.{page_num or 1}",
+                "snippet": src.snippet or (verbatim[:200] if verbatim else ""),
+                "verbatim_text": verbatim,
+                "score": getattr(src, "score", 0.9),
+                "url": get_pdf_url(doc_name, page_num),
+                "source_url": get_pdf_url(doc_name, page_num),
+            })
+
+    # Token totals
+    total_tokens = (trace.input_tokens + trace.output_tokens) if trace else 0
+
+    # Build telemetry_breakdown in legacy key names.
+    telemetry_breakdown = {
+        "latency_vector_db_ms": round(trace.vector_ms, 1) if trace else 0.0,
+        "latency_rerank_ms": round(trace.rerank_ms, 1) if trace else 0.0,
+        "latency_graph_db_ms": round(trace.graph_ms, 1) if trace else 0.0,
+        "latency_ner_processing_ms": round(trace.ner_ms, 1) if trace else 0.0,
+        "latency_llm_generation_ms": round(trace.generation_ms, 1) if trace else 0.0,
+        "latency_post_retrieval_processing_ms": round(trace.assembly_ms, 1) if trace else 0.0,
+        "latency_total_pipeline_ms": round(trace.request_total_ms, 1) if trace else 0.0,
+        "tokens_input": trace.input_tokens if trace else 0,
+        "tokens_output": trace.output_tokens if trace else 0,
+        "tokens_total": total_tokens,
+        "db_candidates_surfaced": len(graph_nodes),
+        "vector_bypassed": False,
+        "pipeline_mode": "ContextGraph Hybrid RAG (v2)",
+        "cache_hit": trace.cache_hit if trace else False,
+        "tokens_saved": trace.tokens_saved if trace else 0,
+        "tokens_cold_equivalent": trace.cold_equivalent_tokens if trace else 0,
+    } if trace else {}
+
+    # Confidence label in legacy display format.
+    conf_str = (synthesis.confidence if synthesis else "high") or "high"
+    conf_label_map = {"high": "✓ High confidence", "medium": "⚠ Medium confidence", "low": "✗ Low confidence"}
+    confidence_label = conf_label_map.get(conf_str.lower(), f"✓ {conf_str.capitalize()} confidence")
+    query_type_str = intent.query_type.value if intent and intent.query_type else None
+
+    # Patch compliance_note onto synthesis for the frontend confidence badge.
+    if synthesis and not synthesis.compliance_note:
+        synthesis.compliance_note = confidence_label
 
     return QueryResponse(
         query=query,
@@ -269,7 +368,24 @@ async def _run_v2_orchestrator(request: QueryRequest, container: Container) -> Q
         sources=sources if mode in ("contextgraph", "both") else [],
         traversal_paths=retrieval_res.traversal_paths,
         taxonomy_paths=intent.taxonomy_paths,
-        graph_highlight={"node_names": graph_nodes, "relationships": graph_rels},
+        # Full legacy-compatible graph_highlight dict — all fields the frontend
+        # _to_hybrid() adapter reads must be present here.
+        graph_highlight={
+            "node_names": graph_nodes,
+            "relationships": graph_rels,
+            "entities": matched_entity_texts,
+            "labels": active_labels,
+            "edges": graph_edges,
+            "edges_used_in_prompt": graph_edges,
+            "entity_summary": entity_summary,
+            "query_type": query_type_str,
+            "graph_matched_by": "graph_facts" if graph_facts else None,
+            "used_verified_aggregate": False,
+            "used_comparison_mode": False,
+            "total_tokens": total_tokens,
+            "telemetry_breakdown": telemetry_breakdown,
+            "provenance": provenance_list,
+        },
         context_debug=context,
         traditional=trad_result,
         latency_ms=int(trace.request_total_ms if trace else 0),

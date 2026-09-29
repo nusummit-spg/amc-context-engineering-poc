@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class TaxonomyNode(BaseModel):
@@ -111,6 +111,8 @@ class TaxonomyClassificationResult(BaseModel):
     """Output of the taxonomy classification step (ingestion pipeline).
     Tags are sorted by confidence descending on construction.
     """
+    model_config = ConfigDict(protected_namespaces=())
+
     document_id: str
     tags:        list[TaxonomyTag] = Field(default_factory=list)
     model_used:  Optional[str]     = None

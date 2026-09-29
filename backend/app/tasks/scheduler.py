@@ -210,6 +210,8 @@ class TaskScheduler:
 
         self._is_running = False
         self._last_results: Dict[str, Dict[str, Any]] = {}
+        from app.config import get_settings
+        self._settings = get_settings()
         self._setup_tasks()
 
     # ── Registration ──────────────────────────────────────────────────────
@@ -351,22 +353,39 @@ class TaskScheduler:
             return {"status": "failed", "error": str(exc)}
 
     async def _process_governance_batch(self) -> Dict[str, Any]:
-        """Process approved corrections in the weekly governance batch."""
+        """Process approved corrections in weekly governance batch."""
         logger.info("[Job] Running weekly governance feedback batch...")
         try:
-            from app.tasks.governance_batch import get_governance_batch
+            # Use repair engine package (microservices-aware)
+            if getattr(self._settings, "microservices_mode", False):
+                from app.services.repair_client import RepairServiceClient
 
-            batch = get_governance_batch()
-            report = await batch.process()
+                repair_url = getattr(self._settings, "repair_service_url", None) or "http://repair:8002"
+                client = RepairServiceClient(repair_url)
+                report = await client.run_governance_batch()
+            else:
+                # Monolithic mode: use local repair engine
+                from app.adapters_config import get_repair_engine
+
+                repair_engine = get_repair_engine()
+                governance_report = await repair_engine.run_governance_batch()
+
+                report = {
+                    "total_evaluated": governance_report.total_evaluated,
+                    "approved": governance_report.approved,
+                    "rejected": governance_report.rejected,
+                    "needs_review": governance_report.needs_review,
+                    "deployed": governance_report.deployed if governance_report.deployed > 0 else governance_report.promoted_to_graph,
+                }
+
             logger.info(
-                "Governance batch processed: %d deployed, %d failed, %d skipped",
-                report.get("deployed", 0),
-                report.get("failed", 0),
-                report.get("skipped", 0),
+                f"Governance batch processed: {report.get('deployed', 0)} deployed, "
+                f"{report.get('failed', 0)} failed"
             )
             return report
+
         except Exception as exc:
-            logger.warning("Governance batch failed: %s", exc)
+            logger.warning(f"Governance batch failed: {exc}")
             return {"status": "failed", "error": str(exc)}
 
     async def _maintain_caches(self) -> Dict[str, Any]:

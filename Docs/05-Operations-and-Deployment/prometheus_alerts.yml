@@ -1,0 +1,44 @@
+groups:
+  - name: amc_microservices_circuit_breakers
+    rules:
+      - alert: CircuitBreakerTrippedOpen
+        expr: amc_circuit_breaker_state == 1
+        for: 10s
+        labels:
+          severity: critical
+          team: ops-sre
+        annotations:
+          summary: "Circuit Breaker Tripped OPEN for {{ $labels.service }}"
+          description: "Service '{{ $labels.service }}' has exceeded its failure threshold and tripped to OPEN. Downstream calls are being redirected to local fallback or rejected."
+          runbook_url: "Docs/05-Operations-and-Deployment/MICROSERVICES_RUNBOOK.md#incident-a-circuit-breaker-tripped-to-open-state"
+
+      - alert: CircuitBreakerProbingHalfOpen
+        expr: amc_circuit_breaker_state == 2
+        for: 5s
+        labels:
+          severity: warning
+          team: ops-sre
+        annotations:
+          summary: "Circuit Breaker in HALF_OPEN recovery probe for {{ $labels.service }}"
+          description: "Service '{{ $labels.service }}' has entered HALF_OPEN state and is attempting recovery canary probes."
+
+      - alert: CircuitBreakerRapidTripRate
+        expr: increase(amc_circuit_breaker_trips_total[5m]) > 2
+        for: 1m
+        labels:
+          severity: critical
+          team: ops-sre
+        annotations:
+          summary: "Rapid circuit breaker tripping for {{ $labels.service }}"
+          description: "Service '{{ $labels.service }}' tripped more than twice within the last 5 minutes. Check downstream container health, network partitions, or database lock contention."
+          runbook_url: "Docs/05-Operations-and-Deployment/MICROSERVICES_RUNBOOK.md"
+
+      - alert: HighFailureRateServiceCall
+        expr: rate(amc_circuit_breaker_failures_total[2m]) > 0.5
+        for: 1m
+        labels:
+          severity: warning
+          team: backend-engineers
+        annotations:
+          summary: "High failure rate calling {{ $labels.service }}"
+          description: "Failure rate calling '{{ $labels.service }}' exceeds 0.5 failures/sec over the last 2 minutes."

@@ -91,6 +91,8 @@ CHILD_CHUNK_OVERLAP  = 50
 
 # ── NER ────────────────────────────────────────────────────────────────
 GLINER_MODEL_ID   = os.environ.get("GLINER_MODEL_ID", "urchade/gliner_medium-v2.1")
+ENABLE_ONNX_GLINER = os.environ.get("ENABLE_ONNX_GLINER", "false").lower() in ("true", "1", "yes")
+ONNX_GLINER_PATH  = PROJECT_ROOT / "models" / "gliner_quantized.onnx"
 GLINER_LABELS     = [
     "mutual fund scheme name", "fund house", "benchmark index",
     "fund manager", "asset class", "sector",
@@ -125,6 +127,12 @@ ENABLE_SMART_VECTOR_PRUNING = os.environ.get("ENABLE_SMART_VECTOR_PRUNING", "tru
 ENABLE_SEMANTIC_CACHE_WARMUP = os.environ.get("ENABLE_SEMANTIC_CACHE_WARMUP", "true").lower() == "true"
 ENABLE_PARALLELIZATION = os.environ.get("ENABLE_PARALLELIZATION", "true").lower() == "true"
 ENABLE_QUERY_DECOMPOSITION = os.environ.get("ENABLE_QUERY_DECOMPOSITION", "true").lower() == "true"
+
+# ── EVALUATION TIER FEATURE FLAGS ──────────────────────────────────────
+ENABLE_TIER2_NLI_EVALUATION = os.environ.get("ENABLE_TIER2_NLI_EVALUATION", "false").lower() == "true"
+ENABLE_TIER3_LLM_JUDGE = os.environ.get("ENABLE_TIER3_LLM_JUDGE", "false").lower() == "true"
+TIER2_NLI_CONFIDENCE_THRESHOLD = float(os.environ.get("TIER2_NLI_CONFIDENCE_THRESHOLD", "0.85"))
+TIER3_LLM_SEVERITY_THRESHOLD = os.environ.get("TIER3_LLM_SEVERITY_THRESHOLD", "HIGH")
 
 # CSV ingestion page cap (25 rows/page). The default indexes 1,250 rows;
 # raise it to cover large exports at the cost of a longer embedding pass.
