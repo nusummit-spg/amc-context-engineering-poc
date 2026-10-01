@@ -1,0 +1,32 @@
+What are the key ESG initiatives wrt climate change adaptation and what are the benefits that we can see?
+
+Can you give me the characteristics of the liquid fund
+
+Which mine is running in Australia and specify the variation that we can see in mine production
+
+How does the 2026 SEBI circular change the categorization of Solution Oriented Schemes and the 'Other Schemes' section?
+
+How exactly is the 50% portfolio overlap calculated? Is it based on daily or quarterly weightages?
+
+What happens to the existing thematic fund if they fail to meet the 50% overlap criteria at the end of the 3-year transition period?
+
+Who is Pranav Adani and which company is he associated with?
+
+Tell me about other executives at Adani Enterprises Limited
+
+What are SEBI's borrowing limits for mutual funds?
+
+Changes in SEBI circular guidelines on scheme categorization
+
+Index Funds and ETFs
+
+What are the general guidelines for mutual fund categorization?
+
+Who are the key executives or directors of Adani Enterprises?
+
+User ID				Password				Operator Name		Role & Clearance Level
+sarah.compliance	Compliance@2026			Sarah Kapoor		Compliance & Regulatory Officer (Level 1 — Full Access + Admin Panel)
+vikram.pm			Portfolio@2026			Vikram Mehta		Fund Manager / Portfolio Manager (Level 2 — Investment Scope)
+ananya.esg			Sustainability@2026		Ananya Sharma		ESG & Sustainability Analyst (Level 3 — ESG Scope)
+rahul.sales			Distribution@2026		Rahul Verma			Sales & Distribution Manager (Level 4 — Commercial Scope)
+priya.investor		Investor@2026			Priya Nair			Retail Investor / Public Client (Level 5 — Restricted Public Scope)

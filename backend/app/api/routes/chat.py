@@ -15,7 +15,9 @@ usable standalone (chat_history=None) for the existing /query endpoints.
 """
 import asyncio
 import json
+import logging
 import uuid
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -33,6 +35,53 @@ from app.retrieval.query_evidence_recorder import get_recorder as get_query_evid
 from app.models.api import ChatRequest, ChatResponse, ChatTitleRequest, ChatTitleResponse, QueryRequest
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+logger = logging.getLogger("app.api.chat")
+
+
+async def _trigger_follow_up_detection(
+    session_id: str,
+    previous_response_id: str,
+    previous_query: str,
+    follow_up_query: str,
+    session_history: Optional[list] = None,
+):
+    """Run follow-up detection in background without adding latency to the response pipeline."""
+    try:
+        import time
+        from app.core.metrics import (
+            passive_feedback_detections_triggered,
+            passive_feedback_corrections_found,
+            passive_feedback_detection_latency,
+        )
+
+        passive_feedback_detections_triggered.inc()
+        start_t = time.perf_counter()
+
+        logger.info(
+            "Auto follow-up detection: session=%s, prev_resp=%s",
+            session_id,
+            previous_response_id,
+        )
+        from app.api.routes.feedback import run_follow_up_detection_logic
+
+        result = await run_follow_up_detection_logic(
+            session_id=session_id,
+            previous_response_id=previous_response_id,
+            follow_up_query=follow_up_query,
+            original_query=previous_query,
+            session_history=session_history,
+        )
+        latency = time.perf_counter() - start_t
+        passive_feedback_detection_latency.observe(latency)
+
+        if result and result.get("is_correction"):
+            passive_feedback_corrections_found.inc()
+            logger.info(
+                "Correction detected automatically via passive feedback: %s",
+                result.get("claim"),
+            )
+    except Exception as exc:
+        logger.warning("Passive follow-up detection failed: %s", exc)
 
 
 async def _run_v2_chat(request: ChatRequest, container: Container) -> ChatResponse:
@@ -254,53 +303,46 @@ async def _run_v2_chat(request: ChatRequest, container: Container) -> ChatRespon
             trace=trace,
             serving_engine="v2",
         )
-        
-        # Create skeleton ResponseFeedback record for immediate availability in data.db
+        # Feedback timer & lifecycle management in data.db
         try:
-            from app.core.database import SessionLocal
-            from app.schemas.response_feedback_table import ResponseFeedback
-            from app.schemas.chat_sessions_table import ChatSession
-            from datetime import datetime, timezone
-            
-            db = SessionLocal()
-            try:
-                # Ensure ChatSession exists
-                session = db.query(ChatSession).filter_by(session_id=session_id).first()
-                if not session:
-                    session = ChatSession(session_id=session_id)
-                    db.add(session)
-                    db.commit()
-                
-                # Check if skeleton feedback already exists
-                existing = db.query(ResponseFeedback).filter_by(
-                    response_id=response_id
-                ).first()
-                
-                if not existing:
-                    # Create skeleton ResponseFeedback record
-                    now_iso = datetime.now(timezone.utc).isoformat()
-                    feedback_id = f"fb_{uuid.uuid4().hex[:12]}"
-                    skeleton_feedback = ResponseFeedback(
-                        feedback_id=feedback_id,
-                        response_id=response_id,
-                        interaction_id=interaction_id,
-                        session_id=session_id,
-                        turn_number=turn_index,
-                        query_text=query,
-                        actor_id=None,  # Will be filled when user submits feedback
-                        actor_role=None,
-                        selected_categories=[],  # Empty initially
-                        feedback_text=None,
-                        created_at=now_iso,
-                        updated_at=now_iso,
-                    )
-                    db.add(skeleton_feedback)
-                    db.commit()
-                    logger.debug("Skeleton ResponseFeedback created: feedback_id=%s, response_id=%s", feedback_id, response_id)
-            finally:
-                db.close()
-        except Exception as exc:
-            logger.debug("Could not create skeleton ResponseFeedback: %s", exc)
+            from app.feedback.feedback_timer import get_feedback_timer_manager
+            feedback_timer = get_feedback_timer_manager()
+            await feedback_timer.on_query_submitted(
+                session_id=session_id,
+                response_id=response_id,
+                interaction_id=interaction_id,
+                turn_number=turn_index,
+                query_text=query,
+                response_text=synthesis.answer if synthesis else None,
+            )
+        except Exception as timer_exc:
+            logger.error("FeedbackTimer registration error: %s", timer_exc, exc_info=True)
+
+        # Register response with SessionManager and trigger passive follow-up detection if eligible
+        try:
+            from app.feedback.session_manager import get_session_manager
+            session_manager = get_session_manager()
+            previous_response = await session_manager.register_response(
+                session_id=session_id,
+                response_id=response_id,
+                query_text=query,
+            )
+            logger.info(f"SessionManager: Registered response_id={response_id}, previous={previous_response is not None}")
+            if previous_response:
+                await session_manager.mark_detected(session_id, previous_response.response_id)
+                history_queries = [
+                    h.get("query", "") if isinstance(h, dict) else getattr(h, "query", "")
+                    for h in (history or [])
+                ]
+                asyncio.create_task(_trigger_follow_up_detection(
+                    session_id=session_id,
+                    previous_response_id=previous_response.response_id,
+                    previous_query=previous_response.query_text,
+                    follow_up_query=query,
+                    session_history=[q for q in history_queries if q],
+                ))
+        except Exception as sm_exc:
+            logger.warning("SessionManager registration error: %s", sm_exc, exc_info=True)
 
     return ChatResponse(
         query=query,
@@ -430,6 +472,21 @@ async def run_chat(
             serving_engine="legacy",
         )
 
+    if resp.response_id:
+        try:
+            from app.feedback.feedback_timer import get_feedback_timer_manager
+            feedback_timer = get_feedback_timer_manager()
+            await feedback_timer.on_query_submitted(
+                session_id=request.session_id,
+                response_id=resp.response_id,
+                interaction_id=resp.interaction_id or response_id,
+                turn_number=turn_index,
+                query_text=request.query,
+                response_text=resp.hybrid.get("answer", {}).get("answer") if resp.hybrid and resp.hybrid.get("answer") else None,
+            )
+        except Exception as timer_exc:
+            logger.error("FeedbackTimer registration error (legacy): %s", timer_exc, exc_info=True)
+
     return resp
 
 
@@ -511,6 +568,49 @@ async def _chat_stream_generator(request: "ChatRequest", container: Container):
                         trace=complete_trace,
                         serving_engine="v2-stream",
                     )
+                    
+                    # Register with SessionManager for passive feedback detection
+                    try:
+                        from app.feedback.session_manager import get_session_manager
+                        session_manager = get_session_manager()
+                        response_id_for_passive = event.get("response_id", f"resp_{uuid.uuid4().hex[:12]}")
+                        previous_response = await session_manager.register_response(
+                            session_id=request.session_id,
+                            response_id=response_id_for_passive,
+                            query_text=request.query,
+                        )
+                        logger.info(f"SessionManager (v2-stream): Registered response_id={response_id_for_passive}, previous={previous_response is not None}")
+                        if previous_response:
+                            await session_manager.mark_detected(request.session_id, previous_response.response_id)
+                            history_queries = [
+                                h.get("query", "") if isinstance(h, dict) else getattr(h, "query", "")
+                                for h in (request.history or [])
+                            ]
+                            asyncio.create_task(_trigger_follow_up_detection(
+                                session_id=request.session_id,
+                                previous_response_id=previous_response.response_id,
+                                previous_query=previous_response.query_text,
+                                follow_up_query=request.query,
+                                session_history=[q for q in history_queries if q],
+                            ))
+                    except Exception as sm_exc:
+                        logger.warning("SessionManager registration error (v2-stream): %s", sm_exc, exc_info=True)
+
+                    # Feedback timer & lifecycle management in data.db
+                    try:
+                        from app.feedback.feedback_timer import get_feedback_timer_manager
+                        feedback_timer = get_feedback_timer_manager()
+                        await feedback_timer.on_query_submitted(
+                            session_id=request.session_id,
+                            response_id=response_id_for_passive,
+                            interaction_id=event.get("response_id", response_id_for_passive),
+                            turn_number=len(request.history) // 2 + 1,
+                            query_text=request.query,
+                            response_text=complete_answer.get("answer") if complete_answer else "".join(answer_parts).strip(),
+                        )
+                    except Exception as timer_exc:
+                        logger.error("FeedbackTimer registration error (v2-stream): %s", timer_exc, exc_info=True)
+                    
                     yield _format_sse("done", event)
                 elif event_type == "error":
                     yield _format_sse("error", event)
@@ -599,11 +699,13 @@ async def _chat_stream_generator(request: "ChatRequest", container: Container):
                 serving_engine="legacy-stream",
             )
 
+            # Signal completion with metadata for SessionManager registration
             loop.call_soon_threadsafe(queue.put_nowait, ("done", {
                 "type": "complete",
                 "response_id": response_id,
                 "interaction_id": interaction_id,
                 "hybrid": hybrid_payload,
+                "_register_passive": True,  # Signal to register with SessionManager
             }))
         except Exception as exc:
             loop.call_soon_threadsafe(queue.put_nowait, ("error", {
@@ -619,6 +721,52 @@ async def _chat_stream_generator(request: "ChatRequest", container: Container):
             if item is None:
                 break
             event_type, event_data = item
+            
+            # Handle passive feedback registration on completion
+            if event_type == "done" and event_data.get("_register_passive"):
+                try:
+                    from app.feedback.session_manager import get_session_manager
+                    session_manager = get_session_manager()
+                    previous_response = await session_manager.register_response(
+                        session_id=request.session_id,
+                        response_id=response_id,
+                        query_text=request.query,
+                    )
+                    logger.info(f"SessionManager (stream): Registered response_id={response_id}, previous={previous_response is not None}")
+                    if previous_response:
+                        await session_manager.mark_detected(request.session_id, previous_response.response_id)
+                        history_queries = [
+                            h.get("query", "") if isinstance(h, dict) else getattr(h, "query", "")
+                            for h in (request.history or [])
+                        ]
+                        asyncio.create_task(_trigger_follow_up_detection(
+                            session_id=request.session_id,
+                            previous_response_id=previous_response.response_id,
+                            previous_query=previous_response.query_text,
+                            follow_up_query=request.query,
+                            session_history=[q for q in history_queries if q],
+                        ))
+                except Exception as sm_exc:
+                    logger.warning("SessionManager registration error (stream): %s", sm_exc, exc_info=True)
+
+                # Feedback timer & lifecycle management in data.db
+                try:
+                    from app.feedback.feedback_timer import get_feedback_timer_manager
+                    feedback_timer = get_feedback_timer_manager()
+                    await feedback_timer.on_query_submitted(
+                        session_id=request.session_id,
+                        response_id=response_id,
+                        interaction_id=interaction_id,
+                        turn_number=turn_index,
+                        query_text=request.query,
+                        response_text=event_data.get("hybrid", {}).get("answer", {}).get("answer") if event_data.get("hybrid") else None,
+                    )
+                except Exception as timer_exc:
+                    logger.error("FeedbackTimer registration error (legacy-stream): %s", timer_exc, exc_info=True)
+                
+                # Remove internal flag before yielding to client
+                event_data.pop("_register_passive", None)
+            
             yield _format_sse(event_type, event_data)
     finally:
         await worker_task
@@ -690,8 +838,7 @@ async def generate_chat_title(query: str) -> str:
         elif len(cleaned_words) == 1 and len(cleaned_words[0]) > 2:
             return cleaned_words[0]
     except Exception as exc:
-        import logging
-        logging.getLogger("app").warning("Fast AI title generation fallback: %s", exc)
+        logger.warning("Fast AI title generation fallback: %s", exc)
 
     return _fast_heuristic_title(query)
 

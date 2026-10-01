@@ -262,3 +262,75 @@ def summarize_persisted_metrics(
     if records:
         return _summarize_records(records)
     return get_metrics_store().summary()
+
+
+# ── Passive Feedback Metrics ──────────────────────────────────────────
+
+try:
+    from prometheus_client import Counter, Gauge, Histogram
+
+    passive_feedback_sessions_tracked = Counter(
+        "passive_feedback_sessions_tracked_total",
+        "Total sessions tracked by SessionManager",
+    )
+    passive_feedback_sessions_active = Gauge(
+        "passive_feedback_sessions_active",
+        "Current number of active sessions in memory",
+    )
+    passive_feedback_detections_triggered = Counter(
+        "passive_feedback_detections_triggered_total",
+        "Total follow-up detections triggered automatically",
+    )
+    passive_feedback_corrections_found = Counter(
+        "passive_feedback_corrections_found_total",
+        "Total corrections detected via passive feedback",
+    )
+    passive_feedback_detection_latency = Histogram(
+        "passive_feedback_detection_seconds",
+        "Time to complete follow-up detection",
+        buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
+    )
+    passive_feedback_enrichments_completed = Counter(
+        "passive_feedback_enrichments_completed_total",
+        "Total skeleton records enriched with automatic metrics",
+    )
+    passive_feedback_enrichment_latency = Histogram(
+        "passive_feedback_enrichment_seconds",
+        "Time to enrich response with metrics",
+        buckets=[0.5, 1.0, 2.0, 5.0, 10.0],
+    )
+    passive_feedback_timeout_processor_errors = Counter(
+        "passive_feedback_timeout_processor_errors_total",
+        "Total errors in TimeoutProcessor",
+    )
+    passive_feedback_session_manager_memory = Gauge(
+        "passive_feedback_session_manager_memory_bytes",
+        "Memory used by SessionManager",
+    )
+except ImportError:
+    class _DummyMetric:
+        def __init__(self, *args, **kwargs):
+            self._value = 0.0
+
+        def inc(self, amount: float = 1.0):
+            self._value += amount
+
+        def dec(self, amount: float = 1.0):
+            self._value -= amount
+
+        def set(self, value: float):
+            self._value = value
+
+        def observe(self, value: float):
+            self._value = value
+
+    passive_feedback_sessions_tracked = _DummyMetric()
+    passive_feedback_sessions_active = _DummyMetric()
+    passive_feedback_detections_triggered = _DummyMetric()
+    passive_feedback_corrections_found = _DummyMetric()
+    passive_feedback_detection_latency = _DummyMetric()
+    passive_feedback_enrichments_completed = _DummyMetric()
+    passive_feedback_enrichment_latency = _DummyMetric()
+    passive_feedback_timeout_processor_errors = _DummyMetric()
+    passive_feedback_session_manager_memory = _DummyMetric()
+

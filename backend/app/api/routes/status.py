@@ -40,7 +40,7 @@ import asyncio
 @router.get("", response_model=HealthResponse)
 async def status(container: Container = Depends(get_container)) -> HealthResponse:
     try:
-        neo4j_ok = await asyncio.wait_for(container.graph.ping(), timeout=0.8)
+        neo4j_ok = await asyncio.wait_for(container.graph.ping(), timeout=5.0)
     except Exception:
         neo4j_ok = False
     qdrant_ok = container.vector.ping()
@@ -101,7 +101,7 @@ async def health(container: Container = Depends(get_container)):
     """Comprehensive component health inspection (Phase 1, Task 6)."""
     neo4j_ok = False
     try:
-        neo4j_ok = await asyncio.wait_for(container.graph.ping(), timeout=0.8)
+        neo4j_ok = await asyncio.wait_for(container.graph.ping(), timeout=5.0)
     except Exception:
         neo4j_ok = False
 

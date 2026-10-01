@@ -90,11 +90,14 @@ class FeedbackLoop:
             issue_types=issue_types or ["F02-Accuracy"],
             source=source,
             confidence=conf,
+            query_text=original_query,
+            response_text=original_response,
         )
 
         # Store unified evaluation record
         eval_record = {
             "feedback_id": feedback_id,
+            "session_id": session_id,
             "response_id": response_id,
             "query_text": original_query,
             "response_text": original_response,

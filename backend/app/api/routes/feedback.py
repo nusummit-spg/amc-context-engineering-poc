@@ -67,28 +67,64 @@ def submit_feedback(
             detail="Submit at least one category or a comment.",
         )
 
+    # Cancel active timer if one is running for this query/session
+    try:
+        from app.feedback.feedback_timer import get_feedback_timer_manager
+        timer_mgr = get_feedback_timer_manager()
+        timer_turn = timer_mgr._pending_turns.get(payload.session_id)
+        if timer_turn and timer_turn.response_id == payload.response_id:
+            if timer_turn.timer_task and not timer_turn.timer_task.done():
+                timer_turn.timer_task.cancel()
+                logger.info(
+                    "[TIMER_CANCELLED] Cancelled active timer for session_id=%s, response_id=%s due to incoming feedback",
+                    payload.session_id,
+                    payload.response_id,
+                )
+            timer_turn.is_recorded = True
+    except Exception as timer_err:
+        logger.debug("FeedbackTimer check notice in submit_feedback: %s", timer_err)
+
     db = SessionLocal()
     try:
-        # Check if feedback already exists for this (response_id, actor_id) pair
+        # Check if feedback already exists for this query/session (handles timer expiration or previous query turns)
         existing = db.query(ResponseFeedback).filter(
-            (ResponseFeedback.response_id == payload.response_id) &
-            (ResponseFeedback.actor_id == payload.actor_id)
+            (ResponseFeedback.response_id == payload.response_id) |
+            ((ResponseFeedback.session_id == payload.session_id) & (ResponseFeedback.interaction_id == payload.interaction_id))
         ).first()
         
         now_iso = datetime.now(timezone.utc).isoformat()
         feedback_id = existing.feedback_id if existing else f"fb_{uuid.uuid4().hex[:12]}"
         
         if existing:
-            # Update existing feedback
-            existing.interaction_id = payload.interaction_id
+            # Late or on-time feedback updating existing record without duplicate
+            logger.info(
+                "[LATE_FEEDBACK_HANDLED] Identified existing feedback record feedback_id=%s for session_id=%s, response_id=%s. Updating record without duplicates.",
+                existing.feedback_id,
+                payload.session_id,
+                payload.response_id,
+            )
+            existing.interaction_id = payload.interaction_id or existing.interaction_id
             existing.session_id = payload.session_id
-            existing.turn_number = payload.turn_number
+            existing.turn_number = payload.turn_number or existing.turn_number
             existing.query_text = payload.query_text or existing.query_text
             existing.selected_categories = payload.selected_categories
             existing.feedback_text = feedback_text_clean if feedback_text_clean else existing.feedback_text
+            existing.actor_id = payload.actor_id or existing.actor_id
             existing.actor_role = payload.actor_role or existing.actor_role
             existing.client_timestamp = payload.client_timestamp or existing.client_timestamp
             existing.updated_at = now_iso
+            db.commit()
+            logger.info(
+                "[RECORD_UPDATED] Updated feedback record feedback_id=%s in data.db for response_id=%s",
+                existing.feedback_id,
+                payload.response_id,
+            )
+            logger.info(
+                "[DUPLICATE_PREVENTED] Prevented duplicate feedback insertion for session_id=%s, response_id=%s; record feedback_id=%s updated.",
+                payload.session_id,
+                payload.response_id,
+                existing.feedback_id,
+            )
         else:
             # Create new feedback record
             new_feedback = ResponseFeedback(
@@ -107,8 +143,13 @@ def submit_feedback(
                 updated_at=now_iso,
             )
             db.add(new_feedback)
-        
-        db.commit()
+            db.commit()
+            logger.info(
+                "[RECORD_INSERTED] Inserted feedback record into data.db: feedback_id=%s, response_id=%s, session_id=%s",
+                feedback_id,
+                payload.response_id,
+                payload.session_id,
+            )
         
         result = {
             "feedback_id": feedback_id,
@@ -351,14 +392,18 @@ def get_dissatisfaction_detector():
     return _dissatisfaction_detector
 
 
-@router.post("/follow-up-detection", response_model=Dict[str, Any])
-def detect_follow_up_correction(
-    payload: FollowUpDetectionIn,
-    background_tasks: BackgroundTasks = BackgroundTasks(),
-    current_role: Role = Depends(get_client_role)
+async def run_follow_up_detection_logic(
+    session_id: str,
+    previous_response_id: str,
+    follow_up_query: str,
+    original_query: Optional[str] = "",
+    original_response: Optional[str] = "",
+    session_history: Optional[List[str]] = None,
+    current_role_value: Optional[str] = None,
+    background_tasks: Optional[BackgroundTasks] = None,
 ) -> Dict[str, Any]:
     """
-    Detect if a follow-up query is actually an implicit correction attempt.
+    Core reusable logic to detect if a follow-up query is an implicit correction attempt.
     If detected, auto-creates structured feedback in data.db and registers a provisional
     patch in CorrectionPatchLayer (passive self-healing).
     """
@@ -366,27 +411,31 @@ def detect_follow_up_correction(
     try:
         # Retrieve previous interaction from data.db
         prev_interaction = db.query(ResponseFeedback).filter(
-            (ResponseFeedback.response_id == payload.previous_response_id) &
-            (ResponseFeedback.session_id == payload.session_id)
+            (ResponseFeedback.response_id == previous_response_id) &
+            (ResponseFeedback.session_id == session_id)
         ).order_by(ResponseFeedback.updated_at.desc()).first()
 
-        original_query = payload.original_query or (prev_interaction.query_text if prev_interaction else "") or ""
-        original_response = payload.original_response or (prev_interaction.feedback_text if prev_interaction else "") or ""
+        orig_query = original_query or (prev_interaction.query_text if prev_interaction else "") or ""
+        orig_resp = original_response or (prev_interaction.feedback_text if prev_interaction else "") or ""
 
         detector = get_dissatisfaction_detector()
         try:
             is_correction, claim = detector.is_correction_attempt(
-                follow_up_query=payload.follow_up_query,
-                original_response=original_response,
-                original_query=original_query,
-                previous_queries=payload.session_history or []
+                follow_up_query=follow_up_query,
+                original_response=orig_resp,
+                original_query=orig_query,
+                previous_queries=session_history or []
             )
         except Exception as exc:
             logger.error("Dissatisfaction detection failed: %s", exc, exc_info=True)
-            raise HTTPException(
-                status_code=500,
-                detail="Dissatisfaction detection service error"
-            )
+            return {
+                "is_correction": False,
+                "correction_detected": False,
+                "feedback_created": False,
+                "auto_created_feedback": False,
+                "confidence": 0.0,
+                "error": str(exc),
+            }
 
         if is_correction and claim:
             target_entity_id = claim.entity_id
@@ -412,31 +461,44 @@ def detect_follow_up_correction(
                 "confidence": claim.confidence
             }
             try:
-                # Check if feedback already exists
+                role_val = current_role_value or Role.ADMIN.value
                 now_iso = datetime.now(timezone.utc).isoformat()
                 existing = db.query(ResponseFeedback).filter(
-                    (ResponseFeedback.response_id == payload.previous_response_id) &
-                    (ResponseFeedback.actor_id == current_role.value)
-                ).first()
+                    (ResponseFeedback.response_id == previous_response_id) &
+                    (ResponseFeedback.session_id == session_id)
+                ).order_by(ResponseFeedback.updated_at.desc()).first()
+
+                if not existing:
+                    existing = db.query(ResponseFeedback).filter(
+                        (ResponseFeedback.response_id == previous_response_id) &
+                        (ResponseFeedback.actor_id == role_val)
+                    ).first()
                 
                 feedback_id = existing.feedback_id if existing else f"fb_{uuid.uuid4().hex[:12]}"
                 
                 if existing:
                     existing.selected_categories = ["F08"]
                     existing.feedback_text = claim.raw_text
+                    existing.automated_category = "auto_correction_detected"
+                    existing.automated_confidence = claim.confidence
+                    if not existing.actor_id:
+                        existing.actor_id = role_val
+                        existing.actor_role = role_val
                     existing.updated_at = now_iso
                 else:
                     new_feedback = ResponseFeedback(
                         feedback_id=feedback_id,
-                        response_id=payload.previous_response_id,
+                        response_id=previous_response_id,
                         interaction_id=f"inter_{uuid.uuid4().hex[:8]}",
-                        session_id=payload.session_id,
+                        session_id=session_id,
                         turn_number=prev_interaction.turn_number if prev_interaction else 1,
-                        query_text=original_query,
-                        actor_id=current_role.value,
-                        actor_role=current_role.value,
+                        query_text=orig_query,
+                        actor_id=role_val,
+                        actor_role=role_val,
                         selected_categories=["F08"],
                         feedback_text=claim.raw_text,
+                        automated_category="auto_correction_detected",
+                        automated_confidence=claim.confidence,
                         created_at=now_iso,
                         updated_at=now_iso,
                     )
@@ -459,7 +521,7 @@ def detect_follow_up_correction(
                             provenance={
                                 "source": "passive_followup_detection",
                                 "feedback_id": feedback_id,
-                                "session_id": payload.session_id,
+                                "session_id": session_id,
                             },
                             approved=False,
                         )
@@ -471,13 +533,23 @@ def detect_follow_up_correction(
                 # Trigger background feedback loop
                 try:
                     from app.services.feedback import trigger_feedback_loop
-                    background_tasks.add_task(
-                        trigger_feedback_loop,
-                        feedback_id=feedback_id,
-                        session_id=payload.session_id,
-                        response_id=payload.previous_response_id,
-                        source="passive_followup",
-                    )
+                    if background_tasks:
+                        background_tasks.add_task(
+                            trigger_feedback_loop,
+                            feedback_id=feedback_id,
+                            session_id=session_id,
+                            response_id=previous_response_id,
+                            source="passive_followup",
+                        )
+                    else:
+                        import asyncio
+                        asyncio.create_task(asyncio.to_thread(
+                            trigger_feedback_loop,
+                            feedback_id=feedback_id,
+                            session_id=session_id,
+                            response_id=previous_response_id,
+                            source="passive_followup",
+                        ))
                 except Exception as fb_exc:
                     logger.debug("Could not queue feedback loop task: %s", fb_exc)
 
@@ -523,6 +595,35 @@ def detect_follow_up_correction(
         }
     finally:
         db.close()
+
+
+@router.post("/follow-up-detection", response_model=Dict[str, Any])
+async def detect_follow_up_correction(
+    payload: FollowUpDetectionIn,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    current_role: Role = Depends(get_client_role)
+) -> Dict[str, Any]:
+    """
+    Detect if a follow-up query is actually an implicit correction attempt.
+    If detected, auto-creates structured feedback in data.db and registers a provisional
+    patch in CorrectionPatchLayer (passive self-healing).
+    """
+    res = await run_follow_up_detection_logic(
+        session_id=payload.session_id,
+        previous_response_id=payload.previous_response_id,
+        follow_up_query=payload.follow_up_query,
+        original_query=payload.original_query,
+        original_response=payload.original_response,
+        session_history=payload.session_history,
+        current_role_value=current_role.value if current_role else None,
+        background_tasks=background_tasks,
+    )
+    if res.get("error") and not res.get("is_correction"):
+        raise HTTPException(
+            status_code=500,
+            detail="Dissatisfaction detection service error"
+        )
+    return res
 
 
 

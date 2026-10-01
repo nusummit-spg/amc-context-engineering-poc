@@ -64,12 +64,11 @@ class SQLiteAdapter(DatabaseAdapter):
 
             if "selected_categories" in columns:
                 interaction_id = f"int_{uuid.uuid4().hex[:8]}"
-                cursor = conn.execute("""
-                    INSERT INTO response_feedback 
-                    (feedback_id, response_id, interaction_id, session_id, turn_number,
-                     query_text, selected_categories, feedback_text, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
+                insert_cols = [
+                    "feedback_id", "response_id", "interaction_id", "session_id", "turn_number",
+                    "query_text", "selected_categories", "feedback_text", "created_at", "updated_at"
+                ]
+                vals = [
                     feedback_pk,
                     response_id,
                     interaction_id,
@@ -80,7 +79,24 @@ class SQLiteAdapter(DatabaseAdapter):
                     feedback_text,
                     now_iso,
                     now_iso,
-                ))
+                ]
+                if "response_text" in columns and kwargs.get("response_text") is not None:
+                    insert_cols.append("response_text")
+                    vals.append(kwargs.get("response_text"))
+                if "actor_id" in columns and kwargs.get("actor_id") is not None:
+                    insert_cols.append("actor_id")
+                    vals.append(kwargs.get("actor_id"))
+                if "actor_role" in columns and kwargs.get("actor_role") is not None:
+                    insert_cols.append("actor_role")
+                    vals.append(kwargs.get("actor_role"))
+
+                placeholders = ", ".join(["?"] * len(vals))
+                col_str = ", ".join(insert_cols)
+                cursor = conn.execute(f"""
+                    INSERT INTO response_feedback 
+                    ({col_str})
+                    VALUES ({placeholders})
+                """, tuple(vals))
                 conn.commit()
                 return feedback_pk
             else:
@@ -179,13 +195,17 @@ class SQLiteAdapter(DatabaseAdapter):
                 try:
                     conn.execute("""
                         INSERT OR IGNORE INTO query_evidence
-                        (response_id, session_id, query_text, retrieval_mode, created_at)
-                        VALUES (?, ?, ?, ?, ?)
+                        (response_id, session_id, query_text, retrieval_mode, assembled_context_json, synthesis_output_json, has_feedback, archived, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (
                         record.get("response_id", "default_resp"),
                         record.get("session_id", "default_sess"),
                         record.get("query_text", ""),
                         "hybrid",
+                        json.dumps({"context_text": "", "sources": []}),
+                        json.dumps({"answer": record.get("response_text", "")}),
+                        1,
+                        0,
                         now_iso,
                     ))
                 except Exception:

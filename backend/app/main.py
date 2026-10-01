@@ -138,11 +138,34 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Could not initialize modular packages: %s", exc)
 
+    # Start passive feedback background tasks
+    if getattr(settings, "passive_feedback_enabled", True):
+        try:
+            from app.feedback.session_manager import start_session_manager
+            from app.feedback.timeout_processor import start_timeout_processor
+            await start_session_manager()
+            await start_timeout_processor()
+            logger.info("Passive feedback background tasks started")
+        except Exception as exc:
+            logger.warning("Could not start passive feedback tasks: %s", exc)
+
     ingest_queue.bind_pipeline(container.pipeline)
     ingest_queue.start()
     logger.info("%s started (env=%s)", settings.app_name, settings.environment)
 
     yield
+
+    # Stop passive feedback background tasks & timers
+    try:
+        from app.feedback.timeout_processor import stop_timeout_processor
+        from app.feedback.session_manager import stop_session_manager
+        from app.feedback.feedback_timer import get_feedback_timer_manager
+        await stop_timeout_processor()
+        await stop_session_manager()
+        await get_feedback_timer_manager().stop_all()
+        logger.info("Passive feedback background tasks and timers stopped")
+    except Exception as exc:
+        logger.warning("Error stopping passive feedback tasks or timers: %s", exc)
 
     try:
         if hasattr(app.state, "feedback_loop") and app.state.feedback_loop:
@@ -202,6 +225,19 @@ def create_app() -> FastAPI:
     async def root_health(container: deps.Container = Depends(deps.get_container)):
         from app.api.routes.status import health as status_health
         return await status_health(container=container)
+
+    @app.get("/api/health/passive-feedback", tags=["status"])
+    async def passive_feedback_health():
+        """Health check and status inspection for the passive feedback system."""
+        from app.feedback.session_manager import get_session_manager
+        sm = get_session_manager()
+        return {
+            "status": "healthy" if settings.passive_feedback_enabled else "disabled",
+            "session_count": len(sm._sessions),
+            "timeout_seconds": sm.timeout_seconds,
+            "cleanup_interval": sm.cleanup_interval,
+            "enabled": settings.passive_feedback_enabled,
+        }
 
     @app.get("/metrics/dashboard", tags=["monitoring"], include_in_schema=False)
     async def root_metrics_dashboard():

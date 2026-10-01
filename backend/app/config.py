@@ -69,6 +69,18 @@ class Settings(BaseSettings):
     tier2_nli_confidence_threshold: float = 0.85      # STOP-2 gate confidence threshold
     tier3_llm_severity_threshold: str = "HIGH"        # Threshold for Tier 3 LLM severity mapping
 
+    # --- Passive Feedback ---
+    passive_feedback_enabled: bool = True
+    passive_feedback_timeout: int = 180               # seconds detection window
+    passive_feedback_cleanup_interval: int = 300      # seconds between session cleanups
+    passive_feedback_processor_interval: int = 60     # seconds between enrichment cycles
+    passive_detection_confidence_min: float = 0.70    # minimum confidence to flag correction
+    passive_sentiment_threshold: float = -0.35        # frustration threshold
+    passive_similarity_threshold: float = 0.75        # same referent threshold
+    passive_session_max_size: int = 10000             # max sessions stored in memory
+    passive_enrichment_batch_size: int = 100          # max responses enriched per cycle
+    feedback_timer_seconds: int = 300                 # 5-minute timer before auto-inserting empty feedback
+
     # ── Microservices Configuration ──────────────────────────────
     microservices_mode: bool = Field(
         default=False,
