@@ -263,6 +263,16 @@ __marimo__/
 tempCodeRunnerFile.py
 *.pyo
 
+# Backend specific
+backend/.venv/
+backend/.pytest_cache/
+backend/data.db
+backend/logs/
+
+# Large ML model files
+backend/models/
+models/
+
 # ============================================================================
 # NODE.JS / JAVASCRIPT / TYPESCRIPT ARTIFACTS
 # ============================================================================
