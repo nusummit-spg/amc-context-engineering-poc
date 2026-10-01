@@ -726,3 +726,7 @@ benchmark-cache/
 !LICENSE*
 !Makefile
 !makefile
+
+# Large ML model files (ONNX, PyTorch models, tokenizers)
+backend/models/
+mf-context-engine/models/

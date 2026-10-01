@@ -190,3 +190,11 @@ aare_transcript.json
 !requirements.txt
 !pytest.ini
 !README.md
+
+# Model files (ONNX, PyTorch models, tokenizers)
+models/
+models/*
+models/gliner_config.json
+models/gliner_medium_fp32.onnx
+models/gliner_quantized.onnx
+models/pytorch_model.bin
