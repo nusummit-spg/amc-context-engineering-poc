@@ -1,0 +1,1659 @@
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { DEFAULT_USER_PROFILES, ROLE_PERMISSIONS } from "../data/rbac";
+// NOTE: `users.json` here is cosmetic mock/display data for the RBAC admin
+// panel only — it holds no credentials and is NOT used for authentication.
+// Real sign-in goes through `loginUser()` against the Python backend, which
+// validates against its own server-side JSON user store the browser never
+// reads (see backend/app/auth/).
+import USERS from "../data/users.json";
+import {
+  fetchUsers,
+  fetchAuditLogs,
+  fetchIndexingTasks,
+  fetchProposedEdges,
+  fetchGraph,
+  sendChat as apiSendChat,
+  generateChatTitle as apiGenerateChatTitle,
+  fetchSessions as apiFetchSessions,
+  fetchSessionHistory as apiFetchSessionHistory,
+  saveSession as apiSaveSession,
+  deleteSession as apiDeleteSession,
+  sendQuery as apiSendQuery,
+  clearIntentCache as apiClearIntentCache,
+  saveUser as apiSaveUser,
+  deleteUser as apiDeleteUser,
+  confirmProposedEdge as apiConfirmProposedEdge,
+  rejectProposedEdge as apiRejectProposedEdge,
+  loginUser as apiLoginUser,
+  logoutUser as apiLogoutUser,
+} from "../services/api";
+import { hasUserMessage, getUserChatSessionsKey, getUserActiveSessionIdKey, loadUserChatSessions } from "../utils/chatSessionUtils";
+import { generateTraditionalResult, generateHybridResult } from "../data/mockEngine";
+
+const AppStateContext = createContext(null);
+
+// ── Storage Keys ─────────────────────────────────────────────────────────────
+const STORAGE_KEYS = {
+  USERS: "ns_cg_users_v1",
+  ACTIVE_USER: "ns_cg_active_user_v1",
+  AUTH_SESSION: "ns_cg_auth_session_v1",
+  REMEMBERED_USER: "ns_cg_remembered_user_v1",
+  REMEMBER_ME: "ns_cg_remember_me_v1",
+  CHAT_SESSIONS: "ns_cg_chat_sessions_v1",
+  ACTIVE_SESSION_ID: "ns_cg_active_session_id_v1",
+  COMPARE_SESSIONS: "ns_cg_compare_sessions_v1",
+  ACTIVE_COMPARE_SESSION_ID: "ns_cg_active_compare_session_id_v1",
+  COMPARISONS: "ns_cg_comparisons_v1",
+  ACTIVE_TAB: "ns_cg_active_tab_v1",
+  ADMIN_SUB_TAB: "ns_cg_admin_subtab_v1",
+  ACTIVE_PAGE: "ns_cg_active_page_v1",
+  SIDEBAR_OPEN: "ns_cg_sidebar_open_v1",
+  THEME: "ns_cg_theme_v1",
+};
+
+function safeStorageGet(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+function safeStorageSet(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.warn(`Could not persist ${key} to localStorage:`, err);
+  }
+}
+
+function uuid() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+
+// ── Initial Mock Data ────────────────────────────────────────────────────────
+const INITIAL_INDEXING_TASKS = [
+  {
+    task_id: "task-8f2c1a",
+    filename: "April 2025.pdf",
+    status: "COMPLETED",
+    stage: "Finished",
+    progress: 1.0,
+    sha256_hash: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a1",
+    started_at: "2026-08-28T09:12:04",
+    completed_at: "2026-08-28T09:14:41",
+    entities_count: 42,
+    relations_count: 67,
+    chunks_count: 118,
+  },
+  {
+    task_id: "task-3ba9de",
+    filename: "Safer participation of retail investors in Algorithmic trading.pdf",
+    status: "COMPLETED",
+    stage: "Finished",
+    progress: 1.0,
+    sha256_hash: "1c383cd30b7c298ab50293adfecb7b18",
+    started_at: "2026-08-25T14:02:11",
+    completed_at: "2026-08-25T14:05:33",
+    entities_count: 28,
+    relations_count: 39,
+    chunks_count: 74,
+  },
+];
+
+const INITIAL_AUDIT_LINES = [
+  `{"ts": "2026-08-30T11:41:02Z", "user": "sarah_compliance", "role": "Compliance & Regulatory Officer", "query": "borrowing limits for mutual funds", "mode": "contextgraph", "latency_ms": 842}`,
+  `{"ts": "2026-08-30T11:38:47Z", "user": "vikram_pm", "role": "Fund Manager / Portfolio Manager", "query": "categorization rules for equity schemes", "mode": "traditional", "latency_ms": 1204}`,
+  `{"ts": "2026-08-30T10:55:19Z", "user": "ananya_esg", "role": "ESG & Sustainability Analyst", "query": "ESG disclosure requirements BRSR", "mode": "contextgraph", "latency_ms": 693}`,
+  `{"ts": "2026-08-29T16:20:03Z", "user": "sarah_compliance", "role": "Compliance & Regulatory Officer", "query": "information ratio disclosure norms", "mode": "contextgraph", "latency_ms": 771}`,
+  `{"ts": "2026-08-29T09:04:55Z", "user": "rahul_sales", "role": "Sales & Distribution Manager", "query": "SID KIM update timelines", "mode": "traditional", "latency_ms": 1330}`,
+];
+
+const INITIAL_USERS = [
+  ...USERS.map((u) => ({
+    username: u.username,
+    full_name: u.display_name,
+    role: u.role,
+    department: u.department,
+    email: u.email,
+    avatar_initials: u.avatar_initials,
+    status: "Active",
+  })),
+  ...DEFAULT_USER_PROFILES.filter((dp) => !USERS.some((u) => u.username === dp.username)),
+];
+
+export function AppStateProvider({ children }) {
+  // ── 0. Auth Gate State ─────────────────────────────────────────────────────
+  // `token`/`expiresAt` come straight from the backend's /api/auth/login
+  // response — the frontend never mints or validates its own credentials,
+  // it just stores what the server issued and re-checks the expiry locally.
+  const [authSession, setAuthSessionState] = useState(() => {
+    // 1. Check sessionStorage first (active tab/window session)
+    let saved = null;
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEYS.AUTH_SESSION);
+      if (raw) saved = JSON.parse(raw);
+    } catch {}
+
+    // 2. Fall back to localStorage (persisted session when "Remember me" was chosen)
+    if (!saved) {
+      saved = safeStorageGet(STORAGE_KEYS.AUTH_SESSION, {
+        isAuthenticated: false,
+        authedUsername: null,
+        token: null,
+        expiresAt: null,
+        rememberMe: false,
+      });
+    }
+
+    // Defend against a stale/expired session surviving a page reload.
+    if (saved?.isAuthenticated && saved?.expiresAt && saved.expiresAt * 1000 <= Date.now()) {
+      try {
+        sessionStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
+        localStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
+      } catch {}
+      return { isAuthenticated: false, authedUsername: null, token: null, expiresAt: null, rememberMe: false };
+    }
+    return saved;
+  });
+  const isAuthenticated = Boolean(authSession?.isAuthenticated);
+  const authedUsername = authSession?.authedUsername || null;
+  const authToken = authSession?.token || null;
+
+  const clearAuthSession = useCallback(() => {
+    const sessionData = { isAuthenticated: false, authedUsername: null, token: null, expiresAt: null, rememberMe: false };
+    setAuthSessionState(sessionData);
+    setChatSessionsState({});
+    const freshId = uuid();
+    setChatSessionIdState(freshId);
+    setChatQuery("");
+    setChatError(null);
+    setIsChatLoading(false);
+    try {
+      sessionStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
+      localStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
+      // NOTE: User-specific chat sessions remain persistently stored in localStorage
+      // under getUserChatSessionsKey(username) and in the backend. They are NOT deleted on logout.
+    } catch {}
+  }, []);
+
+  // Passive expiry watch: if the session outlives its TTL while the tab is
+  // open, drop back to the login screen rather than letting API calls fail
+  // silently with 401s.
+  useEffect(() => {
+    if (!isAuthenticated || !authSession?.expiresAt) return undefined;
+    const msRemaining = authSession.expiresAt * 1000 - Date.now();
+    if (msRemaining <= 0) {
+      clearAuthSession();
+      return undefined;
+    }
+    const timer = setTimeout(clearAuthSession, msRemaining);
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, authSession?.expiresAt, clearAuthSession]);
+
+  // ── 1. Users & RBAC State ──────────────────────────────────────────────────
+  const [users, setUsersState] = useState(() => safeStorageGet(STORAGE_KEYS.USERS, INITIAL_USERS));
+  const [activeUsername, setActiveUsernameState] = useState(() => {
+    const saved = safeStorageGet(STORAGE_KEYS.ACTIVE_USER, null);
+    if (saved) return saved;
+    const initialSession = safeStorageGet(STORAGE_KEYS.AUTH_SESSION, null);
+    return initialSession?.authedUsername || INITIAL_USERS[0].username;
+  });
+
+  const setUsers = useCallback((updater) => {
+    setUsersState((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      safeStorageSet(STORAGE_KEYS.USERS, next);
+      return next;
+    });
+  }, []);
+
+  const setActiveUsername = useCallback((username) => {
+    setActiveUsernameState(username);
+    safeStorageSet(STORAGE_KEYS.ACTIVE_USER, username);
+  }, []);
+
+  const login = useCallback(
+    async (inputUserId, inputPassword, rememberMe = false) => {
+      const cleanUserId = (inputUserId || "").trim();
+
+      // All credential validation happens server-side — the frontend never
+      // reads or compares against a local password list.
+      let response;
+      try {
+        response = await apiLoginUser({ username: cleanUserId, password: inputPassword, rememberMe });
+      } catch (err) {
+        return { success: false, error: err?.message || "Sign-in failed. Please try again." };
+      }
+
+      const backendUser = response.user;
+
+      const commit = () => {
+        const sessionData = {
+          isAuthenticated: true,
+          authedUsername: backendUser.username,
+          token: response.token,
+          expiresAt: response.expires_at,
+          rememberMe: Boolean(rememberMe),
+        };
+        setAuthSessionState(sessionData);
+
+        // Always store in sessionStorage for current tab/window lifecycle
+        try {
+          sessionStorage.setItem(STORAGE_KEYS.AUTH_SESSION, JSON.stringify(sessionData));
+        } catch {}
+
+        // If rememberMe is checked, also persist in localStorage across browser restarts.
+        // If not checked, purge from localStorage so closing browser clears session.
+        try {
+          if (rememberMe) {
+            localStorage.setItem(STORAGE_KEYS.AUTH_SESSION, JSON.stringify(sessionData));
+          } else {
+            localStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
+          }
+        } catch {}
+
+        setActiveUsername(backendUser.username);
+
+        // Load the authenticated user's persistent chat sessions from localStorage
+        const userSavedSessions = loadUserChatSessions(backendUser.username);
+        setChatSessionsState(userSavedSessions);
+
+        // Automatically initialize a new, empty chat session instead of reopening or continuing the most recent conversation
+        const freshSessionId = uuid();
+        setChatSessionIdState(freshSessionId);
+        safeStorageSet(getUserActiveSessionIdKey(backendUser.username), freshSessionId);
+        isLoginPendingNewChatRef.current = true;
+
+        setChatQuery("");
+        setChatError(null);
+        setIsChatLoading(false);
+        setActiveTabState(0);
+        safeStorageSet(STORAGE_KEYS.ACTIVE_TAB, 0);
+        setActivePageState("app");
+        safeStorageSet(STORAGE_KEYS.ACTIVE_PAGE, "app");
+
+        setUsersState((prev) => {
+          const profile = {
+            username: backendUser.username,
+            full_name: backendUser.display_name,
+            role: backendUser.role,
+            department: backendUser.department,
+            email: backendUser.email,
+            avatar_initials: backendUser.avatar_initials,
+            status: backendUser.status || "Active",
+          };
+          const exists = prev.some((u) => u.username === backendUser.username);
+          const next = exists
+            ? prev.map((u) => (u.username === backendUser.username ? { ...u, ...profile } : u))
+            : [profile, ...prev];
+          safeStorageSet(STORAGE_KEYS.USERS, next);
+          return next;
+        });
+      };
+
+      // `user` here mirrors the shape LoginScreen expects for its
+      // "Signing in as {display_name}…" confirmation state.
+      return {
+        success: true,
+        user: { username: backendUser.username, display_name: backendUser.display_name },
+        commit,
+      };
+    },
+    [setActiveUsername]
+  );
+
+  const logout = useCallback(() => {
+    // Best-effort — tokens are stateless/self-expiring, so a failed logout
+    // call server-side never blocks clearing the local session.
+    apiLogoutUser(authToken);
+    clearAuthSession();
+  }, [authToken, clearAuthSession]);
+
+  const activeUser = useMemo(() => {
+    const found = users.find((u) => u.username === activeUsername);
+    if (found) return found;
+    const foundAuth = USERS.find((u) => u.username === activeUsername);
+    if (foundAuth) {
+      return {
+        username: foundAuth.username,
+        full_name: foundAuth.display_name,
+        role: foundAuth.role,
+        department: foundAuth.department,
+        email: foundAuth.email,
+        avatar_initials: foundAuth.avatar_initials,
+        status: "Active",
+      };
+    }
+    return users[0] || INITIAL_USERS[0] || DEFAULT_USER_PROFILES[0];
+  }, [users, activeUsername]);
+
+  const activePermissions = useMemo(() => {
+    return ROLE_PERMISSIONS[activeUser.role] || {};
+  }, [activeUser.role]);
+
+  // ── 2. Navigation & Tabs State ─────────────────────────────────────────────
+  const [activeTab, setActiveTabState] = useState(() => safeStorageGet(STORAGE_KEYS.ACTIVE_TAB, 0));
+  const [adminSubTab, setAdminSubTabState] = useState(() => safeStorageGet(STORAGE_KEYS.ADMIN_SUB_TAB, 0));
+  const [activePage, setActivePageState] = useState(() => safeStorageGet(STORAGE_KEYS.ACTIVE_PAGE, "app"));
+  const [isSidebarOpen, setIsSidebarOpenState] = useState(() => {
+    const isCompact = typeof window !== "undefined" && window.innerWidth <= 1024;
+    // On phones and tablets the sidebar is an overlay drawer, so it always
+    // starts closed — an "open" value persisted from a desktop session would
+    // otherwise cover the content on first load.
+    if (isCompact) return false;
+    const saved = safeStorageGet(STORAGE_KEYS.SIDEBAR_OPEN, null);
+    return saved !== null ? saved : true;
+  });
+
+  const setActiveTab = useCallback((tab) => {
+    setActiveTabState(tab);
+    safeStorageSet(STORAGE_KEYS.ACTIVE_TAB, tab);
+  }, []);
+
+  const setAdminSubTab = useCallback((subTab) => {
+    setAdminSubTabState(subTab);
+    safeStorageSet(STORAGE_KEYS.ADMIN_SUB_TAB, subTab);
+  }, []);
+
+  const setActivePage = useCallback((page) => {
+    setActivePageState(page);
+    safeStorageSet(STORAGE_KEYS.ACTIVE_PAGE, page);
+  }, []);
+
+  const setIsSidebarOpen = useCallback((open) => {
+    setIsSidebarOpenState(open);
+    safeStorageSet(STORAGE_KEYS.SIDEBAR_OPEN, open);
+  }, []);
+
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpenState((prev) => {
+      const next = !prev;
+      safeStorageSet(STORAGE_KEYS.SIDEBAR_OPEN, next);
+      return next;
+    });
+  }, []);
+
+  // ── 2b. Appearance / Theme ─────────────────────────────────────────────────
+  // theme is the user's choice ("light" | "dark" | "system"); resolvedTheme is
+  // what is actually painted, following the OS when the choice is "system".
+  const [theme, setThemeState] = useState(() => {
+    const saved = safeStorageGet(STORAGE_KEYS.THEME, "light");
+    return ["light", "dark", "system"].includes(saved) ? saved : "light";
+  });
+  const [systemPrefersDark, setSystemPrefersDark] = useState(
+    () => typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
+    if (!mq) return;
+    const onChange = (e) => setSystemPrefersDark(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  const resolvedTheme = theme === "system" ? (systemPrefersDark ? "dark" : "light") : theme;
+  const isFirstThemePaint = useRef(true);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute("data-theme", resolvedTheme);
+
+    // Browser chrome (address bar on mobile) follows the painted canvas colour.
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", resolvedTheme === "dark" ? "#141517" : "#FAFAF8");
+
+    // Cross-fade the palette on user-initiated switches only — never on first paint.
+    if (isFirstThemePaint.current) {
+      isFirstThemePaint.current = false;
+      return undefined;
+    }
+    root.classList.add("theme-transition");
+    const timer = setTimeout(() => root.classList.remove("theme-transition"), 360);
+    return () => {
+      clearTimeout(timer);
+      root.classList.remove("theme-transition");
+    };
+  }, [resolvedTheme]);
+
+  const setTheme = useCallback((next) => {
+    setThemeState(next);
+    safeStorageSet(STORAGE_KEYS.THEME, next);
+  }, []);
+
+  // ── Helper: verify a session has at least one actual user message ───────────
+  // Exported for testing and component use.
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  // ── 3. Chat State (Multi-Session & Multi-Turn) ─────────────────────────────
+  const [chatSessions, setChatSessionsState] = useState(() => {
+    let currentAuth = null;
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEYS.AUTH_SESSION) || localStorage.getItem(STORAGE_KEYS.AUTH_SESSION);
+      if (raw) currentAuth = JSON.parse(raw);
+    } catch {}
+
+    const username = currentAuth?.isAuthenticated ? currentAuth.authedUsername : null;
+    if (!username) return {};
+    return loadUserChatSessions(username);
+  });
+
+  const [chatSessionId, setChatSessionIdState] = useState(() => {
+    // If opening a fresh browser window/tab, always start with a new chat session
+    let isSameWindowSession = false;
+    let currentAuth = null;
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEYS.AUTH_SESSION);
+      if (raw) {
+        currentAuth = JSON.parse(raw);
+        isSameWindowSession = Boolean(currentAuth?.isAuthenticated);
+      }
+    } catch {}
+
+    if (isSameWindowSession && currentAuth?.authedUsername) {
+      const saved = safeStorageGet(getUserActiveSessionIdKey(currentAuth.authedUsername), null);
+      if (saved) return saved;
+    }
+    return uuid();
+  });
+
+  const [chatQuery, setChatQuery] = useState("");
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const [chatError, setChatError] = useState(null);
+  const [animatingSessionId, setAnimatingSessionId] = useState(null);
+  const titleAnimTimerRef = useRef(null);
+  const isLoginPendingNewChatRef = useRef(false);
+  const chatSessionsRef = useRef(chatSessions);
+  useEffect(() => {
+    chatSessionsRef.current = chatSessions;
+  }, [chatSessions]);
+
+  useEffect(() => {
+    return () => {
+      if (titleAnimTimerRef.current) {
+        clearTimeout(titleAnimTimerRef.current);
+      }
+    };
+  }, []);
+
+  const setChatSessions = useCallback((updater) => {
+    setChatSessionsState((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      if (authedUsername) {
+        safeStorageSet(getUserChatSessionsKey(authedUsername), next);
+      }
+      return next;
+    });
+  }, [authedUsername]);
+
+  const setChatSessionId = useCallback((id) => {
+    setChatSessionIdState(id);
+    if (authedUsername) {
+      safeStorageSet(getUserActiveSessionIdKey(authedUsername), id);
+    }
+  }, [authedUsername]);
+
+  // Backend persistence helper with automatic conflict re-keying
+  const saveSessionToBackend = useCallback(async (sessionId, sessionData) => {
+    if (!sessionId || !sessionData) return;
+    if (!hasUserMessage(sessionData)) return;
+    try {
+      const resp = await apiSaveSession(sessionId, {
+        session_id: sessionId,
+        id: sessionId,
+        title: sessionData.title,
+        history: sessionData.history,
+        createdAt: sessionData.createdAt,
+        updatedAt: sessionData.updatedAt,
+      });
+
+      // If backend re-keyed the session due to ownership conflict, migrate state cleanly
+      if (resp?.rekeyed && resp?.session_id && resp.session_id !== sessionId) {
+        setChatSessionsState((prev) => {
+          const next = { ...prev };
+          const data = next[sessionId] || sessionData;
+          delete next[sessionId];
+          next[resp.session_id] = { ...data, id: resp.session_id };
+          if (authedUsername) {
+            safeStorageSet(getUserChatSessionsKey(authedUsername), next);
+          }
+          return next;
+        });
+        setChatSessionIdState(resp.session_id);
+        if (authedUsername) {
+          safeStorageSet(getUserActiveSessionIdKey(authedUsername), resp.session_id);
+        }
+      }
+    } catch (err) {
+      console.warn(`Failed to persist session ${sessionId} to backend:`, err);
+    }
+  }, [authedUsername]);
+
+  // Synchronize chat sessions with backend on mount or when user changes
+  useEffect(() => {
+    let isCancelled = false;
+    async function syncBackendSessions() {
+      if (!isAuthenticated || !authToken || !authedUsername) return;
+      try {
+        const backendSessions = await apiFetchSessions();
+        if (isCancelled || !Array.isArray(backendSessions)) return;
+
+        const validIds = new Set(backendSessions.map((bs) => bs.session_id));
+        setChatSessionsState((prev) => {
+          const next = { ...prev };
+          // Merge sessions from backend belonging to this authenticated user
+          for (const bs of backendSessions) {
+            const sid = bs.session_id;
+            if (!sid) continue;
+            const createdAtMs = bs.created_at ? Date.parse(bs.created_at) : (bs.modified_time ? bs.modified_time * 1000 : Date.now());
+            const updatedAtMs = bs.updated_at ? Date.parse(bs.updated_at) : (bs.modified_time ? bs.modified_time * 1000 : Date.now());
+
+            if (!next[sid]) {
+              next[sid] = {
+                id: sid,
+                title: bs.title || bs.preview || "Conversation",
+                isTitleGenerated: Boolean(bs.title && bs.title !== bs.preview),
+                turn_count: bs.turn_count || 1,
+                history: [],
+                createdAt: createdAtMs,
+                updatedAt: updatedAtMs,
+                _needsFetch: true,
+              };
+            } else {
+              // Update metadata if needed
+              if (bs.title && (!next[sid].title || next[sid].title === "New Conversation" || !next[sid].isTitleGenerated)) {
+                next[sid].title = bs.title;
+                next[sid].isTitleGenerated = true;
+              }
+              if (bs.turn_count && !next[sid].turn_count) {
+                next[sid].turn_count = bs.turn_count;
+              }
+            }
+          }
+          safeStorageSet(getUserChatSessionsKey(authedUsername), next);
+          return next;
+        });
+
+        // Ensure active session belongs to this user; always start with new chat on login, never existing recent chat
+        setChatSessionIdState((currId) => {
+          if (isLoginPendingNewChatRef.current) {
+            isLoginPendingNewChatRef.current = false;
+            const freshId =
+              currId && !validIds.has(currId) && (!chatSessionsRef.current[currId] || !hasUserMessage(chatSessionsRef.current[currId]))
+                ? currId
+                : uuid();
+            safeStorageSet(getUserActiveSessionIdKey(authedUsername), freshId);
+            return freshId;
+          }
+
+          if (currId && validIds.has(currId)) {
+            return currId;
+          }
+          if (currId && (!chatSessionsRef.current[currId] || !hasUserMessage(chatSessionsRef.current[currId]))) {
+            safeStorageSet(getUserActiveSessionIdKey(authedUsername), currId);
+            return currId;
+          }
+          const freshId = uuid();
+          safeStorageSet(getUserActiveSessionIdKey(authedUsername), freshId);
+          return freshId;
+        });
+      } catch (err) {
+        console.warn("Could not sync chat sessions from backend:", err);
+      }
+    }
+    syncBackendSessions();
+    return () => {
+      isCancelled = true;
+    };
+  }, [isAuthenticated, authToken, authedUsername]);
+
+  // Fetch full history if the active session was loaded from backend metadata and needs history
+  useEffect(() => {
+    if (!isAuthenticated || !authToken || !authedUsername) return;
+    if (chatSessions[chatSessionId]?._needsFetch) {
+      apiFetchSessionHistory(chatSessionId)
+        .then((data) => {
+          if (data) {
+            const hist = Array.isArray(data) ? data : (data.history || []);
+            setChatSessionsState((prev) => {
+              if (!prev[chatSessionId]) return prev;
+              const next = {
+                ...prev,
+                [chatSessionId]: {
+                  ...prev[chatSessionId],
+                  history: hist,
+                  _needsFetch: false,
+                },
+              };
+              safeStorageSet(getUserChatSessionsKey(authedUsername), next);
+              return next;
+            });
+          }
+        })
+        .catch((err) => console.warn("Could not load session history for active session:", err));
+    }
+  }, [chatSessionId, chatSessions, isAuthenticated, authToken, authedUsername]);
+
+  const getChatHistory = useCallback(
+    (id = chatSessionId) => {
+      return chatSessions[id]?.history || [];
+    },
+    [chatSessions, chatSessionId]
+  );
+
+  const setChatHistory = useCallback(
+    (id, historyOrFn) => {
+      setChatSessions((prev) => {
+        const current = prev[id]?.history || [];
+        const next = typeof historyOrFn === "function" ? historyOrFn(current) : historyOrFn;
+        const hasUser = (next || []).some(
+          (m) => m && m.role === "user" && typeof m.content === "string" && m.content.trim().length > 0
+        );
+
+        // If no user messages exist and session was not previously created, do not add empty session
+        if (!hasUser && !prev[id]) {
+          return prev;
+        }
+
+        // If history was emptied completely, remove from chatSessions
+        if (!hasUser && (!next || next.length === 0)) {
+          const copy = { ...prev };
+          delete copy[id];
+          return copy;
+        }
+
+        const existing = prev[id];
+        const firstUser = (next || []).find((m) => m && m.role === "user" && m.content);
+        const userContent = (firstUser?.content || "").trim();
+        const fallbackTitle = userContent
+          ? (userContent.length > 45 ? userContent.slice(0, 44) + "…" : userContent)
+          : "Conversation";
+        const title = existing?.isTitleGenerated
+          ? existing.title
+          : (existing?.title && existing.title !== "New Conversation" ? existing.title : fallbackTitle);
+        const isTitleGenerated = existing?.isTitleGenerated ?? false;
+
+        const updatedSession = {
+          id,
+          title,
+          isTitleGenerated,
+          history: next,
+          createdAt: existing?.createdAt || Date.now(),
+          updatedAt: Date.now(),
+        };
+
+        const nextSessions = {
+          ...prev,
+          [id]: updatedSession,
+        };
+
+        saveSessionToBackend(id, updatedSession);
+        return nextSessions;
+      });
+    },
+    [setChatSessions, saveSessionToBackend]
+  );
+
+  const generateConversationTitle = useCallback(
+    async (sessionId, queryText) => {
+      const q = (queryText || "").trim();
+      if (!sessionId || !q) return;
+
+      const current = chatSessions[sessionId];
+      if (current?.isTitleGenerated) {
+        return;
+      }
+
+      try {
+        const generatedTitle = await apiGenerateChatTitle({ query: q, session_id: sessionId });
+        if (generatedTitle && generatedTitle.trim() && generatedTitle !== "New Conversation") {
+          const finalTitle = generatedTitle.trim();
+          let sessionToPersist = null;
+          setChatSessions((prev) => {
+            // Guard against race conditions: if session was deleted while title was generating, do NOT recreate it!
+            if (!prev[sessionId]) {
+              return prev;
+            }
+            sessionToPersist = {
+              ...prev[sessionId],
+              title: finalTitle,
+              isTitleGenerated: true,
+              updatedAt: Date.now(),
+            };
+            return {
+              ...prev,
+              [sessionId]: sessionToPersist,
+            };
+          });
+
+          if (sessionToPersist) {
+            saveSessionToBackend(sessionId, sessionToPersist);
+          }
+
+          // Trigger word-by-word animation for this session
+          setAnimatingSessionId(sessionId);
+          if (titleAnimTimerRef.current) {
+            clearTimeout(titleAnimTimerRef.current);
+          }
+          const wordCount = finalTitle.split(/\s+/).filter(Boolean).length;
+          const animDuration = Math.max(500, wordCount * 65 + 350);
+          titleAnimTimerRef.current = setTimeout(() => {
+            setAnimatingSessionId(null);
+          }, animDuration);
+        }
+      } catch (err) {
+        console.warn("Async title generation encountered error:", err);
+      }
+    },
+    [chatSessions, setChatSessions, saveSessionToBackend]
+  );
+
+  const startNewChatSession = useCallback(
+    () => {
+      // Check if current session is already an empty/blank session without any user message
+      const activeSession = chatSessions[chatSessionId];
+      const isCurrentBlank = !activeSession || !hasUserMessage(activeSession);
+
+      if (isCurrentBlank) {
+        // Already on a clean blank session; do not generate or stack anything
+        setChatQuery("");
+        setChatError(null);
+        setIsChatLoading(false);
+        return chatSessionId;
+      }
+
+      // Initialize a fresh blank session ID without adding to chatSessions
+      const newId = uuid();
+      setChatSessionId(newId);
+      setChatQuery("");
+      setChatError(null);
+      setIsChatLoading(false);
+      return newId;
+    },
+    [chatSessionId, chatSessions, setChatSessionId]
+  );
+
+  const loadChatSession = useCallback(
+    async (id) => {
+      if (chatSessions[id]) {
+        setChatSessionId(id);
+        setChatError(null);
+        setIsChatLoading(false);
+        if (chatSessions[id]._needsFetch || !chatSessions[id].history?.length) {
+          try {
+            const data = await apiFetchSessionHistory(id);
+            if (data) {
+              const hist = Array.isArray(data) ? data : (data.history || []);
+              if (hist.length > 0) {
+                setChatSessions((prev) => {
+                  if (!prev[id]) return prev;
+                  return {
+                    ...prev,
+                    [id]: {
+                      ...prev[id],
+                      history: hist,
+                      _needsFetch: false,
+                    },
+                  };
+                });
+              }
+            }
+          } catch (err) {
+            console.warn(`Could not load history for session ${id}:`, err);
+          }
+        }
+        return true;
+      }
+      return false;
+    },
+    [chatSessions, setChatSessionId, setChatSessions]
+  );
+
+  const deleteChatSession = useCallback(
+    async (id) => {
+      // 1. Remove from local state and storage immediately
+      setChatSessions((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
+
+      // 2. Remove from backend persistence
+      try {
+        await apiDeleteSession(id);
+      } catch (err) {
+        console.warn(`Failed to delete session ${id} from backend:`, err);
+      }
+
+      // 3. If deleting the active chat, reset to a clean blank session without adding to chatSessions
+      if (chatSessionId === id) {
+        const freshId = uuid();
+        setChatSessionId(freshId);
+        setChatQuery("");
+        setChatError(null);
+        setIsChatLoading(false);
+      }
+    },
+    [chatSessionId, setChatSessions, setChatSessionId]
+  );
+
+  const clearAllChatSessions = useCallback(async () => {
+    const existingIds = Object.keys(chatSessions);
+    const freshId = uuid();
+    setChatSessions({});
+    setChatSessionId(freshId);
+    setChatQuery("");
+    if (authedUsername) {
+      safeStorageSet(getUserChatSessionsKey(authedUsername), {});
+      safeStorageSet(getUserActiveSessionIdKey(authedUsername), freshId);
+    }
+    for (const id of existingIds) {
+      try {
+        await apiDeleteSession(id);
+      } catch (err) {
+        // ignore
+      }
+    }
+  }, [chatSessions, setChatSessions, setChatSessionId, authedUsername]);
+
+  const sendChatMessage = useCallback(
+    async (queryText = chatQuery) => {
+      const q = queryText.trim();
+      if (!q || isChatLoading) return;
+
+      const sid = chatSessionId;
+      const history = getChatHistory(sid);
+      const turnIndex = Math.floor(history.length / 2) + 1;
+
+      // Automatically generate concise title on first query without blocking response
+      if (turnIndex === 1 && !chatSessions[sid]?.isTitleGenerated) {
+        generateConversationTitle(sid, q);
+      }
+
+      const userMsg = { role: "user", content: q, turn_index: turnIndex, timestamp: Date.now() };
+      const loadingMsg = { role: "assistant", loading: true, turn_index: turnIndex };
+
+      setChatQuery("");
+      setIsChatLoading(true);
+      setChatError(null);
+      setChatHistory(sid, (h) => [...h, userMsg, loadingMsg]);
+
+      try {
+        const resp = await apiSendChat({
+          query: q,
+          history,
+          session_id: sid,
+          mode: "contextgraph",
+        });
+
+        setChatHistory(sid, (h) => {
+          const next = [...h];
+          const idx = next.length - 1;
+          next[idx] = {
+            role: "assistant",
+            loading: false,
+            turn_index: turnIndex,
+            hybrid: resp.hybrid,
+            resolvedQuery: resp.resolvedQuery,
+            content: resp.hybrid?.answer || "No answer generated.",
+            timestamp: Date.now(),
+          };
+          return next;
+        });
+      } catch (err) {
+        console.warn("Backend chat failed, falling back to mock synthesis:", err);
+        const hybrid = generateHybridResult(q);
+
+        setChatHistory(sid, (h) => {
+          const next = [...h];
+          const idx = next.length - 1;
+          next[idx] = {
+            role: "assistant",
+            loading: false,
+            turn_index: turnIndex,
+            hybrid,
+            content: hybrid.answer,
+            timestamp: Date.now(),
+          };
+          return next;
+        });
+      } finally {
+        setIsChatLoading(false);
+      }
+    },
+    [chatQuery, isChatLoading, chatSessionId, chatSessions, getChatHistory, setChatHistory, generateConversationTitle]
+  );
+
+  // ── 4. Compare State (Multi-Session & Multi-Turn Independent from Chat) ────
+  const [compareSessions, setCompareSessionsState] = useState(() => safeStorageGet(STORAGE_KEYS.COMPARE_SESSIONS, {}));
+  const [compareSessionId, setCompareSessionIdState] = useState(() => {
+    const saved = safeStorageGet(STORAGE_KEYS.ACTIVE_COMPARE_SESSION_ID, null);
+    return saved || uuid();
+  });
+  const [compareQuery, setCompareQuery] = useState("");
+  const [isCompareLoading, setIsCompareLoading] = useState(false);
+  const [compareError, setCompareError] = useState(null);
+  const [compareResult, setCompareResult] = useState(null);
+  const [comparisons, setComparisonsState] = useState(() => safeStorageGet(STORAGE_KEYS.COMPARISONS, []));
+  const [lastHybrid, setLastHybrid] = useState(null);
+  const [lastTraditional, setLastTraditional] = useState(null);
+
+  const setCompareSessions = useCallback((updater) => {
+    setCompareSessionsState((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      safeStorageSet(STORAGE_KEYS.COMPARE_SESSIONS, next);
+      return next;
+    });
+  }, []);
+
+  const setCompareSessionId = useCallback((id) => {
+    setCompareSessionIdState(id);
+    safeStorageSet(STORAGE_KEYS.ACTIVE_COMPARE_SESSION_ID, id);
+  }, []);
+
+  const getCompareHistory = useCallback(
+    (id = compareSessionId) => {
+      return compareSessions[id]?.history || [];
+    },
+    [compareSessions, compareSessionId]
+  );
+
+  const setCompareHistory = useCallback(
+    (id, historyOrFn) => {
+      setCompareSessions((prev) => {
+        const current = prev[id]?.history || [];
+        const next = typeof historyOrFn === "function" ? historyOrFn(current) : historyOrFn;
+        const title = prev[id]?.title || (next.find((m) => m.role === "user")?.content?.slice(0, 45) || "New Comparison");
+        return {
+          ...prev,
+          [id]: {
+            id,
+            title,
+            history: next,
+            createdAt: prev[id]?.createdAt || Date.now(),
+            updatedAt: Date.now(),
+          },
+        };
+      });
+    },
+    [setCompareSessions]
+  );
+
+  const startNewCompareSession = useCallback(
+    (customTitle = null) => {
+      const newId = uuid();
+      setCompareSessionId(newId);
+      setCompareQuery("");
+      setCompareError(null);
+      setCompareSessions((prev) => ({
+        ...prev,
+        [newId]: {
+          id: newId,
+          title: customTitle || "New Comparison",
+          history: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+      }));
+      return newId;
+    },
+    [setCompareSessionId, setCompareSessions]
+  );
+
+  const loadCompareSession = useCallback(
+    (id) => {
+      if (compareSessions[id]) {
+        setCompareSessionId(id);
+        setCompareError(null);
+        return true;
+      }
+      return false;
+    },
+    [compareSessions, setCompareSessionId]
+  );
+
+  const deleteCompareSession = useCallback(
+    (id) => {
+      setCompareSessions((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
+      if (compareSessionId === id) {
+        startNewCompareSession();
+      }
+    },
+    [compareSessionId, setCompareSessions, startNewCompareSession]
+  );
+
+  const clearAllCompareSessions = useCallback(() => {
+    const freshId = uuid();
+    setCompareSessions({});
+    setCompareSessionId(freshId);
+    setCompareQuery("");
+    safeStorageSet(STORAGE_KEYS.COMPARE_SESSIONS, {});
+    safeStorageSet(STORAGE_KEYS.ACTIVE_COMPARE_SESSION_ID, freshId);
+  }, [setCompareSessions, setCompareSessionId]);
+
+  const setComparisons = useCallback((updater) => {
+    setComparisonsState((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      safeStorageSet(STORAGE_KEYS.COMPARISONS, next);
+      return next;
+    });
+  }, []);
+
+  const clearComparisonsHistory = useCallback(() => {
+    setComparisons([]);
+    setLastHybrid(null);
+    setLastTraditional(null);
+    safeStorageSet(STORAGE_KEYS.COMPARISONS, []);
+  }, [setComparisons]);
+
+  const sendCompareMessage = useCallback(
+    async (queryText = compareQuery) => {
+      const q = queryText.trim();
+      if (!q || isCompareLoading) return;
+
+      const sid = compareSessionId;
+      const history = getCompareHistory(sid);
+      const turnIndex = Math.floor(history.length / 2) + 1;
+
+      const userMsg = { role: "user", content: q, turn_index: turnIndex, timestamp: Date.now() };
+      const loadingMsg = { role: "assistant", loading: true, turn_index: turnIndex };
+
+      setCompareQuery("");
+      setIsCompareLoading(true);
+      setCompareError(null);
+      setCompareHistory(sid, (h) => [...h, userMsg, loadingMsg]);
+
+      try {
+        const resp = await apiSendChat({
+          query: q,
+          history,
+          session_id: sid,
+          mode: "both",
+        });
+
+        setLastHybrid(resp.hybrid);
+        setLastTraditional(resp.traditional);
+
+        setCompareHistory(sid, (h) => {
+          const next = [...h];
+          const idx = next.length - 1;
+          next[idx] = {
+            role: "assistant",
+            loading: false,
+            turn_index: turnIndex,
+            traditional: resp.traditional,
+            hybrid: resp.hybrid,
+            resolvedQuery: resp.resolvedQuery,
+            timestamp: Date.now(),
+          };
+          return next;
+        });
+
+        setComparisons((prev) => [
+          ...prev,
+          {
+            id: uuid(),
+            query: q,
+            traditional_time: resp.traditional?.total_time || 0,
+            hybrid_time: resp.hybrid?.total_time || 0,
+            traditional_tokens: resp.traditional?.total_tokens || 0,
+            hybrid_tokens: resp.hybrid?.total_tokens || 0,
+            timestamp: Date.now(),
+          },
+        ]);
+      } catch (err) {
+        console.warn("Backend compare failed, using fallback:", err);
+        const hybrid = generateHybridResult(q);
+        const traditional = generateTraditionalResult(q);
+
+        setLastHybrid(hybrid);
+        setLastTraditional(traditional);
+
+        setCompareHistory(sid, (h) => {
+          const next = [...h];
+          const idx = next.length - 1;
+          next[idx] = {
+            role: "assistant",
+            loading: false,
+            turn_index: turnIndex,
+            traditional,
+            hybrid,
+            timestamp: Date.now(),
+          };
+          return next;
+        });
+
+        setComparisons((prev) => [
+          ...prev,
+          {
+            id: uuid(),
+            query: q,
+            traditional_time: traditional.total_time,
+            hybrid_time: hybrid.total_time,
+            traditional_tokens: traditional.total_tokens,
+            hybrid_tokens: hybrid.total_tokens,
+            timestamp: Date.now(),
+          },
+        ]);
+      } finally {
+        setIsCompareLoading(false);
+      }
+    },
+    [compareQuery, isCompareLoading, compareSessionId, getCompareHistory, setCompareHistory, setComparisons]
+  );
+
+  const runComparison = useCallback(
+    async (queryText = compareQuery) => {
+      const q = queryText.trim();
+      if (!q || isCompareLoading) return;
+
+      setIsCompareLoading(true);
+      try {
+        const resp = await apiSendQuery({ query: q, mode: "both" });
+        setCompareResult(resp);
+        setLastHybrid(resp.hybrid);
+        setLastTraditional(resp.traditional);
+
+        setComparisons((prev) => [
+          ...prev,
+          {
+            id: uuid(),
+            query: q,
+            traditional_time: resp.traditional?.total_time || 0,
+            hybrid_time: resp.hybrid?.total_time || 0,
+            traditional_tokens: resp.traditional?.total_tokens || 0,
+            hybrid_tokens: resp.hybrid?.total_tokens || 0,
+            timestamp: Date.now(),
+          },
+        ]);
+        return resp;
+      } catch (err) {
+        console.warn("Backend compare query failed, using fallback:", err);
+        const hybrid = generateHybridResult(q);
+        const traditional = generateTraditionalResult(q);
+        const fallbackResp = { traditional, hybrid };
+
+        setCompareResult(fallbackResp);
+        setLastHybrid(hybrid);
+        setLastTraditional(traditional);
+
+        setComparisons((prev) => [
+          ...prev,
+          {
+            id: uuid(),
+            query: q,
+            traditional_time: traditional.total_time,
+            hybrid_time: hybrid.total_time,
+            traditional_tokens: traditional.total_tokens,
+            hybrid_tokens: hybrid.total_tokens,
+            timestamp: Date.now(),
+          },
+        ]);
+        return fallbackResp;
+      } finally {
+        setIsCompareLoading(false);
+      }
+    },
+    [compareQuery, isCompareLoading, setComparisons]
+  );
+
+  // ── 5. Analytics & Graph State ─────────────────────────────────────────────
+  const [analyticsScope, setAnalyticsScope] = useState("Last query's graph");
+  const [fullGraphData, setFullGraphData] = useState(null);
+  const [isGraphLoading, setIsGraphLoading] = useState(false);
+
+  const loadFullGraph = useCallback(async (limit = 60) => {
+    setIsGraphLoading(true);
+    try {
+      const data = await fetchGraph(limit);
+      if (data && data.edges && data.edges.length > 0) {
+        const edges = data.edges.map((e) => ({
+          s: e.source,
+          rel: e.relationship_type || e.label || "REL",
+          o: e.target,
+          conf: 1.0,
+        }));
+        const nodes = data.nodes ? data.nodes.map((n) => n.label || n.id) : Array.from(new Set(edges.flatMap((x) => [x.s, x.o])));
+        const sourceInfo = {};
+        nodes.forEach((n) => {
+          sourceInfo[n] = { label: "Entity", source: "Neo4j Knowledge Graph" };
+        });
+        const graphObj = { edgesToShow: edges, nodesToShow: nodes, sourceInfo };
+        setFullGraphData(graphObj);
+        return graphObj;
+      }
+    } catch (err) {
+      console.warn("Backend graph fetch error:", err);
+    } finally {
+      setIsGraphLoading(false);
+    }
+  }, []);
+
+  // ── 6. Admin, Indexing & Audit State ───────────────────────────────────────
+  const [indexingTasks, setIndexingTasks] = useState(INITIAL_INDEXING_TASKS);
+  const [auditLines, setAuditLines] = useState(INITIAL_AUDIT_LINES);
+  const [proposedEdges, setProposedEdges] = useState([
+    { edge_id: "pe-1", source: "April 2025 Master Circular", rel: "SUPERSEDES", target: "April 2024 Master Circular" },
+    { edge_id: "pe-2", source: "Categorization and Rationalization Circular (2025)", rel: "SUPERSEDES", target: "Categorization and Rationalization Circular (2017)" },
+  ]);
+  const [isPipelineRunning, setIsPipelineRunning] = useState(false);
+  const [isStalenessChecking, setIsStalenessChecking] = useState(false);
+
+  const taskCounter = useRef(0);
+
+  const addIndexingTask = useCallback((filename) => {
+    taskCounter.current += 1;
+    const id = `task-${Date.now()}-${taskCounter.current}`;
+    const task = {
+      task_id: id,
+      filename,
+      status: "PROCESSING",
+      stage: "Extracting text & running NER pipeline...",
+      progress: 0.15,
+      sha256_hash: Array.from({ length: 24 }, () => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join(""),
+      started_at: new Date().toISOString(),
+      completed_at: null,
+      entities_count: 0,
+      relations_count: 0,
+      chunks_count: 0,
+    };
+    setIndexingTasks((prev) => [task, ...prev]);
+
+    const stages = [
+      [0.35, "Chunking document & generating embeddings..."],
+      [0.65, "Writing vectors to FAISS index..."],
+      [0.9, "Extracting entities & relations into Neo4j..."],
+    ];
+    stages.forEach(([progress, stage], i) => {
+      setTimeout(() => {
+        setIndexingTasks((prev) =>
+          prev.map((t) => (t.task_id === id ? { ...t, progress, stage } : t))
+        );
+      }, 900 * (i + 1));
+    });
+    setTimeout(() => {
+      setIndexingTasks((prev) =>
+        prev.map((t) =>
+          t.task_id === id
+            ? {
+                ...t,
+                status: "COMPLETED",
+                stage: "Finished",
+                progress: 1.0,
+                completed_at: new Date().toISOString(),
+                entities_count: 18 + Math.floor(Math.random() * 30),
+                relations_count: 22 + Math.floor(Math.random() * 40),
+                chunks_count: 40 + Math.floor(Math.random() * 90),
+              }
+            : t
+        )
+      );
+    }, 900 * (stages.length + 1));
+    return id;
+  }, []);
+
+  const refreshIndexingTasks = useCallback(async (limit = 10) => {
+    try {
+      const resp = await fetchIndexingTasks(limit);
+      if (resp && resp.tasks && resp.tasks.length > 0) {
+        setIndexingTasks(resp.tasks);
+        return resp.tasks;
+      }
+    } catch (err) {
+      console.warn("Could not refresh indexing tasks:", err);
+    }
+  }, []);
+
+  const refreshAuditLogs = useCallback(async (limit = 30) => {
+    try {
+      const resp = await fetchAuditLogs(limit);
+      if (resp && resp.lines && resp.lines.length > 0) {
+        setAuditLines(resp.lines);
+        return resp.lines;
+      }
+    } catch (err) {
+      console.warn("Could not refresh audit logs:", err);
+    }
+  }, []);
+
+  const refreshProposedEdges = useCallback(async () => {
+    try {
+      const resp = await fetchProposedEdges();
+      if (resp && resp.edges && resp.edges.length > 0) {
+        setProposedEdges(resp.edges);
+        return resp.edges;
+      }
+    } catch (err) {
+      console.warn("Could not refresh proposed edges:", err);
+    }
+  }, []);
+
+  const confirmEdge = useCallback(async (id, authorizedBy = "sarah_compliance") => {
+    try {
+      await apiConfirmProposedEdge(id, authorizedBy);
+    } catch (err) {
+      console.warn("Backend edge confirm error:", err);
+    }
+    setProposedEdges((prev) => prev.filter((p) => p.edge_id !== id));
+  }, []);
+
+  const rejectEdge = useCallback(async (id) => {
+    try {
+      await apiRejectProposedEdge(id);
+    } catch (err) {
+      console.warn("Backend edge reject error:", err);
+    }
+    setProposedEdges((prev) => prev.filter((p) => p.edge_id !== id));
+  }, []);
+
+  const [isUsersSyncing, setIsUsersSyncing] = useState(false);
+
+  const refreshUsers = useCallback(async (options = {}) => {
+    setIsUsersSyncing(true);
+    try {
+      const u = await fetchUsers(options);
+      if (u && u.users && Array.isArray(u.users)) {
+        setUsers(u.users);
+        return u.users;
+      }
+    } catch (err) {
+      console.warn("Failed to refresh users from backend:", err);
+    } finally {
+      setIsUsersSyncing(false);
+    }
+    return null;
+  }, [setUsers]);
+
+  const saveUserProfile = useCallback(
+    async (profile) => {
+      let result = null;
+      try {
+        result = await apiSaveUser(profile);
+      } catch (err) {
+        console.warn("Backend user save failed, applying locally:", err);
+      }
+      try {
+        const u = await fetchUsers();
+        if (u && u.users && Array.isArray(u.users)) {
+          setUsers(u.users);
+          return result;
+        }
+      } catch {}
+      setUsers((prev) => {
+        const filtered = prev.filter((u) => u.username !== profile.username);
+        return [...filtered, profile];
+      });
+      return result;
+    },
+    [setUsers]
+  );
+
+  const deleteUserProfile = useCallback(
+    async (username) => {
+      const current = (authedUsername || activeUsername || activeUser?.username || "").trim();
+      const normalize = (s) => (s || "").toLowerCase().replace(".", "_");
+      if (current && username && normalize(current) === normalize(username)) {
+        throw new Error("Administrators cannot delete their own account.");
+      }
+      try {
+        await apiDeleteUser(username);
+      } catch (err) {
+        console.warn("Backend user delete failed:", err);
+        throw err;
+      }
+      try {
+        const u = await fetchUsers();
+        if (u && u.users && Array.isArray(u.users)) {
+          setUsers(u.users);
+          return;
+        }
+      } catch {}
+      setUsers((prev) => prev.filter((u) => u.username !== username));
+    },
+    [setUsers, authedUsername, activeUsername, activeUser]
+  );
+
+  // ── 7. System & Cache State ────────────────────────────────────────────────
+  const [isCacheClearing, setIsCacheClearing] = useState(false);
+  const [backendStatus, setBackendStatus] = useState("online");
+
+  const clearCache = useCallback(async () => {
+    setIsCacheClearing(true);
+    try {
+      await apiClearIntentCache();
+      return true;
+    } catch {
+      return false;
+    } finally {
+      setIsCacheClearing(false);
+    }
+  }, []);
+
+  // ── Initial Backend Sync ───────────────────────────────────────────────────
+  useEffect(() => {
+    async function loadBackendData() {
+      try {
+        const u = await fetchUsers();
+        if (u && u.users && u.users.length > 0) {
+          setUsers(u.users);
+          setActiveUsername((prev) => {
+            const current = authedUsername || prev;
+            return u.users.some((x) => x.username === current) ? current : (u.users[0]?.username || prev);
+          });
+        }
+      } catch {
+        // use local storage / fallback
+      }
+
+      try {
+        const audit = await fetchAuditLogs(30);
+        if (audit && audit.lines && audit.lines.length > 0) {
+          setAuditLines(audit.lines);
+        }
+      } catch {}
+
+      try {
+        const tasks = await fetchIndexingTasks(10);
+        if (tasks && tasks.tasks && tasks.tasks.length > 0) {
+          setIndexingTasks(tasks.tasks);
+        }
+      } catch {}
+
+      try {
+        const edges = await fetchProposedEdges();
+        if (edges && edges.edges && edges.edges.length > 0) {
+          setProposedEdges(edges.edges);
+        }
+      } catch {}
+    }
+    loadBackendData();
+  }, [setUsers, setActiveUsername]);
+
+  const value = {
+    // Auth & Gate
+    isAuthenticated,
+    authedUsername,
+    authToken,
+    login,
+    logout,
+
+    // Users & RBAC
+    users, setUsers,
+    refreshUsers, isUsersSyncing,
+    activeUsername, setActiveUsername,
+    activeUser, activePermissions,
+    saveUserProfile, deleteUserProfile,
+
+    // Navigation & Tabs & Pages
+    activeTab, setActiveTab,
+    adminSubTab, setAdminSubTab,
+    activePage, setActivePage,
+    isSidebarOpen, setIsSidebarOpen, toggleSidebar,
+    theme, setTheme, resolvedTheme,
+
+    // Chat
+    chatSessions, setChatSessions,
+    chatSessionId, setChatSessionId,
+    chatQuery, setChatQuery,
+    isChatLoading, chatError, setChatError,
+    animatingSessionId,
+    getChatHistory, setChatHistory,
+    startNewChatSession, loadChatSession, deleteChatSession, clearAllChatSessions,
+    sendChatMessage, generateConversationTitle,
+
+    // Compare
+    compareSessions, setCompareSessions,
+    compareSessionId, setCompareSessionId,
+    compareQuery, setCompareQuery,
+    isCompareLoading, isCompareRunning: isCompareLoading,
+    compareError, setCompareError,
+    getCompareHistory, setCompareHistory,
+    startNewCompareSession, loadCompareSession, deleteCompareSession, clearAllCompareSessions,
+    sendCompareMessage,
+    compareResult, setCompareResult,
+    comparisons, setComparisons,
+    lastHybrid, setLastHybrid,
+    lastTraditional, setLastTraditional,
+    runComparison, clearComparisonsHistory,
+
+    // Analytics & Graph
+    analyticsScope, setAnalyticsScope,
+    fullGraphData, setFullGraphData,
+    isGraphLoading, loadFullGraph,
+
+    // Admin & Ingest
+    indexingTasks, setIndexingTasks, addIndexingTask, refreshIndexingTasks,
+    auditLines, setAuditLines, refreshAuditLogs,
+    proposedEdges, setProposedEdges, refreshProposedEdges,
+    confirmEdge, rejectEdge,
+    isPipelineRunning, setIsPipelineRunning,
+    isStalenessChecking, setIsStalenessChecking,
+
+    // System & Cache
+    isCacheClearing, clearCache,
+    backendStatus, setBackendStatus,
+  };
+
+  return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
+}
+
+export function useAppState() {
+  const ctx = useContext(AppStateContext);
+  if (!ctx) throw new Error("useAppState must be used within AppStateProvider");
+  return ctx;
+}
+
+export function useUser() {
+  const {
+    users,
+    refreshUsers,
+    isUsersSyncing,
+    activeUser,
+    activeUsername,
+    setActiveUsername,
+    activePermissions,
+    saveUserProfile,
+    deleteUserProfile,
+    isAuthenticated,
+    authedUsername,
+    login,
+    logout,
+  } = useAppState();
+  return {
+    users,
+    refreshUsers,
+    isUsersSyncing,
+    activeUser,
+    activeUsername,
+    setActiveUsername,
+    permissions: activePermissions,
+    saveUserProfile,
+    deleteUserProfile,
+    isAuthenticated,
+    authedUsername,
+    login,
+    logout,
+  };
+}
+
+export function useChat() {
+  const {
+    chatSessions, chatSessionId, chatQuery, setChatQuery,
+    isChatLoading, chatError, animatingSessionId, getChatHistory, setChatHistory,
+    startNewChatSession, loadChatSession, deleteChatSession, clearAllChatSessions,
+    sendChatMessage, generateConversationTitle,
+  } = useAppState();
+  return {
+    chatSessions, chatSessionId, chatQuery, setChatQuery,
+    isChatLoading, chatError, animatingSessionId, getChatHistory, setChatHistory,
+    startNewChatSession, loadChatSession, deleteChatSession, clearAllChatSessions,
+    sendChatMessage, generateConversationTitle,
+  };
+}
+
+export function useCompare() {
+  const {
+    compareSessions, compareSessionId,
+    compareQuery, setCompareQuery,
+    isCompareLoading, isCompareRunning,
+    compareError, getCompareHistory, setCompareHistory,
+    startNewCompareSession, loadCompareSession, deleteCompareSession, clearAllCompareSessions,
+    sendCompareMessage,
+    compareResult,
+    comparisons, lastHybrid, lastTraditional, runComparison, clearComparisonsHistory,
+  } = useAppState();
+  return {
+    compareSessions, compareSessionId,
+    compareQuery, setCompareQuery,
+    isCompareLoading, isCompareRunning,
+    compareError, getCompareHistory, setCompareHistory,
+    startNewCompareSession, loadCompareSession, deleteCompareSession, clearAllCompareSessions,
+    sendCompareMessage,
+    compareResult,
+    comparisons, lastHybrid, lastTraditional, runComparison, clearComparisonsHistory,
+  };
+}
+
+export function useAnalytics() {
+  const {
+    analyticsScope, setAnalyticsScope, fullGraphData, isGraphLoading,
+    loadFullGraph, lastHybrid, comparisons,
+  } = useAppState();
+  return {
+    analyticsScope, setAnalyticsScope, fullGraphData, isGraphLoading,
+    loadFullGraph, lastHybrid, comparisons,
+  };
+}
+
+export function useAdmin() {
+  const {
+    indexingTasks, setIndexingTasks, addIndexingTask, refreshIndexingTasks,
+    auditLines, setAuditLines, refreshAuditLogs,
+    proposedEdges, setProposedEdges, refreshProposedEdges,
+    confirmEdge, rejectEdge,
+    isPipelineRunning, setIsPipelineRunning,
+    isStalenessChecking, setIsStalenessChecking,
+  } = useAppState();
+  return {
+    indexingTasks, setIndexingTasks, addIndexingTask, refreshIndexingTasks,
+    auditLines, setAuditLines, refreshAuditLogs,
+    proposedEdges, setProposedEdges, refreshProposedEdges,
+    confirmEdge, rejectEdge,
+    isPipelineRunning, setIsPipelineRunning,
+    isStalenessChecking, setIsStalenessChecking,
+  };
+}
+
+export { getUserChatSessionsKey, getUserActiveSessionIdKey, loadUserChatSessions };

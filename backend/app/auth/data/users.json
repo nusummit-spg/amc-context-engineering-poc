@@ -1,0 +1,124 @@
+{
+  "users": [
+    {
+      "username": "sarah.compliance",
+      "password_hash": "pbkdf2_sha256$260000$397e87b9b1f5fc4f7f0505087b8ffb96$49bb576655f81c61da243b1770218f86cbf7622f5050c5f445d544d25457ac38",
+      "display_name": "Sarah Kapoor",
+      "role": "Compliance & Regulatory Officer",
+      "department": "Regulatory & Legal Compliance",
+      "email": "s.kapoor@amc.com",
+      "avatar_initials": "SK",
+      "status": "Active"
+    },
+    {
+      "username": "ananya.esg",
+      "password_hash": "pbkdf2_sha256$260000$2278b9ca79263521465f26c90315b3d8$a2e5650641017f813f9b72983308ab24845f9f092c910472a9c97c352c2c94d6",
+      "display_name": "Ananya Sharma",
+      "role": "ESG & Sustainability Analyst",
+      "department": "Sustainable Investing & ESG",
+      "email": "a.sharma@amc.com",
+      "avatar_initials": "AS",
+      "status": "Active"
+    },
+    {
+      "username": "rahul.sales",
+      "password_hash": "pbkdf2_sha256$260000$b98f80b3eb5319575f789d3c89265325$d3b076bfc34e862a590e129718c4c1170555b28d8bb704829c0670b5da1b13d0",
+      "display_name": "Rahul Verma",
+      "role": "Sales & Distribution Manager",
+      "department": "Institutional & Retail Distribution",
+      "email": "r.verma@amc.com",
+      "avatar_initials": "RV",
+      "status": "Active"
+    },
+    {
+      "username": "priya.investor",
+      "password_hash": "pbkdf2_sha256$260000$ec487f6193d7c87a50cb048ad25a67bd$686a005d57b6336fd7bc4dbce871324a02eb380fa5ea9bcf7f1804e3e66fb498",
+      "display_name": "Priya Nair",
+      "role": "Retail Investor / Public Client",
+      "department": "External Client Portal",
+      "email": "p.nair@public.com",
+      "avatar_initials": "PN",
+      "status": "Active"
+    },
+    {
+      "username": "admin",
+      "password_hash": "pbkdf2_sha256$260000$505dd94301b0431b898febd5284f050d$397fecc8cd73fb47c5fdc8f33570ce82c955bb06e62ce36b3d49dd650289684f",
+      "display_name": "Sarah Kapoor (Admin)",
+      "role": "Compliance & Regulatory Officer",
+      "department": "Regulatory & Legal Compliance",
+      "email": "admin@amc.com",
+      "avatar_initials": "AD",
+      "status": "Active"
+    },
+    {
+      "username": "new_compliance_analyst",
+      "password_hash": "pbkdf2_sha256$260000$05ecd933a9cc24ff057063813791a3e8$82fccb602af6518d116e83c6b1a219232a0f812797957a61e6c4bf5e7ec6964a",
+      "display_name": "New Compliance Analyst",
+      "role": "Compliance & Regulatory Officer",
+      "department": "Regulatory",
+      "email": "new.analyst@amc.com",
+      "avatar_initials": "NC",
+      "status": "Active"
+    },
+    {
+      "username": "custom_fund_manager",
+      "password_hash": "pbkdf2_sha256$260000$7c4400411746928a9e83878ce2940e1f$bc3f337cb886ed89f8e075c60aa470a34e3cbde9511e2cd44041d0673a9ac825",
+      "display_name": "Custom Fund Manager",
+      "role": "Fund Manager / Portfolio Manager",
+      "department": "Equities",
+      "email": "custom.manager@amc.com",
+      "avatar_initials": "CF",
+      "status": "Active"
+    },
+    {
+      "username": "test_analyst_2026",
+      "password_hash": "pbkdf2_sha256$260000$cbfd0826ec5a15bf43bfa385d85d4b77$fabec8391b8e839d71d9d77e66548fcd27439fb660bb468ce3e11dd813e27def",
+      "display_name": "Test Analyst 2026",
+      "role": "Fund Manager / Portfolio Manager",
+      "department": "Research",
+      "email": "analyst2026@amc.com",
+      "avatar_initials": "TA",
+      "status": "Active"
+    },
+    {
+      "username": "compliance_officer",
+      "password_hash": "pbkdf2_sha256$260000$38f14fe0708db0104ebe62b92633ece5$1bdba12c05a0448d28cb717161b02d1f467b6ad63da7bf74d7822e1a58e01566",
+      "display_name": "Compliance Officer",
+      "role": "Compliance & Regulatory Officer",
+      "department": "Regulatory & Legal Compliance",
+      "email": "compliance@amc.com",
+      "avatar_initials": "CO",
+      "status": "Active"
+    },
+    {
+      "username": "alice_test",
+      "password_hash": "pbkdf2_sha256$260000$b7c7f5a7d59ccbae040cce92a04588f9$473fade28dc2d93e6249c2077b899b3e6db83789c92b31540cde54b7e034e978",
+      "display_name": "Alice Updated",
+      "role": "ESG & Sustainability Analyst",
+      "department": "Senior ESG Unit",
+      "email": "alice.updated@amc.com",
+      "avatar_initials": "AT",
+      "status": "Active"
+    },
+    {
+      "username": "vikram_m",
+      "password_hash": "pbkdf2_sha256$260000$51e9f0197cbf9502a560ac3b3e6f0fb8$042d968ebfb0cb945fdb157998ec9e6d8e079faa98fb8f19cf0cffe9a1c67a3c",
+      "display_name": "vikram meheta",
+      "role": "Fund Manager / Portfolio Manager",
+      "department": "Research",
+      "email": "vikram.m@amc.com",
+      "avatar_initials": "VM",
+      "status": "Active"
+    },
+    {
+      "username": "vikram",
+      "password_hash": "pbkdf2_sha256$260000$f52d3735ff2c524b9e44cdc9cef066f7$648cc89cbff2c610b9377b7a7d80e29ff9014b1dcc0ba58c3d0e35f8fb955e0b",
+      "display_name": "vikram m",
+      "role": "Compliance & Regulatory Officer",
+      "department": "R&D",
+      "email": "vikram.m",
+      "avatar_initials": "VM",
+      "status": "Active"
+    }
+  ]
+}

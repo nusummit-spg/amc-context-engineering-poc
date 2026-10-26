@@ -1,0 +1,130 @@
+{
+  "82590a8a0eb1258ed93de304e1d7c097c1768b6d403a68dedfc85f4783c8960e": {
+    "document_version_id": "82590a8a0eb1258ed93de304e1d7c097c1768b6d403a68dedfc85f4783c8960e",
+    "corpus_version": "v2_baseline_20260814",
+    "history": [
+      {
+        "stage": "parsed",
+        "timestamp": "2026-10-13T05:39:20.862982",
+        "error": null
+      },
+      {
+        "stage": "chunked",
+        "timestamp": "2026-10-13T05:39:20.874900",
+        "error": null
+      },
+      {
+        "stage": "parsed",
+        "timestamp": "2026-10-13T05:53:28.936714",
+        "error": null
+      },
+      {
+        "stage": "chunked",
+        "timestamp": "2026-10-13T05:53:28.966375",
+        "error": null
+      },
+      {
+        "stage": "parsed",
+        "timestamp": "2026-10-13T06:21:39.374151",
+        "error": null
+      },
+      {
+        "stage": "chunked",
+        "timestamp": "2026-10-13T06:21:39.382556",
+        "error": null
+      },
+      {
+        "stage": "parsed",
+        "timestamp": "2026-10-22T10:53:09.067301",
+        "error": null
+      },
+      {
+        "stage": "chunked",
+        "timestamp": "2026-10-22T10:53:09.086102",
+        "error": null
+      },
+      {
+        "stage": "graph_written",
+        "timestamp": "2026-10-22T11:01:50.620330",
+        "error": null
+      },
+      {
+        "stage": "vector_written",
+        "timestamp": "2026-10-22T11:02:09.022867",
+        "error": null
+      },
+      {
+        "stage": "activated",
+        "timestamp": "2026-10-22T11:02:09.026148",
+        "error": null
+      }
+    ],
+    "current_stage": "activated",
+    "created_at": "2026-10-13T05:39:20.862982",
+    "updated_at": "2026-10-22T11:02:09.026148",
+    "metadata": {
+      "filename": "Adani_Portfolio_H1FY25_ESG.pdf",
+      "doc_id": "e208f67bbf33b093e9afcd7ada1e6620652d37c0b064c4f7791cbe031a5545b7",
+      "chunks_count": 38,
+      "indexed_chunks": 38
+    }
+  },
+  "6acc0a5246f1e0fae8c59dd46e9ca1a9f1033bea4a83e57017975eb263cb76b7": {
+    "document_version_id": "6acc0a5246f1e0fae8c59dd46e9ca1a9f1033bea4a83e57017975eb263cb76b7",
+    "corpus_version": "v2_baseline_20260814",
+    "history": [
+      {
+        "stage": "parsed",
+        "timestamp": "2026-10-13T06:00:38.131194",
+        "error": null
+      },
+      {
+        "stage": "chunked",
+        "timestamp": "2026-10-13T06:00:38.216788",
+        "error": null
+      },
+      {
+        "stage": "parsed",
+        "timestamp": "2026-10-22T11:02:39.678096",
+        "error": null
+      },
+      {
+        "stage": "chunked",
+        "timestamp": "2026-10-22T11:02:39.740983",
+        "error": null
+      }
+    ],
+    "current_stage": "chunked",
+    "created_at": "2026-10-13T06:00:38.131194",
+    "updated_at": "2026-10-22T11:02:39.740983",
+    "metadata": {
+      "filename": "AEL_Annual_Return_FY_2024.pdf",
+      "doc_id": "3842bd45ec13e1615ce69b263278f5220caf63fbc69c915e649ccb46cf885bbd",
+      "chunks_count": 196
+    }
+  },
+  "cfbbbf2417a16e4863fa1992f226284f5dd9558b8ed061e4146a7eed1a212d9f": {
+    "document_version_id": "cfbbbf2417a16e4863fa1992f226284f5dd9558b8ed061e4146a7eed1a212d9f",
+    "corpus_version": "v2_baseline_20260814",
+    "history": [
+      {
+        "stage": "parsed",
+        "timestamp": "2026-10-13T06:13:18.571317",
+        "error": null
+      },
+      {
+        "stage": "chunked",
+        "timestamp": "2026-10-13T06:13:19.078577",
+        "error": null
+      }
+    ],
+    "current_stage": "chunked",
+    "created_at": "2026-10-13T06:13:18.571317",
+    "updated_at": "2026-10-13T06:13:19.078577",
+    "metadata": {
+      "filename": "AEL_AR_FY24.pdf",
+      "doc_id": "68b9eb66a5cc72ffd93acc9defeb1db90fef5502df312418fee2f1a367621b3d",
+      "chunks_count": 14885
+    }
+  }
+}

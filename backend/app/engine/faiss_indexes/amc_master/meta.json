@@ -1,0 +1,23 @@
+{
+  "slug": "amc_master",
+  "num_parents": 3494,
+  "num_children": 18188,
+  "embedding_dim": 384,
+  "model": "BAAI/bge-small-en-v1.5",
+  "documents": [
+    "Adani_Portfolio_H1FY25_ESG.pdf",
+    "AEL_Annual_Return_FY_2024.pdf",
+    "AEL_AR_FY24.pdf",
+    "AEL_Earnings_Call_Q1_FY19.pdf",
+    "AEL_Earnings_Call_Q4_FY24.pdf",
+    "April 2024.pdf",
+    "April 2025.pdf",
+    "Borrowing by Mutual Funds.pdf",
+    "Categorization and Rationalization of Mutual Fund Schemes.pdf",
+    "Disclosure of Risk adjusted Return - Information Ratio (IR) for Mutual Fund Schemes..pdf",
+    "Guidelines for Investment Advisers.pdf",
+    "May 2024.pdf",
+    "Safer participation of retail investors in Algorithmic trading.pdf"
+  ],
+  "updated_at": "2026-10-06T21:18:21Z"
+}

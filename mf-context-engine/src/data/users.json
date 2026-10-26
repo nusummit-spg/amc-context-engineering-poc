@@ -1,0 +1,47 @@
+[
+  {
+    "username": "sarah.compliance",
+    "password": "Compliance@2026",
+    "role": "Compliance & Regulatory Officer",
+    "display_name": "Sarah Kapoor",
+    "avatar_initials": "SK",
+    "department": "Regulatory & Legal Compliance",
+    "email": "s.kapoor@amc.com"
+  },
+  {
+    "username": "vikram.pm",
+    "password": "Portfolio@2026",
+    "role": "Fund Manager / Portfolio Manager",
+    "display_name": "Vikram Mehta",
+    "avatar_initials": "VM",
+    "department": "Equity Investment Management",
+    "email": "v.mehta@amc.com"
+  },
+  {
+    "username": "ananya.esg",
+    "password": "Sustainability@2026",
+    "role": "ESG & Sustainability Analyst",
+    "display_name": "Ananya Sharma",
+    "avatar_initials": "AS",
+    "department": "Sustainable Investing & ESG",
+    "email": "a.sharma@amc.com"
+  },
+  {
+    "username": "rahul.sales",
+    "password": "Distribution@2026",
+    "role": "Sales & Distribution Manager",
+    "display_name": "Rahul Verma",
+    "avatar_initials": "RV",
+    "department": "Institutional & Retail Distribution",
+    "email": "r.verma@amc.com"
+  },
+  {
+    "username": "priya.investor",
+    "password": "Investor@2026",
+    "role": "Retail Investor / Public Client",
+    "display_name": "Priya Nair",
+    "avatar_initials": "PN",
+    "department": "External Client Portal",
+    "email": "p.nair@public.com"
+  }
+]

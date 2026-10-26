@@ -1,0 +1,5 @@
+{
+  "auto_approve_threshold": 0.95,
+  "max_risk_level": "LOW",
+  "dry_run": false
+}

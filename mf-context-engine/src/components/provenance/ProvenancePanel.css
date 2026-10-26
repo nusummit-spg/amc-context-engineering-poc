@@ -1,0 +1,129 @@
+.mf-provenance-container {
+  margin: 1.25rem 0 0.75rem 0;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--ink-rgb), 0.15);
+  background-color: var(--color-surface);
+  overflow: hidden;
+  box-shadow: var(--shadow-resting), inset 0 1px 0 var(--surface-edge);
+}
+
+.mf-provenance-container--flat {
+  margin: 0;
+  box-shadow: none;
+}
+
+.mf-provenance-details {
+  width: 100%;
+}
+
+.mf-provenance-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background-color: var(--color-surface-raised);
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-ink-800);
+  border-bottom: 1px solid rgba(var(--ink-rgb), 0.1);
+  list-style: none;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+.mf-provenance-summary::-webkit-details-marker { display: none; }
+.mf-provenance-summary:focus-visible { outline-offset: -3px; }
+
+.mf-provenance-summary:hover {
+  background-color: var(--color-surface-tan);
+}
+
+.mf-provenance-details[open] .mf-provenance-table-wrap {
+  animation: stFadeDown var(--duration-slow) var(--ease-out) backwards;
+}
+
+.mf-provenance-summary-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mf-provenance-toggle-hint {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--color-ink-500);
+}
+
+.mf-provenance-table-wrap {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.mf-provenance-table {
+  width: 100%;
+  /* Roughly the narrowest the three columns (marker + document + page) stay
+     readable at. Below this the wrapper scrolls rather than crushing them —
+     which is what happens in the half-width Compare column. */
+  min-width: 320px;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.mf-provenance-table th {
+  background-color: var(--color-surface-tan);
+  color: var(--color-ink-700);
+  font-weight: 600;
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 2px solid rgba(var(--ink-rgb), 0.12);
+}
+
+.mf-provenance-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
+  vertical-align: top;
+}
+
+.mf-provenance-row {
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+.mf-provenance-row:hover {
+  background-color: rgba(var(--ink-rgb), 0.04);
+}
+.mf-provenance-row:last-child td { border-bottom: none; }
+
+.mf-provenance-marker-tag {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--color-navy-700);
+  background: rgba(var(--navy-rgb), 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.mf-provenance-doc-link {
+  color: var(--color-navy-700);
+  text-decoration: none;
+  font-size: 0.86rem;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+.mf-provenance-doc-link svg { transition: transform var(--duration-base) var(--ease-out); }
+.mf-provenance-doc-link:hover svg { transform: translate(1px, -1px); }
+
+.mf-provenance-doc-link:hover {
+  color: var(--color-navy-900);
+  text-decoration: underline;
+}
+
+.mf-page-badge {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: rgba(var(--ink-rgb), 0.08);
+  color: var(--color-ink-800);
+}
+

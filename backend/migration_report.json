@@ -1,0 +1,72 @@
+{
+  "timestamp": "2026-10-26T07:38:01.215707",
+  "checks": {
+    "File: config.py": {
+      "passed": true,
+      "message": "backend\\app\\engine\\config.py"
+    },
+    "File: scheme_aggregation.py": {
+      "passed": true,
+      "message": "backend\\app\\models\\scheme_aggregation.py"
+    },
+    "File: scheme_aggregation_service.py": {
+      "passed": true,
+      "message": "backend\\app\\services\\scheme_aggregation_service.py"
+    },
+    "File: scheme_aggregation_routes.py": {
+      "passed": true,
+      "message": "backend\\app\\api\\routes\\scheme_aggregation_routes.py"
+    },
+    "File: mutual_fund_data.csv": {
+      "passed": true,
+      "message": "backend\\data\\source_docs\\mutual_fund_data.csv"
+    },
+    "CYPHER_MAX_ROWS updated to 100": {
+      "passed": true,
+      "message": "Configuration file updated"
+    },
+    "Query-specific limits configured": {
+      "passed": true,
+      "message": "Query limits defined"
+    },
+    "SchemeAggregationService import": {
+      "passed": true,
+      "message": "Service imported successfully"
+    },
+    "Service initialization": {
+      "passed": true,
+      "message": "Service loaded 8178 rows from CSV"
+    },
+    "Top schemes query": {
+      "passed": true,
+      "message": "Returned 5 schemes and 5 plans"
+    },
+    "Top scheme identification": {
+      "passed": true,
+      "message": "Top scheme: SBI Nifty 50 ETF (AUM: \u20b9210,783.07 Cr)"
+    },
+    "Scheme-level view": {
+      "passed": true,
+      "message": "Scheme rankings available"
+    },
+    "Plan-level view": {
+      "passed": true,
+      "message": "Plan rankings available"
+    },
+    "Statistics": {
+      "passed": true,
+      "message": "Statistics included"
+    },
+    "Cache: CSV export": {
+      "passed": true,
+      "message": "Exported to C:\\Users\\HemantMore\\OneDrive - NuSummit Technologies Pvt Ltd\\Desktop\\amc-context-engineering-clean\\backend\\cache\\scheme_aggregations\\scheme_aggregations.csv"
+    },
+    "Cache: Parquet export": {
+      "passed": true,
+      "message": "Exported to C:\\Users\\HemantMore\\OneDrive - NuSummit Technologies Pvt Ltd\\Desktop\\amc-context-engineering-clean\\backend\\cache\\scheme_aggregations\\scheme_aggregations.parquet"
+    }
+  },
+  "errors": [],
+  "warnings": [],
+  "success": true
+}

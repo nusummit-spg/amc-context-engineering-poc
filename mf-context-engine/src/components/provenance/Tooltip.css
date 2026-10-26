@@ -1,0 +1,164 @@
+/* Tooltip Trigger */
+.mf-tooltip-trigger {
+  display: inline-block;
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  vertical-align: baseline;
+}
+
+/* Floating Portal Container — an inverted surface in both themes. It sits on
+   the shared tooltip tokens so it stays legible when the page is dark. */
+.mf-tooltip-portal {
+  z-index: 999999;
+  box-sizing: border-box;
+  background-color: var(--color-tooltip-bg);
+  color: var(--color-tooltip-text);
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: auto;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  font-family: var(--font-sans), "Segoe UI", Roboto, sans-serif;
+  animation: mfTooltipFadeIn var(--duration-base) var(--ease-out);
+}
+
+.mf-tooltip-portal.mf-tooltip-bottom {
+  animation: mfTooltipFadeInBottom var(--duration-base) var(--ease-out);
+}
+
+@keyframes mfTooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -96%) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1);
+  }
+}
+
+@keyframes mfTooltipFadeInBottom {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 4%) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* Internal Scrollable Content Box */
+.mf-tooltip-inner {
+  max-height: 380px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+.mf-tooltip-inner::-webkit-scrollbar {
+  width: 5px;
+}
+
+.mf-tooltip-inner::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.mf-tooltip-inner::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  border: none;
+}
+
+.mf-tooltip-inner::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Header & Title */
+.mf-tooltip-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--color-tooltip-text);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  line-height: 1.35;
+}
+
+.mf-tooltip-title span:first-child {
+  flex: 1;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.mf-tooltip-badge {
+  font-size: 0.72rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--color-tooltip-text);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Snippet Box */
+.mf-tooltip-snippet {
+  color: var(--color-tooltip-text);
+  opacity: 0.92;
+  font-size: 0.82rem;
+  margin-top: 8px;
+  line-height: 1.5;
+  font-style: italic;
+  border-left: 3px solid var(--color-navy-700);
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 0 4px 4px 0;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+/* Footer & Links */
+.mf-tooltip-footer {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  color: var(--color-tooltip-text);
+  opacity: 0.75;
+}
+
+.mf-tooltip-link {
+  color: var(--color-navy-700);
+  text-decoration: none;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.mf-tooltip-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* In light mode the tooltip is near-black, so the navy accent needs lifting to read */
+:root:not([data-theme="dark"]) .mf-tooltip-link,
+:root:not([data-theme="dark"]) .mf-tooltip-snippet { border-color: #8CB2E2; }
+:root:not([data-theme="dark"]) .mf-tooltip-link { color: #8CB2E2; }

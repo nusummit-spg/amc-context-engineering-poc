@@ -1,0 +1,229 @@
+{
+  "version": "1.0",
+  "created_at": "2026-10-26T13:16:10.688681",
+  "original_file": "data\\source_docs\\mutual_fund_data.csv",
+  "original_rows": 16245,
+  "chunk_count": 22,
+  "chunks": [
+    {
+      "chunk_num": 1,
+      "filename": "mutual_fund_data_chunk_001.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_001.csv",
+      "rows": 750,
+      "start_row": 1,
+      "end_row": 750,
+      "size_mb": 0.19117355346679688,
+      "created_at": "2026-10-26T13:16:09.854192"
+    },
+    {
+      "chunk_num": 2,
+      "filename": "mutual_fund_data_chunk_002.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_002.csv",
+      "rows": 750,
+      "start_row": 751,
+      "end_row": 1500,
+      "size_mb": 0.20377254486083984,
+      "created_at": "2026-10-26T13:16:09.871318"
+    },
+    {
+      "chunk_num": 3,
+      "filename": "mutual_fund_data_chunk_003.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_003.csv",
+      "rows": 750,
+      "start_row": 1501,
+      "end_row": 2250,
+      "size_mb": 0.21637821197509766,
+      "created_at": "2026-10-26T13:16:09.890978"
+    },
+    {
+      "chunk_num": 4,
+      "filename": "mutual_fund_data_chunk_004.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_004.csv",
+      "rows": 750,
+      "start_row": 2251,
+      "end_row": 3000,
+      "size_mb": 0.21611690521240234,
+      "created_at": "2026-10-26T13:16:09.916990"
+    },
+    {
+      "chunk_num": 5,
+      "filename": "mutual_fund_data_chunk_005.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_005.csv",
+      "rows": 750,
+      "start_row": 3001,
+      "end_row": 3750,
+      "size_mb": 0.20991802215576172,
+      "created_at": "2026-10-26T13:16:09.939005"
+    },
+    {
+      "chunk_num": 6,
+      "filename": "mutual_fund_data_chunk_006.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_006.csv",
+      "rows": 750,
+      "start_row": 3751,
+      "end_row": 4500,
+      "size_mb": 0.2021341323852539,
+      "created_at": "2026-10-26T13:16:09.959918"
+    },
+    {
+      "chunk_num": 7,
+      "filename": "mutual_fund_data_chunk_007.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_007.csv",
+      "rows": 750,
+      "start_row": 4501,
+      "end_row": 5250,
+      "size_mb": 0.20693111419677734,
+      "created_at": "2026-10-26T13:16:09.990604"
+    },
+    {
+      "chunk_num": 8,
+      "filename": "mutual_fund_data_chunk_008.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_008.csv",
+      "rows": 750,
+      "start_row": 5251,
+      "end_row": 6000,
+      "size_mb": 0.21459293365478516,
+      "created_at": "2026-10-26T13:16:10.013968"
+    },
+    {
+      "chunk_num": 9,
+      "filename": "mutual_fund_data_chunk_009.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_009.csv",
+      "rows": 750,
+      "start_row": 6001,
+      "end_row": 6750,
+      "size_mb": 0.2043771743774414,
+      "created_at": "2026-10-26T13:16:10.035057"
+    },
+    {
+      "chunk_num": 10,
+      "filename": "mutual_fund_data_chunk_010.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_010.csv",
+      "rows": 750,
+      "start_row": 6751,
+      "end_row": 7500,
+      "size_mb": 0.20239734649658203,
+      "created_at": "2026-10-26T13:16:10.053621"
+    },
+    {
+      "chunk_num": 11,
+      "filename": "mutual_fund_data_chunk_011.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_011.csv",
+      "rows": 750,
+      "start_row": 7501,
+      "end_row": 8250,
+      "size_mb": 0.19710731506347656,
+      "created_at": "2026-10-26T13:16:10.070326"
+    },
+    {
+      "chunk_num": 12,
+      "filename": "mutual_fund_data_chunk_012.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_012.csv",
+      "rows": 750,
+      "start_row": 8251,
+      "end_row": 9000,
+      "size_mb": 0.20002460479736328,
+      "created_at": "2026-10-26T13:16:10.085248"
+    },
+    {
+      "chunk_num": 13,
+      "filename": "mutual_fund_data_chunk_013.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_013.csv",
+      "rows": 750,
+      "start_row": 9001,
+      "end_row": 9750,
+      "size_mb": 0.2021961212158203,
+      "created_at": "2026-10-26T13:16:10.101959"
+    },
+    {
+      "chunk_num": 14,
+      "filename": "mutual_fund_data_chunk_014.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_014.csv",
+      "rows": 750,
+      "start_row": 9751,
+      "end_row": 10500,
+      "size_mb": 0.20003318786621094,
+      "created_at": "2026-10-26T13:16:10.118709"
+    },
+    {
+      "chunk_num": 15,
+      "filename": "mutual_fund_data_chunk_015.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_015.csv",
+      "rows": 750,
+      "start_row": 10501,
+      "end_row": 11250,
+      "size_mb": 0.2197561264038086,
+      "created_at": "2026-10-26T13:16:10.136778"
+    },
+    {
+      "chunk_num": 16,
+      "filename": "mutual_fund_data_chunk_016.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_016.csv",
+      "rows": 750,
+      "start_row": 11251,
+      "end_row": 12000,
+      "size_mb": 0.22365093231201172,
+      "created_at": "2026-10-26T13:16:10.153352"
+    },
+    {
+      "chunk_num": 17,
+      "filename": "mutual_fund_data_chunk_017.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_017.csv",
+      "rows": 750,
+      "start_row": 12001,
+      "end_row": 12750,
+      "size_mb": 0.22746849060058594,
+      "created_at": "2026-10-26T13:16:10.175870"
+    },
+    {
+      "chunk_num": 18,
+      "filename": "mutual_fund_data_chunk_018.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_018.csv",
+      "rows": 750,
+      "start_row": 12751,
+      "end_row": 13500,
+      "size_mb": 0.21598148345947266,
+      "created_at": "2026-10-26T13:16:10.195120"
+    },
+    {
+      "chunk_num": 19,
+      "filename": "mutual_fund_data_chunk_019.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_019.csv",
+      "rows": 750,
+      "start_row": 13501,
+      "end_row": 14250,
+      "size_mb": 0.21015644073486328,
+      "created_at": "2026-10-26T13:16:10.214912"
+    },
+    {
+      "chunk_num": 20,
+      "filename": "mutual_fund_data_chunk_020.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_020.csv",
+      "rows": 750,
+      "start_row": 14251,
+      "end_row": 15000,
+      "size_mb": 0.2241220474243164,
+      "created_at": "2026-10-26T13:16:10.234997"
+    },
+    {
+      "chunk_num": 21,
+      "filename": "mutual_fund_data_chunk_021.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_021.csv",
+      "rows": 750,
+      "start_row": 15001,
+      "end_row": 15750,
+      "size_mb": 0.22179031372070312,
+      "created_at": "2026-10-26T13:16:10.256596"
+    },
+    {
+      "chunk_num": 22,
+      "filename": "mutual_fund_data_chunk_022.csv",
+      "filepath": "data\\source_docs\\chunks\\mutual_fund_data_chunk_022.csv",
+      "rows": 495,
+      "start_row": 15751,
+      "end_row": 16245,
+      "size_mb": 0.13783931732177734,
+      "created_at": "2026-10-26T13:16:10.277383"
+    }
+  ]
+}

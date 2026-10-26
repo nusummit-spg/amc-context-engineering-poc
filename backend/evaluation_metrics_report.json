@@ -1,0 +1,176 @@
+{
+  "evaluation_timestamp": "2026-08-31T12:20:33Z",
+  "total_comparison_queries": 4,
+  "total_chat_turns": 3,
+  "performance": {
+    "avg_traditional_latency_ms": 16861.0,
+    "avg_contextgraph_latency_ms": 16861.25,
+    "avg_traditional_tokens": 3430.2,
+    "avg_contextgraph_tokens": 1965.0,
+    "token_savings_pct": 42.72,
+    "cache_hit_speedup_factor": 1.18
+  },
+  "retrieval_integrity": {
+    "avg_sources_per_query": 3.5,
+    "avg_graph_nodes_touched": 8.0,
+    "avg_graph_edges_touched": 8.0,
+    "multi_turn_coreference_accuracy": "100%"
+  },
+  "queries_detail": [
+    {
+      "category": "Regulatory Borrowing Limits",
+      "query": "What is the borrowing limit for mutual funds under SEBI regulations?",
+      "status": 200,
+      "total_e2e_ms": 32150.89,
+      "traditional": {
+        "docs_returned": 5,
+        "retrieve_ms": 4589,
+        "llm_ms": 1809,
+        "input_tokens": 2004,
+        "output_tokens": 299,
+        "total_tokens": 2303,
+        "snippet_len": 255
+      },
+      "contextgraph": {
+        "answer_length": 292,
+        "confidence": "high",
+        "sources_count": 2,
+        "source_docs": [
+          "Borrowing by Mutual Funds.pdf",
+          "Borrowing by Mutual Funds.pdf"
+        ],
+        "graph_nodes_count": 8,
+        "graph_edges_count": 8,
+        "query_type": "direct_lookup",
+        "input_tokens": 977,
+        "output_tokens": 206,
+        "total_tokens": 1183,
+        "latency_ms": 6399
+      }
+    },
+    {
+      "category": "Scheme Categorization",
+      "query": "What are the categorization rules and thresholds for equity mutual fund schemes?",
+      "status": 200,
+      "total_e2e_ms": 9310.8,
+      "traditional": {
+        "docs_returned": 5,
+        "retrieve_ms": 4426,
+        "llm_ms": 4803,
+        "input_tokens": 2069,
+        "output_tokens": 4096,
+        "total_tokens": 6165,
+        "snippet_len": 36
+      },
+      "contextgraph": {
+        "answer_length": 292,
+        "confidence": "high",
+        "sources_count": 2,
+        "source_docs": [
+          "Borrowing by Mutual Funds.pdf",
+          "Borrowing by Mutual Funds.pdf"
+        ],
+        "graph_nodes_count": 8,
+        "graph_edges_count": 8,
+        "query_type": "direct_lookup",
+        "input_tokens": 977,
+        "output_tokens": 206,
+        "total_tokens": 1183,
+        "latency_ms": 9229
+      }
+    },
+    {
+      "category": "Algorithmic Trading",
+      "query": "What are the requirements for retail investor participation in algorithmic trading?",
+      "status": 200,
+      "total_e2e_ms": 73229.78,
+      "traditional": {
+        "docs_returned": 5,
+        "retrieve_ms": 2633,
+        "llm_ms": 43786,
+        "input_tokens": 1808,
+        "output_tokens": 1094,
+        "total_tokens": 2902,
+        "snippet_len": 2376
+      },
+      "contextgraph": {
+        "answer_length": 2132,
+        "confidence": "high",
+        "sources_count": 5,
+        "source_docs": [
+          "Safer participation of retail investors in Algorithmic trading.pdf",
+          "Safer participation of retail investors in Algorithmic trading.pdf",
+          "Safer participation of retail investors in Algorithmic trading.pdf"
+        ],
+        "graph_nodes_count": 8,
+        "graph_edges_count": 8,
+        "query_type": "open_ended",
+        "input_tokens": 1841,
+        "output_tokens": 769,
+        "total_tokens": 2610,
+        "latency_ms": 46419
+      }
+    },
+    {
+      "category": "Risk Metric Disclosure",
+      "query": "What are the disclosure norms for Information Ratio and risk-adjusted returns?",
+      "status": 200,
+      "total_e2e_ms": 23000.08,
+      "traditional": {
+        "docs_returned": 5,
+        "retrieve_ms": 4297,
+        "llm_ms": 1101,
+        "input_tokens": 1800,
+        "output_tokens": 551,
+        "total_tokens": 2351,
+        "snippet_len": 1866
+      },
+      "contextgraph": {
+        "answer_length": 1973,
+        "confidence": "high",
+        "sources_count": 5,
+        "source_docs": [
+          "Disclosure of Risk adjusted Return - Information Ratio (IR) for Mutual Fund Schemes..pdf",
+          "Disclosure of Risk adjusted Return - Information Ratio (IR) for Mutual Fund Schemes..pdf",
+          "Disclosure of Risk adjusted Return - Information Ratio (IR) for Mutual Fund Schemes..pdf"
+        ],
+        "graph_nodes_count": 8,
+        "graph_edges_count": 8,
+        "query_type": "open_ended",
+        "input_tokens": 1966,
+        "output_tokens": 918,
+        "total_tokens": 2884,
+        "latency_ms": 5398
+      }
+    }
+  ],
+  "chat_detail": [
+    {
+      "turn": 1,
+      "user_query": "What are the categorization norms for Large Cap mutual fund schemes?",
+      "resolved_query": "What are the categorization norms for Large Cap mutual fund schemes?",
+      "latency_ms": 44565.38,
+      "answer_len": 292,
+      "sources_count": 2,
+      "answer_preview": "Under the SEBI (Mutual Funds) Regulations, 2026, a mutual\u2011fund scheme may borrow only up to **20\u202f% of its net assets** f"
+    },
+    {
+      "turn": 2,
+      "user_query": "What is the minimum investment in equity and equity-related instruments required for them?",
+      "resolved_query": "What is the minimum investment in equity and equity-related instruments required for Large Cap mutual fund schemes?",
+      "latency_ms": 22007.24,
+      "answer_len": 292,
+      "sources_count": 2,
+      "answer_preview": "Under the SEBI (Mutual Funds) Regulations, 2026, a mutual\u2011fund scheme may borrow only up to **20\u202f% of its net assets** f"
+    },
+    {
+      "turn": 3,
+      "user_query": "Can they invest the remaining amount in debt instruments?",
+      "resolved_query": "Can Large Cap mutual fund schemes invest the remaining amount in debt instruments?",
+      "latency_ms": 9856.4,
+      "answer_len": 292,
+      "sources_count": 2,
+      "answer_preview": "Under the SEBI (Mutual Funds) Regulations, 2026, a mutual\u2011fund scheme may borrow only up to **20\u202f% of its net assets** f"
+    }
+  ]
+}

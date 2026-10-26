@@ -1,0 +1,193 @@
+# ===========================================================================
+# Copyright © NuSummit Technologies Pvt Ltd. All rights reserved.
+# 
+# Author: NuSummit Developers
+#
+# ===========================================================================
+
+# AMC Domain Pack v1.0
+# Canonical concepts, aliases, schema-level relations, and seed entities
+# for the Indian Asset Management Company knowledge graph.
+#
+# How to use:
+#   Set DOMAIN_PACK_PATH=path/to/this/file in .env
+#   Or place at backend/seeds/amc_domain_pack.yaml (auto-detected)
+#
+# To create a new domain (insurance, banking):
+#   Copy this file, change the domain, update concepts/relations/seed_entities.
+
+domain: AMC
+version: "1.0"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Domain Concepts
+# Canonical terms and their aliases used for numeric fact subject binding
+# ─────────────────────────────────────────────────────────────────────────────
+concepts:
+  - canonical: nav
+    type: financial_metric
+    aliases: [net asset value, nav per unit, scheme nav]
+
+  - canonical: aum
+    type: financial_metric
+    aliases: [assets under management, total aum, corpus, fund size]
+
+  - canonical: exit_load
+    type: fee
+    aliases: [exit charge, redemption charge, exit load percentage, exit fees]
+
+  - canonical: single_issuer_limit
+    type: limit
+    aliases: [single issuer, single company limit, issuer limit, per issuer limit]
+
+  - canonical: single_group_limit
+    type: limit
+    aliases: [single group, group limit, conglomerate limit, group exposure limit]
+
+  - canonical: holding_percentage
+    type: holding
+    aliases: [portfolio allocation, "% of nav", percent of nav, pct nav, allocation percentage]
+
+  - canonical: minimum_investment
+    type: eligibility
+    aliases: [minimum purchase, minimum application, min investment, minimum sip, minimum lump sum]
+
+  - canonical: lock_in_period
+    type: duration
+    aliases: [lock-in, lock in period, minimum holding period, compulsory holding]
+
+  - canonical: returns
+    type: financial_metric
+    aliases: [return, annualized return, cagr, absolute return, performance, yield]
+
+  - canonical: expense_ratio
+    type: fee
+    aliases: [total expense ratio, ter, annual charges, management fee, ongoing charges]
+
+  - canonical: credit_rating
+    type: credit
+    aliases: [credit rating, rating, rated, rating category]
+
+  - canonical: debt_allocation
+    type: allocation
+    aliases: [debt exposure, fixed income allocation, bond allocation, debt percentage]
+
+  - canonical: equity_allocation
+    type: allocation
+    aliases: [equity exposure, stock allocation, equity percentage, equity investment]
+
+  - canonical: liquid_assets
+    type: liquidity
+    aliases: [liquid holdings, cash equivalent, money market, liquid allocation]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Schema-level Relations
+# These are structural relation candidates between concept types.
+# Used by the federation layer to validate extracted relationships.
+# ─────────────────────────────────────────────────────────────────────────────
+relations:
+  - source: scheme
+    relation: HOLDS
+    target: issuer
+
+  - source: issuer
+    relation: ISSUED_BY
+    target: issuer_group
+
+  - source: issuer
+    relation: IN_SECTOR
+    target: sector
+
+  - source: issuer_group
+    relation: MONITORED_FOR
+    target: risk_theme
+
+  - source: issuer
+    relation: FLAGGED_IN
+    target: risk_theme
+
+  - source: analyst
+    relation: COVERS
+    target: issuer
+
+  - source: regulatory_circular
+    relation: APPLIES_TO
+    target: clause_type
+
+  - source: clause_type
+    relation: AFFECTS
+    target: scheme
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Seed Entities
+# Pre-populated known entities to bootstrap the alias resolver.
+# Production deployments should extend this list significantly.
+# ─────────────────────────────────────────────────────────────────────────────
+seed_entities:
+  # ── Known Issuer Groups ───────────────────────────────────────────────────
+  - canonical_name: Adani Group
+    entity_type: IssuerGroup
+    aliases: [Adani, Adani Conglomerate, Adani Enterprise]
+
+  - canonical_name: Tata Group
+    entity_type: IssuerGroup
+    aliases: [Tata, Tata Sons, House of Tata]
+
+  - canonical_name: Reliance Industries
+    entity_type: IssuerGroup
+    aliases: [Reliance, RIL, Reliance Group]
+
+  - canonical_name: Mahindra Group
+    entity_type: IssuerGroup
+    aliases: [Mahindra, M&M Group]
+
+  # ── Known Sectors ─────────────────────────────────────────────────────────
+  - canonical_name: Infrastructure
+    entity_type: Sector
+    aliases: [Infra, Infrastructure Sector]
+
+  - canonical_name: NBFC
+    entity_type: Sector
+    aliases: [Non-Banking Financial Company, Non Banking Financial]
+
+  - canonical_name: Banking
+    entity_type: Sector
+    aliases: [Banks, Banking Sector, PSU Banks, Private Banks]
+
+  - canonical_name: Technology
+    entity_type: Sector
+    aliases: [IT, Information Technology, Tech Sector]
+
+  # ── Known Risk Themes ─────────────────────────────────────────────────────
+  - canonical_name: Concentration Risk
+    entity_type: RiskTheme
+    aliases: [concentration exposure, single-name concentration, issuer concentration]
+
+  - canonical_name: Credit Risk
+    entity_type: RiskTheme
+    aliases: [credit exposure, default risk, credit deterioration]
+
+  - canonical_name: Liquidity Risk
+    entity_type: RiskTheme
+    aliases: [liquidity pressure, redemption pressure, exit load risk]
+
+  - canonical_name: Regulatory Risk
+    entity_type: RiskTheme
+    aliases: [compliance risk, SEBI risk, regulatory change risk]
+
+  # ── Known Clause Types ────────────────────────────────────────────────────
+  - canonical_name: Single Issuer Limit
+    entity_type: ClauseType
+    aliases: [single issuer concentration limit, per-issuer cap]
+    limit_value: 10.0
+    limit_unit: percentage_of_nav
+
+  - canonical_name: Single Group Limit
+    entity_type: ClauseType
+    aliases: [group exposure limit, single group concentration limit]
+    limit_value: 25.0
+    limit_unit: percentage_of_nav
+
+  - canonical_name: Exit Load Clause
+    entity_type: ClauseType
+    aliases: [exit load, redemption charge clause]
