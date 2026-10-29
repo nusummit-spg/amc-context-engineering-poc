@@ -207,3 +207,91 @@ class SchemeAggregationRequest(BaseModel):
         None,
         description="Optional scheme category filter (e.g., 'Equity Scheme - Large Cap Fund')"
     )
+
+
+class AMCAggregationMetrics(BaseModel):
+    """
+    Aggregated metrics for an Asset Management Company (AMC).
+    Materialized across all schemes and plan variants managed by the AMC.
+    """
+    amc: str = Field(..., description="Asset Management Company name")
+    total_aum_cr: float = Field(..., ge=0.0, description="Total AUM in ₹ Crores across all schemes/plans")
+    avg_aum_cr: float = Field(..., ge=0.0, description="Average AUM in ₹ Crores per plan variant")
+    distinct_schemes: int = Field(..., ge=0, description="Number of distinct schemes offered by this AMC")
+    total_plans: int = Field(..., ge=0, description="Total number of plan variants across all schemes")
+    rank: Optional[int] = Field(None, description="Ranking position")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "amc": "SBI Funds Management Limited",
+                "total_aum_cr": 1260906.03,
+                "avg_aum_cr": 2491.91,
+                "distinct_schemes": 127,
+                "total_plans": 506,
+                "rank": 1,
+            }
+        }
+
+
+class AMCAggregationResponse(BaseModel):
+    """
+    Response model for AMC-level aggregation and ranking queries.
+    """
+    query: str = Field(..., description="Original user query")
+    query_intent: str = Field(default="amc_ranking", description="Detected query intent")
+    generated_at: str = Field(..., description="ISO 8601 timestamp when response was generated")
+    data_period: str = Field(..., description="Data period covered (e.g., 'January - March 2026')")
+    amc_rankings: List[AMCAggregationMetrics] = Field(..., description="Ranked list of AMCs")
+    total_unique_amcs: int = Field(..., ge=0, description="Total number of unique AMCs analyzed")
+    interpretation_guide: str = Field(..., description="Human-readable guidance on interpreting AMC metrics")
+
+
+class NAVAggregationMetrics(BaseModel):
+    """
+    Metrics for mutual fund schemes ranked by NAV.
+    """
+    scheme_name: str = Field(..., description="Scheme name")
+    plan_name: str = Field(..., description="Scheme NAV / plan variant name")
+    amc: str = Field(..., description="Managing Asset Management Company")
+    nav: float = Field(..., description="Net Asset Value in ₹")
+    latest_nav_date: Optional[str] = Field(None, description="Date of latest NAV (YYYY-MM-DD)")
+    scheme_type: str = Field(..., description="Open Ended / Close Ended / Interval")
+    scheme_category: str = Field(..., description="SEBI category")
+    rank: Optional[int] = Field(None, description="Ranking position")
+
+
+class NAVAggregationResponse(BaseModel):
+    """
+    Response model for NAV ranking queries.
+    """
+    query: str = Field(..., description="Original user query")
+    query_intent: str = Field(default="nav_ranking", description="Detected query intent")
+    generated_at: str = Field(..., description="ISO 8601 timestamp when response was generated")
+    data_period: str = Field(..., description="Data period or latest date")
+    schemes: List[NAVAggregationMetrics] = Field(..., description="Ranked list of schemes by NAV")
+    total_matching: int = Field(..., ge=0, description="Total schemes matching filter criteria")
+    applied_filters: dict = Field(default_factory=dict, description="Filters applied (scheme_type, category, plan)")
+    interpretation_guide: str = Field(..., description="Interpretation guidance")
+
+
+class CategoryAggregationMetrics(BaseModel):
+    category: str = Field(..., description="Mutual fund category name")
+    distinct_schemes: int = Field(..., ge=0, description="Number of distinct scheme families in this category")
+    total_folios: int = Field(..., ge=0, description="Total number of plan folios/variants")
+    total_aum_cr: float = Field(..., ge=0.0, description="Total AUM in ₹ Crores across all schemes in category")
+    pct_of_total_aum: float = Field(..., ge=0.0, le=100.0, description="Percentage of overall mutual fund market AUM")
+    avg_aum_per_scheme_cr: float = Field(..., ge=0.0, description="Average AUM per scheme family in ₹ Crores")
+    rank: Optional[int] = Field(None, description="Category ranking position by total AUM")
+
+
+class CategoryAggregationResponse(BaseModel):
+    query: str = Field(..., description="Original user query")
+    query_intent: str = Field(default="category_aggregation", description="Detected query intent")
+    generated_at: str = Field(..., description="ISO 8601 timestamp when response was generated")
+    data_period: str = Field(..., description="Data period covered (e.g., 'January - March 2026')")
+    categories: List[CategoryAggregationMetrics] = Field(..., description="Ranked list of categories by AUM")
+    total_market_aum_cr: float = Field(..., ge=0.0, description="Total mutual fund market AUM in ₹ Crores")
+    total_distinct_schemes: int = Field(..., ge=0, description="Total distinct scheme families across all categories")
+    total_folios: int = Field(..., ge=0, description="Total plan folios in dataset")
+    interpretation_guide: str = Field(..., description="Human-readable interpretation guide")

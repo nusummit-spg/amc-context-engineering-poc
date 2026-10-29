@@ -92,6 +92,9 @@ tmp/
 *.json.gz
 *_dump.json
 *_full_dump.*
+scratch/
+scratch/**
+backend/data/vector_store/**/payload.json
 
 # Documentation builds
 docs/_build/

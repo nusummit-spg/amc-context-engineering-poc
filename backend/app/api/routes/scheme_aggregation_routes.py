@@ -19,7 +19,8 @@ import logging
 from app.services.scheme_aggregation_service import get_aggregation_service
 from app.models.scheme_aggregation import (
     DualViewAUMResponse,
-    SchemeAggregationRequest
+    SchemeAggregationRequest,
+    AMCAggregationResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -123,6 +124,50 @@ async def get_top_schemes(
     except Exception as e:
         logger.error(f"✗ Unexpected error in scheme aggregation: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@router.get(
+    "/top-amcs",
+    response_model=AMCAggregationResponse,
+    summary="Get Top AMCs by Total AUM",
+    description="""
+    Returns top Asset Management Companies (AMCs) ranked by total AUM, along with distinct scheme counts.
+    """,
+)
+async def get_top_amcs(
+    limit: int = Query(
+        10,
+        ge=1,
+        le=100,
+        description="Number of top AMCs to return (1-100)"
+    ),
+    sort_by: str = Query(
+        "total_aum",
+        description="Sort by: 'total_aum' (default), 'distinct_schemes', 'avg_aum', 'total_plans'"
+    ),
+):
+    """
+    Get top N Asset Management Companies with aggregated AUM and distinct scheme counts.
+    """
+    try:
+        service = get_aggregation_service()
+        valid_sorts = ['total_aum', 'distinct_schemes', 'avg_aum', 'total_plans']
+        if sort_by not in valid_sorts:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid sort_by. Must be one of: {', '.join(valid_sorts)}"
+            )
+
+        response = service.get_top_amcs(limit=limit, sort_by=sort_by)
+        logger.info(f"✓ AMC aggregation query succeeded: {limit} AMCs, sorted by {sort_by}")
+        return response
+    except ValueError as e:
+        logger.error(f"✗ Data validation error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"✗ Unexpected error in AMC aggregation: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
 
 
 @router.get(

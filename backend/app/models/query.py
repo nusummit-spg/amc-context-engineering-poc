@@ -382,6 +382,16 @@ TRAVERSAL_STRATEGIES: dict[QueryType, TraversalStrategy] = {
         qdrant_k          = 15,
         needs_aggregation = False,
     ),
+
+    QueryType.AGGREGATE_RANKING: TraversalStrategy(
+        cypher_template   = "TABULAR_AGGREGATION",
+        max_hops          = 0,
+        graph_fact_quota  = 0.85,    # Authoritative facts from CSV/aggregation engine
+        vector_quota      = 0.05,    # Minimal vector chunk quota
+        system_reserve    = 0.10,
+        qdrant_k          = 3,
+        needs_aggregation = True,
+    ),
 }
 """
 Registry mapping each QueryType to its TraversalStrategy.

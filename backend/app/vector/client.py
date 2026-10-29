@@ -21,6 +21,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -33,6 +34,13 @@ from app.config import get_settings
 from app.models.documents import Chunk
 
 logger = logging.getLogger("vector")
+
+_VECTOR_STOP_WORDS = {
+    "what", "is", "the", "for", "and", "in", "to", "of", "a", "an", "under", "did", "does",
+    "are", "by", "its", "it", "on", "as", "with", "from", "according", "how", "much", "many",
+    "was", "were", "been", "that", "this", "these", "those", "have", "has", "had", "which"
+}
+
 
 
 class VectorStore:
@@ -92,6 +100,11 @@ class VectorStore:
         if os.path.exists(self._index_path) and os.path.exists(self._payload_path):
             try:
                 raw_idx = faiss.read_index(self._index_path)
+                if raw_idx.d != self._dim:
+                    raise ValueError(
+                        f"FAISS index dimension mismatch: index at {self._index_path} has dimension {raw_idx.d}, "
+                        f"expected {self._dim} ({self._model_name}). Falling back to baseline hydration."
+                    )
                 if not isinstance(raw_idx, (faiss.IndexIDMap, faiss.IndexIDMap2)):
                     n = raw_idx.ntotal
                     d = raw_idx.d
@@ -393,29 +406,52 @@ class VectorStore:
         else:
             vec = self._matrix(await self.embed_async([query]))
 
-        fetch = min(self._index.ntotal, max(top_k * 20, 200))
+        fetch = min(self._index.ntotal, max(top_k * 30, 300))
         scores, ids = await asyncio.to_thread(self._index.search, vec, fetch)
 
-        def _collect(apply_scope: bool) -> list[dict]:
-            """Collect.
+        # Extract search query tokens for hybrid lexical scoring (strip HyDE text if present)
+        q_tokens = []
+        if isinstance(query, str):
+            actual_q = query.split("\n\nHYPOTHETICAL DOCUMENT:")[0]
+            clean_q = re.sub(r"[^a-zA-Z0-9_\-\.]", " ", actual_q.lower())
+            q_tokens = [w for w in clean_q.split() if len(w) >= 3 and w not in _VECTOR_STOP_WORDS]
 
-            Args:
-                apply_scope (bool): The apply scope.
+        # Build candidate pairs from dense FAISS search + top lexical matches
+        dense_candidates = [(float(score), fid) for score, fid in zip(scores[0].tolist(), ids[0].tolist()) if fid != -1]
+        dense_fid_set = {fid for _, fid in dense_candidates}
+        lex_supplement: list[tuple[float, int]] = []
 
-            Returns:
-                list[dict]: List of resulting items or records.
-            """
-            out: list[dict] = []
-            for score, fid in zip(scores[0].tolist(), ids[0].tolist()):
-                if fid == -1:
+        if len(q_tokens) >= 2 and self._payloads:
+            lex_hits: list[tuple[int, int]] = []
+            seen_lex_prefixes = set()
+            for fid, p in self._payloads.items():
+                if fid in dense_fid_set:
                     continue
+                raw_t = p.get("text", "")
+                t_low = raw_t.lower()
+                mc = sum(1 for kw in q_tokens if kw in t_low)
+                if mc >= 2:
+                    norm = re.sub(r"\s+", " ", raw_t[:140].strip().lower())
+                    if norm not in seen_lex_prefixes:
+                        seen_lex_prefixes.add(norm)
+                        lex_hits.append((fid, mc))
+            lex_hits.sort(key=lambda x: x[1], reverse=True)
+            for fid, mc in lex_hits[:40]:
+                base_sc = 0.75 + (0.10 * (mc / len(q_tokens)))
+                lex_supplement.append((base_sc, fid))
+
+        candidate_pool = dense_candidates + lex_supplement
+
+        def _collect(apply_scope: bool) -> list[dict]:
+            candidates: list[dict] = []
+            seen_prefixes = set()
+
+            for score, fid in candidate_pool:
                 payload = self._payloads.get(fid)
                 if payload is None:
                     continue
 
-                # User isolation:
-                # Documents with a user_id are private to that user.
-                # Documents without user_id (system/corpus) are public.
+                # User isolation
                 doc_user = payload.get("user_id")
                 if user_id:
                     if doc_user is not None and doc_user != user_id:
@@ -423,7 +459,7 @@ class VectorStore:
                 elif doc_user is not None:
                     continue
 
-                # Tenant isolation:
+                # Tenant isolation
                 doc_tenant = payload.get("tenant_id")
                 if tenant_id:
                     if doc_tenant is not None and doc_tenant != tenant_id:
@@ -431,7 +467,7 @@ class VectorStore:
                 elif doc_tenant is not None:
                     continue
 
-                # Metadata filter:
+                # Metadata filter
                 if metadata_filter:
                     match = True
                     meta = payload.get("metadata") or {}
@@ -445,19 +481,41 @@ class VectorStore:
                 if apply_scope and taxonomy_paths:
                     if not set(payload.get("taxonomy_paths") or []) & set(taxonomy_paths):
                         continue
-                out.append({"chunk_id": payload["chunk_id"], "score": float(score), **payload})
-                if len(out) >= top_k:
-                    break
-            return out
+
+                # Text-level deduplication: avoid duplicate copies of the same section
+                raw_text = payload.get("text", "")
+                norm_snip = re.sub(r"\s+", " ", raw_text[:140].strip().lower())
+                if norm_snip in seen_prefixes:
+                    continue
+                seen_prefixes.add(norm_snip)
+
+                # Lexical keyword boost
+                final_score = float(score)
+                if q_tokens:
+                    t_low = raw_text.lower()
+                    kw_matches = sum(1 for kw in q_tokens if kw in t_low)
+                    kw_ratio = kw_matches / len(q_tokens)
+                    final_score += 0.20 * kw_ratio
+
+                # Clamp strictly between 0.0 and 1.0 to satisfy Pydantic RetrievedChunk model constraints
+                clamped_score = min(1.0, max(0.0, round(final_score, 4)))
+                candidates.append({"chunk_id": payload["chunk_id"], "score": clamped_score, **payload})
+
+            # Sort by hybrid final_score
+            candidates.sort(key=lambda x: x["score"], reverse=True)
+            return candidates[:top_k]
 
         hits = _collect(apply_scope=True)
         if len(hits) < top_k and taxonomy_paths:
             seen_ids = {h["chunk_id"] for h in hits}
+            seen_texts = {re.sub(r"\s+", " ", h.get("text", "")[:140].strip().lower()) for h in hits}
             fallback_hits = _collect(apply_scope=False)
             for h in fallback_hits:
-                if h["chunk_id"] not in seen_ids:
+                snip = re.sub(r"\s+", " ", h.get("text", "")[:140].strip().lower())
+                if h["chunk_id"] not in seen_ids and snip not in seen_texts:
                     hits.append(h)
                     seen_ids.add(h["chunk_id"])
+                    seen_texts.add(snip)
                     if len(hits) >= top_k:
                         break
         return hits

@@ -939,7 +939,7 @@ def _format_sse(event_type: str, data: dict) -> str:
     Returns:
         str: Resulting str instance.
     """
-    return f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
+    return f"event: {event_type}\ndata: {json.dumps(data, default=str)}\n\n"
 
 
 async def _query_stream_generator(

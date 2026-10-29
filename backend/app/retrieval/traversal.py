@@ -123,7 +123,8 @@ class GraphTraversal:
             QueryType.HOUSE_VIEW_SYNTHESIS: self._house_view,
             QueryType.ENTITY_LOOKUP: self._entity_lookup,
             QueryType.GENERAL: self._noop,
-        }[intent.query_type]
+            QueryType.AGGREGATE_RANKING: self._noop,
+        }.get(intent.query_type, self._noop)
         # Pass intent so strategies can use taxonomy_paths as fallback
         facts, paths, cyphers = await strategy(intent, entities)
         self._audit_traversal(user_id, tenant_id, [e.name for e in entities], len(facts))

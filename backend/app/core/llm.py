@@ -315,17 +315,34 @@ class LLMClient:
         if structured_schema:
             kwargs["response_format"] = {"type": "json_object"}
 
-        delays = [2.0, 5.0, 10.0]
+        delays = [3.0, 6.0, 12.0, 20.0, 30.0, 45.0]
         for attempt in range(len(delays) + 1):
             async with self._semaphore:
                 try:
                     response = await self._groq_client.chat.completions.create(**kwargs)
                     return response.choices[0].message.content or ""
                 except groq.RateLimitError as exc:
+                    err_msg = str(exc)
+                    # If primary heavy model hit rate/daily limit, fall back immediately to fast model
+                    if kwargs.get("model") != self._settings.llm_fast_model and self._settings.llm_fast_model:
+                        logger.warning("Groq model %s rate limited (%s). Falling back immediately to %s",
+                                       kwargs["model"], err_msg, self._settings.llm_fast_model)
+                        kwargs["model"] = self._settings.llm_fast_model
+                        continue
                     if attempt >= len(delays):
+                        logger.error("Groq rate limit exceeded after %d retries: %s", len(delays), exc)
                         raise UpstreamError("Groq rate limited after retries") from exc
-                    backoff = delays[attempt]
-                    logger.warning("Groq rate limited (attempt %d/%d). Sleeping %.1fs before retrying...", attempt + 1, len(delays), backoff)
+                    m_min_sec = re.search(r"try again in (?:(\d+)m)?([\d\.]+)s", err_msg)
+                    m_ms = re.search(r"try again in ([\d\.]+)ms", err_msg)
+                    if m_min_sec:
+                        mins = float(m_min_sec.group(1) or 0)
+                        secs = float(m_min_sec.group(2) or 0)
+                        backoff = (mins * 60.0) + secs + 1.5
+                    elif m_ms:
+                        backoff = (float(m_ms.group(1)) / 1000.0) + 1.0
+                    else:
+                        backoff = delays[attempt]
+                    logger.warning("Groq rate limited (attempt %d/%d): %s. Sleeping %.1fs before retrying...", attempt + 1, len(delays), err_msg, backoff)
                     await asyncio.sleep(backoff)
                     continue
                 except groq.APIStatusError as exc:

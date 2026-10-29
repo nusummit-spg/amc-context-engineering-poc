@@ -51,6 +51,18 @@ SEARCH_DIRS: List[Path] = [
     _BACKEND_ROOT / "data",
     _BACKEND_ROOT / "data" / "source_docs",
     _REPO_ROOT / "backend" / "data" / "source_docs",
+    _BACKEND_ROOT / "data" / "source_docs" / "pdf",
+    _BACKEND_ROOT / "data" / "source_docs" / "docx",
+    _BACKEND_ROOT / "data" / "source_docs" / "pptx",
+    _BACKEND_ROOT / "data" / "source_docs" / "text",
+    _BACKEND_ROOT / "data" / "source_docs" / "emails",
+    _BACKEND_ROOT / "data" / "source_docs" / "chunks",
+    _REPO_ROOT / "backend" / "data" / "source_docs" / "pdf",
+    _REPO_ROOT / "backend" / "data" / "source_docs" / "docx",
+    _REPO_ROOT / "backend" / "data" / "source_docs" / "pptx",
+    _REPO_ROOT / "backend" / "data" / "source_docs" / "text",
+    _REPO_ROOT / "backend" / "data" / "source_docs" / "emails",
+    _REPO_ROOT / "backend" / "data" / "source_docs" / "chunks",
     engine_config.DATA_DIR,
 ]
 
@@ -131,17 +143,28 @@ def resolve_file_path(document_id: str) -> Optional[Path]:
             if target.is_file():
                 return target.resolve()
 
-        # Normalized / fuzzy match in directory
+        # Normalized / fuzzy match in directory (and immediate subdirectories)
         norm_target = _normalize_name(clean_stem)
         norm_full = _normalize_name(decoded_name)
         try:
             for item in search_dir.iterdir():
-                if not item.is_file():
-                    continue
-                item_norm_stem = _normalize_name(item.stem)
-                item_norm_full = _normalize_name(item.name)
-                if item_norm_full == norm_full or item_norm_stem == norm_target:
-                    return item.resolve()
+                if item.is_file():
+                    item_norm_stem = _normalize_name(item.stem)
+                    item_norm_full = _normalize_name(item.name)
+                    if item_norm_full == norm_full or item_norm_stem == norm_target:
+                        return item.resolve()
+                elif item.is_dir() and not item.name.startswith("."):
+                    for cand in candidates:
+                        sub_target = item / cand
+                        if sub_target.is_file():
+                            return sub_target.resolve()
+                    for sub_item in item.iterdir():
+                        if not sub_item.is_file():
+                            continue
+                        sub_norm_stem = _normalize_name(sub_item.stem)
+                        sub_norm_full = _normalize_name(sub_item.name)
+                        if sub_norm_full == norm_full or sub_norm_stem == norm_target:
+                            return sub_item.resolve()
         except Exception:
             continue
 

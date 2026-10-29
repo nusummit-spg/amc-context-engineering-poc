@@ -140,5 +140,119 @@ def test_aggregation_different_sort_options(aggregation_service):
         assert response.scheme_level_rankings[0].scheme_name is not None
 
 
+def test_aggregation_service_returns_top_amcs(aggregation_service):
+    """Test that aggregation service returns correct top AMCs with distinct schemes."""
+    response = aggregation_service.get_top_amcs(limit=10, sort_by="total_aum")
+    assert response is not None
+    assert len(response.amc_rankings) == 10
+    top_amc = response.amc_rankings[0]
+    assert "SBI" in top_amc.amc
+    assert top_amc.total_aum_cr > 1000000  # Over 10 lakh crores
+    assert top_amc.distinct_schemes > 100
+
+
+@pytest.mark.asyncio
+async def test_fast_path_differentiates_q1_and_q2():
+    """Verify Query 1 and Query 2 return distinct scheme-level and AMC-level answers."""
+    interceptor = FastPathInterceptor()
+    q1 = "What are the top 10 mutual fund schemes with the highest Average AUM (in ₹ Crores), and which AMCs manage them?"
+    q2 = "Which Asset Management Companies (AMCs) manage the highest total AUM, and how many distinct schemes does each AMC offer?"
+
+    assert interceptor._extract_target_attribute(q1) == "AGGREGATION_RANKING"
+    assert interceptor._extract_target_attribute(q2) == "AGGREGATION_AMC"
+
+    r1 = await interceptor.intercept(q1)
+    r2 = await interceptor.intercept(q2)
+
+    assert r1 is not None and r2 is not None
+    assert "Top Mutual Fund Schemes" in r1.synthesis.answer
+    assert "Top Asset Management Companies" in r2.synthesis.answer
+    assert "SBI Funds Management Limited" in r2.synthesis.answer
+    assert r1.synthesis.answer != r2.synthesis.answer
+
+
+
+def test_aggregation_service_returns_top_nav_schemes(aggregation_service):
+    """Test that aggregation service accurately sorts open-ended equity growth schemes by NAV."""
+    response = aggregation_service.get_top_nav_schemes(
+        limit=10,
+        scheme_type="Open Ended",
+        category_keyword="Equity",
+        plan_keyword="Growth",
+        exclude_idcw=True,
+        sort_order="desc",
+    )
+    assert response is not None
+    assert len(response.schemes) == 10
+    top = response.schemes[0]
+    assert "nippon" in top.plan_name.lower(), f"Expected Nippon fund at #1, got {top.plan_name}"
+    assert top.nav > 4000.0, f"Expected NAV > 4000, got {top.nav}"
+    # Verify rank 2
+    second = response.schemes[1]
+    assert "nippon" in second.plan_name.lower()
+    assert second.nav > 4000.0
+    # Verify that ICICI Prudential Large Cap Fund (118.91) is not in top 10
+    assert not any("icici prudential large cap fund" in s.plan_name.lower() and s.nav < 200 for s in response.schemes)
+
+
+@pytest.mark.asyncio
+async def test_fast_path_nav_query():
+    """Verify NAV query is intercepted deterministically by FastPathInterceptor (Layer 1)."""
+    interceptor = FastPathInterceptor()
+    q = "Which open-ended Equity Growth schemes currently have the highest NAV?"
+
+    assert interceptor._extract_target_attribute(q) == "AGGREGATION_NAV"
+    resp = await interceptor.intercept(q)
+    assert resp is not None
+    assert resp.synthesis is not None
+    assert "Nippon India Growth Mid Cap Fund" in resp.synthesis.answer
+    assert "4,908" in resp.synthesis.answer
+    assert len(resp.synthesis.structured_rows) == 10
+    assert resp.synthesis.confidence == "high"
+
+
+def test_orchestrator_layer2_tabular_fallback():
+    """Verify Layer 2 tabular aggregation fallback injects authoritative CSV facts into context."""
+    from app.retrieval.orchestrator import RetrievalOrchestrator
+    from app.models.query import QueryType, QueryIntent
+    
+    orch = RetrievalOrchestrator.__new__(RetrievalOrchestrator)
+    q = "Which open-ended Equity Growth schemes currently have the highest NAV?"
+    facts, rows = orch._populate_tabular_aggregation_facts(q, QueryIntent(query_type=QueryType.AGGREGATE_RANKING))
+    assert len(facts) == 10
+    assert len(rows) == 10
+    assert facts[0].predicate == "HAS_NAV"
+    assert facts[0].source_document_ids == ["mutual_fund_data.csv"]
+    assert "nippon" in rows[0]["scheme_name"].lower()
+
+
+def test_orchestrator_layer3_guardrail_override():
+    """Verify Layer 3 active quality gate overrides hallucinated output with ground truth."""
+    from app.retrieval.orchestrator import RetrievalOrchestrator
+    from app.models.query import SynthesisOutput
+    
+    orch = RetrievalOrchestrator.__new__(RetrievalOrchestrator)
+    q = "Which open-ended Equity Growth schemes currently have the highest NAV?"
+    _, rows = orch._populate_tabular_aggregation_facts(q)
+    
+    hallucinated = SynthesisOutput(
+        answer="The highest NAV fund is ICICI Prudential Large Cap Fund with NAV ₹118.91.",
+        confidence="medium",
+        compliance_note=None,
+    )
+    corrected, overridden = orch._enforce_aggregation_guardrail(
+        query=q,
+        synthesis=hallucinated,
+        rows=rows,
+        critic_escalated=False,
+    )
+    assert overridden is True
+    assert "Nippon India Growth Mid Cap Fund" in corrected.answer
+    assert "4,908" in corrected.answer
+    assert "ICICI Prudential Large Cap Fund with NAV ₹118.91" not in corrected.answer
+    assert corrected.confidence == "high"
+    assert "Audited & Verified" in (corrected.compliance_note or "")
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

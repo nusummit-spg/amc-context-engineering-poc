@@ -1,0 +1,74 @@
+SECURITIES AND EXCHANGE BOARD OF INDIA
+CIRCULAR
+SEBI/HO/IMD/DF3/CIR/P/2017/114                                   October 06, 2017
+
+To,
+All Mutual Funds,
+Asset Management Companies (AMCs),
+Trustee Companies / Board of Trustees of Mutual Funds,
+Association of Mutual Funds in India (AMFI)
+
+Dear Sir / Madam,
+
+Subject: Categorization and Rationalization of Mutual Fund Schemes
+
+1. It has been decided to categorize and rationalize mutual fund schemes in order to bring uniformity in the characteristics of similar schemes so that an investor can evaluate the different options available, before taking an informed investment decision.
+
+2. Towards this, based on the recommendation of Mutual Fund Advisory Committee (MFAC), the various schemes of mutual funds are categorized as under:
+   1. Equity Schemes
+   2. Debt Schemes
+   3. Hybrid Schemes
+   4. Solution Oriented Schemes
+   5. Other Schemes
+
+3. Broad definitions of market capitalization:
+   In order to ensure uniformity across the mutual fund industry, market capitalization shall be defined as follows:
+   a. Large Cap: 1st - 100th company in terms of full market capitalization
+   b. Mid Cap: 101st - 250th company in terms of full market capitalization
+   c. Small Cap: 251st company onwards in terms of full market capitalization
+   AMFI shall publish the list of stocks in this regard on a half-yearly basis on its website.
+
+4. Categories of Schemes:
+   A. Equity Schemes:
+      1. Multi Cap Fund: Investing in equity & equity related instruments of large, mid, small cap stocks. Minimum investment in equity: 75% of total assets (minimum 25% each in large, mid, small cap).
+      2. Large Cap Fund: Minimum investment in equity & equity related instruments of large cap companies: 80% of total assets.
+      3. Large & Mid Cap Fund: Minimum investment in large cap stocks: 35%; mid cap stocks: 35% of total assets.
+      4. Mid Cap Fund: Minimum investment in equity & equity related instruments of mid cap companies: 65% of total assets.
+      5. Small Cap Fund: Minimum investment in equity & equity related instruments of small cap companies: 65% of total assets.
+      6. Dividend Yield Fund: Minimum investment in equity: 65% of total assets in dividend yielding stocks.
+      7. Value Fund / Contra Fund: Minimum investment in equity: 65% of total assets.
+      8. Focused Fund: A scheme investing in maximum 30 stocks with minimum 65% equity allocation.
+      9. Sectoral / Thematic: Minimum investment in equity of specific sector/theme: 80% of total assets.
+      10. ELSS: Minimum investment in equity: 80% of total assets with 3-year statutory lock-in.
+
+   B. Debt Schemes:
+      1. Overnight Fund: Investment in overnight securities having maturity of 1 day.
+      2. Liquid Fund: Investment in debt and money market securities with residual maturity up to 91 days.
+      3. Ultra Short Duration Fund: Macaulay duration between 3 months and 6 months.
+      4. Low Duration Fund: Macaulay duration between 6 months and 12 months.
+      5. Money Market Fund: Investment in money market instruments having maturity up to 1 year.
+      6. Short Duration Fund: Macaulay duration between 1 year and 3 years.
+      7. Medium Duration Fund: Macaulay duration between 3 years and 4 years.
+      8. Medium to Long Duration Fund: Macaulay duration between 4 years and 7 years.
+      9. Long Duration Fund: Macaulay duration greater than 7 years.
+      10. Dynamic Bond Fund: Investment across duration spectrums.
+      11. Corporate Bond Fund: Minimum investment in corporate bonds rated AA+ and above: 80% of total assets.
+      12. Credit Risk Fund: Minimum investment in corporate bonds rated AA and below: 65% of total assets.
+      13. Banking and PSU Fund: Minimum investment in debt instruments of banks, PSUs, PFIs: 80% of total assets.
+      14. Gilt Fund: Minimum investment in G-Secs: 80% of total assets across maturities.
+      15. Floater Fund: Minimum investment in floating rate instruments: 65% of total assets.
+
+   C. Hybrid Schemes:
+      1. Conservative Hybrid Fund: Equity 10%-25%, Debt 75%-90%.
+      2. Balanced Hybrid Fund: Equity 40%-60%, Debt 40%-60%.
+      3. Aggressive Hybrid Fund: Equity 65%-80%, Debt 20%-35%.
+      4. Dynamic Asset Allocation / Balanced Advantage: Investment in equity/debt is dynamically managed.
+      5. Multi Asset Allocation: Minimum investment in at least three asset classes with minimum 10% in each.
+      6. Arbitrage Fund: Minimum investment in equity: 65% of total assets (hedged with derivatives).
+      7. Equity Savings: Minimum 65% equity and minimum 10% debt.
+
+5. Only one scheme per category, except Index Funds/ETFs, Sectoral/Thematic Funds, and FOFs.
+
+Yours faithfully,
+Dinesh Kumar Khara
+Executive Director, SEBI

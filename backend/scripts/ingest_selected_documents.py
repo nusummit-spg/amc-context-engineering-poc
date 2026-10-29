@@ -4,10 +4,7 @@
 # Author: NuSummit Developers
 #
 # ===========================================================================
-# groq remove / disable -> hugging face model
-# hugging face model download 
-# model -> ingest
-# google collab
+
 
 """
 ingest_selected_documents.py

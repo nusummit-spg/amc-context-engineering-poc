@@ -1,0 +1,1148 @@
+{
+  "startedAt": "2026-10-27T10:20:24.016Z",
+  "frontendUrl": "http://localhost:5173",
+  "totalQueries": 20,
+  "queries": [
+    {
+      "id": "Q01_TOP10_SCHEMES_AUM",
+      "title": "Top 10 Mutual Fund Schemes by Average AUM",
+      "query": "What are the top 10 mutual fund schemes with the highest Average AUM (in ₹ Crores), and which AMCs manage them?",
+      "elapsedSeconds": "3.05",
+      "answerText": "Mutual Fund Schemes by Average AUM\nRank\tScheme Name\tAMC\tTotal AUM (₹ Cr)\tAverage AUM (₹ Cr)\tMax Plan AUM (₹ Cr)\tPlan Variants\n1\tSBI Nifty 50 ETF\tSBI Funds Management Limited\t₹210,783.07\t₹210,783.07\t₹210,783.07\t1\n2\tSBI BSE SENSEX ETF\tSBI Funds Management Limited\t₹120,715.25\t₹120,715.25\t₹120,715.25\t1\n3\tUTI Nifty 50 ETF\tUTI Asset Mgmt. Co. Ltd.\t₹68,363.00\t₹68,363.00\t₹68,363.00\t1\n4\tNippon India ETF Nifty 50 BeES\tNippon Life India Asset Management Limited\t₹57,058.66\t₹57,058.66\t₹57,058.66\t1\n5\tNippon India ETF Gold BeES\tNippon Life India Asset Management Limited\t₹53,346.31\t₹53,346.31\t₹53,346.31\t1\n6\tUTI BSE Sensex ETF\tUTI Asset Mgmt. Co. Ltd.\t₹53,198.67\t₹53,198.67\t₹53,198.67\t1\n7\tICICI Prudential Nifty 50 ETF\tICICI Prudential Asset Management Company Limited\t₹37,428.97\t₹37,428.97\t₹37,428.97\t1\n8\tNippon India Silver ETF\tNippon Life India Asset Management Limited\t₹34,718.04\t₹34,718.04\t₹34,718.04\t1\n9\tParag Parikh Flexi Cap Fund\tPPFAS Asset Management Pvt. Ltd.\t₹133,447.85\t₹33,361.96\t₹88,403.90\t4\n10\tICICI Prudential BSE Sensex ETF\tICICI Prudential Asset Management Company Limited\t₹26,545.56\t₹26,545.56\t₹26,545.56\t1\nExecutive Summary\nSBI Nifty 50 ETF (managed by SBI Funds Management Limited) holds the highest AUM with ₹210,783.07 Crores (Total AUM across all 1 plan variants: ₹210,783.07 Cr).\nShowing 10 schemes across 13 total plan variants.\nData Period: January - March 2026",
+      "answerLength": 1380,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “What are the top 10 mutual fund schemes with the highest Average AUM (in ₹ Crores), and which AMCs manage them?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "SBI Nifty 50 ETF",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "SBI Funds Management Limited",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "210,783",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q01_TOP10_SCHEMES_AUM.png"
+    },
+    {
+      "id": "Q02_TOP_AMCS_AUM",
+      "title": "AMCs Managing Highest Total AUM & Scheme Counts",
+      "query": "Which Asset Management Companies (AMCs) manage the highest total AUM, and how many distinct schemes does each AMC offer?",
+      "elapsedSeconds": "2.25",
+      "answerText": "Asset Management Companies (AMCs) by Total AUM\nRank\tAsset Management Company (AMC)\tTotal AUM (₹ Cr)\tDistinct Schemes\tTotal Plans\tAverage Plan AUM (₹ Cr)\n1\tSBI Funds Management Limited\t₹1,260,906.03\t127\t506\t₹2,491.91\n2\tICICI Prudential Asset Management Company Limited\t₹1,155,054.64\t150\t513\t₹2,251.57\n3\tHDFC Asset Management Company Limited\t₹952,359.70\t108\t356\t₹2,675.17\n4\tNippon Life India Asset Management Limited\t₹735,778.88\t106\t505\t₹1,456.99\n5\tKotak Mahindra Asset Management Company Limited.\t₹595,359.95\t118\t403\t₹1,477.32\n6\tAditya Birla Sun Life AMC Limited\t₹430,541.44\t106\t413\t₹1,042.47\n7\tUTI Asset Mgmt. Co. Ltd.\t₹390,289.25\t82\t409\t₹954.25\n8\tAxis Asset Management Co. Ltd.\t₹366,491.96\t84\t390\t₹939.72\n9\tTata Asset Management Limited\t₹229,419.21\t65\t237\t₹968.01\n10\tMirae Asset Investment Managers (India) Pvt. Ltd\t₹227,742.87\t92\t260\t₹875.93\n\nData Summary: Showing 10 of 47 AMCs. Data period: January - March 2026",
+      "answerLength": 915,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “Which Asset Management Companies (AMCs) manage the highest total AUM, and how many distinct schemes does each AMC offer?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION)"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "SBI Funds Management Limited",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "1,260,906",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "ICICI Prudential",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "Distinct Schemes",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q02_TOP_AMCS_AUM.png"
+    },
+    {
+      "id": "Q03_CATEGORY_BREAKDOWN",
+      "title": "Category Breakdown of Total AUM and Scheme Counts",
+      "query": "What is the breakdown of total AUM and number of schemes across different mutual fund categories?",
+      "elapsedSeconds": "2.25",
+      "answerText": "Mutual Fund Category Breakdown: Total AUM and Scheme Counts\nRank\tMutual Fund Category\tTotal AUM (₹ Cr)\tMarket Share (%)\tDistinct Schemes\tTotal Plan Variants\tAvg AUM / Scheme (₹ Cr)\n1\tEquity Schemes\t₹3,517,433.31\t42.45%\t607\t2601\t₹5,794.78\n2\tDebt Schemes\t₹1,915,852.48\t23.12%\t397\t3585\t₹4,825.82\n3\tOther Schemes (ETFs & Index Funds)\t₹1,649,277.14\t19.91%\t933\t2419\t₹1,767.71\n4\tHybrid Schemes\t₹1,125,810.79\t13.59%\t170\t870\t₹6,622.42\n5\tSolution Oriented Schemes\t₹57,032.45\t0.69%\t42\t148\t₹1,357.92\n6\tIncome Schemes\t₹15,695.94\t0.19%\t1395\t6124\t₹11.25\n7\tELSS\t₹4,111.86\t0.05%\t23\t85\t₹178.78\n8\tAssured Return\t₹0.00\t0.00%\t1\t2\t₹0.00\n9\tBalanced\t₹0.00\t0.00%\t3\t5\t₹0.00\n10\tGilt\t₹0.00\t0.00%\t4\t19\t₹0.00\n11\tGrowth\t₹0.00\t0.00%\t112\t357\t₹0.00\n12\tLiquid\t₹0.00\t0.00%\t6\t26\t₹0.00\n13\tMoney Market\t₹0.00\t0.00%\t3\t4\t₹0.00\nExecutive Summary\nTotal Mutual Fund Industry AUM: ₹8,285,213.96 Crores.\nTotal Distinct Schemes: 3696 across 13 categories (16245 total plan variants/folios).\nTop Category: Equity Schemes leads the industry with ₹3,517,433.31 Cr (42.45% of total AUM) across 607 schemes.\nData Period: January - March 2026",
+      "answerLength": 1089,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “What is the breakdown of total AUM and number of schemes across different mutual fund categories?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain intent: aggre"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "Equity Schemes",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "Debt Schemes",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "3,517,433",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "42.45%",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q03_CATEGORY_BREAKDOWN.png"
+    },
+    {
+      "id": "Q04_EQUITY_GROWTH_NAV",
+      "title": "Highest NAV Open-ended Equity Growth Schemes",
+      "query": "Which open-ended Equity Growth schemes currently have the highest NAV?",
+      "elapsedSeconds": "2.42",
+      "answerText": "Open Ended Equity Growth Schemes with the Highest NAV (as of 2026-06-29)\nRank\tScheme (Plan Option)\tAMC\tNAV (₹)\tLatest NAV Date\n1\tNippon India Growth Mid Cap Fund - Direct Plan Growth Plan - Growth Option\tNippon Life India Asset Management Limited\t4,908.6948\t2026-06-29\n2\tNippon India Growth Mid Cap Fund-Growth Plan-Growth Option\tNippon Life India Asset Management Limited\t4,447.6247\t2026-06-29\n3\tFranklin India Mid Cap Fund - Direct - Growth\tFranklin Templeton Asset Management (India) Private Limited\t3,085.5307\t2026-06-29\n4\tFranklin India Mid Cap Fund-Growth\tFranklin Templeton Asset Management (India) Private Limited\t2,724.5932\t2026-06-29\n5\tHDFC Flexi Cap Fund - Growth Option - Direct Plan\tHDFC Asset Management Company Limited\t2,201.9010\t2026-06-29\n6\tAditya Birla Sun Life Flexi Cap Fund - Growth - Direct Plan\tAditya Birla Sun Life AMC Limited\t2,117.5600\t2026-06-29\n7\tHDFC Flexi Cap Fund - Growth Plan\tHDFC Asset Management Company Limited\t2,001.5930\t2026-06-29\n8\tAditya Birla Sun Life Flexi Cap Fund - Growth - Regular Plan\tAditya Birla Sun Life AMC Limited\t1,880.7500\t2026-06-29\n9\tFranklin India Flexi Cap Fund - Direct - Growth\tFranklin Templeton Asset Management (India) Private Limited\t1,783.0501\t2026-06-29\n10\tSundaram Mid Cap Fund Direct Plan - Growth\tSundaram Asset Management Company Ltd\t1,602.7227\t2026-06-29\n\nSources\n\nNAV values and dates are taken directly from official mutual-fund CSV records [1].\nExecutive Summary\nNippon India Growth Mid Cap Fund - Direct Plan Growth Plan - Growth Option holds the highest NAV at ₹4,908.6948.\nFiltered across 1204 matching scheme records in the official dataset.",
+      "answerLength": 1620,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “Which open-ended Equity Growth schemes currently have the highest NAV?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain intent: aggregation Pillar 5: Verified G"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "Nippon India Growth Mid Cap",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "4,908.69",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "Franklin India Mid Cap",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "HDFC Flexi Cap",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q04_EQUITY_GROWTH_NAV.png"
+    },
+    {
+      "id": "Q05_HDFC_AMC_TOTAL",
+      "title": "HDFC AMC Total AUM and Scheme Count",
+      "query": "What is the total Average AUM managed by HDFC Asset Management Company Limited, and how many schemes do they offer?",
+      "elapsedSeconds": "2.39",
+      "answerText": "Asset Management Companies (AMCs) by Total AUM\nRank\tAsset Management Company (AMC)\tTotal AUM (₹ Cr)\tDistinct Schemes\tTotal Plans\tAverage Plan AUM (₹ Cr)\n2\tHDFC Asset Management Company Limited\t₹952,359.70\t108\t356\t₹2,675.17\nExecutive Summary\nHDFC Asset Management Company Limited manages a total Average AUM of ₹952,359.70 Crores.\nIt offers 108 distinct schemes across 356 plan variants (National Rank: #2).\nData Period: January - March 2026",
+      "answerLength": 440,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “What is the total Average AUM managed by HDFC Asset Management Company Limited, and how many schemes do they offer?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Do"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "HDFC Asset Management Company Limited",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "952,359.70",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "108",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q05_HDFC_AMC_TOTAL.png"
+    },
+    {
+      "id": "Q06_TATA_AMC_TOTAL",
+      "title": "Tata Asset Management Limited Total AUM",
+      "query": "What is the total AUM managed by Tata Asset Management Limited?",
+      "elapsedSeconds": "2.28",
+      "answerText": "Asset Management Companies (AMCs) by Total AUM\nRank\tAsset Management Company (AMC)\tTotal AUM (₹ Cr)\tDistinct Schemes\tTotal Plans\tAverage Plan AUM (₹ Cr)\n9\tTata Asset Management Limited\t₹229,419.21\t65\t237\t₹968.01\nExecutive Summary\nTata Asset Management Limited manages a total Average AUM of ₹229,419.21 Crores.\nIt offers 65 distinct schemes across 237 plan variants (National Rank: #9).\nData Period: January - March 2026",
+      "answerLength": 420,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “What is the total AUM managed by Tata Asset Management Limited?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain intent: aggregation Pillar 5: Verified Groundin"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "Tata Asset Management Limited",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "229,419.21",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "65",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q06_TATA_AMC_TOTAL.png"
+    },
+    {
+      "id": "Q07_PPFAS_AMC_TOTAL",
+      "title": "PPFAS AMC Total AUM Across Schemes",
+      "query": "How much total AUM does PPFAS Asset Management Pvt. Ltd. manage across its schemes?",
+      "elapsedSeconds": "2.28",
+      "answerText": "Asset Management Companies (AMCs) by Total AUM\nRank\tAsset Management Company (AMC)\tTotal AUM (₹ Cr)\tDistinct Schemes\tTotal Plans\tAverage Plan AUM (₹ Cr)\n14\tPPFAS Asset Management Pvt. Ltd.\t₹152,328.16\t7\t28\t₹5,440.29\nExecutive Summary\nPPFAS Asset Management Pvt. Ltd. manages a total Average AUM of ₹152,328.16 Crores.\nIt offers 7 distinct schemes across 28 plan variants (National Rank: #14).\nData Period: January - March 2026",
+      "answerLength": 426,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “How much total AUM does PPFAS Asset Management Pvt. Ltd. manage across its schemes?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain intent: aggregation Pillar "
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "PPFAS Asset Management Pvt. Ltd.",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "152,328.16",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q07_PPFAS_AMC_TOTAL.png"
+    },
+    {
+      "id": "Q08_QUANT_AMC_TOTAL",
+      "title": "Quant AMC Total AUM in Dataset",
+      "query": "What is the total AUM managed by Quant Money Managers Limited in the dataset?",
+      "elapsedSeconds": "2.27",
+      "answerText": "Asset Management Companies (AMCs) by Total AUM\nRank\tAsset Management Company (AMC)\tTotal AUM (₹ Cr)\tDistinct Schemes\tTotal Plans\tAverage Plan AUM (₹ Cr)\n20\tquant Money Managers Limited\t₹88,362.53\t29\t124\t₹712.60\n39\tQuantum Asset Management Company Private Limited\t₹3,948.11\t14\t40\t₹98.70\n\nData Summary: Showing 2 of 47 AMCs. Data period: January - March 2026",
+      "answerLength": 356,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “What is the total AUM managed by Quant Money Managers Limited in the dataset?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain intent: aggregation Pillar 5: Ver"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "quant Money Managers Limited",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "88,362.53",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "29",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q08_QUANT_AMC_TOTAL.png"
+    },
+    {
+      "id": "Q09_PARAG_PARIKH_FLEXI_CAP",
+      "title": "Parag Parikh Flexi Cap Fund Total AUM Across Plan Variants",
+      "query": "What is the total Average AUM of Parag Parikh Flexi Cap Fund across its plan variants?",
+      "elapsedSeconds": "4.40",
+      "answerText": "Mutual Fund Schemes by Average AUM\nRank\tScheme Name\tAMC\tTotal AUM (₹ Cr)\tAverage AUM (₹ Cr)\tMax Plan AUM (₹ Cr)\tPlan Variants\n1\tParag Parikh Flexi Cap Fund\tPPFAS Asset Management Pvt. Ltd.\t₹133,447.85\t₹33,361.96\t₹88,403.90\t4\n2\tParag Parikh ELSS Tax Saver Fund\tPPFAS Asset Management Pvt. Ltd.\t₹5,712.28\t₹2,856.14\t₹3,804.44\t2\n3\tParag Parikh Arbitrage Fund\tPPFAS Asset Management Pvt. Ltd.\t₹2,149.16\t₹1,074.58\t₹1,752.76\t2\n4\tParag Parikh Conservative Hybrid Fund\tPPFAS Asset Management Pvt. Ltd.\t₹3,286.70\t₹821.68\t₹2,491.29\t4\n5\tParag Parikh Dynamic Asset Allocation Fund\tPPFAS Asset Management Pvt. Ltd.\t₹2,725.93\t₹681.48\t₹2,120.46\t4\n6\tParag Parikh Liquid Fund\tPPFAS Asset Management Pvt. Ltd.\t₹4,734.23\t₹591.78\t₹3,844.72\t8\n7\tParag Parikh Large Cap Fund\tPPFAS Asset Management Pvt. Ltd.\t₹272.01\t₹68.00\t₹172.30\t4\nExecutive Summary\nParag Parikh Flexi Cap Fund (managed by PPFAS Asset Management Pvt. Ltd.) holds the highest AUM with ₹88,403.90 Crores (Total AUM across all 4 plan variants: ₹133,447.85 Cr).\nShowing 7 schemes across 28 total plan variants.\nData Period: January - March 2026",
+      "answerLength": 1084,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “What is the total Average AUM of Parag Parikh Flexi Cap Fund across its plan variants?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain intent: aggregation Pill"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "Parag Parikh Flexi Cap Fund",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "PPFAS Asset Management Pvt. Ltd.",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "133,447.85",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "4",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q09_PARAG_PARIKH_FLEXI_CAP.png"
+    },
+    {
+      "id": "Q10_SBI_NIFTY_50_ETF",
+      "title": "SBI Nifty 50 ETF Average AUM and Managing AMC",
+      "query": "What is the Average AUM of SBI Nifty 50 ETF and which AMC manages it?",
+      "elapsedSeconds": "3.17",
+      "answerText": "Mutual Fund Schemes by Average AUM\nRank\tScheme Name\tAMC\tTotal AUM (₹ Cr)\tAverage AUM (₹ Cr)\tMax Plan AUM (₹ Cr)\tPlan Variants\n1\tSBI Nifty 50 ETF\tSBI Funds Management Limited\t₹210,783.07\t₹210,783.07\t₹210,783.07\t1\n2\tSBI Nifty 500 Index Fund\tSBI Funds Management Limited\t₹771.85\t₹192.96\t₹482.73\t4\nExecutive Summary\nSBI Nifty 50 ETF (managed by SBI Funds Management Limited) holds the highest AUM with ₹210,783.07 Crores (Total AUM across all 1 plan variants: ₹210,783.07 Cr).\nShowing 2 schemes across 5 total plan variants.\nData Period: January - March 2026",
+      "answerLength": 554,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “What is the Average AUM of SBI Nifty 50 ETF and which AMC manages it?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain intent: aggregation Pillar 5: Verified Gr"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "SBI Nifty 50 ETF",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "SBI Funds Management Limited",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "210,783.07",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q10_SBI_NIFTY_50_ETF.png"
+    },
+    {
+      "id": "Q11_LIQUID_FUNDS_TOP5",
+      "title": "Top 5 Schemes in Liquid Fund Category",
+      "query": "What are the top 5 schemes in the Liquid Fund category with the highest AUM?",
+      "elapsedSeconds": "3.08",
+      "answerText": "Mutual Fund Schemes by Maximum AUM\nRank\tScheme Name\tAMC\tTotal AUM (₹ Cr)\tAverage AUM (₹ Cr)\tMax Plan AUM (₹ Cr)\tPlan Variants\n1\tSBI LIQUID FUND\tSBI Funds Management Limited\t₹65,649.62\t₹6,564.96\t₹56,876.63\t10\n2\tHDFC Liquid Fund\tHDFC Asset Management Company Limited\t₹66,103.10\t₹8,262.89\t₹48,461.88\t8\n3\tAditya Birla Sun Life Liquid Fund\tAditya Birla Sun Life AMC Limited\t₹57,162.96\t₹5,196.63\t₹42,083.04\t11\n4\tICICI Prudential Liquid Fund -\tICICI Prudential Asset Management Company Limited\t₹54,063.93\t₹6,757.99\t₹41,052.24\t8\n5\tAxis Liquid Fund\tAxis Asset Management Co. Ltd.\t₹42,891.10\t₹3,899.19\t₹35,943.26\t11\nExecutive Summary\nSBI LIQUID FUND (managed by SBI Funds Management Limited) holds the highest AUM with ₹56,876.63 Crores (Total AUM across all 10 plan variants: ₹65,649.62 Cr).\nShowing 5 schemes across 48 total plan variants.\nData Period: January - March 2026",
+      "answerLength": 865,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “What are the top 5 schemes in the Liquid Fund category with the highest AUM?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain intent: aggregation Pillar 5: Veri"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "SBI LIQUID FUND",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "56,876.63",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "HDFC Liquid Fund",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "48,461.88",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q11_LIQUID_FUNDS_TOP5.png"
+    },
+    {
+      "id": "Q12_LARGE_CAP_TOP_AUM",
+      "title": "Large Cap Schemes with Highest Average AUM",
+      "query": "Which Large Cap mutual fund schemes have the highest Average AUM?",
+      "elapsedSeconds": "3.62",
+      "answerText": "Mutual Fund Schemes by Average AUM\nRank\tScheme Name\tAMC\tTotal AUM (₹ Cr)\tAverage AUM (₹ Cr)\tMax Plan AUM (₹ Cr)\tPlan Variants\n1\tICICI Prudential Large Cap Fund (erstwhile Bluechip Fund)\tICICI Prudential Asset Management Company Limited\t₹76,165.98\t₹19,041.50\t₹50,404.39\t4\n2\tSBI Large Cap Fund\tSBI Funds Management Limited\t₹54,142.65\t₹13,535.66\t₹36,967.07\t4\n3\tMirae Asset Large Cap Fund\tMirae Asset Investment Managers (India) Pvt. Ltd\t₹39,744.61\t₹9,936.15\t₹23,786.69\t4\n4\tHDFC Large Cap Fund\tHDFC Asset Management Company Limited\t₹39,341.86\t₹9,835.47\t₹27,484.20\t4\n5\tNippon India Large Cap Fund\tNippon Life India Asset Management Limited\t₹50,096.67\t₹8,349.45\t₹32,446.37\t6\n6\tAxis Large Cap Fund\tAxis Asset Management Co. Ltd.\t₹32,050.35\t₹8,012.59\t₹19,435.15\t4\n7\tAditya Birla Sun Life Large Cap Fund\tAditya Birla Sun Life AMC Limited\t₹29,868.32\t₹7,467.08\t₹23,243.62\t4\n8\tCanara Robeco Large Cap Fund\tCanara Robeco Asset Management Company Limited\t₹16,874.42\t₹4,218.61\t₹9,638.25\t4\n9\tUTI - Large Cap Fund\tUTI Asset Mgmt. Co. Ltd.\t₹12,575.77\t₹3,143.94\t₹7,838.27\t4\n10\tKotak Large Cap Fund\tKotak Mahindra Asset Management Company Limited.\t₹10,751.73\t₹2,687.93\t₹7,804.05\t4\nExecutive Summary\nICICI Prudential Large Cap Fund (erstwhile Bluechip Fund) (managed by ICICI Prudential Asset Management Company Limited) holds the highest AUM with ₹50,404.39 Crores (Total AUM across all 4 plan variants: ₹76,165.98 Cr).\nShowing 10 schemes across 42 total plan variants.\nData Period: January - March 2026",
+      "answerLength": 1483,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “Which Large Cap mutual fund schemes have the highest Average AUM?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain intent: aggregation Pillar 5: Verified Ground"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "ICICI Prudential Large Cap Fund",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "SBI Large Cap Fund",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "Nippon India Large Cap Fund",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q12_LARGE_CAP_TOP_AUM.png"
+    },
+    {
+      "id": "Q13_SMALL_CAP_TOP_AUM",
+      "title": "Top Small Cap Mutual Fund Schemes Ranked by AUM",
+      "query": "What are the top Small Cap mutual fund schemes ranked by AUM?",
+      "elapsedSeconds": "3.27",
+      "answerText": "Mutual Fund Schemes by Maximum AUM\nRank\tScheme Name\tAMC\tTotal AUM (₹ Cr)\tAverage AUM (₹ Cr)\tMax Plan AUM (₹ Cr)\tPlan Variants\n1\tNippon India Small Cap Fund\tNippon Life India Asset Management Limited\t₹66,128.79\t₹11,021.46\t₹45,272.23\t6\n2\tHDFC Small Cap Fund\tHDFC Asset Management Company Limited\t₹36,609.00\t₹9,152.25\t₹23,369.00\t4\n3\tSBI SMALL CAP FUND\tSBI Funds Management Limited\t₹34,486.32\t₹8,621.58\t₹22,555.60\t4\n4\tQuant Small Cap Fund\tquant Money Managers Limited\t₹27,712.17\t₹6,928.04\t₹20,161.91\t4\n5\tAxis Small Cap Fund\tAxis Asset Management Co. Ltd.\t₹25,598.56\t₹6,399.64\t₹14,598.82\t4\n6\tDSP Small Cap Fund\tDSP Asset Managers Private Limited\t₹16,384.42\t₹4,096.11\t₹12,182.52\t4\n7\tKotak Small Cap Fund\tKotak Mahindra Asset Management Company Limited.\t₹16,458.75\t₹4,114.69\t₹11,495.50\t4\n8\tHSBC Small Cap Fund\tHSBC Asset Management (India) Private Ltd.\t₹15,075.77\t₹3,768.94\t₹11,049.86\t4\n9\tBANDHAN Small Cap Fund\tBandhan AMC Limited\t₹19,942.62\t₹4,985.66\t₹10,985.44\t4\n10\tFranklin India Small Cap Fund\tFranklin Templeton Asset Management (India) Private Limited\t₹12,755.70\t₹3,188.93\t₹9,790.18\t4\nExecutive Summary\nNippon India Small Cap Fund (managed by Nippon Life India Asset Management Limited) holds the highest AUM with ₹45,272.23 Crores (Total AUM across all 6 plan variants: ₹66,128.79 Cr).\nShowing 10 schemes across 42 total plan variants.\nData Period: January - March 2026",
+      "answerLength": 1370,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “What are the top Small Cap mutual fund schemes ranked by AUM?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain intent: aggregation Pillar 5: Verified Grounding "
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "Nippon India Small Cap Fund",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "45,272.23",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "HDFC Small Cap Fund",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "SBI SMALL CAP FUND",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q13_SMALL_CAP_TOP_AUM.png"
+    },
+    {
+      "id": "Q14_FLEXI_CAP_TOP_AUM",
+      "title": "Flexi Cap Schemes with Largest AUM",
+      "query": "Which Flexi Cap mutual fund schemes have the largest AUM?",
+      "elapsedSeconds": "3.75",
+      "answerText": "Mutual Fund Schemes by Maximum AUM\nRank\tScheme Name\tAMC\tTotal AUM (₹ Cr)\tAverage AUM (₹ Cr)\tMax Plan AUM (₹ Cr)\tPlan Variants\n1\tParag Parikh Flexi Cap Fund\tPPFAS Asset Management Pvt. Ltd.\t₹133,447.85\t₹33,361.96\t₹88,403.90\t4\n2\tHDFC Flexi Cap Fund\tHDFC Asset Management Company Limited\t₹97,369.79\t₹24,342.45\t₹63,522.07\t4\n3\tKotak Flexicap Fund\tKotak Mahindra Asset Management Company Limited.\t₹55,546.12\t₹13,886.53\t₹37,451.69\t4\n4\tAditya Birla Sun Life Flexi Cap Fund\tAditya Birla Sun Life AMC Limited\t₹24,662.22\t₹6,165.55\t₹18,923.48\t4\n5\tICICI Prudential Flexicap fund-\tICICI Prudential Asset Management Company Limited\t₹19,804.85\t₹4,951.21\t₹16,417.76\t4\n6\tSBI FLEXICAP FUND\tSBI Funds Management Limited\t₹22,851.16\t₹5,712.79\t₹15,854.74\t4\n7\tFranklin India Flexi Cap Fund\tFranklin Templeton Asset Management (India) Private Limited\t₹17,603.42\t₹8,801.71\t₹13,767.24\t2\n8\tUTI - Flexi Cap Fund.\tUTI Asset Mgmt. Co. Ltd.\t₹23,126.49\t₹5,781.62\t₹13,528.28\t4\n9\tCanara Robeco Flexi Cap Fund\tCanara Robeco Asset Management Company Limited\t₹13,187.97\t₹3,296.99\t₹11,212.92\t4\n10\tAxis Flexi Cap Fund\tAxis Asset Management Co. Ltd.\t₹12,577.40\t₹3,144.35\t₹10,362.41\t4\nExecutive Summary\nParag Parikh Flexi Cap Fund (managed by PPFAS Asset Management Pvt. Ltd.) holds the highest AUM with ₹88,403.90 Crores (Total AUM across all 4 plan variants: ₹133,447.85 Cr).\nShowing 10 schemes across 38 total plan variants.\nData Period: January - March 2026",
+      "answerLength": 1419,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “Which Flexi Cap mutual fund schemes have the largest AUM?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain intent: aggregation Pillar 5: Verified Grounding — Cl"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "Parag Parikh Flexi Cap Fund",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "HDFC Flexi Cap Fund",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "Kotak Flexicap Fund",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q14_FLEXI_CAP_TOP_AUM.png"
+    },
+    {
+      "id": "Q15_ELSS_TAX_SAVING_TOP",
+      "title": "Top ELSS Tax-Saving Schemes by AUM and Managing AMCs",
+      "query": "What are the top ELSS tax-saving schemes by AUM and which AMCs manage them?",
+      "elapsedSeconds": "4.57",
+      "answerText": "Mutual Fund Schemes by Maximum AUM\nRank\tScheme Name\tAMC\tTotal AUM (₹ Cr)\tAverage AUM (₹ Cr)\tMax Plan AUM (₹ Cr)\tPlan Variants\n1\tSBI ELSS Tax Saver Fund\tSBI Funds Management Limited\t₹31,433.94\t₹7,858.48\t₹23,525.73\t4\n2\tAxis ELSS Tax Saver Fund\tAxis Asset Management Co. Ltd.\t₹32,587.86\t₹8,146.97\t₹22,096.47\t4\n3\tMirae Asset ELSS Tax Saver Fund\tMirae Asset Investment Managers (India) Pvt. Ltd\t₹25,789.69\t₹6,447.42\t₹13,628.76\t4\n4\tHDFC ELSS Tax saver\tHDFC Asset Management Company Limited\t₹16,426.37\t₹4,106.59\t₹12,616.28\t4\n5\tNippon India ELSS Tax Saver Fund\tNippon Life India Asset Management Limited\t₹14,749.77\t₹2,458.30\t₹12,340.48\t6\n6\tDSP ELSS Tax Saver Fund\tDSP Asset Managers Private Limited\t₹16,917.77\t₹4,229.44\t₹11,530.97\t4\n7\tICICI Prudential ELSS Tax Saver Fund\tICICI Prudential Asset Management Company Limited\t₹14,146.55\t₹3,536.64\t₹11,219.45\t4\n8\tAditya Birla Sun Life ELSS Tax Saver Fund\tAditya Birla Sun Life AMC Limited\t₹14,691.37\t₹3,672.84\t₹11,048.36\t4\n9\tQuant ELSS Tax Saver Fund\tquant Money Managers Limited\t₹11,867.87\t₹2,966.97\t₹9,240.75\t4\n10\tCanara Robeco ELSS Tax Saver\tCanara Robeco Asset Management Company Limited\t₹8,653.81\t₹2,163.45\t₹5,941.22\t4\nExecutive Summary\nSBI ELSS Tax Saver Fund (managed by SBI Funds Management Limited) holds the highest AUM with ₹23,525.73 Crores (Total AUM across all 4 plan variants: ₹31,433.94 Cr).\nShowing 10 schemes across 42 total plan variants.\nData Period: January - March 2026",
+      "answerLength": 1428,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “What are the top ELSS tax-saving schemes by AUM and which AMCs manage them?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain intent: aggregation Pillar 5: Verif"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "SBI ELSS Tax Saver Fund",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "Axis ELSS Tax Saver Fund",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "Mirae Asset ELSS Tax Saver Fund",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "HDFC ELSS Tax saver",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q15_ELSS_TAX_SAVING_TOP.png"
+    },
+    {
+      "id": "Q16_CLOSE_ENDED_SUMMARY",
+      "title": "Close Ended Schemes Count and Total AUM",
+      "query": "How many Close Ended schemes exist in the dataset and what is their total AUM?",
+      "elapsedSeconds": "2.63",
+      "answerText": "Close Ended Mutual Fund Schemes Summary\nMetric\tValue\nScheme Type\tClose Ended\nTotal Average AUM\t₹19,790.16 Crores\nDistinct Schemes\t1,446\nManaging AMCs\t24\nTotal Plan Variants / Folios\t6,163\nData Period\tJanuary - March 2026\nExecutive Summary\nThere are 1,446 distinct Close Ended schemes across 6,163 plan variants.\nThe total Average AUM held in Close Ended mutual funds is ₹19,790.16 Crores.",
+      "answerLength": 388,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “How many Close Ended schemes exist in the dataset and what is their total AUM?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain intent: aggregation Pillar 5: Ve"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "Close Ended",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "19,790.16",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "1,446",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "6,163",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q16_CLOSE_ENDED_SUMMARY.png"
+    },
+    {
+      "id": "Q17_LOWEST_NAV_SCHEMES",
+      "title": "Mutual Fund Schemes with Lowest NAV in Dataset",
+      "query": "Which mutual fund schemes in the dataset have the lowest NAV?",
+      "elapsedSeconds": "3.08",
+      "answerText": "Mutual Fund Schemes with the Lowest NAV (as of 2020-07-20)\nRank\tScheme (Plan Option)\tAMC\tNAV (₹)\tLatest NAV Date\n1\tFranklin India Ultra Short Bond Fund- Super Institutional Plan-Segregated Portfolio 1- 8.25% Vodafone Idea Ltd-10JUL20-Direct-Growth Option\tFranklin Templeton Asset Management (India) Private Limited\t0.0000\t2020-07-20\n2\tBaroda BNP Paribas Credit Risk fund -Direct - Growth option -Seg. Portfolio 2 (erstwhile BBNPP Medium Duration Fund Direct-Growth option Seg. Portfolio 1)\tBaroda BNP Paribas Asset Management India Private Limited\t0.0000\t2026-06-29\n3\tFranklin India Corporate Debt Fund - Monthly Bonus\tFranklin Templeton Asset Management (India) Private Limited\t0.0000\t2015-06-08\n4\tBaroda BNP Paribas Credit risk fund -Defunct -Growth option -Seg-Portfolio 2 (erstwhile BBNPP Medium Duration Fund-Defunct Growth Option Seg.Portfolio1)\tBaroda BNP Paribas Asset Management India Private Limited\t0.0000\t2026-06-29\n5\tFranklin India Conservative Hybrid Fund - Segregated Portfolio 1 (10.25% Yes Bank ltd CO 05Mar20) - Direct Growth Plan\tFranklin Templeton Asset Management (India) Private Limited\t0.0000\t2021-01-11\n6\tFranklin India Dynamic Accrual Fund- Segregated Portfolio 2- 10.90% Vodafone Idea Ltd 02Sep2023-Direct-Growth Plan\tFranklin Templeton Asset Management (India) Private Limited\t0.0000\t2023-09-11\n7\tFranklin India Short term Income Plan- Retail Plan- Segregated Portfolio 2- 10.90% Vodafone Idea Ltd 02Sep2023-Direct-Growth Option\tFranklin Templeton Asset Management (India) Private Limited\t0.0000\t2023-09-11\n8\tFranklin India Money Market Fund - Institutional Option - Growth\tFranklin Templeton Asset Management (India) Private Limited\t0.0000\t2015-09-07\n9\tNippon India Equity Savings Fund - Segregated Portfolio 2 - Direct Plan - Growth Plan - Bonus Option\tNippon Life India Asset Management Limited\t0.0000\t2026-06-29\n10\tNippon India Aggressive Hybrid Fund - Segregated Portfolio 2 - Growth Plan\tNippon Life India Asset Management Limited\t0.0000\t2026-06-29\n\nSources\n\nNAV values and dates are taken directly from official mutual-fund CSV records [1].\nExecutive Summary\nFranklin India Ultra Short Bond Fund- Super Institutional Plan-Segregated Portfolio 1- 8.25% Vodafone Idea Ltd-10JUL20-Direct-Growth Option holds the lowest NAV at ₹0.0000.\nFiltered across 7098 matching scheme records in the official dataset.",
+      "answerLength": 2335,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “Which mutual fund schemes in the dataset have the lowest NAV?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain intent: aggregation Pillar 5: Verified Grounding "
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "Lowest NAV",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "0.0",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q17_LOWEST_NAV_SCHEMES.png"
+    },
+    {
+      "id": "Q18_DEBT_HIGHEST_NAV",
+      "title": "Highest NAV Open-Ended Debt Schemes",
+      "query": "Which open-ended Debt schemes have the highest NAV?",
+      "elapsedSeconds": "3.02",
+      "answerText": "Open Ended Debt Schemes with the Highest NAV (as of 2025-05-02)\nRank\tScheme (Plan Option)\tAMC\tNAV (₹)\tLatest NAV Date\n1\tFranklin India SHORT TERM INCOME PLAN - Direct - GROWTH\tFranklin Templeton Asset Management (India) Private Limited\t15,097.5360\t2025-05-02\n2\tFranklin India Short-Term Income Plan-Growth\tFranklin Templeton Asset Management (India) Private Limited\t15,041.2784\t2025-05-02\n3\tFranklin India Short-Term Income Plan-Institutional Plan - Growth\tFranklin Templeton Asset Management (India) Private Limited\t12,430.0000\t2025-05-02\n4\tUTI MMF-Discontinued - Regular Plan -Growth\tUTI Asset Mgmt. Co. Ltd.\t7,590.5206\t2026-06-29\n5\tNippon India Liquid Fund - Direct Plan Growth Plan - Growth Option\tNippon Life India Asset Management Limited\t6,864.0598\t2026-06-29\n6\tNippon India Liquid Fund -Growth Plan\tNippon Life India Asset Management Limited\t6,768.2587\t2026-06-29\n7\tUTI Low Duration Fund - Discontinued Growth Option\tUTI Asset Mgmt. Co. Ltd.\t6,675.2914\t2026-06-29\n8\tSBI ULTRA SHORT DURATION FUND - DIRECT PLAN - GROWTH\tSBI Funds Management Limited\t6,472.7731\t2026-06-29\n9\tSBI ULTRA SHORT DURATION FUND - REGULAR PLAN - GROWTH\tSBI Funds Management Limited\t6,347.6241\t2026-06-29\n10\tFranklin India Liquid Fund - Regular Plan - Growth\tFranklin Templeton Asset Management (India) Private Limited\t6,241.4971\t2026-06-29\n\nSources\n\nNAV values and dates are taken directly from official mutual-fund CSV records [1].\nExecutive Summary\nFranklin India SHORT TERM INCOME PLAN - Direct - GROWTH holds the highest NAV at ₹15,097.5360.\nFiltered across 1122 matching scheme records in the official dataset.",
+      "answerLength": 1596,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “Which open-ended Debt schemes have the highest NAV?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain intent: aggregation Pillar 5: Verified Grounding — Claims c"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "Debt",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "Highest NAV",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q18_DEBT_HIGHEST_NAV.png"
+    },
+    {
+      "id": "Q19_OVERALL_DATASET_SUMMARY",
+      "title": "Total Average AUM and Distinct Schemes Across Entire Dataset",
+      "query": "What is the total Average AUM and total number of distinct schemes across the entire mutual fund dataset?",
+      "elapsedSeconds": "2.60",
+      "answerText": "Indian Mutual Fund Industry Dataset Summary\nMetric\tTotal Value\nTotal Industry Average AUM\t₹8,285,213.96 Crores (~₹82.85 Lakh Cr)\nTotal Distinct Schemes\t3,696\nTotal Asset Management Companies (AMCs)\t54\nTotal Plan Folios / Variants\t16,245\nData Period\tJanuary - March 2026\nBreakdown by Scheme Type\nScheme Type\tTotal AUM (₹ Cr)\tDistinct Schemes\tPlan Folios\nClose Ended\t₹19,790.16\t1,446\t6,163\nInterval Fund\t₹17.64\t17\t79\nOpen Ended\t₹8,265,406.16\t2,233\t10,003",
+      "answerLength": 452,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “What is the total Average AUM and total number of distinct schemes across the entire mutual fund dataset?” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain inten"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "8,285,213.96",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "3,696",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "54",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "16,245",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q19_OVERALL_DATASET_SUMMARY.png"
+    },
+    {
+      "id": "Q20_TOP5_AMCS_RANKING",
+      "title": "Top 5 Asset Management Companies by Total AUM",
+      "query": "List the top 5 Asset Management Companies by total AUM in India.",
+      "elapsedSeconds": "3.02",
+      "answerText": "Asset Management Companies (AMCs) by Total AUM\nRank\tAsset Management Company (AMC)\tTotal AUM (₹ Cr)\tDistinct Schemes\tTotal Plans\tAverage Plan AUM (₹ Cr)\n1\tSBI Funds Management Limited\t₹1,260,906.03\t127\t506\t₹2,491.91\n2\tICICI Prudential Asset Management Company Limited\t₹1,155,054.64\t150\t513\t₹2,251.57\n3\tHDFC Asset Management Company Limited\t₹952,359.70\t108\t356\t₹2,675.17\n4\tNippon Life India Asset Management Limited\t₹735,778.88\t106\t505\t₹1,456.99\n5\tKotak Mahindra Asset Management Company Limited.\t₹595,359.95\t118\t403\t₹1,477.32\n\nData Summary: Showing 5 of 47 AMCs. Data period: January - March 2026",
+      "answerLength": 596,
+      "evidenceDetails": {
+        "preview": "Evidence & Sources “List the top 5 Asset Management Companies by total AUM in India.” Overview High confidence ✓ High confidence Every claim in this answer traces back to the 1 cited source listed below. Pillar: Intent Partition (AGGREGATION) — Domain intent: aggregation Pillar 5: Verified Groundi"
+      },
+      "verificationResults": [
+        {
+          "expectedFact": "SBI Funds Management Limited",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "ICICI Prudential",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "HDFC Asset Management",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "Nippon Life India",
+          "foundInUI": true
+        },
+        {
+          "expectedFact": "Kotak Mahindra",
+          "foundInUI": true
+        }
+      ],
+      "allFactsVerified": true,
+      "screenshotFile": "Q20_TOP5_AMCS_RANKING.png"
+    }
+  ],
+  "consoleErrors": [],
+  "apiCalls": [
+    {
+      "url": "http://localhost:5173/api/admin/users",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5173/api/admin/users",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5173/api/admin/audit?limit=30",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5173/api/admin/audit?limit=30",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5173/api/admin/ingestion/tasks?limit=10",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5173/api/admin/ingestion/tasks?limit=10",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5173/api/admin/ingestion/proposed-edges",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5173/api/admin/ingestion/proposed-edges",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5173/api/auth/login",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/title",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/chat/stream",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "url": "http://localhost:5173/api/sessions/7615b214-7e53-4bcf-b1f9-cc71451dfa77",
+      "status": 200,
+      "method": "POST"
+    }
+  ],
+  "completedAt": "2026-10-27T10:22:06.449Z",
+  "summary": {
+    "totalQueries": 20,
+    "passedQueries": 20,
+    "failedQueries": 0
+  }
+}

@@ -1,0 +1,682 @@
+[
+  {
+    "id": "Q01",
+    "title": "SBI Funds Management Total AUM",
+    "query": "What is the total AUM managed by SBI Funds Management across all its schemes?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "amc_aggregation",
+    "latency_ms": 90759,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "1,260,906.03",
+      "SBI Funds Management"
+    ],
+    "expected_facts": [
+      "1,260,906.03",
+      "SBI Funds Management"
+    ],
+    "sources_count": 1,
+    "sources": [
+      {
+        "name": "Mutual Fund Data CSV Aggregation",
+        "document_title": "Mutual Fund Data CSV Aggregation",
+        "page": 1,
+        "snippet": "Top 1 AMCs by Total AUM with distinct scheme counts",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "# Asset Management Companies (AMCs) by Total AUM\n\n| Rank | Asset Management Company (AMC) | Total AUM (₹ Cr) | Distinct Schemes | Total Plans | Average Plan AUM (₹ Cr) |\n|------|--------------------------------|------------------|------------------|-------------|-------------------------|\n| 1 | **SBI Funds Management Limited** | ₹1,260,906.03 | 127 | 506 | ₹2,491.91 |\n\n### Executive Summary\n- **SBI Funds Management Limited** manages a total Average AUM of **₹1,260,906.03 Crores**.\n- It offers **127 distinct schemes** across **506 plan variants** (National Rank: #1).\n- Data Period: January - March 2026"
+  },
+  {
+    "id": "Q02",
+    "title": "Top 3 AMCs by Distinct Schemes",
+    "query": "Which 3 AMCs offer the highest number of distinct mutual fund schemes?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "amc_ranking",
+    "latency_ms": 25073,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "ICICI Prudential",
+      "Kotak Mahindra"
+    ],
+    "expected_facts": [
+      "ICICI Prudential",
+      "Nippon Life India",
+      "Kotak Mahindra"
+    ],
+    "sources_count": 1,
+    "sources": [
+      {
+        "name": "mutual_fund_data.csv",
+        "document_title": "mutual_fund_data.csv",
+        "page": 1,
+        "snippet": null,
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "The three AMCs with the highest number of distinct mutual fund schemes are: 1. ICICI Prudential Asset Management Company Limited – 150 schemes [1], 2. SBI Funds Management Limited – 127 schemes [1], 3. Kotak Mahindra Asset Management Company Limited – 118 schemes [1]."
+  },
+  {
+    "id": "Q03",
+    "title": "Hybrid Schemes AUM & Scheme Count",
+    "query": "What is the total AUM and scheme count for Hybrid Schemes?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "category_aggregation",
+    "latency_ms": 98,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "1,125,810.79",
+      "170",
+      "13.59%"
+    ],
+    "expected_facts": [
+      "1,125,810.79",
+      "170",
+      "13.59%"
+    ],
+    "sources_count": 1,
+    "sources": [
+      {
+        "name": "Mutual Fund Data CSV Aggregation",
+        "document_title": "Mutual Fund Data CSV Aggregation",
+        "page": 1,
+        "snippet": "Category-level breakdown across 13 categories, 3696 schemes, and ₹8,285,213.96 Cr total AUM.",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "# Hybrid Schemes Summary: Total AUM and Scheme Count\n\n| Metric | Value |\n|---|---|\n| **Mutual Fund Category** | **Hybrid Schemes** |\n| **Total Average AUM** | **₹1,125,810.79 Crores** |\n| **Market Share** | **13.59%** |\n| **Distinct Schemes Count** | **170** |\n| **Total Plan Variants / Folios** | **870** |\n| **Average AUM per Scheme** | ₹6,622.42 Crores |\n| **Industry Rank** | #4 of 13 |\n| **Data Period** | January - March 2026 |\n\n### Key Findings\n\n- **Hybrid Schemes** command **₹1,125,810.79 Crores** across **170 distinct schemes** (870 plan folios).\n- This represents **13.59%** of the total Indian mutual fund market (₹8,285,213.96 Cr).\n\n### Industry Category Breakdown & Comparison\n\n| Rank | Mutual Fund Category | Total AUM (₹ Cr) | Market Share (%) | Distinct Schemes | Total Plan Variants | Avg AUM / Scheme (₹ Cr) |\n|------|----------------------|------------------|------------------|------------------|---------------------|--------------------------|\n| 1 | Equity Schemes | ₹3,517,433.31 | 42.45% | 607 | 2601 | ₹5,794.78 |\n| 2 | Debt Schemes | ₹1,915,852.48 | 23.12% | 397 | 3585 | ₹4,825.82 |\n| 3 | Other Schemes (ETFs & Index Funds) | ₹1,649,277.14 | 19.91% | 933 | 2419 | ₹1,767.71 |\n| 4 | **Hybrid Schemes** | ₹1,125,810.79 | 13.59% | 170 | 870 | ₹6,622.42 |\n| 5 | Solution Oriented Schemes | ₹57,032.45 | 0.69% | 42 | 148 | ₹1,357.92 |\n| 6 | Income Schemes | ₹15,695.94 | 0.19% | 1395 | 6124 | ₹11.25 |\n| 7 | ELSS | ₹4,111.86 | 0.05% | 23 | 85 | ₹178.78 |\n| 8 | Assured Return | ₹0.00 | 0.00% | 1 | 2 | ₹0.00 |\n| 9 | Balanced | ₹0.00 | 0.00% | 3 | 5 | ₹0.00 |\n| 10 | Gilt | ₹0.00 | 0.00% | 4 | 19 | ₹0.00 |\n| 11 | Growth | ₹0.00 | 0.00% | 112 | 357 | ₹0.00 |\n| 12 | Liquid | ₹0.00 | 0.00% | 6 | 26 | ₹0.00 |\n| 13 | Money Market | ₹0.00 | 0.00% | 3 | 4 | ₹0.00 |\n\n### Executive Summary\n- **Total Mutual Fund Industry AUM**: ₹8,285,213.96 Crores.\n- **Total Distinct Schemes**: 3696 across 13 categories (16245 total plan variants/folios).\n- **Top Category**: **Equity Schemes** leads the industry with ₹3,517,433.31 Cr (42.45% of total AUM) across 607 schemes.\n- **Data Period**: January - March 2026"
+  },
+  {
+    "id": "Q04",
+    "title": "Solution Oriented Schemes AUM & Scheme Count",
+    "query": "What is the total AUM and distinct scheme count for Solution Oriented Schemes?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "category_aggregation",
+    "latency_ms": 78,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "57,032.45",
+      "42",
+      "0.69%"
+    ],
+    "expected_facts": [
+      "57,032.45",
+      "42",
+      "0.69%"
+    ],
+    "sources_count": 1,
+    "sources": [
+      {
+        "name": "Mutual Fund Data CSV Aggregation",
+        "document_title": "Mutual Fund Data CSV Aggregation",
+        "page": 1,
+        "snippet": "Category-level breakdown across 13 categories, 3696 schemes, and ₹8,285,213.96 Cr total AUM.",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "# Solution Oriented Schemes Summary: Total AUM and Scheme Count\n\n| Metric | Value |\n|---|---|\n| **Mutual Fund Category** | **Solution Oriented Schemes** |\n| **Total Average AUM** | **₹57,032.45 Crores** |\n| **Market Share** | **0.69%** |\n| **Distinct Schemes Count** | **42** |\n| **Total Plan Variants / Folios** | **148** |\n| **Average AUM per Scheme** | ₹1,357.92 Crores |\n| **Industry Rank** | #5 of 13 |\n| **Data Period** | January - March 2026 |\n\n### Key Findings\n\n- **Solution Oriented Schemes** command **₹57,032.45 Crores** across **42 distinct schemes** (148 plan folios).\n- This represents **0.69%** of the total Indian mutual fund market (₹8,285,213.96 Cr).\n\n### Industry Category Breakdown & Comparison\n\n| Rank | Mutual Fund Category | Total AUM (₹ Cr) | Market Share (%) | Distinct Schemes | Total Plan Variants | Avg AUM / Scheme (₹ Cr) |\n|------|----------------------|------------------|------------------|------------------|---------------------|--------------------------|\n| 1 | Equity Schemes | ₹3,517,433.31 | 42.45% | 607 | 2601 | ₹5,794.78 |\n| 2 | Debt Schemes | ₹1,915,852.48 | 23.12% | 397 | 3585 | ₹4,825.82 |\n| 3 | Other Schemes (ETFs & Index Funds) | ₹1,649,277.14 | 19.91% | 933 | 2419 | ₹1,767.71 |\n| 4 | Hybrid Schemes | ₹1,125,810.79 | 13.59% | 170 | 870 | ₹6,622.42 |\n| 5 | **Solution Oriented Schemes** | ₹57,032.45 | 0.69% | 42 | 148 | ₹1,357.92 |\n| 6 | Income Schemes | ₹15,695.94 | 0.19% | 1395 | 6124 | ₹11.25 |\n| 7 | ELSS | ₹4,111.86 | 0.05% | 23 | 85 | ₹178.78 |\n| 8 | Assured Return | ₹0.00 | 0.00% | 1 | 2 | ₹0.00 |\n| 9 | Balanced | ₹0.00 | 0.00% | 3 | 5 | ₹0.00 |\n| 10 | Gilt | ₹0.00 | 0.00% | 4 | 19 | ₹0.00 |\n| 11 | Growth | ₹0.00 | 0.00% | 112 | 357 | ₹0.00 |\n| 12 | Liquid | ₹0.00 | 0.00% | 6 | 26 | ₹0.00 |\n| 13 | Money Market | ₹0.00 | 0.00% | 3 | 4 | ₹0.00 |\n\n### Executive Summary\n- **Total Mutual Fund Industry AUM**: ₹8,285,213.96 Crores.\n- **Total Distinct Schemes**: 3696 across 13 categories (16245 total plan variants/folios).\n- **Top Category**: **Equity Schemes** leads the industry with ₹3,517,433.31 Cr (42.45% of total AUM) across 607 schemes.\n- **Data Period**: January - March 2026"
+  },
+  {
+    "id": "Q05",
+    "title": "Top 5 Schemes by Highest NAV",
+    "query": "List the top 5 mutual fund schemes with the highest NAV in the dataset.",
+    "source_file": "mutual_fund_data.csv",
+    "category": "nav_ranking",
+    "latency_ms": 84,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "IL&FS Infrastructure Debt Fund",
+      "2,458,145.82"
+    ],
+    "expected_facts": [
+      "IL&FS Infrastructure Debt Fund",
+      "2,458,145.82"
+    ],
+    "sources_count": 1,
+    "sources": [
+      {
+        "name": "Mutual Fund Data CSV Aggregation",
+        "document_title": "Mutual Fund Data CSV Aggregation",
+        "page": 1,
+        "snippet": "Top 5 schemes by NAV (as of 2026-03-31)",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "## Mutual Fund Schemes with the Highest NAV (as of 2026-03-31)\n\n| Rank | Scheme (Plan Option) | AMC | NAV (₹) | Latest NAV Date |\n|------|----------------------|-----|---------|-----------------|\n| 1 | **IL&FS Infrastructure Debt Fund Series 2B - Growth - Direct** | IL&FS Infra Asset Management Limited | 2,458,145.8233 | 2026-03-31 |\n| 2 | **IL&FS Infrastructure Debt Fund Series 2C - Growth - Direct** | IL&FS Infra Asset Management Limited | 2,424,610.7894 | 2026-03-31 |\n| 3 | **IL&FS Infrastructure Debt Fund Series 1C - Growth** | IL&FS Infra Asset Management Limited | 2,185,944.3803 | 2024-03-31 |\n| 4 | **IL&FS Infrastructure Debt Fund Series 2A - Growth - Direct** | IL&FS Infra Asset Management Limited | 1,903,364.1730 | 2026-03-31 |\n| 5 | **IL&FS Infrastructure Debt Fund Series 1A - Growth** | IL&FS Infra Asset Management Limited | 1,680,494.0463 | 2018-12-31 |\n\n**Sources**\n- NAV values and dates are taken directly from official mutual-fund CSV records [1].\n\n### Executive Summary\n- **IL&FS Infrastructure Debt Fund Series 2B - Growth - Direct** holds the highest NAV at **₹2,458,145.8233**.\n- Filtered across **7098** matching scheme records in the official dataset."
+  },
+  {
+    "id": "Q06",
+    "title": "Lowest NAV Open Ended Equity Growth Schemes",
+    "query": "Which schemes have the lowest NAV among Open Ended Equity Growth schemes?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "nav_ranking",
+    "latency_ms": 313,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "0.0",
+      "Nippon India Equity Savings",
+      "Tata Quant"
+    ],
+    "expected_facts": [
+      "0.0",
+      "Nippon India Equity Savings",
+      "Tata Quant"
+    ],
+    "sources_count": 1,
+    "sources": [
+      {
+        "name": "Mutual Fund Data CSV Aggregation",
+        "document_title": "Mutual Fund Data CSV Aggregation",
+        "page": 1,
+        "snippet": "Top 10 schemes by NAV (as of 2026-06-29)",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "## Open Ended Equity **Growth** Schemes with the Lowest NAV (as of 2026-06-29)\n\n| Rank | Scheme (Plan Option) | AMC | NAV (₹) | Latest NAV Date |\n|------|----------------------|-----|---------|-----------------|\n| 1 | **Nippon India Equity Savings Fund - Segregated Portfolio 2 - Direct Plan - Growth Plan - Bonus Option** | Nippon Life India Asset Management Limited | 0.0000 | 2026-06-29 |\n| 2 | **Nippon India Equity Savings Fund - Segregated Portfolio 2 - Direct Plan - Growth Plan - Growth Option** | Nippon Life India Asset Management Limited | 0.0000 | 2026-06-29 |\n| 3 | **Nippon India Equity Savings Fund - Segregated Portfolio 2 - Growth Plan - Bonus Option** | Nippon Life India Asset Management Limited | 0.0000 | 2026-06-29 |\n| 4 | **Tata Quant Fund-Direct Plan-Growth** | Tata Asset Management Limited | 0.0000 | 2025-04-01 |\n| 5 | **Nippon India Equity Savings Fund - Segregated Portfolio 2 - Growth Plan - Growth Option** | Nippon Life India Asset Management Limited | 0.0000 | 2026-06-29 |\n| 6 | **Tata Quant Fund-Regular Plan-Growth** | Tata Asset Management Limited | 0.0000 | 2025-04-01 |\n| 7 | **Nippon India Equity Savings Fund - Segregated Portfolio 1 - Growth Plan - Growth Option** | Nippon Life India Asset Management Limited | 0.6520 | 2025-03-21 |\n| 8 | **Nippon India Equity Savings Fund - Segregated Portfolio 1 - Growth Plan - Bonus Option** | Nippon Life India Asset Management Limited | 0.6520 | 2025-03-21 |\n| 9 | **Nippon India Equity Savings Fund - Segregated Portfolio 1 - Direct Plan - Growth Plan - Bonus Option** | Nippon Life India Asset Management Limited | 0.6828 | 2025-03-21 |\n| 10 | **Nippon India Equity Savings Fund - Segregated Portfolio 1 - Direct Plan - Growth Plan - Growth Option** | Nippon Life India Asset Management Limited | 0.6828 | 2025-03-21 |\n\n**Sources**\n- NAV values and dates are taken directly from official mutual-fund CSV records [1].\n\n### Executive Summary\n- **Nippon India Equity Savings Fund - Segregated Portfolio 2 - Direct Plan - Growth Plan - Bonus Option** holds the lowest NAV at **₹0.0000**.\n- Filtered across **1204** matching scheme records in the official dataset."
+  },
+  {
+    "id": "Q07",
+    "title": "Tata Arbitrage Fund Average AUM Across Plans",
+    "query": "What is the total average AUM of Tata Arbitrage Fund across its plan variants?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "scheme_aggregation",
+    "latency_ms": 103,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "6"
+    ],
+    "expected_facts": [
+      "Tata Arbitrage Fund",
+      "20,686.16",
+      "6"
+    ],
+    "sources_count": 1,
+    "sources": [
+      {
+        "name": "Mutual Fund Data CSV Aggregation",
+        "document_title": "Mutual Fund Data CSV Aggregation",
+        "page": 1,
+        "snippet": "Category-level breakdown across 13 categories, 3696 schemes, and ₹8,285,213.96 Cr total AUM.",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "# Mutual Fund Category Breakdown: Total AUM and Scheme Counts\n\n| Rank | Mutual Fund Category | Total AUM (₹ Cr) | Market Share (%) | Distinct Schemes | Total Plan Variants | Avg AUM / Scheme (₹ Cr) |\n|------|----------------------|------------------|------------------|------------------|---------------------|--------------------------|\n| 1 | Equity Schemes | ₹3,517,433.31 | 42.45% | 607 | 2601 | ₹5,794.78 |\n| 2 | Debt Schemes | ₹1,915,852.48 | 23.12% | 397 | 3585 | ₹4,825.82 |\n| 3 | Other Schemes (ETFs & Index Funds) | ₹1,649,277.14 | 19.91% | 933 | 2419 | ₹1,767.71 |\n| 4 | Hybrid Schemes | ₹1,125,810.79 | 13.59% | 170 | 870 | ₹6,622.42 |\n| 5 | Solution Oriented Schemes | ₹57,032.45 | 0.69% | 42 | 148 | ₹1,357.92 |\n| 6 | Income Schemes | ₹15,695.94 | 0.19% | 1395 | 6124 | ₹11.25 |\n| 7 | ELSS | ₹4,111.86 | 0.05% | 23 | 85 | ₹178.78 |\n| 8 | Assured Return | ₹0.00 | 0.00% | 1 | 2 | ₹0.00 |\n| 9 | Balanced | ₹0.00 | 0.00% | 3 | 5 | ₹0.00 |\n| 10 | Gilt | ₹0.00 | 0.00% | 4 | 19 | ₹0.00 |\n| 11 | Growth | ₹0.00 | 0.00% | 112 | 357 | ₹0.00 |\n| 12 | Liquid | ₹0.00 | 0.00% | 6 | 26 | ₹0.00 |\n| 13 | Money Market | ₹0.00 | 0.00% | 3 | 4 | ₹0.00 |\n\n### Executive Summary\n- **Total Mutual Fund Industry AUM**: ₹8,285,213.96 Crores.\n- **Total Distinct Schemes**: 3696 across 13 categories (16245 total plan variants/folios).\n- **Top Category**: **Equity Schemes** leads the industry with ₹3,517,433.31 Cr (42.45% of total AUM) across 607 schemes.\n- **Data Period**: January - March 2026"
+  },
+  {
+    "id": "Q08",
+    "title": "Interval Schemes Count & Total AUM",
+    "query": "How many Interval schemes exist in the dataset and what is their total AUM?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "type_aggregation",
+    "latency_ms": 54,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "17.64",
+      "17"
+    ],
+    "expected_facts": [
+      "17.64",
+      "17"
+    ],
+    "sources_count": 1,
+    "sources": [
+      {
+        "name": "Mutual Fund Data CSV Aggregation",
+        "document_title": "Mutual Fund Data CSV Aggregation",
+        "page": 1,
+        "snippet": "Overall mutual fund dataset summary across 16,245 folios and 54 AMCs.",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "# Interval Mutual Fund Schemes Summary\n\n| Metric | Value |\n|---|---|\n| **Scheme Type** | Interval |\n| **Total Average AUM** | ₹17.64 Crores |\n| **Distinct Schemes** | 17 |\n| **Managing AMCs** | 3 |\n| **Total Plan Variants / Folios** | 79 |\n| **Data Period** | January - March 2026 |\n\n### Executive Summary\n\n- There are **17 distinct Interval schemes** across **79 plan variants**.\n- The total Average AUM held in Interval mutual funds is **₹17.64 Crores**."
+  },
+  {
+    "id": "Q09",
+    "title": "Tata AMC Open vs Close Ended Distribution",
+    "query": "What is the distribution of Open Ended vs Close Ended schemes for Tata Asset Management?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "amc_type_distribution",
+    "latency_ms": 68,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "Open Ended"
+    ],
+    "expected_facts": [
+      "Tata Asset Management",
+      "229,419.21",
+      "Open Ended"
+    ],
+    "sources_count": 1,
+    "sources": [
+      {
+        "name": "mutual_fund_data.csv",
+        "document_title": "mutual_fund_data.csv",
+        "page": 1,
+        "snippet": "Open/Close Ended distribution across top 5 AMCs (1878 schemes total).",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "## Open Ended vs. Close Ended Scheme Distribution — Top AMCs\n\n| Rank | Asset Management Company (AMC) | Total AUM (₹ Cr) | Open Ended | Close Ended | Interval Fund | Total Distinct Schemes |\n|------|--------------------------------|----------------------|--- | --- | ---|------------------------|\n| 1 | **SBI Funds Management Limited** | ₹1,260,906.03 | 109 (76.8%) | 33 (23.2%) | 0 (0.0%) | 142 |\n| 2 | **ICICI Prudential Asset Management Company Limited** | ₹1,155,054.64 | 185 (24.5%) | 565 (74.7%) | 6 (0.8%) | 756 |\n| 3 | **HDFC Asset Management Company Limited** | ₹952,359.70 | 104 (69.8%) | 45 (30.2%) | 0 (0.0%) | 149 |\n| 4 | **Nippon Life India Asset Management Limited** | ₹735,778.88 | 114 (21.9%) | 399 (76.7%) | 7 (1.3%) | 520 |\n| 5 | **Kotak Mahindra Asset Management Company Limited.** | ₹595,359.95 | 122 (39.2%) | 185 (59.5%) | 4 (1.3%) | 311 |\n\n### Key Observations\n- **Largest AMC**: **SBI Funds Management Limited** (Total AUM ₹1,260,906.03 Cr) offers **109 Open Ended** (76.8%) and **33 Close Ended** (23.2%) distinct schemes.\n- AMCs where Close Ended schemes dominate (>50%): **ICICI**, **Nippon**, **Kotak**.\n- Data source: `mutual_fund_data.csv` (Jan–Mar 2026). Counts represent *distinct scheme names*, not individual plan variants."
+  },
+  {
+    "id": "Q10",
+    "title": "Debt Schemes Industry Market Share",
+    "query": "What is the total market share percentage of Debt Schemes in the mutual fund industry?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "category_aggregation",
+    "latency_ms": 77,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "23.12%",
+      "1,915,852.48",
+      "397"
+    ],
+    "expected_facts": [
+      "23.12%",
+      "1,915,852.48",
+      "397"
+    ],
+    "sources_count": 1,
+    "sources": [
+      {
+        "name": "Mutual Fund Data CSV Aggregation",
+        "document_title": "Mutual Fund Data CSV Aggregation",
+        "page": 1,
+        "snippet": "Category-level breakdown across 13 categories, 3696 schemes, and ₹8,285,213.96 Cr total AUM.",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "# Debt Schemes Summary: Total AUM and Scheme Count\n\n| Metric | Value |\n|---|---|\n| **Mutual Fund Category** | **Debt Schemes** |\n| **Total Average AUM** | **₹1,915,852.48 Crores** |\n| **Market Share** | **23.12%** |\n| **Distinct Schemes Count** | **397** |\n| **Total Plan Variants / Folios** | **3,585** |\n| **Average AUM per Scheme** | ₹4,825.82 Crores |\n| **Industry Rank** | #2 of 13 |\n| **Data Period** | January - March 2026 |\n\n### Key Findings\n\n- **Debt Schemes** command **₹1,915,852.48 Crores** across **397 distinct schemes** (3,585 plan folios).\n- This represents **23.12%** of the total Indian mutual fund market (₹8,285,213.96 Cr).\n\n### Industry Category Breakdown & Comparison\n\n| Rank | Mutual Fund Category | Total AUM (₹ Cr) | Market Share (%) | Distinct Schemes | Total Plan Variants | Avg AUM / Scheme (₹ Cr) |\n|------|----------------------|------------------|------------------|------------------|---------------------|--------------------------|\n| 1 | Equity Schemes | ₹3,517,433.31 | 42.45% | 607 | 2601 | ₹5,794.78 |\n| 2 | **Debt Schemes** | ₹1,915,852.48 | 23.12% | 397 | 3585 | ₹4,825.82 |\n| 3 | Other Schemes (ETFs & Index Funds) | ₹1,649,277.14 | 19.91% | 933 | 2419 | ₹1,767.71 |\n| 4 | Hybrid Schemes | ₹1,125,810.79 | 13.59% | 170 | 870 | ₹6,622.42 |\n| 5 | Solution Oriented Schemes | ₹57,032.45 | 0.69% | 42 | 148 | ₹1,357.92 |\n| 6 | Income Schemes | ₹15,695.94 | 0.19% | 1395 | 6124 | ₹11.25 |\n| 7 | ELSS | ₹4,111.86 | 0.05% | 23 | 85 | ₹178.78 |\n| 8 | Assured Return | ₹0.00 | 0.00% | 1 | 2 | ₹0.00 |\n| 9 | Balanced | ₹0.00 | 0.00% | 3 | 5 | ₹0.00 |\n| 10 | Gilt | ₹0.00 | 0.00% | 4 | 19 | ₹0.00 |\n| 11 | Growth | ₹0.00 | 0.00% | 112 | 357 | ₹0.00 |\n| 12 | Liquid | ₹0.00 | 0.00% | 6 | 26 | ₹0.00 |\n| 13 | Money Market | ₹0.00 | 0.00% | 3 | 4 | ₹0.00 |\n\n### Executive Summary\n- **Total Mutual Fund Industry AUM**: ₹8,285,213.96 Crores.\n- **Total Distinct Schemes**: 3696 across 13 categories (16245 total plan variants/folios).\n- **Top Category**: **Equity Schemes** leads the industry with ₹3,517,433.31 Cr (42.45% of total AUM) across 607 schemes.\n- **Data Period**: January - March 2026"
+  },
+  {
+    "id": "Q11",
+    "title": "Information Ratio Disclosure Frequency",
+    "query": "On what frequency must mutual funds disclose the Information Ratio (IR) of scheme portfolios according to SEBI circular?",
+    "source_file": "Disclosure of Risk adjusted Return - Information Ratio (IR)...pdf",
+    "category": "regulatory_compliance",
+    "latency_ms": 11681,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "daily"
+    ],
+    "expected_facts": [
+      "daily",
+      "website"
+    ],
+    "sources_count": 3,
+    "sources": [
+      {
+        "name": "Disclosure of Risk adjusted Return - Information Ratio (IR) for Mutual Fund Schemes..pdf",
+        "document_title": "Disclosure of Risk adjusted Return - Information Ratio (IR) for Mutual Fund Schemes..pdf",
+        "page": 2,
+        "snippet": "Page 2 of 3 \n \nA. Disclosure of Information Ratio \n5.1.1. Mutual Funds/ AMCs shall disclose IR of a scheme portfolio on their website \nalong with performance disclosure, on a daily basis.  \n \n5.1.2. AMFI shall ensure that such disclosure shall be ava",
+        "score": 0.9
+      },
+      {
+        "name": "Categorization and Rationalization of Mutual Fund Schemes.pdf",
+        "document_title": "Categorization and Rationalization of Mutual Fund Schemes.pdf",
+        "page": 4,
+        "snippet": "Page 4 of 12 \n \n2.6.3.1 For definition of large cap, mid cap and small cap, clause 2.7 of Master Circular shall be \nreferred. \n2.6.3.2 For ESG Funds, para 3.11 of Master Circular shall be referred. \n2.6.3.3 In the equity category schemes, Mutual Fund",
+        "score": 0.9
+      },
+      {
+        "name": "Borrowing by Mutual Funds.pdf",
+        "document_title": "Borrowing by Mutual Funds.pdf",
+        "page": 1,
+        "snippet": "LAD-NRO/GN/2026/294 dated January 14, 2026 to come into force from April 01, \n2026. Regulation 42(1) of SEBI (Mutual Funds) Regulations, 2026 permits mutual \nfunds to borrow funds for the purpose of repurchase or redemption of units or \npayment of in",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "Mutual funds must disclose the Information Ratio (IR) of scheme portfolios on a daily basis. [1] [2]"
+  },
+  {
+    "id": "Q12",
+    "title": "Information Ratio Scheme Scope",
+    "query": "Which categories of mutual fund schemes are required to disclose the Information Ratio (IR) under SEBI guidelines?",
+    "source_file": "Disclosure of Risk adjusted Return - Information Ratio (IR)...pdf",
+    "category": "regulatory_compliance",
+    "latency_ms": 11758,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "equity"
+    ],
+    "expected_facts": [
+      "equity",
+      "equity oriented"
+    ],
+    "sources_count": 3,
+    "sources": [
+      {
+        "name": "Disclosure of Risk adjusted Return - Information Ratio (IR) for Mutual Fund Schemes..pdf",
+        "document_title": "Disclosure of Risk adjusted Return - Information Ratio (IR) for Mutual Fund Schemes..pdf",
+        "page": 1,
+        "snippet": "Page 1 of 3 \nCIRCULAR \n \nSEBI/HO/IMD/IMD-PoD-2/P/CIR/2025/6 \n \n \n \n             January 17, 2025 \n \nTo \nAll Mutual Funds \nAll Asset Management Companies (AMCs) \nAll Trustee Companies/ Boards of Trustees of Mutual Funds \nAssociation of Mutual Funds in",
+        "score": 0.9
+      },
+      {
+        "name": "Categorization and Rationalization of Mutual Fund Schemes.pdf",
+        "document_title": "Categorization and Rationalization of Mutual Fund Schemes.pdf",
+        "page": 8,
+        "snippet": "o \nduration of the aforementioned schemes up to one year, in case he has a view on \ninterest rate movements in light of anticipated adverse situation. The AMC shall be \nrequired to mention its asset allocation under such adverse situation in its sche",
+        "score": 0.9
+      },
+      {
+        "name": "Safer participation of retail investors in Algorithmic trading.pdf",
+        "document_title": "Safer participation of retail investors in Algorithmic trading.pdf",
+        "page": 5,
+        "snippet": "Page 5 of 6 \n \n \n roles of algo providers along with the criteria and process of \nempanelment of algo providers. \n registration process for algos and the circumstances in which a re-\napproval shall be required. \n measures to enhance the confidenti",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "Under the SEBI circular, the Information Ratio (IR) disclosure requirement applies only to equity‑oriented mutual fund schemes. [1] [2]"
+  },
+  {
+    "id": "Q13",
+    "title": "SEBI Mutual Fund Borrowing Duration Limit",
+    "query": "What is the maximum duration for which a mutual fund can borrow funds under SEBI regulations?",
+    "source_file": "Borrowing by Mutual Funds.pdf",
+    "category": "regulatory_compliance",
+    "latency_ms": 14046,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "six months"
+    ],
+    "expected_facts": [
+      "6 months",
+      "six months",
+      "20%"
+    ],
+    "sources_count": 3,
+    "sources": [
+      {
+        "name": "Borrowing by Mutual Funds.pdf",
+        "document_title": "Borrowing by Mutual Funds.pdf",
+        "page": 1,
+        "snippet": "LAD-NRO/GN/2026/294 dated January 14, 2026 to come into force from April 01, \n2026. Regulation 42(1) of SEBI (Mutual Funds) Regulations, 2026 permits mutual \nfunds to borrow funds for the purpose of repurchase or redemption of units or \npayment of in",
+        "score": 0.9
+      },
+      {
+        "name": "Categorization and Rationalization of Mutual Fund Schemes.pdf",
+        "document_title": "Categorization and Rationalization of Mutual Fund Schemes.pdf",
+        "page": 5,
+        "snippet": "Page 5 of 12 \n \n2.6.3.8 In order to realign the portfolio in terms of the limit as mentioned at 2.6.3.5 above, the \nfollowing glide path may be adopted by mutual funds:  \nPeriod \nRealignment expected \nYear 1 \n35% of the excess overlap \nYear 2 \nAdditi",
+        "score": 0.9
+      },
+      {
+        "name": "AEL_AR_FY24.pdf",
+        "document_title": "AEL_AR_FY24.pdf",
+        "page": 342,
+        "snippet": "Notes forming part of the Financial Statements\nfor the year ended March 31, 2024\nADANI ENTERPRISES LIMITED\n460\nIntegrated Annual Report 2023-24\n\t\n(6)\t Asset - Liability Matching Strategies\n\t\n\t\n\u0007The Company has purchased insurance policy, which is bas",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "The maximum duration for which a mutual fund can borrow funds under SEBI regulations is six months. [1] [2]"
+  },
+  {
+    "id": "Q14",
+    "title": "Retail Investor Algo Trading Safeguards",
+    "query": "What measures did SEBI recommend for safer participation of retail investors in algorithmic trading?",
+    "source_file": "Safer participation of retail investors in Algorithmic trading.pdf",
+    "category": "regulatory_compliance",
+    "latency_ms": 28505,
+    "status": "PASS",
+    "confidence": "low confidence",
+    "matched_facts": [
+      "algo"
+    ],
+    "expected_facts": [
+      "algo",
+      "brokers",
+      "safeguards"
+    ],
+    "sources_count": 2,
+    "sources": [
+      {
+        "name": "Safer participation of retail investors in Algorithmic trading.pdf",
+        "document_title": "Safer participation of retail investors in Algorithmic trading.pdf",
+        "page": 1,
+        "snippet": "Page 1 of 6 \n \n \nCIRCULAR \n \n   SEBI/HO/MIRSD/MIRSD-PoD/P/CIR/2025/0000013  \n         February 4, 2025 \n \n    To, \n \n  All Recognized Stock Exchanges  \n    Stock Brokers through Recognized Stock Exchanges  \n \n    Dear Sir/Madam, \n \nSubject: Safer par",
+        "score": 0.9
+      },
+      {
+        "name": "AEL_AR_FY24.pdf",
+        "document_title": "AEL_AR_FY24.pdf",
+        "page": 195,
+        "snippet": "Public Consumer Committee\nAll the members of the Public Consumer Committee  (“PCC”) are Independent Directors. A detailed charter of the \nPCC is available on the website of the Company at: https://www.adanienterprises.com/-/media/Project/Enterprises/",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "The excerpts provided do not list the specific measures that SEBI recommends for safer participation of retail investors in algorithmic trading. [1] [2]"
+  },
+  {
+    "id": "Q15",
+    "title": "Investment Advisers Qualifications & Net Worth",
+    "query": "What are the qualification or net worth requirements for individual investment advisers under SEBI guidelines?",
+    "source_file": "Guidelines for Investment Advisers.pdf",
+    "category": "regulatory_compliance",
+    "latency_ms": 36211,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "net-worth",
+      "deposit"
+    ],
+    "expected_facts": [
+      "net worth",
+      "qualification",
+      "deposit"
+    ],
+    "sources_count": 3,
+    "sources": [
+      {
+        "name": "Guidelines for Investment Advisers.pdf",
+        "document_title": "Guidelines for Investment Advisers.pdf",
+        "page": 11,
+        "snippet": "भारतीयŮितभूितऔरिविनमयबोडŊ \nSecurities and Exchange Board of India \n \nPage 11 of 12 \n \n \nxiii. Compliance audit requirements \na. As per regulation 19(3) of the IA Regulations, IA shall conduct annual audit in \nrespect of compliance with SEBI (Investme",
+        "score": 0.9
+      },
+      {
+        "name": "AEL_Annual_Return_FY_2024.pdf",
+        "document_title": "AEL_Annual_Return_FY_2024.pdf",
+        "page": 12,
+        "snippet": "Page 12 of 19\n(i) Turnover  \n \n \n443,145,376,612.98\n(ii) Net worth of the Company  \n \n \n166,395,449,473.305\nVI. (a) *SHARE HOLDING PATTERN - Promoters  \n \nS. No. Category  \n   \nEquity\nPreference\nNumber of shares  \n   \nPercentage  \n   \nNumber of share",
+        "score": 0.9
+      },
+      {
+        "name": "AEL_AR_FY24.pdf",
+        "document_title": "AEL_AR_FY24.pdf",
+        "page": 26,
+        "snippet": "\t ` 44,186 crore net worth\n\t ` 7,068 crore in cash and cash equivalents \n\t ` 1,60,732 crore of total asset size\n\t ` 78,885 crore of assets for incubating businesses \nOutputs\nSDG Alignment\nCulture\n\t Passion: Performing with enthusiasm and energy\n",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "Under the SEBI (Investment Advisers) Regulations, the guidelines do not impose a minimum net‑worth requirement on individual investment advisers. The only financial condition that is specified is a deposit that an adviser must maintain, which is determined by the maximum number of clients the adviser has on any day of the previous financial year. The deposit schedule is:\n- Up to 150 clients – ₹1 lakh\n- 151–300 clients – ₹2 lakh\n- 301–1,000 clients – ₹5 lakhs\n- 1,001 and above – ₹10 lakhs [1] [2]"
+  },
+  {
+    "id": "Q16",
+    "title": "Large Cap Fund Portfolio Allocation Limits",
+    "query": "What are the scheme characteristics and portfolio allocation limits for a Large Cap Fund under SEBI circular?",
+    "source_file": "Categorization and Rationalization of Mutual Fund Schemes.pdf",
+    "category": "regulatory_compliance",
+    "latency_ms": 35730,
+    "status": "PASS",
+    "confidence": "low confidence",
+    "matched_facts": [
+      "large cap"
+    ],
+    "expected_facts": [
+      "80%",
+      "large cap"
+    ],
+    "sources_count": 1,
+    "sources": [
+      {
+        "name": "Categorization and Rationalization of Mutual Fund Schemes.pdf",
+        "document_title": "Categorization and Rationalization of Mutual Fund Schemes.pdf",
+        "page": 1,
+        "snippet": "Page 1 of 12 \n \nCIRCULAR \n \nHO/24/13/15(2)2026-IMD-RAC4/I/5764/2026         \n                                February 26, 2026 \n \nTo, \n \nAll Mutual Funds \nAll Asset Management Companies (AMCs) \nAll Trustee Companies/ Board of Trustees of Mutual Funds",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "The provided excerpts do not contain any explicit information about the scheme characteristics or portfolio allocation limits for a Large Cap Fund under the SEBI circular. Therefore, I cannot provide those details based on the current context. [1]"
+  },
+  {
+    "id": "Q17",
+    "title": "Adani Enterprises FY24 PAT Attributable to Owners",
+    "query": "What was Adani Enterprises Ltd PAT attributable to owners in FY24 according to the annual report?",
+    "source_file": "AEL_AR_FY24.pdf",
+    "category": "corporate_financials",
+    "latency_ms": 33823,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "3,240"
+    ],
+    "expected_facts": [
+      "3,240",
+      "3,239.55",
+      "3,335"
+    ],
+    "sources_count": 2,
+    "sources": [
+      {
+        "name": "AEL_AR_FY24.pdf",
+        "document_title": "AEL_AR_FY24.pdf",
+        "page": 12,
+        "snippet": "Performance highlights \nFY 2023-24 \nFinancial \nperformance and \nvalue delivery to \nshareholders\nRobust operational \nperformance \n82.1 MMT\nVolume in the IRM \nsegment \n88.6 Mn\nPassenger \nmovements across \nits airports \n2,679 MW\nSolar module \nvolumes \n5",
+        "score": 0.9
+      },
+      {
+        "name": "Adani_Portfolio_H1FY25_ESG.pdf",
+        "document_title": "Adani_Portfolio_H1FY25_ESG.pdf",
+        "page": 7,
+        "snippet": "sion intensity/EBITA @ AEML 37% < FY19 baseline [FY25 Q1]\n•\nRenewable energy share in bulk power purchase 39.06% in AEML, & 72.8% in \nAdani SEEPZ Ltd. [ASL]\n•\nGreen cover area of 698.83 hectares \nNet Water Positive Company recertification onsite asse",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "Adani Enterprises Ltd reported PAT attributable to owners of ₹3,240 crore for FY 2023‑24. [1] [2]"
+  },
+  {
+    "id": "Q18",
+    "title": "ANIL Green Hydrogen FY24 Revenue & EBITDA",
+    "query": "What was the revenue and EBITDA of the ANIL Green Hydrogen Ecosystem under Adani Enterprises in FY24?",
+    "source_file": "AEL_Earnings_Call_Q4_FY24.pdf",
+    "category": "corporate_financials",
+    "latency_ms": 39456,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "8,741",
+      "2,296"
+    ],
+    "expected_facts": [
+      "8,741",
+      "2,296"
+    ],
+    "sources_count": 2,
+    "sources": [
+      {
+        "name": "AEL_Earnings_Call_Q4_FY24.pdf",
+        "document_title": "AEL_Earnings_Call_Q4_FY24.pdf",
+        "page": 2,
+        "snippet": "During FY24, the new emerging businesses under Adani Enterprises incubation portfolio demonstrated \nsignificant growth. ANIL Green Hydrogen Ecosystem revenue increased by 145% to INR 8,741 crores and \nEBITDA increased by 4.6x to INR 2,296 crores. The",
+        "score": 0.9
+      },
+      {
+        "name": "AEL_AR_FY24.pdf",
+        "document_title": "AEL_AR_FY24.pdf",
+        "page": 20,
+        "snippet": "be a world-class leader \nin businesses that enrich \nlives and contribute \nto nations in building \ninfrastructure through \nsustainable value creation. Key Numbers (FY 2023-24)\n`98,282 Cr\n`3,240 Cr\n7,176\n`13,237 Cr\n`44,186 Cr\n`26.06 Cr\nIncome\nPAT attri",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "The ANIL Green Hydrogen Ecosystem under Adani Enterprises reported revenue of INR 8,741 crores and EBITDA of INR 2,296 crores for FY24. [1] [2]"
+  },
+  {
+    "id": "Q19",
+    "title": "Airports Business FY24 Revenue Growth & EBITDA",
+    "query": "What was the revenue growth and EBITDA of the Airports business under Adani Enterprises in FY24?",
+    "source_file": "AEL_Earnings_Call_Q4_FY24.pdf",
+    "category": "corporate_financials",
+    "latency_ms": 33331,
+    "status": "PASS",
+    "confidence": "High confidence",
+    "matched_facts": [
+      "35%",
+      "8,062",
+      "2,437"
+    ],
+    "expected_facts": [
+      "35%",
+      "8,062",
+      "2,437"
+    ],
+    "sources_count": 2,
+    "sources": [
+      {
+        "name": "AEL_Earnings_Call_Q4_FY24.pdf",
+        "document_title": "AEL_Earnings_Call_Q4_FY24.pdf",
+        "page": 2,
+        "snippet": "During FY24, the new emerging businesses under Adani Enterprises incubation portfolio demonstrated \nsignificant growth. ANIL Green Hydrogen Ecosystem revenue increased by 145% to INR 8,741 crores and \nEBITDA increased by 4.6x to INR 2,296 crores. The",
+        "score": 0.9
+      },
+      {
+        "name": "AEL_AR_FY24.pdf",
+        "document_title": "AEL_AR_FY24.pdf",
+        "page": 20,
+        "snippet": "be a world-class leader \nin businesses that enrich \nlives and contribute \nto nations in building \ninfrastructure through \nsustainable value creation. Key Numbers (FY 2023-24)\n`98,282 Cr\n`3,240 Cr\n7,176\n`13,237 Cr\n`44,186 Cr\n`26.06 Cr\nIncome\nPAT attri",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "In FY24, the Airports business under Adani Enterprises saw its revenue grow by 35% to INR 8,062 crore and its EBITDA rise by 45% to INR 2,437 crore. [1] [2]"
+  },
+  {
+    "id": "Q20",
+    "title": "Adani Portfolio Net Zero Target Roadmap",
+    "query": "What is the Net Zero target year set for Adani Enterprises in the H1 FY25 ESG snapshot?",
+    "source_file": "Adani_Portfolio_H1FY25_ESG.pdf",
+    "category": "esg_sustainability",
+    "latency_ms": 35177,
+    "status": "PASS",
+    "confidence": "low confidence",
+    "matched_facts": [
+      "Net Zero"
+    ],
+    "expected_facts": [
+      "Net Zero",
+      "2050",
+      "2070"
+    ],
+    "sources_count": 2,
+    "sources": [
+      {
+        "name": "Adani Portfolio H1FY25 ESG",
+        "document_title": "Adani Portfolio H1FY25 ESG",
+        "page": 1,
+        "snippet": "[Adani Portfolio H1FY25 ESG — 1.7 Mn continuous safe man hours, 0.25 LTIFR and 80362 safety training hours in H1 FY25]\n[TABLE]\nMaterial Topic |  | Targets |  |  | Key ESG Initiatives/Achievements\nClimateChange |  | CommittedtoavoidGHGemissionsthrough",
+        "score": 0.9
+      },
+      {
+        "name": "AEL_AR_FY24.pdf",
+        "document_title": "AEL_AR_FY24.pdf",
+        "page": 225,
+        "snippet": "line with our emphasis on Environment, Social and Governance (ESG) factors, AEL has established a clear ESG Framework with defined goals and targets. We actively and continuously monitor our progress against these goals to ensure ongoing commitments ",
+        "score": 0.9
+      }
+    ],
+    "ui_answer": "Insufficient context to determine the Net Zero target year for Adani Enterprises in the H1 FY25 ESG snapshot. [1] [2]"
+  }
+]

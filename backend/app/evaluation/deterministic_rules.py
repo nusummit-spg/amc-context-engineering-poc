@@ -148,13 +148,23 @@ class DeterministicRuleEngine:
         # Gather source numbers from evidence_pack
         source_numbers: List[float] = []
         if "source_numbers" in evidence_pack:
-            source_numbers = [float(n) for n in evidence_pack["source_numbers"]]
-        elif "chunks" in evidence_pack:
+            source_numbers.extend([float(n) for n in evidence_pack["source_numbers"]])
+        if "chunks" in evidence_pack:
             for ch in evidence_pack["chunks"]:
                 text_content = ch.get("text", "") if isinstance(ch, dict) else str(ch)
                 source_numbers.extend(self._extract_numbers(text_content))
-        elif "context" in evidence_pack:
+        if "context" in evidence_pack:
             source_numbers.extend(self._extract_numbers(str(evidence_pack["context"])))
+        if "structured_rows" in evidence_pack:
+            for row in evidence_pack["structured_rows"]:
+                if isinstance(row, dict):
+                    for v in row.values():
+                        source_numbers.extend(self._extract_numbers(str(v)))
+        if "facts" in evidence_pack or "graph_facts" in evidence_pack:
+            raw_facts = evidence_pack.get("facts") or evidence_pack.get("graph_facts") or []
+            for gf in raw_facts:
+                stmt = gf.get("statement", "") if isinstance(gf, dict) else getattr(gf, "statement", "")
+                source_numbers.extend(self._extract_numbers(str(stmt)))
 
         if not source_numbers:
             return RuleResult(

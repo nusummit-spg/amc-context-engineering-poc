@@ -60,6 +60,7 @@ _QUALITY_THRESHOLDS: dict[str, float] = {
     "house_view_synthesis": 0.20,
     "entity_lookup":        0.25,
     "general":              0.10,
+    "aggregate_ranking":    0.30,
 }
 
 
@@ -292,25 +293,26 @@ class ContextAssembler:
         """Heuristic quality: graph fact density + top chunk scores.
         0.0 = nothing usable, 1.0 = rich verified context.
 
-        Formula:
-          fact_component  = min(fact_count / 5, 1.0) × 0.6
-          chunk_component = avg(top-3 chunk scores)    × 0.4
-
-        Args:
-            result (RetrievalResult): The result.
-            chunks_included (int): The chunks included.
-
-        Returns:
-            float: Resulting float instance.
+        Adapts dynamically based on retrieval mode:
+        - If graph facts are present: balanced 50/50 blend of graph facts + chunk relevance.
+        - If graph facts are absent (e.g. document/vector query or graph offline):
+          quality score is evaluated directly from chunk semantic relevance.
         """
         if not result.graph_facts and not result.chunks:
             return 0.0
-        fact_component = min(len(result.graph_facts) / 5.0, 1.0) * 0.6
-        if result.chunks:
-            top_scores = sorted((c.score for c in result.chunks), reverse=True)[:3]
-            chunk_component = (sum(top_scores) / len(top_scores)) * 0.4
-        else:
-            chunk_component = 0.0
         if chunks_included == 0 and not result.graph_facts:
             return 0.0
-        return round(fact_component + chunk_component, 3)
+
+        top_scores = sorted((c.score for c in result.chunks), reverse=True)[:3] if result.chunks else []
+        chunk_avg = (sum(top_scores) / len(top_scores)) if top_scores else 0.0
+
+        if result.graph_facts:
+            fact_score = min(len(result.graph_facts) / 5.0, 1.0)
+            if top_scores:
+                score = (fact_score * 0.5) + (chunk_avg * 0.5)
+            else:
+                score = fact_score
+        else:
+            score = chunk_avg
+
+        return round(min(1.0, max(0.0, score)), 3)

@@ -1,0 +1,1174 @@
+[
+  {
+    "id": 1,
+    "query": "Which asset management companies manage the highest total AUM?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "amc_ranking",
+    "latency_ms": 93601,
+    "status": "SUCCESS",
+    "ui_answer": "# Asset Management Companies (AMCs) by Total AUM\n\n| Rank | Asset Management Company (AMC) | Total AUM (₹ Cr) | Distinct Schemes | Total Plans | Average Plan AUM (₹ Cr) |\n|------|--------------------------------|------------------|------------------|-------------|-------------------------|\n| 1 | **SBI Funds Management Limited** | ₹1,260,906.03 | 127 | 506 | ₹2,491.91 |\n| 2 | **ICICI Prudential Asset Management Company Limited** | ₹1,155,054.64 | 150 | 513 | ₹2,251.57 |\n| 3 | **HDFC Asset Management Company Limited** | ₹952,359.70 | 108 | 356 | ₹2,675.17 |\n| 4 | **Nippon Life India Asset Management Limited** | ₹735,778.88 | 106 | 505 | ₹1,456.99 |\n| 5 | **Kotak Mahindra Asset Management Company Limited.** | ₹595,359.95 | 118 | 403 | ₹1,477.32 |\n| 6 | **Aditya Birla Sun Life AMC Limited** | ₹430,541.44 | 106 | 413 | ₹1,042.47 |\n| 7 | **UTI Asset Mgmt. Co. Ltd.** | ₹390,289.25 | 82 | 409 | ₹954.25 |\n| 8 | **Axis Asset Management Co. Ltd.** | ₹366,491.96 | 84 | 390 | ₹939.72 |\n| 9 | **Tata Asset Management Limited** | ₹229,419.21 | 65 | 237 | ₹968.01 |\n| 10 | **Mirae Asset Investment Managers (India) Pvt. Ltd** | ₹227,742.87 | 92 | 260 | ₹875.93 |\n\n**Data Summary**: Showing 10 of 47 AMCs. Data period: January - March 2026",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "rank": 1,
+        "amc": "SBI Funds Management Limited",
+        "total_aum_cr": "₹1,260,906.03",
+        "distinct_schemes": 127,
+        "total_plans": 506,
+        "average_plan_aum_cr": "₹2,491.91"
+      },
+      {
+        "rank": 2,
+        "amc": "ICICI Prudential Asset Management Company Limited",
+        "total_aum_cr": "₹1,155,054.64",
+        "distinct_schemes": 150,
+        "total_plans": 513,
+        "average_plan_aum_cr": "₹2,251.57"
+      },
+      {
+        "rank": 3,
+        "amc": "HDFC Asset Management Company Limited",
+        "total_aum_cr": "₹952,359.70",
+        "distinct_schemes": 108,
+        "total_plans": 356,
+        "average_plan_aum_cr": "₹2,675.17"
+      },
+      {
+        "rank": 4,
+        "amc": "Nippon Life India Asset Management Limited",
+        "total_aum_cr": "₹735,778.88",
+        "distinct_schemes": 106,
+        "total_plans": 505,
+        "average_plan_aum_cr": "₹1,456.99"
+      },
+      {
+        "rank": 5,
+        "amc": "Kotak Mahindra Asset Management Company Limited.",
+        "total_aum_cr": "₹595,359.95",
+        "distinct_schemes": 118,
+        "total_plans": 403,
+        "average_plan_aum_cr": "₹1,477.32"
+      },
+      {
+        "rank": 6,
+        "amc": "Aditya Birla Sun Life AMC Limited",
+        "total_aum_cr": "₹430,541.44",
+        "distinct_schemes": 106,
+        "total_plans": 413,
+        "average_plan_aum_cr": "₹1,042.47"
+      },
+      {
+        "rank": 7,
+        "amc": "UTI Asset Mgmt. Co. Ltd.",
+        "total_aum_cr": "₹390,289.25",
+        "distinct_schemes": 82,
+        "total_plans": 409,
+        "average_plan_aum_cr": "₹954.25"
+      },
+      {
+        "rank": 8,
+        "amc": "Axis Asset Management Co. Ltd.",
+        "total_aum_cr": "₹366,491.96",
+        "distinct_schemes": 84,
+        "total_plans": 390,
+        "average_plan_aum_cr": "₹939.72"
+      },
+      {
+        "rank": 9,
+        "amc": "Tata Asset Management Limited",
+        "total_aum_cr": "₹229,419.21",
+        "distinct_schemes": 65,
+        "total_plans": 237,
+        "average_plan_aum_cr": "₹968.01"
+      },
+      {
+        "rank": 10,
+        "amc": "Mirae Asset Investment Managers (India) Pvt. Ltd",
+        "total_aum_cr": "₹227,742.87",
+        "distinct_schemes": 92,
+        "total_plans": 260,
+        "average_plan_aum_cr": "₹875.93"
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 2,
+    "query": "How many distinct schemes does each of the top 5 AMCs offer?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "amc_schemes",
+    "latency_ms": 178,
+    "status": "SUCCESS",
+    "ui_answer": "# Asset Management Companies (AMCs) by Total AUM\n\n| Rank | Asset Management Company (AMC) | Total AUM (₹ Cr) | Distinct Schemes | Total Plans | Average Plan AUM (₹ Cr) |\n|------|--------------------------------|------------------|------------------|-------------|-------------------------|\n| 1 | **SBI Funds Management Limited** | ₹1,260,906.03 | 127 | 506 | ₹2,491.91 |\n| 2 | **ICICI Prudential Asset Management Company Limited** | ₹1,155,054.64 | 150 | 513 | ₹2,251.57 |\n| 3 | **HDFC Asset Management Company Limited** | ₹952,359.70 | 108 | 356 | ₹2,675.17 |\n| 4 | **Nippon Life India Asset Management Limited** | ₹735,778.88 | 106 | 505 | ₹1,456.99 |\n| 5 | **Kotak Mahindra Asset Management Company Limited.** | ₹595,359.95 | 118 | 403 | ₹1,477.32 |\n\n**Data Summary**: Showing 5 of 47 AMCs. Data period: January - March 2026",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "rank": 1,
+        "amc": "SBI Funds Management Limited",
+        "total_aum_cr": "₹1,260,906.03",
+        "distinct_schemes": 127,
+        "total_plans": 506,
+        "average_plan_aum_cr": "₹2,491.91"
+      },
+      {
+        "rank": 2,
+        "amc": "ICICI Prudential Asset Management Company Limited",
+        "total_aum_cr": "₹1,155,054.64",
+        "distinct_schemes": 150,
+        "total_plans": 513,
+        "average_plan_aum_cr": "₹2,251.57"
+      },
+      {
+        "rank": 3,
+        "amc": "HDFC Asset Management Company Limited",
+        "total_aum_cr": "₹952,359.70",
+        "distinct_schemes": 108,
+        "total_plans": 356,
+        "average_plan_aum_cr": "₹2,675.17"
+      },
+      {
+        "rank": 4,
+        "amc": "Nippon Life India Asset Management Limited",
+        "total_aum_cr": "₹735,778.88",
+        "distinct_schemes": 106,
+        "total_plans": 505,
+        "average_plan_aum_cr": "₹1,456.99"
+      },
+      {
+        "rank": 5,
+        "amc": "Kotak Mahindra Asset Management Company Limited.",
+        "total_aum_cr": "₹595,359.95",
+        "distinct_schemes": 118,
+        "total_plans": 403,
+        "average_plan_aum_cr": "₹1,477.32"
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 3,
+    "query": "How much total AUM does HDFC Asset Management Company manage?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "amc_specific",
+    "latency_ms": 161,
+    "status": "SUCCESS",
+    "ui_answer": "# Asset Management Companies (AMCs) by Total AUM\n\n| Rank | Asset Management Company (AMC) | Total AUM (₹ Cr) | Distinct Schemes | Total Plans | Average Plan AUM (₹ Cr) |\n|------|--------------------------------|------------------|------------------|-------------|-------------------------|\n| 3 | **HDFC Asset Management Company Limited** | ₹952,359.70 | 108 | 356 | ₹2,675.17 |\n\n### Executive Summary\n- **HDFC Asset Management Company Limited** manages a total Average AUM of **₹952,359.70 Crores**.\n- It offers **108 distinct schemes** across **356 plan variants** (National Rank: #3).\n- Data Period: January - March 2026",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "rank": 1,
+        "amc": "HDFC Asset Management Company Limited",
+        "total_aum_cr": "₹952,359.70",
+        "distinct_schemes": 108,
+        "total_plans": 356,
+        "average_plan_aum_cr": "₹2,675.17"
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 4,
+    "query": "How much total AUM is managed by Quant Money Managers in the dataset?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "amc_specific",
+    "latency_ms": 195,
+    "status": "SUCCESS",
+    "ui_answer": "# Asset Management Companies (AMCs) by Total AUM\n\n| Rank | Asset Management Company (AMC) | Total AUM (₹ Cr) | Distinct Schemes | Total Plans | Average Plan AUM (₹ Cr) |\n|------|--------------------------------|------------------|------------------|-------------|-------------------------|\n| 20 | **quant Money Managers Limited** | ₹88,362.53 | 29 | 124 | ₹712.60 |\n| 39 | **Quantum Asset Management Company Private Limited** | ₹3,948.11 | 14 | 40 | ₹98.70 |\n\n**Data Summary**: Showing 2 of 47 AMCs. Data period: January - March 2026",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "rank": 1,
+        "amc": "quant Money Managers Limited",
+        "total_aum_cr": "₹88,362.53",
+        "distinct_schemes": 29,
+        "total_plans": 124,
+        "average_plan_aum_cr": "₹712.60"
+      },
+      {
+        "rank": 2,
+        "amc": "Quantum Asset Management Company Private Limited",
+        "total_aum_cr": "₹3,948.11",
+        "distinct_schemes": 14,
+        "total_plans": 40,
+        "average_plan_aum_cr": "₹98.70"
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 5,
+    "query": "What is the distribution of Open Ended vs. Close Ended schemes among the top 5 largest AMCs?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "scheme_type_distribution",
+    "latency_ms": 206,
+    "status": "SUCCESS",
+    "ui_answer": "## Open Ended vs. Close Ended Scheme Distribution — Top AMCs\n\n| Rank | Asset Management Company (AMC) | Total AUM (₹ Cr) | Open Ended | Close Ended | Interval Fund | Total Distinct Schemes |\n|------|--------------------------------|----------------------|--- | --- | ---|------------------------|\n| 1 | **SBI Funds Management Limited** | ₹1,260,906.03 | 109 (76.8%) | 33 (23.2%) | 0 (0.0%) | 142 |\n| 2 | **ICICI Prudential Asset Management Company Limited** | ₹1,155,054.64 | 185 (24.5%) | 565 (74.7%) | 6 (0.8%) | 756 |\n| 3 | **HDFC Asset Management Company Limited** | ₹952,359.70 | 104 (69.8%) | 45 (30.2%) | 0 (0.0%) | 149 |\n| 4 | **Nippon Life India Asset Management Limited** | ₹735,778.88 | 114 (21.9%) | 399 (76.7%) | 7 (1.3%) | 520 |\n| 5 | **Kotak Mahindra Asset Management Company Limited.** | ₹595,359.95 | 122 (39.2%) | 185 (59.5%) | 4 (1.3%) | 311 |\n\n### Key Observations\n- **Largest AMC**: **SBI Funds Management Limited** (Total AUM ₹1,260,906.03 Cr) offers **109 Open Ended** (76.8%) and **33 Close Ended** (23.2%) distinct schemes.\n- AMCs where Close Ended schemes dominate (>50%): **ICICI**, **Nippon**, **Kotak**.\n- Data source: `mutual_fund_data.csv` (Jan–Mar 2026). Counts represent *distinct scheme names*, not individual plan variants.",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "rank": 1,
+        "amc": "SBI Funds Management Limited",
+        "total_aum_cr": "₹1,260,906.03",
+        "total_distinct_schemes": 142,
+        "close_ended_count": 33,
+        "close_ended_pct": "23.2%",
+        "open_ended_count": 109,
+        "open_ended_pct": "76.8%"
+      },
+      {
+        "rank": 2,
+        "amc": "ICICI Prudential Asset Management Company Limited",
+        "total_aum_cr": "₹1,155,054.64",
+        "total_distinct_schemes": 756,
+        "close_ended_count": 565,
+        "close_ended_pct": "74.7%",
+        "interval_fund_count": 6,
+        "interval_fund_pct": "0.8%",
+        "open_ended_count": 185,
+        "open_ended_pct": "24.5%"
+      },
+      {
+        "rank": 3,
+        "amc": "HDFC Asset Management Company Limited",
+        "total_aum_cr": "₹952,359.70",
+        "total_distinct_schemes": 149,
+        "close_ended_count": 45,
+        "close_ended_pct": "30.2%",
+        "open_ended_count": 104,
+        "open_ended_pct": "69.8%"
+      },
+      {
+        "rank": 4,
+        "amc": "Nippon Life India Asset Management Limited",
+        "total_aum_cr": "₹735,778.88",
+        "total_distinct_schemes": 520,
+        "close_ended_count": 399,
+        "close_ended_pct": "76.7%",
+        "interval_fund_count": 7,
+        "interval_fund_pct": "1.3%",
+        "open_ended_count": 114,
+        "open_ended_pct": "21.9%"
+      },
+      {
+        "rank": 5,
+        "amc": "Kotak Mahindra Asset Management Company Limited.",
+        "total_aum_cr": "₹595,359.95",
+        "total_distinct_schemes": 311,
+        "close_ended_count": 185,
+        "close_ended_pct": "59.5%",
+        "interval_fund_count": 4,
+        "interval_fund_pct": "1.3%",
+        "open_ended_count": 122,
+        "open_ended_pct": "39.2%"
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 6,
+    "query": "How many Close Ended schemes exist in the dataset and what is their total AUM?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "scheme_type_summary",
+    "latency_ms": 164,
+    "status": "SUCCESS",
+    "ui_answer": "# Close Ended Mutual Fund Schemes Summary\n\n| Metric | Value |\n|---|---|\n| **Scheme Type** | Close Ended |\n| **Total Average AUM** | ₹19,790.16 Crores |\n| **Distinct Schemes** | 1,446 |\n| **Managing AMCs** | 24 |\n| **Total Plan Variants / Folios** | 6,163 |\n| **Data Period** | January - March 2026 |\n\n### Executive Summary\n\n- There are **1,446 distinct Close Ended schemes** across **6,163 plan variants**.\n- The total Average AUM held in Close Ended mutual funds is **₹19,790.16 Crores**.",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "scheme_type": "Close Ended",
+        "total_aum_cr": "₹19,790.16 Cr",
+        "distinct_schemes": 1446,
+        "total_folios": 6163
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 7,
+    "query": "How many Open Ended schemes are in the mutual fund dataset?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "scheme_type_summary",
+    "latency_ms": 194,
+    "status": "SUCCESS",
+    "ui_answer": "# Open Ended Mutual Fund Schemes Summary\n\n| Metric | Value |\n|---|---|\n| **Scheme Type** | Open Ended |\n| **Total Average AUM** | ₹8,265,406.16 Crores |\n| **Distinct Schemes** | 2,233 |\n| **Managing AMCs** | 52 |\n| **Total Plan Variants / Folios** | 10,003 |\n| **Data Period** | January - March 2026 |\n\n### Executive Summary\n\n- There are **2,233 distinct Open Ended schemes** across **10,003 plan variants**.\n- The total Average AUM held in Open Ended mutual funds is **₹8,265,406.16 Crores**.",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "scheme_type": "Open Ended",
+        "total_aum_cr": "₹8,265,406.16 Cr",
+        "distinct_schemes": 2233,
+        "total_folios": 10003
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 8,
+    "query": "What is the total average AUM across the entire mutual fund industry dataset?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "dataset_summary",
+    "latency_ms": 229,
+    "status": "SUCCESS",
+    "ui_answer": "# Indian Mutual Fund Industry Dataset Summary\n\n| Metric | Total Value |\n|---|---|\n| **Total Industry Average AUM** | ₹8,285,213.96 Crores (~₹82.85 Lakh Cr) |\n| **Total Distinct Schemes** | 3,696 |\n| **Total Asset Management Companies (AMCs)** | 54 |\n| **Total Plan Folios / Variants** | 16,245 |\n| **Data Period** | January - March 2026 |\n\n### Breakdown by Scheme Type\n\n| Scheme Type | Total AUM (₹ Cr) | Distinct Schemes | Plan Folios |\n|---|---|---|---|\n| **Close Ended** | ₹19,790.16 | 1,446 | 6,163 |\n| **Interval Fund** | ₹17.64 | 17 | 79 |\n| **Open Ended** | ₹8,265,406.16 | 2,233 | 10,003 |",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "scheme_type": "Close Ended",
+        "total_aum_cr": "₹19,790.16 Cr",
+        "distinct_schemes": 1446,
+        "total_folios": 6163
+      },
+      {
+        "scheme_type": "Interval Fund",
+        "total_aum_cr": "₹17.64 Cr",
+        "distinct_schemes": 17,
+        "total_folios": 79
+      },
+      {
+        "scheme_type": "Open Ended",
+        "total_aum_cr": "₹8,265,406.16 Cr",
+        "distinct_schemes": 2233,
+        "total_folios": 10003
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 9,
+    "query": "What is the category breakdown of total AUM and number of schemes across categories?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "category_breakdown",
+    "latency_ms": 231,
+    "status": "SUCCESS",
+    "ui_answer": "# Mutual Fund Category Breakdown: Total AUM and Scheme Counts\n\n| Rank | Mutual Fund Category | Total AUM (₹ Cr) | Market Share (%) | Distinct Schemes | Total Plan Variants | Avg AUM / Scheme (₹ Cr) |\n|------|----------------------|------------------|------------------|------------------|---------------------|--------------------------|\n| 1 | Equity Schemes | ₹3,517,433.31 | 42.45% | 607 | 2601 | ₹5,794.78 |\n| 2 | Debt Schemes | ₹1,915,852.48 | 23.12% | 397 | 3585 | ₹4,825.82 |\n| 3 | Other Schemes (ETFs & Index Funds) | ₹1,649,277.14 | 19.91% | 933 | 2419 | ₹1,767.71 |\n| 4 | Hybrid Schemes | ₹1,125,810.79 | 13.59% | 170 | 870 | ₹6,622.42 |\n| 5 | Solution Oriented Schemes | ₹57,032.45 | 0.69% | 42 | 148 | ₹1,357.92 |\n| 6 | Income Schemes | ₹15,695.94 | 0.19% | 1395 | 6124 | ₹11.25 |\n| 7 | ELSS | ₹4,111.86 | 0.05% | 23 | 85 | ₹178.78 |\n| 8 | Assured Return | ₹0.00 | 0.00% | 1 | 2 | ₹0.00 |\n| 9 | Balanced | ₹0.00 | 0.00% | 3 | 5 | ₹0.00 |\n| 10 | Gilt | ₹0.00 | 0.00% | 4 | 19 | ₹0.00 |\n| 11 | Growth | ₹0.00 | 0.00% | 112 | 357 | ₹0.00 |\n| 12 | Liquid | ₹0.00 | 0.00% | 6 | 26 | ₹0.00 |\n| 13 | Money Market | ₹0.00 | 0.00% | 3 | 4 | ₹0.00 |\n\n### Executive Summary\n- **Total Mutual Fund Industry AUM**: ₹8,285,213.96 Crores.\n- **Total Distinct Schemes**: 3696 across 13 categories (16245 total plan variants/folios).\n- **Top Category**: **Equity Schemes** leads the industry with ₹3,517,433.31 Cr (42.45% of total AUM) across 607 schemes.\n- **Data Period**: January - March 2026",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "rank": 1,
+        "category": "Equity Schemes",
+        "total_aum_cr": "₹3,517,433.31",
+        "pct_of_total_aum": "42.45%",
+        "distinct_schemes": 607,
+        "total_folios": 2601,
+        "avg_aum_per_scheme_cr": "₹5,794.78"
+      },
+      {
+        "rank": 2,
+        "category": "Debt Schemes",
+        "total_aum_cr": "₹1,915,852.48",
+        "pct_of_total_aum": "23.12%",
+        "distinct_schemes": 397,
+        "total_folios": 3585,
+        "avg_aum_per_scheme_cr": "₹4,825.82"
+      },
+      {
+        "rank": 3,
+        "category": "Other Schemes (ETFs & Index Funds)",
+        "total_aum_cr": "₹1,649,277.14",
+        "pct_of_total_aum": "19.91%",
+        "distinct_schemes": 933,
+        "total_folios": 2419,
+        "avg_aum_per_scheme_cr": "₹1,767.71"
+      },
+      {
+        "rank": 4,
+        "category": "Hybrid Schemes",
+        "total_aum_cr": "₹1,125,810.79",
+        "pct_of_total_aum": "13.59%",
+        "distinct_schemes": 170,
+        "total_folios": 870,
+        "avg_aum_per_scheme_cr": "₹6,622.42"
+      },
+      {
+        "rank": 5,
+        "category": "Solution Oriented Schemes",
+        "total_aum_cr": "₹57,032.45",
+        "pct_of_total_aum": "0.69%",
+        "distinct_schemes": 42,
+        "total_folios": 148,
+        "avg_aum_per_scheme_cr": "₹1,357.92"
+      },
+      {
+        "rank": 6,
+        "category": "Income Schemes",
+        "total_aum_cr": "₹15,695.94",
+        "pct_of_total_aum": "0.19%",
+        "distinct_schemes": 1395,
+        "total_folios": 6124,
+        "avg_aum_per_scheme_cr": "₹11.25"
+      },
+      {
+        "rank": 7,
+        "category": "ELSS",
+        "total_aum_cr": "₹4,111.86",
+        "pct_of_total_aum": "0.05%",
+        "distinct_schemes": 23,
+        "total_folios": 85,
+        "avg_aum_per_scheme_cr": "₹178.78"
+      },
+      {
+        "rank": 8,
+        "category": "Assured Return",
+        "total_aum_cr": "₹0.00",
+        "pct_of_total_aum": "0.00%",
+        "distinct_schemes": 1,
+        "total_folios": 2,
+        "avg_aum_per_scheme_cr": "₹0.00"
+      },
+      {
+        "rank": 9,
+        "category": "Balanced",
+        "total_aum_cr": "₹0.00",
+        "pct_of_total_aum": "0.00%",
+        "distinct_schemes": 3,
+        "total_folios": 5,
+        "avg_aum_per_scheme_cr": "₹0.00"
+      },
+      {
+        "rank": 10,
+        "category": "Gilt",
+        "total_aum_cr": "₹0.00",
+        "pct_of_total_aum": "0.00%",
+        "distinct_schemes": 4,
+        "total_folios": 19,
+        "avg_aum_per_scheme_cr": "₹0.00"
+      },
+      {
+        "rank": 11,
+        "category": "Growth",
+        "total_aum_cr": "₹0.00",
+        "pct_of_total_aum": "0.00%",
+        "distinct_schemes": 112,
+        "total_folios": 357,
+        "avg_aum_per_scheme_cr": "₹0.00"
+      },
+      {
+        "rank": 12,
+        "category": "Liquid",
+        "total_aum_cr": "₹0.00",
+        "pct_of_total_aum": "0.00%",
+        "distinct_schemes": 6,
+        "total_folios": 26,
+        "avg_aum_per_scheme_cr": "₹0.00"
+      },
+      {
+        "rank": 13,
+        "category": "Money Market",
+        "total_aum_cr": "₹0.00",
+        "pct_of_total_aum": "0.00%",
+        "distinct_schemes": 3,
+        "total_folios": 4,
+        "avg_aum_per_scheme_cr": "₹0.00"
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 10,
+    "query": "What is the total AUM and scheme count for Equity Schemes?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "category_specific",
+    "latency_ms": 35791,
+    "status": "SUCCESS",
+    "ui_answer": "## Top Mutual Fund Schemes by AUM\n\n| Rank | Scheme Name | AMC | Average AUM (₹ Cr) | Maximum AUM (₹ Cr) |\n|------|-------------|-----|--------------------|--------------------|\n| 1 | **SBI Nifty 50 ETF** | SBI Funds Management Limited | ₹210,783.07 Cr | ₹210,783.07 Cr |\n| 2 | **SBI BSE SENSEX ETF** | SBI Funds Management Limited | ₹120,715.25 Cr | ₹120,715.25 Cr |\n| 3 | **Parag Parikh Flexi Cap Fund** | PPFAS Asset Management Pvt. Ltd. | ₹33,361.96 Cr | ₹88,403.90 Cr |\n| 4 | **SBI EQUITY HYBRID FUND** | SBI Funds Management Limited | ₹20,311.04 Cr | ₹72,494.84 Cr |\n| 5 | **UTI Nifty 50 ETF** | UTI Asset Mgmt. Co. Ltd. | ₹68,363.00 Cr | ₹68,363.00 Cr |\n| 6 | **HDFC Mid Cap Fund** | HDFC Asset Management Company Limited | ₹22,890.53 Cr | ₹66,026.01 Cr |\n| 7 | **HDFC Flexi Cap Fund** | HDFC Asset Management Company Limited | ₹24,342.45 Cr | ₹63,522.07 Cr |\n| 8 | **ICICI Prudential Multi-Asset Fund** | ICICI Prudential Asset Management Company Limited | ₹20,143.37 Cr | ₹59,811.30 Cr |\n| 9 | **Nippon India ETF Nifty 50 BeES** | Nippon Life India Asset Management Limited | ₹57,058.66 Cr | ₹57,058.66 Cr |\n| 10 | **SBI LIQUID FUND** | SBI Funds Management Limited | ₹6,564.96 Cr | ₹56,876.63 Cr |\n\n**Sources**\n- Aggregated directly from scheme folios in mutual_fund_data.csv [1].",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "rank": 1,
+        "scheme_name": "SBI Nifty 50 ETF",
+        "amc": "SBI Funds Management Limited",
+        "avg_aum_cr": "₹210,783.07 Cr",
+        "max_aum_cr": "₹210,783.07 Cr"
+      },
+      {
+        "rank": 2,
+        "scheme_name": "SBI BSE SENSEX ETF",
+        "amc": "SBI Funds Management Limited",
+        "avg_aum_cr": "₹120,715.25 Cr",
+        "max_aum_cr": "₹120,715.25 Cr"
+      },
+      {
+        "rank": 3,
+        "scheme_name": "Parag Parikh Flexi Cap Fund",
+        "amc": "PPFAS Asset Management Pvt. Ltd.",
+        "avg_aum_cr": "₹33,361.96 Cr",
+        "max_aum_cr": "₹88,403.90 Cr"
+      },
+      {
+        "rank": 4,
+        "scheme_name": "SBI EQUITY HYBRID FUND",
+        "amc": "SBI Funds Management Limited",
+        "avg_aum_cr": "₹20,311.04 Cr",
+        "max_aum_cr": "₹72,494.84 Cr"
+      },
+      {
+        "rank": 5,
+        "scheme_name": "UTI Nifty 50 ETF",
+        "amc": "UTI Asset Mgmt. Co. Ltd.",
+        "avg_aum_cr": "₹68,363.00 Cr",
+        "max_aum_cr": "₹68,363.00 Cr"
+      },
+      {
+        "rank": 6,
+        "scheme_name": "HDFC Mid Cap Fund",
+        "amc": "HDFC Asset Management Company Limited",
+        "avg_aum_cr": "₹22,890.53 Cr",
+        "max_aum_cr": "₹66,026.01 Cr"
+      },
+      {
+        "rank": 7,
+        "scheme_name": "HDFC Flexi Cap Fund",
+        "amc": "HDFC Asset Management Company Limited",
+        "avg_aum_cr": "₹24,342.45 Cr",
+        "max_aum_cr": "₹63,522.07 Cr"
+      },
+      {
+        "rank": 8,
+        "scheme_name": "ICICI Prudential Multi-Asset Fund",
+        "amc": "ICICI Prudential Asset Management Company Limited",
+        "avg_aum_cr": "₹20,143.37 Cr",
+        "max_aum_cr": "₹59,811.30 Cr"
+      },
+      {
+        "rank": 9,
+        "scheme_name": "Nippon India ETF Nifty 50 BeES",
+        "amc": "Nippon Life India Asset Management Limited",
+        "avg_aum_cr": "₹57,058.66 Cr",
+        "max_aum_cr": "₹57,058.66 Cr"
+      },
+      {
+        "rank": 10,
+        "scheme_name": "SBI LIQUID FUND",
+        "amc": "SBI Funds Management Limited",
+        "avg_aum_cr": "₹6,564.96 Cr",
+        "max_aum_cr": "₹56,876.63 Cr"
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 11,
+    "query": "What is the total AUM and scheme count for Debt Schemes?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "category_specific",
+    "latency_ms": 14973,
+    "status": "SUCCESS",
+    "ui_answer": "## Top Mutual Fund Schemes by AUM\n\n| Rank | Scheme Name | AMC | Average AUM (₹ Cr) | Maximum AUM (₹ Cr) |\n|------|-------------|-----|--------------------|--------------------|\n| 1 | **SBI Nifty 50 ETF** | SBI Funds Management Limited | ₹210,783.07 Cr | ₹210,783.07 Cr |\n| 2 | **SBI BSE SENSEX ETF** | SBI Funds Management Limited | ₹120,715.25 Cr | ₹120,715.25 Cr |\n| 3 | **Parag Parikh Flexi Cap Fund** | PPFAS Asset Management Pvt. Ltd. | ₹33,361.96 Cr | ₹88,403.90 Cr |\n| 4 | **SBI EQUITY HYBRID FUND** | SBI Funds Management Limited | ₹20,311.04 Cr | ₹72,494.84 Cr |\n| 5 | **UTI Nifty 50 ETF** | UTI Asset Mgmt. Co. Ltd. | ₹68,363.00 Cr | ₹68,363.00 Cr |\n| 6 | **HDFC Mid Cap Fund** | HDFC Asset Management Company Limited | ₹22,890.53 Cr | ₹66,026.01 Cr |\n| 7 | **HDFC Flexi Cap Fund** | HDFC Asset Management Company Limited | ₹24,342.45 Cr | ₹63,522.07 Cr |\n| 8 | **ICICI Prudential Multi-Asset Fund** | ICICI Prudential Asset Management Company Limited | ₹20,143.37 Cr | ₹59,811.30 Cr |\n| 9 | **Nippon India ETF Nifty 50 BeES** | Nippon Life India Asset Management Limited | ₹57,058.66 Cr | ₹57,058.66 Cr |\n| 10 | **SBI LIQUID FUND** | SBI Funds Management Limited | ₹6,564.96 Cr | ₹56,876.63 Cr |\n\n**Sources**\n- Aggregated directly from scheme folios in mutual_fund_data.csv [1].",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "rank": 1,
+        "scheme_name": "SBI Nifty 50 ETF",
+        "amc": "SBI Funds Management Limited",
+        "avg_aum_cr": "₹210,783.07 Cr",
+        "max_aum_cr": "₹210,783.07 Cr"
+      },
+      {
+        "rank": 2,
+        "scheme_name": "SBI BSE SENSEX ETF",
+        "amc": "SBI Funds Management Limited",
+        "avg_aum_cr": "₹120,715.25 Cr",
+        "max_aum_cr": "₹120,715.25 Cr"
+      },
+      {
+        "rank": 3,
+        "scheme_name": "Parag Parikh Flexi Cap Fund",
+        "amc": "PPFAS Asset Management Pvt. Ltd.",
+        "avg_aum_cr": "₹33,361.96 Cr",
+        "max_aum_cr": "₹88,403.90 Cr"
+      },
+      {
+        "rank": 4,
+        "scheme_name": "SBI EQUITY HYBRID FUND",
+        "amc": "SBI Funds Management Limited",
+        "avg_aum_cr": "₹20,311.04 Cr",
+        "max_aum_cr": "₹72,494.84 Cr"
+      },
+      {
+        "rank": 5,
+        "scheme_name": "UTI Nifty 50 ETF",
+        "amc": "UTI Asset Mgmt. Co. Ltd.",
+        "avg_aum_cr": "₹68,363.00 Cr",
+        "max_aum_cr": "₹68,363.00 Cr"
+      },
+      {
+        "rank": 6,
+        "scheme_name": "HDFC Mid Cap Fund",
+        "amc": "HDFC Asset Management Company Limited",
+        "avg_aum_cr": "₹22,890.53 Cr",
+        "max_aum_cr": "₹66,026.01 Cr"
+      },
+      {
+        "rank": 7,
+        "scheme_name": "HDFC Flexi Cap Fund",
+        "amc": "HDFC Asset Management Company Limited",
+        "avg_aum_cr": "₹24,342.45 Cr",
+        "max_aum_cr": "₹63,522.07 Cr"
+      },
+      {
+        "rank": 8,
+        "scheme_name": "ICICI Prudential Multi-Asset Fund",
+        "amc": "ICICI Prudential Asset Management Company Limited",
+        "avg_aum_cr": "₹20,143.37 Cr",
+        "max_aum_cr": "₹59,811.30 Cr"
+      },
+      {
+        "rank": 9,
+        "scheme_name": "Nippon India ETF Nifty 50 BeES",
+        "amc": "Nippon Life India Asset Management Limited",
+        "avg_aum_cr": "₹57,058.66 Cr",
+        "max_aum_cr": "₹57,058.66 Cr"
+      },
+      {
+        "rank": 10,
+        "scheme_name": "SBI LIQUID FUND",
+        "amc": "SBI Funds Management Limited",
+        "avg_aum_cr": "₹6,564.96 Cr",
+        "max_aum_cr": "₹56,876.63 Cr"
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 12,
+    "query": "List the top 10 mutual fund schemes by Average AUM",
+    "source_file": "mutual_fund_data.csv",
+    "category": "scheme_ranking_aum",
+    "latency_ms": 1218,
+    "status": "SUCCESS",
+    "ui_answer": "# Mutual Fund Schemes by Average AUM\n\n| Rank | Scheme Name | AMC | Total AUM (₹ Cr) | Average AUM (₹ Cr) | Max Plan AUM (₹ Cr) | Plan Variants |\n|------|-------------|-----|------------------|--------------------|---------------------|---------------|\n| 1 | **SBI Nifty 50 ETF** | SBI Funds Management Limited | ₹210,783.07 | ₹210,783.07 | ₹210,783.07 | 1 |\n| 2 | **SBI BSE SENSEX ETF** | SBI Funds Management Limited | ₹120,715.25 | ₹120,715.25 | ₹120,715.25 | 1 |\n| 3 | **UTI Nifty 50 ETF** | UTI Asset Mgmt. Co. Ltd. | ₹68,363.00 | ₹68,363.00 | ₹68,363.00 | 1 |\n| 4 | **Nippon India ETF Nifty 50 BeES** | Nippon Life India Asset Management Limited | ₹57,058.66 | ₹57,058.66 | ₹57,058.66 | 1 |\n| 5 | **Nippon India ETF Gold BeES** | Nippon Life India Asset Management Limited | ₹53,346.31 | ₹53,346.31 | ₹53,346.31 | 1 |\n| 6 | **UTI BSE Sensex ETF** | UTI Asset Mgmt. Co. Ltd. | ₹53,198.67 | ₹53,198.67 | ₹53,198.67 | 1 |\n| 7 | **ICICI Prudential Nifty 50 ETF** | ICICI Prudential Asset Management Company Limited | ₹37,428.97 | ₹37,428.97 | ₹37,428.97 | 1 |\n| 8 | **Nippon India Silver ETF** | Nippon Life India Asset Management Limited | ₹34,718.04 | ₹34,718.04 | ₹34,718.04 | 1 |\n| 9 | **Parag Parikh Flexi Cap Fund** | PPFAS Asset Management Pvt. Ltd. | ₹133,447.85 | ₹33,361.96 | ₹88,403.90 | 4 |\n| 10 | **ICICI Prudential BSE Sensex ETF** | ICICI Prudential Asset Management Company Limited | ₹26,545.56 | ₹26,545.56 | ₹26,545.56 | 1 |\n\n### Executive Summary\n- **SBI Nifty 50 ETF** (managed by SBI Funds Management Limited) holds the highest AUM with **₹210,783.07 Crores** (Total AUM across all 1 plan variants: ₹210,783.07 Cr).\n- Showing 10 schemes across 13 total plan variants.\n- Data Period: January - March 2026",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "rank": 1,
+        "scheme_name": "SBI Nifty 50 ETF",
+        "amc": "SBI Funds Management Limited",
+        "average_aum_cr": "₹210,783.07",
+        "max_aum_cr": "₹210,783.07",
+        "plan_count": 1
+      },
+      {
+        "rank": 2,
+        "scheme_name": "SBI BSE SENSEX ETF",
+        "amc": "SBI Funds Management Limited",
+        "average_aum_cr": "₹120,715.25",
+        "max_aum_cr": "₹120,715.25",
+        "plan_count": 1
+      },
+      {
+        "rank": 3,
+        "scheme_name": "UTI Nifty 50 ETF",
+        "amc": "UTI Asset Mgmt. Co. Ltd.",
+        "average_aum_cr": "₹68,363.00",
+        "max_aum_cr": "₹68,363.00",
+        "plan_count": 1
+      },
+      {
+        "rank": 4,
+        "scheme_name": "Nippon India ETF Nifty 50 BeES",
+        "amc": "Nippon Life India Asset Management Limited",
+        "average_aum_cr": "₹57,058.66",
+        "max_aum_cr": "₹57,058.66",
+        "plan_count": 1
+      },
+      {
+        "rank": 5,
+        "scheme_name": "Nippon India ETF Gold BeES",
+        "amc": "Nippon Life India Asset Management Limited",
+        "average_aum_cr": "₹53,346.31",
+        "max_aum_cr": "₹53,346.31",
+        "plan_count": 1
+      },
+      {
+        "rank": 6,
+        "scheme_name": "UTI BSE Sensex ETF",
+        "amc": "UTI Asset Mgmt. Co. Ltd.",
+        "average_aum_cr": "₹53,198.67",
+        "max_aum_cr": "₹53,198.67",
+        "plan_count": 1
+      },
+      {
+        "rank": 7,
+        "scheme_name": "ICICI Prudential Nifty 50 ETF",
+        "amc": "ICICI Prudential Asset Management Company Limited",
+        "average_aum_cr": "₹37,428.97",
+        "max_aum_cr": "₹37,428.97",
+        "plan_count": 1
+      },
+      {
+        "rank": 8,
+        "scheme_name": "Nippon India Silver ETF",
+        "amc": "Nippon Life India Asset Management Limited",
+        "average_aum_cr": "₹34,718.04",
+        "max_aum_cr": "₹34,718.04",
+        "plan_count": 1
+      },
+      {
+        "rank": 9,
+        "scheme_name": "Parag Parikh Flexi Cap Fund",
+        "amc": "PPFAS Asset Management Pvt. Ltd.",
+        "average_aum_cr": "₹33,361.96",
+        "max_aum_cr": "₹88,403.90",
+        "plan_count": 4
+      },
+      {
+        "rank": 10,
+        "scheme_name": "ICICI Prudential BSE Sensex ETF",
+        "amc": "ICICI Prudential Asset Management Company Limited",
+        "average_aum_cr": "₹26,545.56",
+        "max_aum_cr": "₹26,545.56",
+        "plan_count": 1
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 13,
+    "query": "Which mutual fund scheme has the highest Maximum AUM across its plan variants?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "scheme_ranking_max",
+    "latency_ms": 1937,
+    "status": "SUCCESS",
+    "ui_answer": "# Mutual Fund Schemes by Maximum AUM\n\n| Rank | Scheme Name | AMC | Total AUM (₹ Cr) | Average AUM (₹ Cr) | Max Plan AUM (₹ Cr) | Plan Variants |\n|------|-------------|-----|------------------|--------------------|---------------------|---------------|\n| 1 | **SBI Nifty 50 ETF** | SBI Funds Management Limited | ₹210,783.07 | ₹210,783.07 | ₹210,783.07 | 1 |\n| 2 | **SBI BSE SENSEX ETF** | SBI Funds Management Limited | ₹120,715.25 | ₹120,715.25 | ₹120,715.25 | 1 |\n| 3 | **Parag Parikh Flexi Cap Fund** | PPFAS Asset Management Pvt. Ltd. | ₹133,447.85 | ₹33,361.96 | ₹88,403.90 | 4 |\n| 4 | **SBI EQUITY HYBRID FUND** | SBI Funds Management Limited | ₹81,244.16 | ₹20,311.04 | ₹72,494.84 | 4 |\n| 5 | **UTI Nifty 50 ETF** | UTI Asset Mgmt. Co. Ltd. | ₹68,363.00 | ₹68,363.00 | ₹68,363.00 | 1 |\n| 6 | **HDFC Mid Cap Fund** | HDFC Asset Management Company Limited | ₹91,562.11 | ₹22,890.53 | ₹66,026.01 | 4 |\n| 7 | **HDFC Flexi Cap Fund** | HDFC Asset Management Company Limited | ₹97,369.79 | ₹24,342.45 | ₹63,522.07 | 4 |\n| 8 | **ICICI Prudential Multi-Asset Fund** | ICICI Prudential Asset Management Company Limited | ₹80,573.48 | ₹20,143.37 | ₹59,811.30 | 4 |\n| 9 | **Nippon India ETF Nifty 50 BeES** | Nippon Life India Asset Management Limited | ₹57,058.66 | ₹57,058.66 | ₹57,058.66 | 1 |\n| 10 | **SBI LIQUID FUND** | SBI Funds Management Limited | ₹65,649.62 | ₹6,564.96 | ₹56,876.63 | 10 |\n\n### Executive Summary\n- **SBI Nifty 50 ETF** (managed by SBI Funds Management Limited) holds the highest AUM with **₹210,783.07 Crores** (Total AUM across all 1 plan variants: ₹210,783.07 Cr).\n- Showing 10 schemes across 34 total plan variants.\n- Data Period: January - March 2026",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "rank": 1,
+        "scheme_name": "SBI Nifty 50 ETF",
+        "amc": "SBI Funds Management Limited",
+        "average_aum_cr": "₹210,783.07",
+        "max_aum_cr": "₹210,783.07",
+        "plan_count": 1
+      },
+      {
+        "rank": 2,
+        "scheme_name": "SBI BSE SENSEX ETF",
+        "amc": "SBI Funds Management Limited",
+        "average_aum_cr": "₹120,715.25",
+        "max_aum_cr": "₹120,715.25",
+        "plan_count": 1
+      },
+      {
+        "rank": 3,
+        "scheme_name": "Parag Parikh Flexi Cap Fund",
+        "amc": "PPFAS Asset Management Pvt. Ltd.",
+        "average_aum_cr": "₹33,361.96",
+        "max_aum_cr": "₹88,403.90",
+        "plan_count": 4
+      },
+      {
+        "rank": 4,
+        "scheme_name": "SBI EQUITY HYBRID FUND",
+        "amc": "SBI Funds Management Limited",
+        "average_aum_cr": "₹20,311.04",
+        "max_aum_cr": "₹72,494.84",
+        "plan_count": 4
+      },
+      {
+        "rank": 5,
+        "scheme_name": "UTI Nifty 50 ETF",
+        "amc": "UTI Asset Mgmt. Co. Ltd.",
+        "average_aum_cr": "₹68,363.00",
+        "max_aum_cr": "₹68,363.00",
+        "plan_count": 1
+      },
+      {
+        "rank": 6,
+        "scheme_name": "HDFC Mid Cap Fund",
+        "amc": "HDFC Asset Management Company Limited",
+        "average_aum_cr": "₹22,890.53",
+        "max_aum_cr": "₹66,026.01",
+        "plan_count": 4
+      },
+      {
+        "rank": 7,
+        "scheme_name": "HDFC Flexi Cap Fund",
+        "amc": "HDFC Asset Management Company Limited",
+        "average_aum_cr": "₹24,342.45",
+        "max_aum_cr": "₹63,522.07",
+        "plan_count": 4
+      },
+      {
+        "rank": 8,
+        "scheme_name": "ICICI Prudential Multi-Asset Fund",
+        "amc": "ICICI Prudential Asset Management Company Limited",
+        "average_aum_cr": "₹20,143.37",
+        "max_aum_cr": "₹59,811.30",
+        "plan_count": 4
+      },
+      {
+        "rank": 9,
+        "scheme_name": "Nippon India ETF Nifty 50 BeES",
+        "amc": "Nippon Life India Asset Management Limited",
+        "average_aum_cr": "₹57,058.66",
+        "max_aum_cr": "₹57,058.66",
+        "plan_count": 1
+      },
+      {
+        "rank": 10,
+        "scheme_name": "SBI LIQUID FUND",
+        "amc": "SBI Funds Management Limited",
+        "average_aum_cr": "₹6,564.96",
+        "max_aum_cr": "₹56,876.63",
+        "plan_count": 10
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 14,
+    "query": "Which open-ended equity growth schemes have the highest NAV?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "scheme_ranking_nav",
+    "latency_ms": 257,
+    "status": "SUCCESS",
+    "ui_answer": "## Open Ended Equity **Growth** Schemes with the Highest NAV (as of 2026-06-29)\n\n| Rank | Scheme (Plan Option) | AMC | NAV (₹) | Latest NAV Date |\n|------|----------------------|-----|---------|-----------------|\n| 1 | **Nippon India Growth Mid Cap Fund - Direct Plan Growth Plan - Growth Option** | Nippon Life India Asset Management Limited | 4,908.6948 | 2026-06-29 |\n| 2 | **Nippon India Growth Mid Cap Fund-Growth Plan-Growth Option** | Nippon Life India Asset Management Limited | 4,447.6247 | 2026-06-29 |\n| 3 | **Franklin India Mid Cap Fund - Direct - Growth** | Franklin Templeton Asset Management (India) Private Limited | 3,085.5307 | 2026-06-29 |\n| 4 | **Franklin India Mid Cap Fund-Growth** | Franklin Templeton Asset Management (India) Private Limited | 2,724.5932 | 2026-06-29 |\n| 5 | **HDFC Flexi Cap Fund - Growth Option - Direct Plan** | HDFC Asset Management Company Limited | 2,201.9010 | 2026-06-29 |\n| 6 | **Aditya Birla Sun Life Flexi Cap Fund - Growth - Direct Plan** | Aditya Birla Sun Life AMC Limited | 2,117.5600 | 2026-06-29 |\n| 7 | **HDFC Flexi Cap Fund - Growth Plan** | HDFC Asset Management Company Limited | 2,001.5930 | 2026-06-29 |\n| 8 | **Aditya Birla Sun Life Flexi Cap Fund - Growth - Regular Plan** | Aditya Birla Sun Life AMC Limited | 1,880.7500 | 2026-06-29 |\n| 9 | **Franklin India Flexi Cap Fund - Direct - Growth** | Franklin Templeton Asset Management (India) Private Limited | 1,783.0501 | 2026-06-29 |\n| 10 | **Sundaram Mid Cap Fund Direct Plan - Growth** | Sundaram Asset Management Company Ltd | 1,602.7227 | 2026-06-29 |\n\n**Sources**\n- NAV values and dates are taken directly from official mutual-fund CSV records [1].\n\n### Executive Summary\n- **Nippon India Growth Mid Cap Fund - Direct Plan Growth Plan - Growth Option** holds the highest NAV at **₹4,908.6948**.\n- Filtered across **1204** matching scheme records in the official dataset.",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "rank": 1,
+        "scheme_name": "Nippon India Growth Mid Cap Fund - Direct Plan Growth Plan - Growth Option",
+        "amc": "Nippon Life India Asset Management Limited",
+        "nav": "₹4,908.6948",
+        "latest_nav_date": "2026-06-29",
+        "category": "Equity Scheme - Mid Cap Fund",
+        "scheme_type": "Open Ended"
+      },
+      {
+        "rank": 2,
+        "scheme_name": "Nippon India Growth Mid Cap Fund-Growth Plan-Growth Option",
+        "amc": "Nippon Life India Asset Management Limited",
+        "nav": "₹4,447.6247",
+        "latest_nav_date": "2026-06-29",
+        "category": "Equity Scheme - Mid Cap Fund",
+        "scheme_type": "Open Ended"
+      },
+      {
+        "rank": 3,
+        "scheme_name": "Franklin India Mid Cap Fund - Direct - Growth",
+        "amc": "Franklin Templeton Asset Management (India) Private Limited",
+        "nav": "₹3,085.5307",
+        "latest_nav_date": "2026-06-29",
+        "category": "Equity Scheme - Mid Cap Fund",
+        "scheme_type": "Open Ended"
+      },
+      {
+        "rank": 4,
+        "scheme_name": "Franklin India Mid Cap Fund-Growth",
+        "amc": "Franklin Templeton Asset Management (India) Private Limited",
+        "nav": "₹2,724.5932",
+        "latest_nav_date": "2026-06-29",
+        "category": "Equity Scheme - Mid Cap Fund",
+        "scheme_type": "Open Ended"
+      },
+      {
+        "rank": 5,
+        "scheme_name": "HDFC Flexi Cap Fund - Growth Option - Direct Plan",
+        "amc": "HDFC Asset Management Company Limited",
+        "nav": "₹2,201.9010",
+        "latest_nav_date": "2026-06-29",
+        "category": "Equity Scheme - Flexi Cap Fund",
+        "scheme_type": "Open Ended"
+      },
+      {
+        "rank": 6,
+        "scheme_name": "Aditya Birla Sun Life Flexi Cap Fund - Growth - Direct Plan",
+        "amc": "Aditya Birla Sun Life AMC Limited",
+        "nav": "₹2,117.5600",
+        "latest_nav_date": "2026-06-29",
+        "category": "Equity Scheme - Flexi Cap Fund",
+        "scheme_type": "Open Ended"
+      },
+      {
+        "rank": 7,
+        "scheme_name": "HDFC Flexi Cap Fund - Growth Plan",
+        "amc": "HDFC Asset Management Company Limited",
+        "nav": "₹2,001.5930",
+        "latest_nav_date": "2026-06-29",
+        "category": "Equity Scheme - Flexi Cap Fund",
+        "scheme_type": "Open Ended"
+      },
+      {
+        "rank": 8,
+        "scheme_name": "Aditya Birla Sun Life Flexi Cap Fund - Growth - Regular Plan",
+        "amc": "Aditya Birla Sun Life AMC Limited",
+        "nav": "₹1,880.7500",
+        "latest_nav_date": "2026-06-29",
+        "category": "Equity Scheme - Flexi Cap Fund",
+        "scheme_type": "Open Ended"
+      },
+      {
+        "rank": 9,
+        "scheme_name": "Franklin India Flexi Cap Fund - Direct - Growth",
+        "amc": "Franklin Templeton Asset Management (India) Private Limited",
+        "nav": "₹1,783.0501",
+        "latest_nav_date": "2026-06-29",
+        "category": "Equity Scheme - Flexi Cap Fund",
+        "scheme_type": "Open Ended"
+      },
+      {
+        "rank": 10,
+        "scheme_name": "Sundaram Mid Cap Fund Direct Plan - Growth",
+        "amc": "Sundaram Asset Management Company Ltd",
+        "nav": "₹1,602.7227",
+        "latest_nav_date": "2026-06-29",
+        "category": "Equity Scheme - Mid Cap Fund",
+        "scheme_type": "Open Ended"
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 15,
+    "query": "What is the average AUM of SBI Nifty 50 ETF across its plan variants?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "scheme_specific_aum",
+    "latency_ms": 1357,
+    "status": "SUCCESS",
+    "ui_answer": "# Mutual Fund Schemes by Average AUM\n\n| Rank | Scheme Name | AMC | Total AUM (₹ Cr) | Average AUM (₹ Cr) | Max Plan AUM (₹ Cr) | Plan Variants |\n|------|-------------|-----|------------------|--------------------|---------------------|---------------|\n| 1 | **SBI Nifty 50 ETF** | SBI Funds Management Limited | ₹210,783.07 | ₹210,783.07 | ₹210,783.07 | 1 |\n| 2 | **SBI Nifty 500 Index Fund** | SBI Funds Management Limited | ₹771.85 | ₹192.96 | ₹482.73 | 4 |\n\n### Executive Summary\n- **SBI Nifty 50 ETF** (managed by SBI Funds Management Limited) holds the highest AUM with **₹210,783.07 Crores** (Total AUM across all 1 plan variants: ₹210,783.07 Cr).\n- Showing 2 schemes across 5 total plan variants.\n- Data Period: January - March 2026",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "rank": 1,
+        "scheme_name": "SBI Nifty 50 ETF",
+        "amc": "SBI Funds Management Limited",
+        "average_aum_cr": "₹210,783.07",
+        "max_aum_cr": "₹210,783.07",
+        "plan_count": 1
+      },
+      {
+        "rank": 2,
+        "scheme_name": "SBI Nifty 500 Index Fund",
+        "amc": "SBI Funds Management Limited",
+        "average_aum_cr": "₹192.96",
+        "max_aum_cr": "₹482.73",
+        "plan_count": 4
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 16,
+    "query": "What is the total AUM of Parag Parikh Flexi Cap Fund across its plan variants?",
+    "source_file": "mutual_fund_data.csv",
+    "category": "scheme_specific_aum",
+    "latency_ms": 1092,
+    "status": "SUCCESS",
+    "ui_answer": "# Mutual Fund Schemes by Maximum AUM\n\n| Rank | Scheme Name | AMC | Total AUM (₹ Cr) | Average AUM (₹ Cr) | Max Plan AUM (₹ Cr) | Plan Variants |\n|------|-------------|-----|------------------|--------------------|---------------------|---------------|\n| 1 | **Parag Parikh Flexi Cap Fund** | PPFAS Asset Management Pvt. Ltd. | ₹133,447.85 | ₹33,361.96 | ₹88,403.90 | 4 |\n| 2 | **Parag Parikh Liquid Fund** | PPFAS Asset Management Pvt. Ltd. | ₹4,734.23 | ₹591.78 | ₹3,844.72 | 8 |\n| 3 | **Parag Parikh ELSS Tax Saver Fund** | PPFAS Asset Management Pvt. Ltd. | ₹5,712.28 | ₹2,856.14 | ₹3,804.44 | 2 |\n| 4 | **Parag Parikh Conservative Hybrid Fund** | PPFAS Asset Management Pvt. Ltd. | ₹3,286.70 | ₹821.68 | ₹2,491.29 | 4 |\n| 5 | **Parag Parikh Dynamic Asset Allocation Fund** | PPFAS Asset Management Pvt. Ltd. | ₹2,725.93 | ₹681.48 | ₹2,120.46 | 4 |\n| 6 | **Parag Parikh Arbitrage Fund** | PPFAS Asset Management Pvt. Ltd. | ₹2,149.16 | ₹1,074.58 | ₹1,752.76 | 2 |\n| 7 | **Parag Parikh Large Cap Fund** | PPFAS Asset Management Pvt. Ltd. | ₹272.01 | ₹68.00 | ₹172.30 | 4 |\n\n### Executive Summary\n- **Parag Parikh Flexi Cap Fund** (managed by PPFAS Asset Management Pvt. Ltd.) holds the highest AUM with **₹88,403.90 Crores** (Total AUM across all 4 plan variants: ₹133,447.85 Cr).\n- Showing 7 schemes across 28 total plan variants.\n- Data Period: January - March 2026",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "rank": 1,
+        "scheme_name": "Parag Parikh Flexi Cap Fund",
+        "amc": "PPFAS Asset Management Pvt. Ltd.",
+        "average_aum_cr": "₹33,361.96",
+        "max_aum_cr": "₹88,403.90",
+        "plan_count": 4
+      },
+      {
+        "rank": 2,
+        "scheme_name": "Parag Parikh Liquid Fund",
+        "amc": "PPFAS Asset Management Pvt. Ltd.",
+        "average_aum_cr": "₹591.78",
+        "max_aum_cr": "₹3,844.72",
+        "plan_count": 8
+      },
+      {
+        "rank": 3,
+        "scheme_name": "Parag Parikh ELSS Tax Saver Fund",
+        "amc": "PPFAS Asset Management Pvt. Ltd.",
+        "average_aum_cr": "₹2,856.14",
+        "max_aum_cr": "₹3,804.44",
+        "plan_count": 2
+      },
+      {
+        "rank": 4,
+        "scheme_name": "Parag Parikh Conservative Hybrid Fund",
+        "amc": "PPFAS Asset Management Pvt. Ltd.",
+        "average_aum_cr": "₹821.68",
+        "max_aum_cr": "₹2,491.29",
+        "plan_count": 4
+      },
+      {
+        "rank": 5,
+        "scheme_name": "Parag Parikh Dynamic Asset Allocation Fund",
+        "amc": "PPFAS Asset Management Pvt. Ltd.",
+        "average_aum_cr": "₹681.48",
+        "max_aum_cr": "₹2,120.46",
+        "plan_count": 4
+      },
+      {
+        "rank": 6,
+        "scheme_name": "Parag Parikh Arbitrage Fund",
+        "amc": "PPFAS Asset Management Pvt. Ltd.",
+        "average_aum_cr": "₹1,074.58",
+        "max_aum_cr": "₹1,752.76",
+        "plan_count": 2
+      },
+      {
+        "rank": 7,
+        "scheme_name": "Parag Parikh Large Cap Fund",
+        "amc": "PPFAS Asset Management Pvt. Ltd.",
+        "average_aum_cr": "₹68.00",
+        "max_aum_cr": "₹172.30",
+        "plan_count": 4
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 17,
+    "query": "What are the five broad categories of mutual fund schemes under SEBI's categorization framework?",
+    "source_file": "Categorization and Rationalization of Mutual Fund Schemes.pdf",
+    "category": "sebi_regulation",
+    "latency_ms": 22757,
+    "status": "SUCCESS",
+    "ui_answer": "The provided context only lists three broad categories of mutual fund schemes under SEBI's framework—Equity Scheme, Debt Scheme, and Hybrid Scheme. It does not contain information about five categories, so I cannot provide the full list of five broad categories. [1]",
+    "confidence": "HIGH confidence",
+    "structured_rows": [],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 18,
+    "query": "What is the maximum investment limit for a mutual fund scheme in a single issuer's debt securities?",
+    "source_file": "Categorization and Rationalization of Mutual Fund Schemes.pdf / SEBI circulars",
+    "category": "sebi_regulation",
+    "latency_ms": 23497,
+    "status": "SUCCESS",
+    "ui_answer": "The provided documents do not specify the maximum investment limit for a mutual fund scheme in a single issuer's debt securities. [1] [2]",
+    "confidence": "HIGH confidence",
+    "structured_rows": [],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 19,
+    "query": "What change did the September 2020 SEBI circular make to the Multi Cap Fund mandate?",
+    "source_file": "Categorization and Rationalization of Mutual Fund Schemes.pdf / September 2020 circular",
+    "category": "sebi_regulation",
+    "latency_ms": 34505,
+    "status": "SUCCESS",
+    "ui_answer": "The provided excerpts do not contain information about the September 2020 SEBI circular or any change to the Multi Cap Fund mandate. [1] [2]",
+    "confidence": "LOW confidence",
+    "structured_rows": [],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 20,
+    "query": "What are the rebalancing timelines for mutual fund scheme portfolios in case of passive breaches?",
+    "source_file": "Categorization and Rationalization of Mutual Fund Schemes.pdf / April 2024.pdf",
+    "category": "sebi_regulation",
+    "latency_ms": 21331,
+    "status": "SUCCESS",
+    "ui_answer": "The provided excerpts do not contain a specific rebalancing timeline for mutual‑fund scheme portfolios when a passive‑breach occurs. The only timing references relate to other compliance matters – e.g., schemes must align with the new categorisation rules within 6 months of the circular and sectoral/thematic schemes must meet portfolio‑overlap limits within 3 years – but no explicit rebalancing schedule for passive breaches is mentioned. Consequently, the answer is based on limited information and should be treated with low confidence. [1] [2]",
+    "confidence": "LOW confidence",
+    "structured_rows": [],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 21,
+    "query": "What is the borrowing limit for mutual funds to meet temporary liquidity requirements under SEBI regulations?",
+    "source_file": "Borrowing by Mutual Funds.pdf",
+    "category": "sebi_regulation",
+    "latency_ms": 41521,
+    "status": "SUCCESS",
+    "ui_answer": "Under SEBI (Mutual Funds) Regulations, 2026, mutual funds may borrow up to 20% of the net assets of a scheme to meet temporary liquidity needs such as unit repurchase, redemption, interest payment or Income Distribution Cum Capital Withdrawal payouts, and the borrowing period must not exceed six months [1]. For intraday borrowings, the 20% cap does not apply; instead, the amount is limited to the guaranteed receivables due on the same day from the Government of India, RBI, and Clearing Corporation of India Limited [1].",
+    "confidence": "MEDIUM confidence",
+    "structured_rows": [
+      {
+        "Borrowing Type": "General borrowing for liquidity (repurchase/redemption, etc.)",
+        "Limit": "Up to 20% of net assets of the scheme",
+        "Duration": "Maximum 6 months"
+      },
+      {
+        "Borrowing Type": "Intraday borrowing",
+        "Limit": "Not subject to 20% cap; limited to same‑day guaranteed receivables (e.g., TREPS proceeds, reverse repo, G‑Sec/T‑bill/SDL proceeds) [1]",
+        "Duration": "Intraday (same day)"
+      }
+    ],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 22,
+    "query": "What was Adani Enterprises Ltd (AEL) Consolidated EBITDA and Revenue in FY24?",
+    "source_file": "AEL_AR_FY24.pdf / AEL_Earnings_Call_Q4_FY24.pdf",
+    "category": "corporate_financials",
+    "latency_ms": 32532,
+    "status": "SUCCESS",
+    "ui_answer": "The provided context does not contain the Consolidated EBITDA or Revenue figures for Adani Enterprises Ltd (AEL) for FY24.",
+    "confidence": "LOW confidence",
+    "structured_rows": [],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 23,
+    "query": "What is the total debt and leverage ratio across the Adani Portfolio in H1FY25?",
+    "source_file": "Adani_Portfolio_H1FY25_ESG.pdf",
+    "category": "corporate_debt",
+    "latency_ms": 11763,
+    "status": "SUCCESS",
+    "ui_answer": "The provided documents do not contain the total debt and leverage ratio for the Adani Portfolio in H1FY25, so I cannot provide that figure. [1]",
+    "confidence": "LOW confidence",
+    "structured_rows": [],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 24,
+    "query": "What are the Sustainalytics ESG risk scores for Adani Enterprises and Adani Ports?",
+    "source_file": "Adani_Portfolio_H1FY25_ESG.pdf",
+    "category": "esg_scores",
+    "latency_ms": 42872,
+    "status": "SUCCESS",
+    "ui_answer": "The provided documents do not contain the specific Sustainalytics ESG risk scores for Adani Enterprises or Adani Ports. [1] [2]",
+    "confidence": "LOW confidence",
+    "structured_rows": [],
+    "serving_engine": "v2"
+  },
+  {
+    "id": 25,
+    "query": "What are the key decarbonization and renewable energy capacity targets in Adani Portfolio H1FY25?",
+    "source_file": "Adani_Portfolio_H1FY25_ESG.pdf",
+    "category": "esg_targets",
+    "latency_ms": 38205,
+    "status": "SUCCESS",
+    "ui_answer": "The Adani Portfolio’s H1FY25 decarbonisation roadmap sets several concrete capacity and investment targets: • Current operational renewable capacity stands at **11+ GW** and the group is committed to **operationalising 50 GW by 2030**【1】. • A green‑hydrogen ecosystem is being built with **10 GW of solar‑panel manufacturing capacity**, **5 GW of wind‑turbine manufacturing capacity**, and **5 GW of electrolyser manufacturing capacity**【1】. • The overall Adani renewables portfolio is slated to expand to **50 GW** of capacity【2】. • A **USD 100 billion** investment is earmarked for the green transition and transport by 2030, underpinning these capacity builds【2】. [1] [2]",
+    "confidence": "HIGH confidence",
+    "structured_rows": [
+      {
+        "Target": "Current operational renewable capacity",
+        "Value": "11+ GW",
+        "Source": "Adani_Portfolio_H1FY25_ESG.pdf"
+      },
+      {
+        "Target": "Operational renewable capacity goal by 2030",
+        "Value": "50 GW",
+        "Source": "Adadi_Portfolio_H1FY25_ESG.pdf"
+      },
+      {
+        "Target": "Solar manufacturing capacity (green‑hydrogen ecosystem)",
+        "Value": "10 GW",
+        "Source": "Adani_Portfolio_H1FY25_ESG.pdf"
+      },
+      {
+        "Target": "Wind turbine manufacturing capacity (green‑hydrogen ecosystem)",
+        "Value": "5 GW",
+        "Source": "Adani_Portfolio_H1FY25_ESG.pdf"
+      },
+      {
+        "Target": "Electrolyser manufacturing capacity (green‑hydrogen ecosystem)",
+        "Value": "5 GW",
+        "Source": "Adani_Portfolio_H1FY25_ESG.pdf"
+      },
+      {
+        "Target": "Total Adani renewables portfolio expansion",
+        "Value": "50 GW",
+        "Source": "AEL_AR_FY24.pdf"
+      },
+      {
+        "Target": "Investment earmarked for green transition by 2030",
+        "Value": "USD 100 billion",
+        "Source": "AEL_AR_FY24.pdf"
+      }
+    ],
+    "serving_engine": "v2"
+  }
+]

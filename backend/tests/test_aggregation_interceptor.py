@@ -90,6 +90,22 @@ class TestAttributeExtraction:
         result = interceptor._extract_target_attribute(query)
         assert result == "AUM"
 
+    def test_extract_target_attribute_amc_aggregation(self):
+        """Test detection of AMC-level aggregation queries."""
+        interceptor = FastPathInterceptor()
+        q1 = "Which Asset Management Companies (AMCs) manage the highest total AUM, and how many distinct schemes does each AMC offer?"
+        assert interceptor._extract_target_attribute(q1) == "AGGREGATION_AMC"
+
+        q2 = "top 5 amcs by aum"
+        assert interceptor._extract_target_attribute(q2) == "AGGREGATION_AMC"
+
+    def test_extract_target_attribute_scheme_ranking_with_amc_mention(self):
+        """Test that scheme ranking queries mentioning AMCs remain AGGREGATION_RANKING."""
+        interceptor = FastPathInterceptor()
+        q = "What are the top 10 mutual fund schemes with the highest Average AUM (in ₹ Crores), and which AMCs manage them?"
+        assert interceptor._extract_target_attribute(q) == "AGGREGATION_RANKING"
+
+
 
 class TestAggregationResponseFormatting:
     """Test response formatting for aggregation queries."""

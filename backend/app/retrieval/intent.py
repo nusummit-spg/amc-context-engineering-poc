@@ -22,7 +22,7 @@ _INTENT_SCHEMA = {
             "type": "string",
             "enum": [
                 "exposure_aggregation", "compliance_check",
-                "house_view_synthesis", "entity_lookup", "general",
+                "house_view_synthesis", "entity_lookup", "aggregate_ranking", "general",
             ],
         },
         "entities_mentioned": {"type": "array", "items": {"type": "string"}},
@@ -86,7 +86,14 @@ class IntentClassifier:
                 paths.append(p)
 
         is_agg, agg_type = self._detect_aggregation(query)
-        q_type = QueryType(result["query_type"])
+        raw_type = result.get("query_type", "general")
+        if is_agg or raw_type == "aggregate_ranking":
+            q_type = QueryType.AGGREGATE_RANKING
+        else:
+            try:
+                q_type = QueryType(raw_type)
+            except ValueError:
+                q_type = QueryType.GENERAL
         requires_cypher = is_agg or (q_type == QueryType.EXPOSURE_AGGREGATION)
 
         ents = result.get("entities_mentioned", [])
@@ -95,7 +102,7 @@ class IntentClassifier:
             entities_mentioned=ents,
             taxonomy_paths=paths,
             requires_graph=bool(result.get("requires_graph")) or requires_cypher or (q_type != QueryType.GENERAL) or bool(ents),
-            requires_vector=result.get("requires_vector", True),
+            requires_vector=False if q_type == QueryType.AGGREGATE_RANKING else result.get("requires_vector", True),
             requires_cypher=requires_cypher,
             aggregation_type=agg_type,
             reasoning=result.get("reasoning"),

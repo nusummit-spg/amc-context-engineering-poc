@@ -200,6 +200,7 @@ register(PromptTemplate(
         "- compliance_check: which schemes/documents are affected by a regulation or need updates\n"
         "- house_view_synthesis: summarize analyst opinions/views across many documents\n"
         "- entity_lookup: factual question about a single entity\n"
+        "- aggregate_ranking: ranking, top-N, maximum, minimum, or aggregate sorting across schemes or AMCs (by AUM, NAV, TER, returns)\n"
         "- general: anything else (falls back to plain semantic search)"
     ),
     template=(
@@ -235,6 +236,7 @@ register(PromptTemplate(
         "are verified and take precedence — and (b) supporting document excerpts.\n\n"
         "Rules:\n"
         "- Answer only from the provided context. If the context is insufficient, say so.\n"
+        "- Superlative & Ranking Grounding: For queries asking for 'highest', 'lowest', 'top', or 'ranking' metrics (such as NAV, AUM, returns), ONLY report the schemes and values explicitly provided in the verified context facts or tables. NEVER declare a scheme as the highest or top in the market unless the context provides an exhaustive verified ranking table. If the context contains only sample or partial excerpts, explicitly state that these are sample schemes from the available documents.\n"
         "- If a [CORRECTION PATCH APPLIED: <attr> = <value> (supersedes prior context)] notice is present in the context, treat it as authoritative verified ground truth that supersedes any contrary text in document excerpts or other context.\n"
         "- MANDATORY: Cite sources inline with bracketed numeric indices like [1], [2] directly inside the answer text for each factual statement or figure (e.g. 'AUM was INR 58,91,160.48 crore [1].'). Every response MUST contain inline [1], [2] citations.\n"
         "- Every number (percentages, counts, dates, monetary values) must come from a structured fact or an excerpt, followed immediately by its bracketed citation like [1].\n"
