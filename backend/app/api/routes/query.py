@@ -284,7 +284,7 @@ async def _run_v2_orchestrator(
     """
     query = request.query
     mode = request.mode
-    log_step_info(logger, "V2_ROUTE_START", "Routing query to V2 orchestrator: '%s' (mode=%s, session_id=%s)", query, mode, request.session_id)
+    log_step_info(logger, "V2_ROUTE_START", "Step 0: Routing incoming query to V2 orchestrator: '%s' (mode=%s, session_id=%s)", query, mode, request.session_id)
     resp_obj = await container.orchestrator.answer(
         query,
         top_k=request.top_k,
@@ -698,7 +698,7 @@ async def _run_v2_orchestrator(
         interaction_id=interaction_id,
         pending_feedback_notice=pending_feedback_notice,
     )
-    log_step_info(logger, "V2_ROUTE_COMPLETE", "V2 orchestrator query returned response %s in %dms (passed_gate=%s)", response_id, int(trace.request_total_ms if trace else 0), trace.quality_gate_passed if trace else True)
+    log_step_info(logger, "V2_ROUTE_COMPLETE", "Step 12: V2 orchestrator query returned response %s in %dms (quality gate passed=%s)", response_id, int(trace.request_total_ms if trace else 0), trace.quality_gate_passed if trace else True)
     return query_response
 
 

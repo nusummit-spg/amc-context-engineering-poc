@@ -21,6 +21,7 @@ from app.feedback.metrics_enrichment import get_metrics_enricher
 from app.feedback.session_manager import get_session_manager
 from sqlalchemy import or_
 from app.core.database import SessionLocal
+from app.core.logging import log_step_info, log_step_error, log_step_warning
 from app.schemas.response_feedback_table import ResponseFeedback
 
 logger = logging.getLogger("app.feedback.timeout_processor")
@@ -109,9 +110,23 @@ class TimeoutProcessor:
                             .first()
                         )
                         feedback_id = fb_rec.feedback_id if fb_rec else None
+                        should_trigger = False
+                        if fb_rec:
+                            if not fb_rec.unified_record_ref:
+                                from app.schemas.unified_evaluation_records_table import UnifiedEvaluationRecord
+                                existing_uer = (
+                                    db_lookup.query(UnifiedEvaluationRecord)
+                                    .filter(UnifiedEvaluationRecord.response_id == response_id)
+                                    .first()
+                                )
+                                if existing_uer:
+                                    fb_rec.unified_record_ref = existing_uer.response_id
+                                    db_lookup.commit()
+                                else:
+                                    should_trigger = True
                         db_lookup.close()
 
-                        if feedback_id:
+                        if should_trigger and feedback_id:
                             from app.services.feedback import trigger_feedback_loop
                             await asyncio.to_thread(
                                 trigger_feedback_loop,
@@ -120,20 +135,20 @@ class TimeoutProcessor:
                                 response_id=response_id,
                                 source="passive",
                             )
-                            logger.info("Triggered feedback loop for passive response %s", response_id)
+                            log_step_info(logger, "PASSIVE_FEEDBACK_TRIGGER", "Step 2: Triggered passive feedback evaluation for response %s", response_id)
                     except Exception as loop_exc:
-                        logger.error("Failed to trigger passive feedback loop for response %s: %s", response_id, loop_exc)
+                        log_step_error(logger, "PASSIVE_FEEDBACK_ERROR", "Step 2 error: Failed triggering passive feedback loop for response %s: %s", response_id, loop_exc)
             except Exception as exc:
-                logger.error("Enrichment failed for response %s in session %s: %s", response_id, session_id, exc)
+                log_step_error(logger, "ENRICHMENT_ERROR", "Step 1 error: Telemetry enrichment failed for response %s in session %s: %s", response_id, session_id, exc)
 
         if enriched_count > 0:
-            logger.info("TimeoutProcessor enriched %d responses", enriched_count)
+            log_step_info(logger, "TIMEOUT_SUMMARY", "Step 3: Processed and enriched %d idle responses past feedback timeout", enriched_count)
 
         return enriched_count
 
     async def _process_loop(self) -> None:
         """Continuous background loop running every check_interval seconds."""
-        logger.info("TimeoutProcessor loop started (interval=%ds)", self.check_interval)
+        log_step_info(logger, "TIMEOUT_PROCESSOR_STARTED", "Passive timeout worker started: polling every %d seconds for idle responses", self.check_interval)
         while self._running:
             try:
                 await asyncio.sleep(self.check_interval)
@@ -141,7 +156,7 @@ class TimeoutProcessor:
             except asyncio.CancelledError:
                 break
             except Exception as exc:
-                logger.error("Error in TimeoutProcessor loop: %s", exc)
+                log_step_error(logger, "TIMEOUT_LOOP_ERROR", "Passive timeout worker loop error: %s", exc)
 
     async def start(self) -> None:
         """Start the background processing task."""
@@ -149,7 +164,7 @@ class TimeoutProcessor:
             return
         self._running = True
         self._task = asyncio.create_task(self._process_loop())
-        logger.info("TimeoutProcessor started")
+        log_step_info(logger, "TIMEOUT_PROCESSOR_INIT", "Passive feedback timeout processor initialized")
 
     async def stop(self) -> None:
         """Stop the background processing task gracefully."""
@@ -158,9 +173,9 @@ class TimeoutProcessor:
             self._task.cancel()
             try:
                 await asyncio.wait_for(self._task, timeout=5.0)
-                logger.info("TimeoutProcessor stopped successfully")
+                log_step_info(logger, "TIMEOUT_PROCESSOR_STOPPED", "Passive feedback timeout processor stopped successfully")
             except asyncio.TimeoutError:
-                logger.warning("TimeoutProcessor did not stop within 5 seconds")
+                log_step_warning(logger, "TIMEOUT_PROCESSOR_WARN", "TimeoutProcessor did not stop within 5 seconds")
             except asyncio.CancelledError:
                 pass
             finally:

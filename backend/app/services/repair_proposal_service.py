@@ -57,6 +57,21 @@ class RepairProposalService:
         if not record.repair or not record.repair_target:
             raise ValueError(f"Record {record.response_id} does not require repair")
 
+        # Deduplication: Check if proposal already exists for this unified record
+        existing_proposal = (
+            db.query(RepairProposal)
+            .filter(RepairProposal.unified_record_ref == record.response_id)
+            .first()
+        )
+        if existing_proposal:
+            logger.info(
+                "Repair proposal already exists for unified_record_ref=%s (proposal_id=%s, status=%s), skipping duplicate creation",
+                record.response_id,
+                existing_proposal.proposal_id,
+                existing_proposal.status,
+            )
+            return existing_proposal
+
         proposal_id = f"prop_{uuid.uuid4().hex[:12]}"
         repair_target_str = (
             record.repair_target.value

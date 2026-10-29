@@ -254,6 +254,23 @@ def _pydantic_to_orm_unified(
     Returns:
         ORM_UnifiedEvaluationRecord: Resulting ORM_UnifiedEvaluationRecord instance.
     """
+    raw_v = record.adjudication_verdict
+    norm_v = None
+    if raw_v:
+        v_str = raw_v.value if hasattr(raw_v, "value") else str(raw_v).lower().strip()
+        if v_str in ("valid", "partially_valid", "invalid", "subjective", "insufficient_evidence"):
+            norm_v = v_str
+        elif v_str in ("pass",):
+            norm_v = "valid"
+        elif v_str in ("fail",):
+            norm_v = "invalid"
+        elif v_str in ("warn", "revise", "partial"):
+            norm_v = "partially_valid"
+        elif "inconclusive" in v_str or "insufficient" in v_str:
+            norm_v = "insufficient_evidence"
+        else:
+            norm_v = "valid"
+
     return ORM_UnifiedEvaluationRecord(
         session_id=record.session_id,
         response_id=record.response_id,
@@ -270,7 +287,7 @@ def _pydantic_to_orm_unified(
         gnn_plausibility_score=record.gnn_plausibility_score,
         semantic_results=record.semantic_results,
         llm_evaluation=record.llm_evaluation,
-        adjudication_verdict=record.adjudication_verdict,
+        adjudication_verdict=norm_v,
         adjudication_confidence=record.adjudication_confidence,
         created_by="feedback_loop_module",
     )

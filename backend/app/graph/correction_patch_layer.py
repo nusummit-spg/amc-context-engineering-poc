@@ -134,6 +134,21 @@ class CorrectionPatchLayer:
         Returns:
             dict: Dictionary containing result data or status.
         """
+        # Step 0: Deduplication check - if identical patch already exists, reuse it
+        existing_patch = self.get_correction(entity_id, attribute)
+        if existing_patch and existing_patch.corrected_value == corrected_value:
+            logger.info(
+                "Exact duplicate patch found for %s.%s (%s), reusing existing patch %s",
+                entity_id, attribute, corrected_value, existing_patch.patch_id
+            )
+            return {
+                "patch_id": existing_patch.patch_id,
+                "conflict_detected": False,
+                "conflict_report": None,
+                "resolution": None,
+                "status": "reused"
+            }
+
         # Step 1: Detect conflicts (GAP 1)
         try:
             from amc_repair.conflict_resolver import get_conflict_resolver
@@ -149,7 +164,21 @@ class CorrectionPatchLayer:
                 "provenance": provenance or {},
             }
             
-            conflict = conflict_resolver.detect_conflict(self, new_patch_dict)
+            import inspect
+            raw_conflict = conflict_resolver.detect_conflict(self, new_patch_dict)
+            if inspect.iscoroutine(raw_conflict):
+                import asyncio
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+                if loop and loop.is_running():
+                    raw_conflict.close()
+                    conflict = None
+                else:
+                    conflict = asyncio.run(raw_conflict)
+            else:
+                conflict = raw_conflict
             
             # Step 2: Resolve conflict (if detected)
             resolution = None
@@ -429,6 +458,10 @@ class CorrectionPatchLayer:
         if not target_patch:
             logger.error("Cannot promote: Patch %s not found", patch_id)
             return False
+
+        if target_patch.approved:
+            logger.info("Patch %s is already approved and permanent; skipping promotion", patch_id)
+            return True
 
         patch_key = self._make_key(target_patch.entity_id, target_patch.attribute)
 

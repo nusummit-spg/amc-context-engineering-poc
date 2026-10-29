@@ -13,6 +13,7 @@ QueryEvidence, and implicit satisfaction signals (e.g. dwell time).
 """
 
 import logging
+from app.core.logging import log_step_info, log_step_error
 from datetime import datetime, timezone
 from typing import Optional, Tuple
 
@@ -166,15 +167,33 @@ class MetricsEnricher:
             except Exception:
                 dwell_seconds = 0.0
 
-            # If no automated category assigned yet and dwell time >= 180s, mark implicit satisfaction
-            # only if no explicit human feedback or category was provided
+            # If no automated category assigned yet, assign category based on dwell time or mark as evaluated
+            # Only if no explicit human feedback or category was provided
+            selected_cats = feedback.selected_categories
+            has_explicit_cats = False
+            if isinstance(selected_cats, list):
+                has_explicit_cats = len(selected_cats) > 0
+            elif isinstance(selected_cats, str):
+                has_explicit_cats = selected_cats.strip() not in ("[]", "")
+
             has_explicit = bool(
-                (feedback.feedback_text and feedback.feedback_text.strip())
-                or (feedback.selected_categories and feedback.selected_categories.strip() not in ("[]", ""))
+                (feedback.feedback_text and str(feedback.feedback_text).strip())
+                or has_explicit_cats
             )
-            if not feedback.automated_category and not has_explicit and dwell_seconds >= 180.0:
-                feedback.automated_category = "implicit_positive"
-                feedback.automated_confidence = 0.70
+            if not feedback.automated_category and not has_explicit:
+                if dwell_seconds >= 180.0:
+    
+                    feedback.automated_category = "implicit_positive"
+                    feedback.automated_confidence = 0.70
+    
+                else:
+                    feedback.automated_category = "auto_evaluated"
+                    feedback.automated_confidence = 1.0
+            elif not feedback.automated_category:
+                feedback.automated_category = "auto_evaluated"
+                feedback.automated_confidence = 1.0
+
+
 
             feedback.updated_at = now_iso
             db.commit()
@@ -189,11 +208,13 @@ class MetricsEnricher:
             except Exception:
                 pass
 
-            logger.debug(
-                "Enriched ResponseFeedback %s: category=%s, conf=%s",
-                feedback.feedback_id,
+            log_step_info(
+                logger,
+                "METRICS_ENRICHED",
+                "Step 1: Enriched telemetry metrics for response %s: category=%s (confidence=%.2f)",
+                feedback.response_id,
                 feedback.automated_category,
-                feedback.automated_confidence,
+                feedback.automated_confidence or 0.0,
             )
             return True
 

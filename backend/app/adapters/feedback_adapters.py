@@ -313,6 +313,26 @@ class AMCDatabaseAdapter(AbstractDatabaseAdapter):
             )
             if existing:
                 logger.info("UnifiedEvaluationRecord already exists for response_id=%s, skipping insert", record.response_id)
+                updated = False
+                fb = None
+                if record.feedback_ref:
+                    fb = session.query(ResponseFeedback).filter(ResponseFeedback.feedback_id == record.feedback_ref).first()
+                if not fb:
+                    fb = session.query(ResponseFeedback).filter(ResponseFeedback.response_id == record.response_id).first()
+                if fb and not fb.unified_record_ref:
+                    fb.unified_record_ref = existing.response_id
+                    fb.root_cause = root_cause_str
+                    updated = True
+
+                qe = session.query(QueryEvidence).filter(QueryEvidence.response_id == record.response_id).first()
+                if qe and not qe.unified_record_ref:
+                    qe.unified_record_ref = existing.response_id
+                    qe.has_feedback = True
+                    qe.root_cause = root_cause_str
+                    updated = True
+
+                if updated:
+                    session.commit()
                 return
 
             entry_route_val = record.entry_route.value if hasattr(record.entry_route, "value") else str(record.entry_route)

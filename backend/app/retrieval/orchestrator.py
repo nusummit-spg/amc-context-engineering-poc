@@ -678,7 +678,7 @@ class RetrievalOrchestrator:
         req_id = str(uuid4())
         metrics = QueryMetrics(request_id=req_id, query=query) if track_metrics else None
 
-        log_step_info(logger, "REQUEST_RECEIVED", "Incoming V2 query: '%s' (user_id=%s, session_id=%s)", query, user_id, session_id)
+        log_step_info(logger, "REQUEST_RECEIVED", "Step 1: Received user query: '%s' (session_id=%s)", query, session_id)
 
         # Step 0 — Multi-turn context rewrite & Coreference resolution (PV-02B)
         comp_rewrite = ComponentMetric("query_rewrite", time.perf_counter())
@@ -698,13 +698,13 @@ class RetrievalOrchestrator:
         if metrics:
             metrics.add_component(comp_rewrite)
         if effective_query != query:
-            log_step_info(logger, "QUERY_REWRITE", "Multi-turn coreference rewrite applied: '%s' -> '%s' (%.1fms)", query, effective_query, t_rewrite_ms)
+            log_step_info(logger, "QUERY_REWRITE", "Step 1b: Rewrote multi-turn query for context: '%s' -> '%s' (%.1fms)", query, effective_query, t_rewrite_ms)
 
         # Step 0.5 — Configurable Pre-Retrieval Safety Guardrail Interceptor
         if self._settings.enable_pre_retrieval_guardrails:
             q_clean = query.lower().strip()
             if any(w in q_clean for w in ["guarantee", "assured return", "promise return", "guaranteed profit", "15% annual return", "fixed return"]):
-                log_step_warning(logger, "GUARDRAIL_CHECK", "Pre-retrieval safety guardrail triggered: SEBI guaranteed return refusal for query '%s'", query)
+                log_step_warning(logger, "GUARDRAIL_CHECK", "Guardrail Check: Blocked query promising guaranteed returns per SEBI regulations: '%s'", query)
                 synth = SynthesisOutput(
                     answer="Under SEBI regulations, mutual fund schemes cannot guarantee returns and are subject to market risks. Past performance is no guarantee of future returns.",
                     compliance_note="Statutory Notice: Mutual funds cannot offer guaranteed returns.",
@@ -772,7 +772,7 @@ class RetrievalOrchestrator:
                     metrics.query_type = "fast_path_patch"
                     get_metrics_store().record(metrics)
 
-                log_step_info(logger, "FAST_PATH_INTERCEPTOR", "Pre-LLM fast-path interceptor served response in %.1fms", total_ms)
+                log_step_info(logger, "FAST_PATH_INTERCEPTOR", "Fast Path: Served verified ground-truth answer directly without LLM (%.1fms)", total_ms)
                 log_v2_query_audit({
                     "query": effective_query,
                     "query_type": "fast_path_patch",
@@ -812,7 +812,7 @@ class RetrievalOrchestrator:
             metrics.add_component(comp_cache)
 
         if cached_entry and cached_entry.get("cache_hit"):
-            log_step_info(logger, "CACHE_LOOKUP", "Serving from semantic cache (<30ms short-circuit) for query: '%s' (lookup=%.1fms)", query, t_cache_lookup_ms)
+            log_step_info(logger, "CACHE_LOOKUP", "Cache Hit: Retrieved exact match from semantic cache in %.1fms for query: '%s'", t_cache_lookup_ms, query)
             total_ms = (time.perf_counter() - t0) * 1000
             
             cached_synth = SynthesisOutput(
@@ -893,7 +893,7 @@ class RetrievalOrchestrator:
             )
 
         active_namespaces = route_query_namespace(effective_query)
-        log_step_info(logger, "NAMESPACE_ROUTING", "Query routed to namespaces: %s", active_namespaces)
+        log_step_info(logger, "NAMESPACE_ROUTING", "Step 2: Routed query to knowledge domains: %s", active_namespaces)
 
         # Step 2 — intent classification
         comp_intent = ComponentMetric("intent_classification", time.perf_counter())
@@ -902,7 +902,7 @@ class RetrievalOrchestrator:
         comp_intent.finalize()
         if metrics:
             metrics.add_component(comp_intent)
-        log_step_info(logger, "INTENT_CLASSIFICATION", "Intent: %s | entities=%s | taxonomy=%s",
+        log_step_info(logger, "INTENT_CLASSIFICATION", "Step 3: Classified intent: type=%s, entities detected=%s, taxonomy=%s",
                       intent.query_type.value, intent.entities_mentioned, intent.taxonomy_paths)
 
         # Step 2.5 — Query Planner & Decomposition (Phase 3)
@@ -915,7 +915,7 @@ class RetrievalOrchestrator:
                 comp_plan.metadata["sub_tasks"] = len(plan.sub_tasks)
                 comp_plan.metadata["synthesis_strategy"] = plan.synthesis_strategy
                 if plan.is_complex:
-                    log_step_info(logger, "QUERY_PLANNING", "Decomposed complex query into %d sub-tasks: %s",
+                    log_step_info(logger, "QUERY_PLANNING", "Step 3b: Decomposed complex query into %d sub-tasks: %s",
                                 len(plan.sub_tasks), plan.complexity_reason)
                 else:
                     log_step_debug(logger, "QUERY_PLANNING", "Simple query plan generated (sub_tasks=1)")
@@ -962,7 +962,7 @@ class RetrievalOrchestrator:
         comp_ner.finalize()
         if metrics:
             metrics.add_component(comp_ner)
-        log_step_info(logger, "ENTITY_RESOLUTION", "Resolved %d entities in %.1fms: %s", len(resolved_entities), t_ner_ms, resolved_map)
+        log_step_info(logger, "ENTITY_RESOLUTION", "Step 4: Resolved %d financial entities against database in %.1fms: %s", len(resolved_entities), t_ner_ms, resolved_map)
 
         # Step 3.5 — Cypher Aggregation Path with Syntax Auto-Correction (Phase 4)
         cypher_facts: list[GraphFact] = []
@@ -997,7 +997,7 @@ class RetrievalOrchestrator:
                     comp_cypher.metadata["source"] = usage.get("source")
                     comp_cypher.input_tokens = usage.get("input_tokens", 0)
                     comp_cypher.output_tokens = usage.get("output_tokens", 0)
-                    log_step_info(logger, "CYPHER_AGGREGATION", "Cypher aggregation succeeded: %d rows from %s", len(rows), usage.get("source"))
+                    log_step_info(logger, "CYPHER_AGGREGATION", "Step 5a: Graph aggregation query returned %d rows from %s", len(rows), usage.get("source"))
             except Exception as exc:
                 log_step_warning(logger, "CYPHER_AGGREGATION_WARN", "Cypher aggregation notice: %s", exc)
                 comp_cypher.error = str(exc)
@@ -1011,7 +1011,7 @@ class RetrievalOrchestrator:
             if fb_facts:
                 cypher_facts.extend(fb_facts)
                 cypher_structured_rows.extend(fb_rows)
-                log_step_info(logger, "TABULAR_AGGREGATION_FALLBACK", "Injected %d authoritative tabular facts into context", len(fb_facts))
+                log_step_info(logger, "TABULAR_AGGREGATION_FALLBACK", "Step 5b: Injected %d authoritative tabular facts into context", len(fb_facts))
 
         # Step 4 — HyDE Expansion (Phase 2)
         hyde_doc = ""
@@ -1025,7 +1025,7 @@ class RetrievalOrchestrator:
                 )
                 comp_hyde.latency_ms = hyde_latency
                 comp_hyde.cache_hit = (hyde_latency < 5.0)
-                log_step_info(logger, "HYDE_EXPANSION", "HyDE document generated (%.1fms, cached=%s)", hyde_latency, hyde_latency < 5.0)
+                log_step_info(logger, "HYDE_EXPANSION", "Step 5c: Generated hypothetical answer document for vector search (%.1fms, cached=%s)", hyde_latency, hyde_latency < 5.0)
             except Exception as exc:
                 log_step_debug(logger, "HYDE_EXPANSION_NOTICE", "HyDE expansion notice: %s", exc)
                 comp_hyde.error = str(exc)
@@ -1094,13 +1094,13 @@ class RetrievalOrchestrator:
 
             if not isinstance(graph_res, Exception):
                 facts, traversal_paths, cyphers = graph_res
-                log_step_info(logger, "GRAPH_TRAVERSAL", "Parallel graph traversal found %d facts across %d paths", len(facts), len(traversal_paths))
+                log_step_info(logger, "GRAPH_TRAVERSAL", "Step 6: Traversed knowledge graph (parallel): found %d verified facts across %d paths", len(facts), len(traversal_paths))
             else:
                 log_step_warning(logger, "GRAPH_TRAVERSAL_WARN", "Graph traversal failure in parallel gather: %s", graph_res)
 
             if not isinstance(vector_res, Exception):
                 chunks = vector_res
-                log_step_info(logger, "VECTOR_RETRIEVAL", "Parallel vector search retrieved %d chunks", len(chunks))
+                log_step_info(logger, "VECTOR_RETRIEVAL", "Step 7: Searched vector document store (parallel): retrieved %d matching chunks", len(chunks))
             else:
                 log_step_warning(logger, "VECTOR_RETRIEVAL_WARN", "Vector search failure in parallel gather: %s", vector_res)
 
@@ -1119,7 +1119,7 @@ class RetrievalOrchestrator:
                     user_id=user_id, tenant_id=tenant_id,
                 )
                 t_graph_ms = (time.perf_counter() - t_graph_start) * 1000
-                log_step_info(logger, "GRAPH_TRAVERSAL", "Sequential graph traversal found %d facts in %.1fms", len(facts), t_graph_ms)
+                log_step_info(logger, "GRAPH_TRAVERSAL", "Step 6: Traversed knowledge graph: found %d verified facts in %.1fms", len(facts), t_graph_ms)
                 if metrics:
                     metrics.add_component(ComponentMetric("graph_traversal", latency_ms=t_graph_ms))
 
@@ -1131,7 +1131,7 @@ class RetrievalOrchestrator:
                     user_id=user_id, tenant_id=tenant_id,
                 )
                 t_vector_ms = (time.perf_counter() - t_vector_start) * 1000
-                log_step_info(logger, "VECTOR_RETRIEVAL", "Sequential vector search retrieved %d chunks in %.1fms", len(chunks), t_vector_ms)
+                log_step_info(logger, "VECTOR_RETRIEVAL", "Step 7: Searched vector document store: retrieved %d matching chunks in %.1fms", len(chunks), t_vector_ms)
                 if metrics:
                     metrics.add_component(ComponentMetric("vector_search", latency_ms=t_vector_ms))
 
@@ -1170,7 +1170,7 @@ class RetrievalOrchestrator:
                 if sub.get("edges"):
                     traversal_paths.append(f"Connected knowledge graph neighborhood ({len(sub.get('edges'))} facts)")
                     cyphers.append("SUBGRAPH_FALLBACK")
-                    log_step_info(logger, "GRAPH_FALLBACK", "Subgraph fallback retrieved %d facts", len(sub.get("edges")))
+                    log_step_info(logger, "GRAPH_FALLBACK", "Step 6b: Fallback graph search retrieved %d additional facts", len(sub.get("edges")))
             except Exception as fb_exc:
                 log_step_debug(logger, "GRAPH_FALLBACK_NOTICE", "Graph fallback notice in answer: %s", fb_exc)
 
@@ -1190,7 +1190,7 @@ class RetrievalOrchestrator:
                     if fb_chunks:
                         chunks = fb_chunks
                         t_vector_ms = (time.perf_counter() - t_vec_fb_start) * 1000
-                        log_step_info(logger, "VECTOR_FALLBACK", "Vector fallback retrieved %d chunks in %.1fms (query: %s)", len(chunks), t_vector_ms, effective_query)
+                        log_step_info(logger, "VECTOR_FALLBACK", "Step 7b: Fallback vector search retrieved %d chunks in %.1fms (query: %s)", len(chunks), t_vector_ms, effective_query)
                 except Exception as fb_v_exc:
                     log_step_warning(logger, "VECTOR_FALLBACK_WARN", "Vector fallback error: %s", fb_v_exc)
 
@@ -1232,7 +1232,7 @@ class RetrievalOrchestrator:
                     )
                     if round2_chunks:
                         chunks.extend(round2_chunks)
-                        log_step_info(logger, "ADAPTIVE_RETRIEVAL", "Round 2 adaptive retrieval added %d chunks", len(round2_chunks))
+                        log_step_info(logger, "ADAPTIVE_RETRIEVAL", "Step 7c: Adaptive secondary search added %d extra chunks", len(round2_chunks))
             except Exception as exc:
                 log_step_debug(logger, "ADAPTIVE_RETRIEVAL_NOTICE", "Adaptive retrieval notice: %s", exc)
                 comp_adaptive.error = str(exc)
@@ -1257,7 +1257,7 @@ class RetrievalOrchestrator:
             log_step_warning(logger, "CONTEXT_QUALITY_GATE", "Context quality gate failed (score=%.2f) for query: %s",
                            context.quality_score, effective_query)
         else:
-            log_step_info(logger, "CONTEXT_ASSEMBLY", "Context assembled: score=%.2f, passed_gate=True, tokens=%d",
+            log_step_info(logger, "CONTEXT_ASSEMBLY", "Step 8: Assembled context for LLM: quality score=%.2f, gate passed=True, tokens=%d",
                           context.quality_score, context.token_count)
         t_asm_ms = (time.perf_counter() - t_asm_start) * 1000
         comp_asm.finalize()
@@ -1289,7 +1289,7 @@ class RetrievalOrchestrator:
                 if applied_corrections:
                     context.passed_quality_gate = True
                     context.quality_score = max(getattr(context, "quality_score", 0.0), 0.95)
-                    log_step_info(logger, "REPAIR_PATCH_INJECTION", "Injected %d correction patches into context", len(applied_corrections))
+                    log_step_info(logger, "REPAIR_PATCH_INJECTION", "Step 8b: Injected %d verified correction patches into context", len(applied_corrections))
         except Exception as patch_exc:
             log_step_debug(logger, "REPAIR_PATCH_NOTICE", "Correction patch layer notice: %s", patch_exc)
 
@@ -1301,7 +1301,7 @@ class RetrievalOrchestrator:
         comp_synth.finalize()
         if metrics:
             metrics.add_component(comp_synth)
-        log_step_info(logger, "SYNTHESIS", "Synthesis completed in %.1fms (confidence=%s)", t_gen_ms, synthesis.confidence)
+        log_step_info(logger, "SYNTHESIS", "Step 9: Synthesized final answer with LLM in %.1fms (confidence=%s)", t_gen_ms, synthesis.confidence)
 
         if cypher_structured_rows:
             synthesis.structured_rows.extend(cypher_structured_rows)
@@ -1332,7 +1332,7 @@ class RetrievalOrchestrator:
                 if synthesis.confidence == "high":
                     synthesis.confidence = "medium"
             else:
-                log_step_info(logger, "ANSWER_CRITIC", "Answer critic passed (score=%.2f, severity=%s)", critique.get("score", 1.0), severity.value)
+                log_step_info(logger, "ANSWER_CRITIC", "Step 10: Answer verification passed (critic score=%.2f, status=%s)", critique.get("score", 1.0), severity.value)
         except Exception as exc:
             log_step_debug(logger, "ANSWER_CRITIC_NOTICE", "Answer critic notice: %s", exc)
             comp_critic.error = str(exc)
@@ -1351,7 +1351,7 @@ class RetrievalOrchestrator:
                     query=effective_query,
                 )
                 if was_rewritten:
-                    log_step_info(logger, "PATCH_GUARDRAIL", "Guardrail enforced patch truth on final answer for '%s'", effective_query)
+                    log_step_info(logger, "PATCH_GUARDRAIL", "Step 10b: Enforced verified errata patch values on final answer for '%s'", effective_query)
             except Exception as gr_exc:
                 log_step_debug(logger, "PATCH_GUARDRAIL_NOTICE", "Patch guardrail notice: %s", gr_exc)
 
@@ -1399,7 +1399,7 @@ class RetrievalOrchestrator:
                 )
                 await repo.enqueue(item)
                 review_escalated = True
-                log_step_info(logger, "REVIEW_QUEUE_ESCALATE", "Response %s auto-escalated to review queue (reason=%s)", req_id, reason.value)
+                log_step_info(logger, "REVIEW_QUEUE_ESCALATE", "Step 10c: Escalated response %s to human review queue (reason=%s)", req_id, reason.value)
             except Exception as exc:
                 log_step_warning(logger, "REVIEW_QUEUE_ERROR", "Failed auto-escalating to review queue: %s", exc)
 
@@ -1464,7 +1464,7 @@ class RetrievalOrchestrator:
             metrics.finalize()
             get_metrics_store().record(metrics)
 
-        log_step_info(logger, "EXECUTION_COMPLETE", "V2 query answered successfully in %.1fms (quality=%.2f, passed_gate=%s)", total_ms, context.quality_score, context.passed_quality_gate)
+        log_step_info(logger, "EXECUTION_COMPLETE", "Step 11: Query execution completed in %.1fms (context quality=%.2f, gate passed=%s)", total_ms, context.quality_score, context.passed_quality_gate)
 
         log_v2_query_audit({
             "query": effective_query,
@@ -1749,7 +1749,7 @@ class RetrievalOrchestrator:
         intent = None
         try:
             intent = await self._intent.classify(effective_query)
-            log_step_info(logger, "INTENT_CLASSIFICATION", "Stream intent: %s | entities=%s", intent.query_type.value if intent else "general", intent.entities_mentioned if intent else [])
+            log_step_info(logger, "INTENT_CLASSIFICATION", "Step 3: Streaming classified intent: type=%s, entities detected=%s", intent.query_type.value if intent else "general", intent.entities_mentioned if intent else [])
             yield {
                 "type": "metadata",
                 "intent": intent.query_type.value if intent else "general",
@@ -1798,7 +1798,7 @@ class RetrievalOrchestrator:
                 yield {"type": "error", "message": f"Entity resolution error: {exc}", "recoverable": True}
 
         t_ner_ms = (time.perf_counter() - t_ner_start) * 1000
-        log_step_info(logger, "ENTITY_RESOLUTION", "Stream resolved %d entities in %.1fms: %s", len(resolved_entities), t_ner_ms, resolved_map)
+        log_step_info(logger, "ENTITY_RESOLUTION", "Step 4: Streaming resolved %d financial entities against database in %.1fms: %s", len(resolved_entities), t_ner_ms, resolved_map)
 
         # ── Step 3.5: Cypher aggregation path ─────────────────────────────
         cypher_facts: list[GraphFact] = []
@@ -1826,7 +1826,7 @@ class RetrievalOrchestrator:
                             properties=r if isinstance(r, dict) else {"val": r},
                             traversal_path="Cypher→Aggregation",
                         ))
-                    log_step_info(logger, "CYPHER_AGGREGATION", "Stream Cypher aggregation: %d rows from %s", len(rows), usage.get("source"))
+                    log_step_info(logger, "CYPHER_AGGREGATION", "Step 5a: Streaming graph aggregation returned %d rows from %s", len(rows), usage.get("source"))
             except Exception as exc:
                 log_step_warning(logger, "CYPHER_AGGREGATION_WARN", "Stream Cypher aggregation notice: %s", exc)
 
@@ -1836,7 +1836,7 @@ class RetrievalOrchestrator:
             if fb_facts:
                 cypher_facts.extend(fb_facts)
                 cypher_structured_rows.extend(fb_rows)
-                log_step_info(logger, "TABULAR_AGGREGATION_FALLBACK", "Stream injected %d authoritative tabular facts into context", len(fb_facts))
+                log_step_info(logger, "TABULAR_AGGREGATION_FALLBACK", "Step 5b: Streaming injected %d authoritative tabular facts into context", len(fb_facts))
 
         # ── Step 3.6: Query planner & decomposition ───────────────────────
         plan: Optional[ExecutionPlan] = None
@@ -1844,7 +1844,7 @@ class RetrievalOrchestrator:
             try:
                 plan = await self._planner.plan(effective_query)
                 if plan.is_complex:
-                    log_step_info(logger, "QUERY_PLANNING", "Stream decomposed query into %d sub-tasks", len(plan.sub_tasks))
+                    log_step_info(logger, "QUERY_PLANNING", "Step 3b: Streaming decomposed query into %d sub-tasks", len(plan.sub_tasks))
             except Exception as exc:
                 log_step_debug(logger, "QUERY_PLANNING_NOTICE", "Stream query planner notice: %s", exc)
 
@@ -1857,7 +1857,7 @@ class RetrievalOrchestrator:
                     user_id=user_id,
                     tenant_id=tenant_id,
                 )
-                log_step_info(logger, "HYDE_EXPANSION", "Stream HyDE: %.1fms (cached=%s)", hyde_lat, hyde_lat < 5.0)
+                log_step_info(logger, "HYDE_EXPANSION", "Step 5c: Streaming HyDE hypothetical document generated in %.1fms (cached=%s)", hyde_lat, hyde_lat < 5.0)
             except Exception as exc:
                 log_step_debug(logger, "HYDE_EXPANSION_NOTICE", "Stream HyDE generation notice: %s", exc)
 
@@ -1921,13 +1921,13 @@ class RetrievalOrchestrator:
                 yield {"type": "error", "message": f"Graph traversal error: {graph_res or type(graph_res).__name__}", "recoverable": True}
             else:
                 facts, traversal_paths, cyphers = graph_res
-                log_step_info(logger, "GRAPH_TRAVERSAL", "Stream parallel graph traversal found %d facts", len(facts))
+                log_step_info(logger, "GRAPH_TRAVERSAL", "Step 6: Streaming traversed knowledge graph (parallel): found %d facts", len(facts))
             if isinstance(vector_res, Exception):
                 log_step_warning(logger, "VECTOR_RETRIEVAL_WARN", "Vector search failure during streaming: %s", vector_res)
                 yield {"type": "error", "message": f"Vector search error: {vector_res or type(vector_res).__name__}", "recoverable": True}
             else:
                 chunks = vector_res
-                log_step_info(logger, "VECTOR_RETRIEVAL", "Stream parallel vector search retrieved %d chunks", len(chunks))
+                log_step_info(logger, "VECTOR_RETRIEVAL", "Step 7: Streaming searched vector document store (parallel): retrieved %d chunks", len(chunks))
             t_retrieval_total = (time.perf_counter() - t_retrieval_start) * 1000
             t_graph_ms = t_retrieval_total
             t_vector_ms = t_retrieval_total
@@ -1936,7 +1936,7 @@ class RetrievalOrchestrator:
                 t_g_start = time.perf_counter()
                 try:
                     facts, traversal_paths, cyphers = await _stream_graph()
-                    log_step_info(logger, "GRAPH_TRAVERSAL", "Stream sequential graph traversal found %d facts", len(facts))
+                    log_step_info(logger, "GRAPH_TRAVERSAL", "Step 6: Streaming traversed knowledge graph: found %d facts", len(facts))
                 except Exception as exc:
                     log_step_warning(logger, "GRAPH_TRAVERSAL_WARN", "Graph traversal failed during streaming: %s", exc)
                     yield {"type": "error", "message": f"Graph traversal error: {exc or type(exc).__name__}", "recoverable": True}
@@ -1945,7 +1945,7 @@ class RetrievalOrchestrator:
                 t_v_start = time.perf_counter()
                 try:
                     chunks = await _stream_vector()
-                    log_step_info(logger, "VECTOR_RETRIEVAL", "Stream sequential vector search retrieved %d chunks", len(chunks))
+                    log_step_info(logger, "VECTOR_RETRIEVAL", "Step 7: Streaming searched vector document store: retrieved %d chunks", len(chunks))
                 except Exception as exc:
                     log_step_warning(logger, "VECTOR_RETRIEVAL_WARN", "Vector search failed during streaming: %s", exc)
                     yield {"type": "error", "message": f"Vector search error: {exc or type(exc).__name__}", "recoverable": True}
@@ -1985,7 +1985,7 @@ class RetrievalOrchestrator:
                 if sub.get("edges"):
                     traversal_paths.append(f"Connected knowledge graph neighborhood ({len(sub.get('edges'))} facts)")
                     cyphers.append("SUBGRAPH_FALLBACK")
-                    log_step_info(logger, "GRAPH_FALLBACK", "Stream subgraph fallback retrieved %d facts", len(sub.get("edges")))
+                    log_step_info(logger, "GRAPH_FALLBACK", "Step 6b: Streaming fallback graph search retrieved %d facts", len(sub.get("edges")))
             except Exception as fb_exc:
                 log_step_debug(logger, "GRAPH_FALLBACK_NOTICE", "Graph fallback notice in answer_stream: %s", fb_exc)
 
@@ -1998,7 +1998,7 @@ class RetrievalOrchestrator:
                     fb_chunks = await _stream_vector()
                     if fb_chunks:
                         chunks = fb_chunks
-                        log_step_info(logger, "VECTOR_FALLBACK", "Stream vector fallback retrieved %d chunks", len(chunks))
+                        log_step_info(logger, "VECTOR_FALLBACK", "Step 7b: Streaming fallback vector search retrieved %d chunks", len(chunks))
                 except Exception as fb_exc:
                     log_step_debug(logger, "VECTOR_FALLBACK_NOTICE", "Stream vector fallback notice: %s", fb_exc)
 
@@ -2031,7 +2031,7 @@ class RetrievalOrchestrator:
         t_asm_start = time.perf_counter()
         try:
             context = self._assembler.assemble(retrieval)
-            log_step_info(logger, "CONTEXT_ASSEMBLY", "Stream context assembled: score=%.2f, passed_gate=%s", context.quality_score, context.passed_quality_gate)
+            log_step_info(logger, "CONTEXT_ASSEMBLY", "Step 8: Streaming assembled context for LLM: quality score=%.2f (passed=%s)", context.quality_score, context.passed_quality_gate)
             if not chunks and context and context.sources:
                 yield {
                     "type": "sources",
@@ -2200,7 +2200,7 @@ class RetrievalOrchestrator:
         in_toks = context.token_count if context else 0
         out_toks = len(full_answer_clean.split()) * 2
 
-        log_step_info(logger, "EXECUTION_COMPLETE", "Streamed query completed in %.1fms (chunks=%d, quality=%.2f)", total_ms, chunk_index, quality_score or 0.0)
+        log_step_info(logger, "EXECUTION_COMPLETE", "Step 11: Streaming query completed in %.1fms (chunks=%d, quality=%.2f)", total_ms, chunk_index, quality_score or 0.0)
 
         log_v2_query_audit({
             "query": effective_query,

@@ -189,7 +189,7 @@ def create_patch_from_correction(
     
     try:
         patch_layer = get_correction_patch_layer()
-        patch_id = patch_layer.add_correction(
+        patch_res = patch_layer.add_correction(
             entity_id=entity_id,
             attribute=attribute,
             canonical_value=canonical_value,
@@ -201,8 +201,11 @@ def create_patch_from_correction(
                 "extraction_method": correction.get("source", "unknown"),
                 "entity_name": correction.get("entity_name")
             },
-            approved=False
+            approved=False,
         )
+        patch_id = patch_res.get("patch_id") if isinstance(patch_res, dict) else patch_res
+
+
         
         log_step_info(
             logger,
@@ -249,7 +252,7 @@ def process_unified_record_for_repair(
         "record_id": response_id
     }
     
-    log_step_info(logger, "REPAIR_SERVICE_START", "Processing unified record for response_id=%s", response_id)
+    log_step_info(logger, "REPAIR_SERVICE_START", "Step 1: Starting repair analysis for response %s", response_id)
     
     local_db = db or SessionLocal()
     try:
@@ -274,7 +277,7 @@ def process_unified_record_for_repair(
             result["success"] = True
             return result
         
-        log_step_info(logger, "REPAIR_PROCESSING", "Processing repair for response_id=%s", response_id)
+        log_step_info(logger, "REPAIR_PROCESSING", "Step 3: Processing repair pipeline for response %s", response_id)
         
         # 3. Fetch query evidence for context
         query_text = ""
@@ -291,7 +294,7 @@ def process_unified_record_for_repair(
             log_step_debug(logger, "FETCH_EVIDENCE_NOTICE", "Could not fetch query evidence for context: %s", exc)
         
         # 4. Extract corrections from dissatisfaction evidence
-        log_step_info(logger, "CORRECTION_EXTRACTION", "Extracting corrections from dissatisfaction evidence...")
+        log_step_info(logger, "CORRECTION_EXTRACTION", "Step 4: Extracting factual corrections from user feedback & evidence...")
         corrections = extract_corrections_from_evidence(
             dissatisfaction_evidence=record.dissatisfaction_evidence_json,
             query_text=query_text,
@@ -303,7 +306,7 @@ def process_unified_record_for_repair(
             result["success"] = True
             return result
         
-        log_step_info(logger, "CORRECTIONS_EXTRACTED", "Extracted %d correction(s) for response_id=%s", len(corrections), response_id)
+        log_step_info(logger, "CORRECTIONS_EXTRACTED", "Step 4b: Extracted %d correction claim(s) for response %s", len(corrections), response_id)
         for idx, corr in enumerate(corrections, 1):
             log_step_debug(logger, "CORRECTION_DETAIL", "[%d] %s.%s: %s → %s (conf=%.2f)",
                        idx,
@@ -314,7 +317,7 @@ def process_unified_record_for_repair(
                        corr.get("confidence", 0))
         
         # 5. Create patches for each correction
-        log_step_info(logger, "PATCH_CREATION", "Creating patches from %d correction(s)...", len(corrections))
+        log_step_info(logger, "PATCH_CREATION", "Step 5: Generating correction patches from %d claim(s)...", len(corrections))
         for correction in corrections:
             try:
                 patch_id = create_patch_from_correction(
@@ -325,7 +328,7 @@ def process_unified_record_for_repair(
                 if patch_id:
                     result["patches"].append(patch_id)
                     result["patches_created"] += 1
-                    log_step_info(logger, "PATCH_CREATED", "Patch created: %s", patch_id)
+                    log_step_info(logger, "PATCH_CREATED", "Step 6: Created correction patch: %s", patch_id)
                 else:
                     error_msg = f"Failed to create patch for correction: {correction}"
                     result["errors"].append(error_msg)
@@ -336,7 +339,7 @@ def process_unified_record_for_repair(
                 log_step_error(logger, "PATCH_EXCEPTION", "%s", error_msg)
         
         result["success"] = True
-        log_step_info(logger, "REPAIR_SERVICE_COMPLETE", "Repair service complete for %s (patches_created=%d)", response_id, result["patches_created"])
+        log_step_info(logger, "REPAIR_SERVICE_COMPLETE", "Step 7: Repair analysis complete for response %s (%d patches created)", response_id, result["patches_created"])
         return result
     
     except Exception as exc:

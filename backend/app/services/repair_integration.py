@@ -79,6 +79,24 @@ class RepairEngineIntegration:
             logger.debug("Repair service URL not configured, skipping repair engine trigger")
             return {"success": False, "reason": "repair_service_url_not_configured"}
         
+        # Check if record has already been processed and resolved to prevent duplicate patches
+        from app.schemas.models import LifecycleStatus
+        status_val = record.lifecycle_status.value if hasattr(record.lifecycle_status, "value") else str(record.lifecycle_status or "").lower()
+        if status_val == "resolved" and db:
+            from app.schemas.repair_proposals import RepairProposal
+            existing_prop = db.query(RepairProposal).filter(RepairProposal.unified_record_ref == record.response_id).first()
+            if existing_prop:
+                log_step_info(logger, "REPAIR_ALREADY_RESOLVED", "Skipping repair: Record %s is already resolved (proposal=%s)", record.response_id, existing_prop.proposal_id)
+                return {
+                    "success": True,
+                    "response_id": record.response_id,
+                    "patches_created": [],
+                    "patches_failed": [],
+                    "errors": [],
+                    "proposal_id": existing_prop.proposal_id,
+                    "already_processed": True,
+                }
+        
         evidence = record.dissatisfaction_evidence_json or {}
         raw_claims = evidence.get("correction_claims", []) if isinstance(evidence, dict) else []
 
@@ -144,7 +162,7 @@ class RepairEngineIntegration:
         log_step_info(
             logger,
             "REPAIR_TRIGGER",
-            "Processing %d correction(s) for response_id=%s",
+            "Step 1: Processing %d correction claim(s) for response %s",
             len(correction_claims),
             record.response_id
         )
@@ -166,6 +184,18 @@ class RepairEngineIntegration:
                     claim["confidence"] = conf
                     canonical_val = claim.get("rejected_value") or "canonical"
                     corrected_val = claim.get("asserted_value") or claim.get("rejected_value") or "repair_flagged"
+
+                    # Deduplication: check if patch layer already has an active patch for this entity/attribute
+                    from app.graph.correction_patch_layer import get_correction_patch_layer, CorrectionPatch
+                    p_layer = get_correction_patch_layer()
+                    entity_str = str(claim.get("entity_id") or "unknown_entity")
+                    attr_str = str(claim.get("attribute") or "general")
+                    existing_p = p_layer.get_correction(entity_str, attr_str)
+                    if existing_p and (existing_p.corrected_value == corrected_val or (existing_p.provenance and existing_p.provenance.get("response_id") == record.response_id)):
+                        log_step_info(logger, "PATCH_REUSED", "Step 2: Found matching patch %s for %s.%s; reusing without duplication", existing_p.patch_id, entity_str, attr_str)
+                        result["patches_created"].append(existing_p.patch_id)
+                        continue
+
                     risk = assess_risk_level(conf, canonical_val, corrected_val)
                     claim_is_auto_approved = (conf >= 0.95 and risk == "LOW")
 
@@ -203,10 +233,10 @@ class RepairEngineIntegration:
                     log_step_info(
                         logger,
                         "PATCH_CREATED",
-                        "Patch %d/%d created: %s (entity=%s, attr=%s, approved=%s)",
+                        "Step 2b: Created correction patch %s (%d/%d): entity=%s, attribute=%s, auto_approved=%s",
+                        patch_id,
                         idx,
                         len(correction_claims),
-                        patch_id,
                         claim.get("entity_id", "?"),
                         claim.get("attribute", "?"),
                         claim_is_auto_approved,
@@ -228,9 +258,9 @@ class RepairEngineIntegration:
         log_step_info(
             logger,
             "REPAIR_RESULT",
-            "Repair engine result: response_id=%s, created=%d, failed=%d",
-            record.response_id,
+            "Step 3: Repair engine generated %d patch(es) for response %s (%d failed)",
             len(result["patches_created"]),
+            record.response_id,
             len(result["patches_failed"])
         )
 
@@ -238,7 +268,7 @@ class RepairEngineIntegration:
             try:
                 from app.retrieval.cache import get_semantic_cache
                 get_semantic_cache().clear()
-                log_step_info(logger, "CACHE_CLEARED", "Semantic cache cleared following patch creation for %s", record.response_id)
+                log_step_info(logger, "CACHE_CLEARED", "Step 4: Cleared semantic cache for %s so patched truth is immediately live", record.response_id)
             except Exception as cache_exc:
                 log_step_debug(logger, "CACHE_CLEAR_NOTICE", "Could not clear semantic cache: %s", cache_exc)
 
@@ -268,7 +298,13 @@ class RepairEngineIntegration:
                     if conf >= 0.95:
                         risk = assess_risk_level(conf, canonical_val, corrected_val)
                         if risk == "LOW":
-                            log_step_info(logger, "HANDS_FREE_AUTO_APPROVE", "Hands-free auto-promoting patch %s (conf=%.2f, risk=LOW)", patch_id, conf)
+                            from app.graph.correction_patch_layer import get_correction_patch_layer
+                            p_layer = get_correction_patch_layer()
+                            patch_obj = p_layer.get_patch_by_id(patch_id)
+                            if patch_obj and patch_obj.approved:
+                                logger.debug("Patch %s is already approved and permanent; skipping redundant auto-promote", patch_id)
+                                continue
+                            log_step_info(logger, "HANDS_FREE_AUTO_APPROVE", "Step 5: Auto-approved low-risk patch %s (confidence=%.2f, risk=LOW)", patch_id, conf)
                             from app.graph.correction_patch_layer import get_correction_patch_layer
                             from app.engine.graph_store import get_driver, config as g_config
                             p_layer = get_correction_patch_layer()
@@ -300,7 +336,7 @@ class RepairEngineIntegration:
                 proposal_svc = RepairProposalService()
                 proposal = proposal_svc.create_proposal_from_record(record, db, is_approved=is_auto_approved)
                 result["proposal_id"] = proposal.proposal_id
-                log_step_info(logger, "PROPOSAL_CREATED", "Repair proposal created: %s (approved=%s)", proposal.proposal_id, is_auto_approved)
+                log_step_info(logger, "PROPOSAL_CREATED", "Step 6: Created repair proposal %s (auto_approved=%s)", proposal.proposal_id, is_auto_approved)
             except Exception as prop_exc:
                 logger.debug("Repair proposal creation notice: %s", prop_exc)
 
@@ -310,7 +346,7 @@ class RepairEngineIntegration:
                     record.lifecycle_status = LifecycleStatus.RESOLVED
                     record.updated_at = _now_iso()
                     db.commit()
-                    log_step_info(logger, "UNIFIED_RECORD_RESOLVED", "UnifiedEvaluationRecord %s marked resolved", record.response_id)
+                    log_step_info(logger, "UNIFIED_RECORD_RESOLVED", "Step 7: Marked Unified Evaluation Record %s as resolved", record.response_id)
                 except Exception as rec_exc:
                     logger.debug("Unified record status update notice: %s", rec_exc)
 

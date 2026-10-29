@@ -309,7 +309,23 @@ class RecordBuilder:
                     record.gnn_plausibility_score = evaluation_results.get("gnn_plausibility_score")
                     record.semantic_results = evaluation_results.get("nli_result")
                     record.llm_evaluation = evaluation_results.get("critic_result")
-                    record.adjudication_verdict = evaluation_results.get("verdict")
+                    raw_v = evaluation_results.get("verdict")
+                    norm_v = None
+                    if raw_v:
+                        norm = str(raw_v).lower().strip()
+                        if norm in ("valid", "partially_valid", "invalid", "subjective", "insufficient_evidence"):
+                            norm_v = norm
+                        elif norm in ("pass",):
+                            norm_v = "valid"
+                        elif norm in ("fail",):
+                            norm_v = "invalid"
+                        elif norm in ("warn", "revise", "partial"):
+                            norm_v = "partially_valid"
+                        elif "inconclusive" in norm or "insufficient" in norm:
+                            norm_v = "insufficient_evidence"
+                        else:
+                            norm_v = "valid"
+                    record.adjudication_verdict = norm_v
                     record.adjudication_confidence = evaluation_results.get("confidence")
             except Exception as exc:
                 log_step_warning(step_logger, "STEP7_SKIPPED", "Tiered evaluation skipped or failed: %s", exc)

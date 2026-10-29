@@ -65,11 +65,10 @@ def trigger_feedback_loop(
     log_step_info(
         logger,
         "FEEDBACK_LOOP_START",
-        "FEEDBACK LOOP START: feedback_id=%s, response_id=%s, session_id=%s, source=%s",
-        feedback_id,
+        "Step 1: Starting feedback loop for response %s (source=%s, feedback_id=%s)",
         response_id,
-        session_id,
         source,
+        feedback_id,
     )
 
     try:
@@ -83,13 +82,13 @@ def trigger_feedback_loop(
                 .first()
             )
             if not has_evidence:
-                log_step_info(logger, "FEEDBACK_LOOP_SKIP", "QueryEvidence not present for response_id=%s, skipping deep loop", response_id)
+                log_step_info(logger, "FEEDBACK_LOOP_SKIP", "Skipping feedback loop: Query evidence not found for response %s", response_id)
                 return None
         finally:
             if db is None:
                 check_db.close()
 
-        log_step_info(logger, "FEEDBACK_LOOP_EXEC", "Running feedback loop pipeline (Steps 1-4)...")
+        log_step_info(logger, "FEEDBACK_LOOP_EXEC", "Step 2: Running 4-tier evaluation pipeline (Enrichment -> Routing -> Adjudication -> Diagnosis)...")
         success = start_feedback_loop(
             feedback_id=feedback_id,
             session_id=session_id,
@@ -99,7 +98,7 @@ def trigger_feedback_loop(
             db=_db_adapter,
             evidence_adapter=_evidence_adapter,
         )
-        log_step_info(logger, "FEEDBACK_LOOP_COMPLETE", "Feedback loop pipeline completed: success=%s", success)
+        log_step_info(logger, "FEEDBACK_LOOP_COMPLETE", "Step 3: Feedback evaluation pipeline finished (success=%s)", success)
 
         # Retrieve the generated UnifiedEvaluationRecord
         local_db = db or SessionLocal()
@@ -117,17 +116,32 @@ def trigger_feedback_loop(
             log_step_info(
                 logger,
                 "UNIFIED_RECORD_CREATED",
-                "Unified record created: entry_route=%s, root_cause=%s, severity=%s, repair=%s",
+                "Step 4: Created Unified Evaluation Record: route=%s, root_cause=%s, severity=%s, repair_needed=%s",
                 record.entry_route, record.root_cause, record.severity, record.repair
             )
+
+            # Ensure ResponseFeedback reverse reference is set to prevent repetitive retries
+            try:
+                from app.schemas.response_feedback_table import ResponseFeedback
+                fb = local_db.query(ResponseFeedback).filter(
+                    (ResponseFeedback.feedback_id == feedback_id) |
+                    (ResponseFeedback.response_id == response_id)
+                ).first()
+                if fb and not fb.unified_record_ref:
+                    fb.unified_record_ref = record.response_id
+                    rc_val = record.root_cause.value if hasattr(record.root_cause, "value") else str(record.root_cause)
+                    fb.root_cause = rc_val
+                    local_db.commit()
+            except Exception as fb_sync_err:
+                logger.debug("ResponseFeedback reverse reference sync notice: %s", fb_sync_err)
             
             # NEW: If repair is flagged, trigger repair engine microservice
             if process_repair and record.repair:
                 log_step_info(
                     logger,
                     "REPAIR_FLAGGED",
-                    "REPAIR FLAGGED: response_id=%s, root_cause=%s, repair_target=%s",
-                    response_id, record.root_cause, record.repair_target
+                    "Step 5: Repair required for response %s: target=%s, root_cause=%s",
+                    response_id, record.repair_target, record.root_cause
                 )
                 try:
                     # Import here to avoid circular imports
@@ -151,7 +165,7 @@ def trigger_feedback_loop(
                         log_step_info(
                             logger,
                             "REPAIR_INTEGRATION_SCHEDULED",
-                            "Repair engine integration scheduled on running event loop for response_id=%s",
+                            "Step 6: Scheduled background repair engine task for response %s",
                             response_id,
                         )
                     else:
@@ -159,7 +173,7 @@ def trigger_feedback_loop(
                         log_step_info(
                             logger,
                             "REPAIR_INTEGRATION_RESULT",
-                            "Repair engine integration result: success=%s, patches=%d",
+                            "Step 6b: Repair engine completed: success=%s, %d patches created",
                             repair_result.get("success"),
                             len(repair_result.get("patches_created", []))
                         )
@@ -167,7 +181,7 @@ def trigger_feedback_loop(
                             log_step_info(
                                 logger,
                                 "PATCHES_CREATED",
-                                "Patches created via repair engine: %s",
+                                "Step 6c: Patches created via repair engine: %s",
                                 repair_result["patches_created"]
                             )
                 
@@ -175,7 +189,7 @@ def trigger_feedback_loop(
                     log_step_error(
                         logger,
                         "REPAIR_INTEGRATION_ERROR",
-                        "Repair engine integration error: %s",
+                        "Repair engine error: %s",
                         repair_exc,
                     )
             
@@ -188,7 +202,7 @@ def trigger_feedback_loop(
         log_step_error(
             logger,
             "FEEDBACK_LOOP_FAILED",
-            "trigger_feedback_loop FAILED: feedback_id=%s, error: %s",
+            "Feedback loop failed for feedback_id=%s: %s",
             feedback_id,
             exc,
         )
