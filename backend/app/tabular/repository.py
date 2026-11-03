@@ -137,13 +137,21 @@ class FinancialDataRepository:
     G05-T06: Compile only whitelisted SQL templates with bound parameters
     """
     
-    def __init__(self, db_path: str = "data/financial.db"):
+    def __init__(self, db_path: Optional[str] = None):
         """Initialize repository with database connection
         
         Args:
-            db_path: Path to SQLite database file
+            db_path: Path to SQLite database file. Defaults to backend/data/financial.db.
         """
-        self.db_path = Path(db_path)
+        if db_path is None:
+            self.db_path = (Path(__file__).resolve().parent.parent.parent / "data" / "financial.db").resolve()
+        else:
+            p = Path(db_path)
+            if p.is_absolute():
+                self.db_path = p
+            else:
+                self.db_path = (Path(__file__).resolve().parent.parent.parent / p).resolve()
+
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         
         # Initialize schema if needed
@@ -362,6 +370,7 @@ class FinancialDataRepository:
             if not dataset_version:
                 raise ValueError("No active dataset version set")
         
+        date_str = nav_date.isoformat() if hasattr(nav_date, "isoformat") else str(nav_date).strip()
         with self._get_connection() as conn:
             cursor = conn.execute(
                 """SELECT observation_id, source_row_id, dataset_version,
@@ -372,7 +381,7 @@ class FinancialDataRepository:
                      AND scheme_code = ? 
                      AND nav_date = ?
                    LIMIT 1""",
-                (dataset_version, scheme_code, nav_date.isoformat())
+                (dataset_version, scheme_code, date_str)
             )
             
             row = cursor.fetchone()
@@ -403,17 +412,159 @@ class FinancialDataRepository:
             )
             return cursor.fetchone()["cnt"]
     
-    def get_dataset_info(self, dataset_version: str) -> Optional[Dict[str, Any]]:
-        """Get dataset version metadata"""
+    def register_dataset_version(
+        self,
+        dataset_version: str,
+        source_file_path: str,
+        source_file_hash: str,
+        total_rows: int = 0,
+        valid_rows: int = 0,
+        quarantined_rows: int = 0,
+        status: str = "STAGED",
+        created_by: str = "system",
+        notes: Optional[str] = None,
+    ):
+        """Register or update a dataset version record (G04-T05)."""
+        from datetime import datetime
+        now = datetime.utcnow().isoformat()
+        with self._get_connection() as conn:
+            conn.execute(
+                """INSERT OR REPLACE INTO dataset_versions (
+                    dataset_version, source_file_path, source_file_hash,
+                    total_rows, valid_rows, quarantined_rows,
+                    ingestion_timestamp, status, created_by, notes
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    dataset_version, source_file_path, source_file_hash,
+                    total_rows, valid_rows, quarantined_rows,
+                    now, status, created_by, notes
+                )
+            )
+            conn.commit()
+
+    def update_dataset_counts(
+        self,
+        dataset_version: str,
+        total_rows: int,
+        valid_rows: int,
+        quarantined_rows: int,
+        status: str = "VALIDATED"
+    ):
+        """Update row counts and status for dataset version (G04-T04)."""
+        with self._get_connection() as conn:
+            conn.execute(
+                """UPDATE dataset_versions
+                   SET total_rows = ?, valid_rows = ?, quarantined_rows = ?, status = ?
+                   WHERE dataset_version = ?""",
+                (total_rows, valid_rows, quarantined_rows, status, dataset_version)
+            )
+            conn.commit()
+
+    def insert_source_rows_batch(self, rows: List[Dict[str, Any]]):
+        """Insert batch of source rows (G04-T05)."""
+        if not rows:
+            return
+        
+        sql = """
+        INSERT OR REPLACE INTO source_rows (
+            source_row_id, dataset_version, logical_source_path,
+            original_row_number, row_content_hash, scheme_code,
+            scheme_display_name, amc_display_name, scheme_type,
+            scheme_category_raw, plan_option_display_name,
+            amc_id, scheme_id, plan_option_id,
+            nav_per_unit, nav_date, aaum_crore, aaum_quarter,
+            isin_growth_payout, isin_reinvestment, isin_combined,
+            launch_date, closure_date, ingestion_timestamp,
+            validation_status, validation_notes
+        ) VALUES (
+            :source_row_id, :dataset_version, :logical_source_path,
+            :original_row_number, :row_content_hash, :scheme_code,
+            :scheme_display_name, :amc_display_name, :scheme_type,
+            :scheme_category_raw, :plan_option_display_name,
+            :amc_id, :scheme_id, :plan_option_id,
+            :nav_per_unit, :nav_date, :aaum_crore, :aaum_quarter,
+            :isin_growth_payout, :isin_reinvestment, :isin_combined,
+            :launch_date, :closure_date, :ingestion_timestamp,
+            :validation_status, :validation_notes
+        )
+        """
+        with self._get_connection() as conn:
+            conn.executemany(sql, rows)
+            conn.commit()
+
+    def insert_nav_observations_batch(self, observations: List[Dict[str, Any]]):
+        """Insert batch of NAV observations (G04-T05)."""
+        if not observations:
+            return
+        
+        sql = """
+        INSERT OR REPLACE INTO nav_observations (
+            observation_id, source_row_id, dataset_version,
+            scheme_code, amc_id, scheme_id, plan_option_id,
+            nav_per_unit, nav_date
+        ) VALUES (
+            :observation_id, :source_row_id, :dataset_version,
+            :scheme_code, :amc_id, :scheme_id, :plan_option_id,
+            :nav_per_unit, :nav_date
+        )
+        """
+        with self._get_connection() as conn:
+            conn.executemany(sql, observations)
+            conn.commit()
+
+    def insert_aaum_observations_batch(self, observations: List[Dict[str, Any]]):
+        """Insert batch of AAUM observations (G04-T05)."""
+        if not observations:
+            return
+        
+        sql = """
+        INSERT OR REPLACE INTO aaum_observations (
+            observation_id, source_row_id, dataset_version,
+            scheme_code, amc_id, scheme_id, plan_option_id,
+            aaum_crore, aaum_quarter
+        ) VALUES (
+            :observation_id, :source_row_id, :dataset_version,
+            :scheme_code, :amc_id, :scheme_id, :plan_option_id,
+            :aaum_crore, :aaum_quarter
+        )
+        """
+        with self._get_connection() as conn:
+            conn.executemany(sql, observations)
+            conn.commit()
+
+    def get_quarantined_rows(self, dataset_version: str, limit: int = 100) -> List[Dict[str, Any]]:
+        """Fetch quarantined rows for review (G04-T07)."""
         with self._get_connection() as conn:
             cursor = conn.execute(
-                """SELECT * FROM dataset_versions WHERE dataset_version = ?""",
-                (dataset_version,)
+                """SELECT source_row_id, original_row_number, scheme_code,
+                          scheme_display_name, validation_notes
+                   FROM source_rows
+                   WHERE dataset_version = ? AND validation_status = 'QUARANTINED'
+                   LIMIT ?""",
+                (dataset_version, limit)
             )
-            row = cursor.fetchone()
-            if not row:
-                return None
-            return dict(row)
+            return [dict(r) for r in cursor.fetchall()]
+
+    def get_summary_stats(self, dataset_version: Optional[str] = None) -> Dict[str, Any]:
+        """Get complete row, NAV and AAUM observation counts."""
+        if dataset_version is None:
+            dataset_version = self.get_active_version()
+        
+        with self._get_connection() as conn:
+            r_cnt = conn.execute("SELECT COUNT(*) FROM source_rows WHERE dataset_version = ?", (dataset_version,)).fetchone()[0]
+            v_cnt = conn.execute("SELECT COUNT(*) FROM source_rows WHERE dataset_version = ? AND validation_status = 'VALID'", (dataset_version,)).fetchone()[0]
+            q_cnt = conn.execute("SELECT COUNT(*) FROM source_rows WHERE dataset_version = ? AND validation_status = 'QUARANTINED'", (dataset_version,)).fetchone()[0]
+            nav_cnt = conn.execute("SELECT COUNT(*) FROM nav_observations WHERE dataset_version = ?", (dataset_version,)).fetchone()[0]
+            aaum_cnt = conn.execute("SELECT COUNT(*) FROM aaum_observations WHERE dataset_version = ?", (dataset_version,)).fetchone()[0]
+            
+            return {
+                "dataset_version": dataset_version,
+                "total_source_rows": r_cnt,
+                "valid_rows": v_cnt,
+                "quarantined_rows": q_cnt,
+                "nav_observations": nav_cnt,
+                "aaum_observations": aaum_cnt,
+            }
 
 
 __all__ = [

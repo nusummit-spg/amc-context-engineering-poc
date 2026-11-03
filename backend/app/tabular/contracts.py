@@ -129,6 +129,17 @@ class NullPolicy(str, Enum):
     WARN = "WARN"               # Accept but log warning
 
 
+class QueryErrorCode(str, Enum):
+    """Standardized failure codes for typed financial queries (03_CSV_EXCEL_SPEC §6)"""
+    STRUCTURED_SOURCE_UNAVAILABLE = "STRUCTURED_SOURCE_UNAVAILABLE"
+    AMBIGUOUS_QUERY = "AMBIGUOUS_QUERY"
+    INCOMPATIBLE_PERIODS = "INCOMPATIBLE_PERIODS"
+    UNSUPPORTED_METRIC = "UNSUPPORTED_METRIC"
+    NO_MATCH = "NO_MATCH"
+    INVALID_PLAN = "INVALID_PLAN"
+    EXECUTION_ERROR = "EXECUTION_ERROR"
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # G03-T01: Source Schema Definition
 # ═══════════════════════════════════════════════════════════════════════════
@@ -619,6 +630,7 @@ __all__ = [
     "Unit",
     "NullPolicy",
     "AggregationSafety",
+    "QueryErrorCode",
     
     # Models
     "SourceFieldDefinition",

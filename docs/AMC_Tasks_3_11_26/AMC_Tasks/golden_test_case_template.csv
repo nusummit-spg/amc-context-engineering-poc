@@ -1,0 +1,32 @@
+﻿case_id,category,query_or_scenario,expected_route,observed_sample_value_not_verified_current_gold,unit,period,independent_oracle_note,critical_assertion,gold_approved_by,source_dataset_sha,actual_result,status
+CSV-EXACT-001,exact_nav,NAV for scheme code 100033 on 2026-06-29,SOURCE_ROW,922.67,INR_PER_UNIT,2026-06-29,"Source chunk_001 second physical line, validate against active dataset",NO_GENERATIVE_NUMERIC_FALLBACK,,,,NOT_RUN
+CSV-EXACT-002,exact_aaum,Average AUM for scheme code 100033 in Q1 2026,SOURCE_ROW,,INR_CRORE,2026-Q1,Steward gold and source-row proof required,NO_GENERATIVE_NUMERIC_FALLBACK,,,,NOT_RUN
+CSV-EXACT-003,exact_isin,Find scheme/plan for ISIN INF209K01165,SOURCE_ROW,,TEXT,,Match source ID and display options; no guess,EXACT_OR_AMBIGUOUS,,,,NOT_RUN
+CSV-COUNT-001,dataset_count,How many records are in this CSV snapshot?,SOURCE_MANIFEST,16245,ROWS,,Only if actual source hash/reconciliation matches manifest,VERIFIED_OR_UNAVAILABLE,,,,NOT_RUN
+CSV-COUNT-002,count_distinct,How many distinct schemes by AMC in Q1 2026?,SQL,,COUNT,2026-Q1,"Dedup via canonical scheme IDs, not Scheme_Name",NO_GENERATIVE_NUMERIC_FALLBACK,,,,NOT_RUN
+CSV-RANK-001,amc_ranking,Top 5 AMCs by total AAUM in Q1 2026,SQL,,INR_CRORE,2026-Q1,Requires approved AAUM additivity rule,NO_GENERATIVE_NUMERIC_FALLBACK,,,,NOT_RUN
+CSV-RANK-002,nav_rank,Top 10 schemes by NAV as of 2026-06-29,SQL,,INR_PER_UNIT,2026-06-29,No hidden equity/growth-only filter,NO_GENERATIVE_NUMERIC_FALLBACK,,,,NOT_RUN
+CSV-RANK-003,nav_rank,Top 10 schemes by NAV,CLARIFY_OR_POLICY,,INR_PER_UNIT,,Return documented as-of and filter policy,MUST_NOT_SILENTLY_FILTER,,,,NOT_RUN
+CSV-RANK-004,aaum_rank,Highest average AUM scheme,CLARIFY_OR_POLICY,,INR_CRORE,,Plan vs scheme denominator ambiguous,NO_UNAPPROVED_METRIC,,,,NOT_RUN
+CSV-DISTRIB-001,amc_scheme_type,Open ended vs close ended among top five AMCs,SQL,,PERCENT,,Counts and denominator over canonical scheme IDs,SUM_PERCENTAGES_WITHIN_TOLERANCE,,,,NOT_RUN
+CSV-DISTRIB-002,scheme_category,Category-level AUM market share by quarter,SQL,,PERCENT,2026-Q1,Only dataset-derived share until population completeness proven,NO_INDUSTRY_COMPLETE_CLAIM,,,,NOT_RUN
+CSV-CASE-001,date_mismatch,Compare AAUM quarter Q1 to NAV date June 29,MIXED,,MIXED,,Show distinct periods and proper qualification,SOURCE_DATE_EXPLICIT,,,,NOT_RUN
+CSV-CASE-002,closure_ambiguous,Number of inactive funds from Closure_Date,CLARIFY_OR_POLICY,,COUNT,,Source Closure_Date semantics unapproved,MUST_NOT_INFER_INACTIVE,,,,NOT_RUN
+CSV-CASE-003,no_match,NAV of definitely nonexistent AMC scheme,NO_MATCH,,,,"Explicit no match, no invented data",ABSTAIN,,,,NOT_RUN
+CSV-CASE-004,name_collision,Find scheme with same display name at different AMCs,AMBIGUOUS,,,,Require canonical identity disambiguation,NO_MERGE_BY_NAME_ONLY,,,,NOT_RUN
+CSV-CASE-005,duplicate_row,Add duplicate chunk row during ingest,INGEST_FAIL,,,,"Quarantine or stable approved dedupe, old ACTIVE preserved",NO_PARTIAL_ACTIVATION,,,,NOT_RUN
+CSV-CASE-006,missing_chunk,Remove chunk 022 in staging,INGEST_FAIL,,,,Reject missing 495-row suffix,NO_PARTIAL_ACTIVATION,,,,NOT_RUN
+CSV-CASE-007,struct_db_down,Structured executor unavailable during ranking,STRUCTURED_SOURCE_UNAVAILABLE,,,,No vector fallback for financial answer,NO_GENERATIVE_NUMERIC_FALLBACK,,,,NOT_RUN
+CSV-CASE-008,precision,"AAUM and NAV with exact decimals, nulls and overflow",SQL,,EXACT_DECIMAL,,Typed conversion tests with Decimal/scaled integer,NO_FLOAT_DRIFT,,,,NOT_RUN
+CSV-MIXED-001,mixed_regulation,NAV for scheme X and applicable SEBI limit,SQL_PLUS_DOCUMENT,,MIXED,,"NAV from row, limit from dated authoritative clause",DUAL_PROVENANCE,,,,NOT_RUN
+CSV-MIXED-002,multi_turn,What about the same scheme last quarter?,RESOLVED_MULTITURN,,INR_CRORE,,Carry entity+metric and change quarter only,NO_PERIOD_CONFUSION,,,,NOT_RUN
+FEEDBACK-001,wrong_claim_report,Report wrong NAV then adjudicate against active row,ISSUE_TRIAGE,,,,Confirm only if independent evidence disagrees,NO_AUTO_PATCH,,,,NOT_RUN
+FEEDBACK-002,false_correction,User reports knowingly incorrect NAV alternative,REJECT_FEEDBACK,,,,No source mutation; reason documented,NO_AUTO_PATCH,,,,NOT_RUN
+FEEDBACK-003,passive_timeout,User leaves page without explicit feedback,UNKNOWN_SIGNAL,,,,Silence is neither satisfaction nor confirmed error,NO_AUTO_REPAIR,,,,NOT_RUN
+REPAIR-001,pending_patch,Propose higher NAV without review,DRAFT_ONLY,,,,Pending patch excluded from answers and index,NO_TRUTH_OVERRIDE,,,,NOT_RUN
+REPAIR-002,publish_no_graph,Approve patch while Neo4j unavailable,RETRYABLE_FAILED,,,,"No APPLIED status, old active version",RECEIPT_REQUIRED,,,,NOT_RUN
+REPAIR-003,duplicate_event,Deliver same repair.event twice,ONE_LOGICAL_EFFECT,,,,Idempotency prevents duplicate mutation,IDEMPOTENT,,,,NOT_RUN
+REPAIR-004,tenant_mismatch,Apply approved repair in different tenant,FORBIDDEN,,,,Tenant mismatch blocked at mutation and read,TENANT_ISOLATION,,,,NOT_RUN
+REPAIR-005,rollback,Canary detects bad financial correction,ROLLBACK,,,,"Old active pointer, cache namespace, validation restored",RELEASE_ROLLBACK,,,,NOT_RUN
+SECURITY-001,role_spoof,Send X-User-Role ADMIN without bearer principal,UNAUTHORIZED,,,,No approval or read of restricted resources,REJECT,,,,NOT_RUN
+SECURITY-002,admin_account,Create user without verified admin scope,UNAUTHORIZED,,,,Never generates active account,REJECT,,,,NOT_RUN

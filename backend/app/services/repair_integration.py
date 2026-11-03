@@ -197,7 +197,11 @@ class RepairEngineIntegration:
                         continue
 
                     risk = assess_risk_level(conf, canonical_val, corrected_val)
-                    claim_is_auto_approved = (conf >= 0.95 and risk == "LOW")
+                    settings = get_settings()
+                    claim_is_auto_approved = (
+                        bool(getattr(settings, "repair_auto_approve_enabled", False))
+                        and (conf >= 0.95 and risk == "LOW")
+                    )
 
                     patch_response = await self._create_patch_via_api(
                         client=client,
@@ -290,43 +294,45 @@ class RepairEngineIntegration:
                 logger.debug("Option 3 synthetic chunk ingestion notice: %s", v_exc)
 
             # Hands-Free Auto-Approval: automatically promote high-confidence (>= 0.95) & LOW-risk patches
-            for patch_id, claim in zip(result["patches_created"], correction_claims):
-                try:
-                    conf = float(claim.get("confidence") or record.adjudication_confidence or 0.0)
-                    canonical_val = claim.get("rejected_value") or "canonical"
-                    corrected_val = claim.get("asserted_value") or claim.get("rejected_value") or "repair_flagged"
-                    if conf >= 0.95:
-                        risk = assess_risk_level(conf, canonical_val, corrected_val)
-                        if risk == "LOW":
-                            from app.graph.correction_patch_layer import get_correction_patch_layer
-                            p_layer = get_correction_patch_layer()
-                            patch_obj = p_layer.get_patch_by_id(patch_id)
-                            if patch_obj and patch_obj.approved:
-                                logger.debug("Patch %s is already approved and permanent; skipping redundant auto-promote", patch_id)
-                                continue
-                            log_step_info(logger, "HANDS_FREE_AUTO_APPROVE", "Step 5: Auto-approved low-risk patch %s (confidence=%.2f, risk=LOW)", patch_id, conf)
-                            from app.graph.correction_patch_layer import get_correction_patch_layer
-                            from app.engine.graph_store import get_driver, config as g_config
-                            p_layer = get_correction_patch_layer()
-                            n_session = None
-                            try:
-                                driver = get_driver()
-                                if driver:
-                                    n_session = driver.session(database=getattr(g_config, "NEO4J_DATABASE", "neo4j"))
-                                p_layer.promote_to_permanent(patch_id, neo4j_session=n_session)
-                            finally:
-                                if n_session:
-                                    try:
-                                        n_session.close()
-                                    except Exception:
-                                        pass
-                            try:
-                                await self.promote_patch(patch_id)
-                            except Exception as ms_err:
-                                logger.debug("Promote patch microservice sync notice: %s", ms_err)
-                            result.setdefault("auto_approved", []).append(patch_id)
-                except Exception as auto_exc:
-                    logger.debug("Hands-free auto-approval notice: %s", auto_exc)
+            # GOV-03 / G02-T12 / G10-T01: Guarded by settings.repair_auto_approve_enabled
+            if getattr(settings, "repair_auto_approve_enabled", False):
+                for patch_id, claim in zip(result["patches_created"], correction_claims):
+                    try:
+                        conf = float(claim.get("confidence") or record.adjudication_confidence or 0.0)
+                        canonical_val = claim.get("rejected_value") or "canonical"
+                        corrected_val = claim.get("asserted_value") or claim.get("rejected_value") or "repair_flagged"
+                        if conf >= 0.95:
+                            risk = assess_risk_level(conf, canonical_val, corrected_val)
+                            if risk == "LOW":
+                                from app.graph.correction_patch_layer import get_correction_patch_layer
+                                p_layer = get_correction_patch_layer()
+                                patch_obj = p_layer.get_patch_by_id(patch_id)
+                                if patch_obj and patch_obj.approved:
+                                    logger.debug("Patch %s is already approved and permanent; skipping redundant auto-promote", patch_id)
+                                    continue
+                                log_step_info(logger, "HANDS_FREE_AUTO_APPROVE", "Step 5: Auto-approved low-risk patch %s (confidence=%.2f, risk=LOW)", patch_id, conf)
+                                from app.graph.correction_patch_layer import get_correction_patch_layer
+                                from app.engine.graph_store import get_driver, config as g_config
+                                p_layer = get_correction_patch_layer()
+                                n_session = None
+                                try:
+                                    driver = get_driver()
+                                    if driver:
+                                        n_session = driver.session(database=getattr(g_config, "NEO4J_DATABASE", "neo4j"))
+                                    p_layer.promote_to_permanent(patch_id, neo4j_session=n_session)
+                                finally:
+                                    if n_session:
+                                        try:
+                                            n_session.close()
+                                        except Exception:
+                                            pass
+                                try:
+                                    await self.promote_patch(patch_id)
+                                except Exception as ms_err:
+                                    logger.debug("Promote patch microservice sync notice: %s", ms_err)
+                                result.setdefault("auto_approved", []).append(patch_id)
+                    except Exception as auto_exc:
+                        logger.debug("Hands-free auto-approval notice: %s", auto_exc)
 
         is_auto_approved = bool(result.get("auto_approved"))
 

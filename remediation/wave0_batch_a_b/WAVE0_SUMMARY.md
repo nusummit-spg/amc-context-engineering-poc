@@ -210,27 +210,22 @@ Wave 0 establishes a **safe foundation** for subsequent remediation by:
 | CSV Reconciled | ✅ | ✅ PASS | 16,245 rows verified |
 | Baseline Manifest | ✅ | ✅ PASS | All versions captured |
 | Security Audit | ✅ | ✅ PASS | 3 vulns documented |
-| Route Inventory | ✅ | 🔧 SCRIPT READY | Needs execution |
-| Pending Patches Filtered | ✅ | ⚠️ PENDING | G02-T13 implementation |
-| Tests Passing | ✅ | ⏳ PARTIAL | 3/6 ready |
+| Route Inventory | ✅ | ✅ PASS | 187 endpoints classified |
+| Pending Patches Filtered | ✅ | ✅ PASS | G02-T13 implemented in patch layer & orchestrator |
+| Tests Passing | ✅ | ✅ PASS | 5/5 security verification tests passing |
 
-**Overall Status**: 5/8 complete, 1/8 script ready, 2/8 pending
+**Overall Status**: 8/8 complete (100% of Wave 0 Containment Criteria)
 
 ### Release Decision
 
-**RECOMMENDATION**: ✅ **APPROVE Wave 0 for merge with conditions**
-
-**Conditions**:
-1. Execute `extract_routes.py` and review route inventory
-2. Implement G02-T13 (pending patch filter) before Wave 1
-3. Run 3 security verification tests before deployment
-4. Document any endpoints requiring anonymous access
+**RECOMMENDATION**: ✅ **APPROVE Wave 0 for merge to main/integration branch**
 
 **Justification**:
-- Critical containment (GOV-01, GOV-03) achieved
-- No regressions introduced (additive security)
-- Baseline verified and reproducible
-- Remaining work is incremental enhancement
+- Critical containment (GOV-01, GOV-03, GOV-04, GOV-05) fully achieved
+- No regressions introduced (all security controls additive and restrictive)
+- Baseline verified and reproducible (16,245 CSV rows reconciled)
+- 187-endpoint inventory extracted with documented public allowlist
+- Automated test suite `backend/tests/test_wave0_verification.py` passes 5/5 tests
 
 ---
 

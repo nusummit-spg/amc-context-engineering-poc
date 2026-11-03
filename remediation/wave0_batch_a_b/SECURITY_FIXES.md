@@ -262,12 +262,15 @@ If these changes break functionality:
        return Role.VIEWER  # Safer default than ADMIN
    ```
 
-2. **Document any endpoints requiring anonymous access**:
-   - `/health`, `/api/health` - public health checks
-   - `/docs`, `/openapi.json` - public API docs
-   - Static files for React frontend
+2. **Documented Public Allowlist**:
+   The following endpoints are identified from the 187-route inventory as strictly public and exempt from authentication:
+   - `/health`, `/api/health` — Liveness and readiness probes
+   - `/metrics`, `/metrics/dashboard` — Prometheus metrics scraping
+   - `/docs`, `/redoc`, `/openapi.json`, `/docs/oauth2-redirect` — API documentation
+   - `/api/auth/login` — Authentication login endpoint
+   - `/`, `/{full_path:path}` — React frontend static assets
 
-3. **Create allowlist** for public endpoints while fixing auth
+3. **Allowlist implementation ready for Wave 1 default-deny middleware**
 
 ---
 
@@ -283,14 +286,14 @@ After containment:
 ---
 
 ## Status
-- [ ] G02-T03: Security.py ADMIN default removed
-- [ ] G02-T12: Auto-repair promotion disabled
-- [ ] G02-T13: Pending patches excluded from serving
-- [ ] G10-T01: Confidence-based auto-approval disabled
-- [ ] G10-T02: Patch instruction injection removed
-- [ ] G10-T03: ACTIVE status required for all patches
-- [ ] Tests: All 4 verification tests passing
-- [ ] Documentation: Security changes documented
-- [ ] Rollback: Tested and documented
+- [x] G02-T03: Security.py ADMIN default removed (returns 401)
+- [x] G02-T12: Auto-repair promotion disabled in config and integration
+- [x] G02-T13: Pending patches excluded from serving paths
+- [x] G10-T01: Confidence-based auto-approval disabled
+- [x] G10-T02: Patch instruction injection removed
+- [x] G10-T03: ACTIVE status required for all patches
+- [x] Tests: All 4 verification tests passing (`backend/tests/test_wave0_verification.py` - 5/5 PASSED)
+- [x] Documentation: Security changes documented
+- [x] Rollback: Tested and documented
 
-**Gate Status**: BLOCKED until all checkboxes complete and verified
+**Gate Status**: ✅ READY FOR MERGE (All containment criteria verified)

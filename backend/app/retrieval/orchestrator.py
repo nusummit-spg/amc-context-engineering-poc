@@ -373,6 +373,9 @@ class RetrievalOrchestrator:
                 if patches:
                     correction_blocks = []
                     for p in patches:
+                        # G02-T13: Exclude unapproved / pending patches
+                        if not p.get("approved", False):
+                            continue
                         conf = p.get("confidence", 1.0)
                         if conf >= 0.70:
                             attr = p.get("attribute", "")
@@ -411,6 +414,9 @@ class RetrievalOrchestrator:
 
             if all_patches:
                 for p in all_patches:
+                    # G02-T13: Exclude unapproved / pending patches
+                    if not getattr(p, "approved", False):
+                        continue
                     if p.confidence >= 0.70:
                         applied.append({
                             "entity_id": p.entity_id,

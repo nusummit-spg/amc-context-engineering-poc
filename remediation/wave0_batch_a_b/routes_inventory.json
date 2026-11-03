@@ -10,7 +10,7 @@
         "GET"
       ],
       "name": "openapi",
-      "endpoint": "<function FastAPI.setup.<locals>.openapi at 0x000002207F3B8B80>"
+      "endpoint": "<function FastAPI.setup.<locals>.openapi at 0x0000018248138AE0>"
     },
     {
       "path": "/docs",
@@ -19,7 +19,7 @@
         "GET"
       ],
       "name": "swagger_ui_html",
-      "endpoint": "<function FastAPI.setup.<locals>.swagger_ui_html at 0x000002207F3BB060>"
+      "endpoint": "<function FastAPI.setup.<locals>.swagger_ui_html at 0x000001824813AFC0>"
     },
     {
       "path": "/docs/oauth2-redirect",
@@ -28,7 +28,7 @@
         "GET"
       ],
       "name": "swagger_ui_redirect",
-      "endpoint": "<function FastAPI.setup.<locals>.swagger_ui_redirect at 0x000002207F3BB100>"
+      "endpoint": "<function FastAPI.setup.<locals>.swagger_ui_redirect at 0x000001824813B060>"
     },
     {
       "path": "/redoc",
@@ -37,7 +37,7 @@
         "GET"
       ],
       "name": "redoc_html",
-      "endpoint": "<function FastAPI.setup.<locals>.redoc_html at 0x000002207F3BB600>"
+      "endpoint": "<function FastAPI.setup.<locals>.redoc_html at 0x000001824813B560>"
     },
     {
       "path": "/api/auth/login",
@@ -45,9 +45,9 @@
         "POST"
       ],
       "name": "login",
-      "endpoint": "<function login at 0x000002207C893240>",
+      "endpoint": "<function login at 0x000001822C6131A0>",
       "dependencies": [
-        "<function get_auth_service at 0x000002207C6C7D80>"
+        "<function get_auth_service at 0x000001822C443CE0>"
       ]
     },
     {
@@ -56,9 +56,9 @@
         "POST"
       ],
       "name": "logout",
-      "endpoint": "<function logout at 0x000002207C8D6840>",
+      "endpoint": "<function logout at 0x000001822C6527A0>",
       "dependencies": [
-        "<function get_auth_service at 0x000002207C6C7D80>"
+        "<function get_auth_service at 0x000001822C443CE0>"
       ]
     },
     {
@@ -67,9 +67,9 @@
         "GET"
       ],
       "name": "me",
-      "endpoint": "<function me at 0x000002207C8D6340>",
+      "endpoint": "<function me at 0x000001822C6522A0>",
       "dependencies": [
-        "<function get_auth_service at 0x000002207C6C7D80>"
+        "<function get_auth_service at 0x000001822C443CE0>"
       ]
     },
     {
@@ -78,7 +78,7 @@
         "GET"
       ],
       "name": "list_users",
-      "endpoint": "<function list_users at 0x000002207C7959E0>",
+      "endpoint": "<function list_users at 0x000001822C519940>",
       "dependencies": []
     },
     {
@@ -87,7 +87,7 @@
         "POST"
       ],
       "name": "sync_users",
-      "endpoint": "<function sync_users at 0x000002207C8922A0>",
+      "endpoint": "<function sync_users at 0x000001822C612200>",
       "dependencies": []
     },
     {
@@ -96,7 +96,7 @@
         "POST"
       ],
       "name": "create_or_update_user",
-      "endpoint": "<function create_or_update_user at 0x000002207C892DE0>",
+      "endpoint": "<function create_or_update_user at 0x000001822C612D40>",
       "dependencies": []
     },
     {
@@ -105,10 +105,10 @@
         "DELETE"
       ],
       "name": "delete_user",
-      "endpoint": "<function delete_user at 0x000002207C892480>",
+      "endpoint": "<function delete_user at 0x000001822C6123E0>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_current_user_optional at 0x000002207C6C8040>"
+        "<function get_current_user_optional at 0x000001822C443F60>"
       ]
     },
     {
@@ -117,7 +117,7 @@
         "GET"
       ],
       "name": "get_rbac_matrix",
-      "endpoint": "<function get_rbac_matrix at 0x000002207C8936A0>",
+      "endpoint": "<function get_rbac_matrix at 0x000001822C613600>",
       "dependencies": []
     },
     {
@@ -126,7 +126,7 @@
         "GET"
       ],
       "name": "get_audit_logs",
-      "endpoint": "<function get_audit_logs at 0x000002207C8925C0>",
+      "endpoint": "<function get_audit_logs at 0x000001822C612520>",
       "dependencies": []
     },
     {
@@ -135,7 +135,7 @@
         "POST"
       ],
       "name": "run_production_pipeline",
-      "endpoint": "<function run_production_pipeline at 0x000002207C892020>",
+      "endpoint": "<function run_production_pipeline at 0x000001822C611F80>",
       "dependencies": []
     },
     {
@@ -144,7 +144,7 @@
         "POST"
       ],
       "name": "check_staleness_drift",
-      "endpoint": "<function check_staleness_drift at 0x000002207C892A20>",
+      "endpoint": "<function check_staleness_drift at 0x000001822C612980>",
       "dependencies": []
     },
     {
@@ -153,7 +153,7 @@
         "POST"
       ],
       "name": "upload_document",
-      "endpoint": "<function upload_document at 0x000002207C893EC0>",
+      "endpoint": "<function upload_document at 0x000001822C613E20>",
       "dependencies": []
     },
     {
@@ -162,7 +162,7 @@
         "GET"
       ],
       "name": "get_indexing_tasks",
-      "endpoint": "<function get_indexing_tasks at 0x000002207C8D51C0>",
+      "endpoint": "<function get_indexing_tasks at 0x000001822C651120>",
       "dependencies": []
     },
     {
@@ -171,7 +171,7 @@
         "GET"
       ],
       "name": "get_active_indexing_tasks",
-      "endpoint": "<function get_active_indexing_tasks at 0x000002207C8931A0>",
+      "endpoint": "<function get_active_indexing_tasks at 0x000001822C613060>",
       "dependencies": []
     },
     {
@@ -180,7 +180,7 @@
         "GET"
       ],
       "name": "get_unread_notifications",
-      "endpoint": "<function get_unread_notifications at 0x000002207C8927A0>",
+      "endpoint": "<function get_unread_notifications at 0x000001822C612840>",
       "dependencies": []
     },
     {
@@ -189,7 +189,7 @@
         "POST"
       ],
       "name": "mark_notification_read",
-      "endpoint": "<function mark_notification_read at 0x000002207C8D5580>",
+      "endpoint": "<function mark_notification_read at 0x000001822C613F60>",
       "dependencies": []
     },
     {
@@ -198,7 +198,7 @@
         "POST"
       ],
       "name": "mark_all_notifications_read",
-      "endpoint": "<function mark_all_notifications_read at 0x000002207C8D49A0>",
+      "endpoint": "<function mark_all_notifications_read at 0x000001822C6509A0>",
       "dependencies": []
     },
     {
@@ -207,7 +207,7 @@
         "GET"
       ],
       "name": "get_proposed_edges",
-      "endpoint": "<function get_proposed_edges at 0x000002207C8D4040>",
+      "endpoint": "<function get_proposed_edges at 0x000001822C650220>",
       "dependencies": []
     },
     {
@@ -216,7 +216,7 @@
         "POST"
       ],
       "name": "confirm_proposed_edge",
-      "endpoint": "<function confirm_proposed_edge at 0x000002207C8D5C60>",
+      "endpoint": "<function confirm_proposed_edge at 0x000001822C651BC0>",
       "dependencies": []
     },
     {
@@ -225,7 +225,7 @@
         "POST"
       ],
       "name": "reject_proposed_edge",
-      "endpoint": "<function reject_proposed_edge at 0x000002207C891BC0>",
+      "endpoint": "<function reject_proposed_edge at 0x000001822C611B20>",
       "dependencies": []
     },
     {
@@ -234,7 +234,7 @@
         "GET"
       ],
       "name": "get_compliance_report",
-      "endpoint": "<function get_compliance_report at 0x000002207C8D6480>",
+      "endpoint": "<function get_compliance_report at 0x000001822C6523E0>",
       "dependencies": []
     },
     {
@@ -243,7 +243,7 @@
         "GET"
       ],
       "name": "get_intent_cache_stats",
-      "endpoint": "<function get_intent_cache_stats at 0x000002207C8D5B20>",
+      "endpoint": "<function get_intent_cache_stats at 0x000001822C651A80>",
       "dependencies": []
     },
     {
@@ -252,7 +252,7 @@
         "GET"
       ],
       "name": "get_intent_cache_stats",
-      "endpoint": "<function get_intent_cache_stats at 0x000002207C8D5B20>",
+      "endpoint": "<function get_intent_cache_stats at 0x000001822C651A80>",
       "dependencies": []
     },
     {
@@ -261,7 +261,7 @@
         "POST"
       ],
       "name": "invalidate_domain_endpoint",
-      "endpoint": "<function invalidate_domain_endpoint at 0x000002207C8D65C0>",
+      "endpoint": "<function invalidate_domain_endpoint at 0x000001822C652520>",
       "dependencies": []
     },
     {
@@ -270,7 +270,7 @@
         "POST"
       ],
       "name": "clear_intent_cache_endpoint",
-      "endpoint": "<function clear_intent_cache_endpoint at 0x000002207C8939C0>",
+      "endpoint": "<function clear_intent_cache_endpoint at 0x000001822C613B00>",
       "dependencies": []
     },
     {
@@ -279,7 +279,7 @@
         "POST"
       ],
       "name": "clear_intent_cache_endpoint",
-      "endpoint": "<function clear_intent_cache_endpoint at 0x000002207C8939C0>",
+      "endpoint": "<function clear_intent_cache_endpoint at 0x000001822C613B00>",
       "dependencies": []
     },
     {
@@ -288,11 +288,11 @@
         "GET"
       ],
       "name": "admin_list_feedback_issues",
-      "endpoint": "<function admin_list_feedback_issues at 0x000002207C8D5EE0>",
+      "endpoint": "<function admin_list_feedback_issues at 0x000001822C651E40>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_current_user_optional at 0x000002207C6C8040>",
-        "<function get_client_role at 0x000002207C70D8A0>"
+        "<function get_current_user_optional at 0x000001822C443F60>",
+        "<function get_client_role at 0x000001822C491800>"
       ]
     },
     {
@@ -301,11 +301,11 @@
         "POST"
       ],
       "name": "run_query_v2",
-      "endpoint": "<function run_query_v2 at 0x000002207E5F2160>",
+      "endpoint": "<function run_query_v2 at 0x000001822E36E0C0>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>",
-        "<function get_current_user_optional at 0x000002207C6C8040>"
+        "<function get_container at 0x000001822C443C40>",
+        "<function get_current_user_optional at 0x000001822C443F60>"
       ]
     },
     {
@@ -314,9 +314,9 @@
         "POST"
       ],
       "name": "run_traditional",
-      "endpoint": "<function run_traditional at 0x000002207E5F2D40>",
+      "endpoint": "<function run_traditional at 0x000001822E36ECA0>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -325,9 +325,9 @@
         "POST"
       ],
       "name": "run_contextgraph",
-      "endpoint": "<function run_contextgraph at 0x000002207E5F28E0>",
+      "endpoint": "<function run_contextgraph at 0x000001822E36E840>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -336,9 +336,9 @@
         "POST"
       ],
       "name": "run_query",
-      "endpoint": "<function run_query at 0x000002207E5F31A0>",
+      "endpoint": "<function run_query at 0x000001822E36F100>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -347,11 +347,11 @@
         "POST"
       ],
       "name": "query_stream",
-      "endpoint": "<function query_stream at 0x000002207E5F3100>",
+      "endpoint": "<function query_stream at 0x000001822E36F060>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>",
-        "<function get_current_user_optional at 0x000002207C6C8040>"
+        "<function get_container at 0x000001822C443C40>",
+        "<function get_current_user_optional at 0x000001822C443F60>"
       ]
     },
     {
@@ -360,7 +360,7 @@
         "GET"
       ],
       "name": "stream_health_check",
-      "endpoint": "<function stream_health_check at 0x000002207E5F3C40>",
+      "endpoint": "<function stream_health_check at 0x000001822E36FBA0>",
       "dependencies": []
     },
     {
@@ -369,9 +369,9 @@
         "GET"
       ],
       "name": "get_response_pending_feedback_notice",
-      "endpoint": "<function get_response_pending_feedback_notice at 0x000002207E5F39C0>",
+      "endpoint": "<function get_response_pending_feedback_notice at 0x000001822E36F920>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -380,11 +380,11 @@
         "POST"
       ],
       "name": "run_chat_v2",
-      "endpoint": "<function run_chat_v2 at 0x000002207E675080>",
+      "endpoint": "<function run_chat_v2 at 0x000001822E3F8FE0>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_current_user at 0x000002207C6C7E20>",
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_current_user at 0x000001822C443D80>",
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -393,11 +393,11 @@
         "POST"
       ],
       "name": "run_chat",
-      "endpoint": "<function run_chat at 0x000002207E675C60>",
+      "endpoint": "<function run_chat at 0x000001822E3F9BC0>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_current_user at 0x000002207C6C7E20>",
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_current_user at 0x000001822C443D80>",
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -406,11 +406,11 @@
         "POST"
       ],
       "name": "run_chat",
-      "endpoint": "<function run_chat at 0x000002207E675C60>",
+      "endpoint": "<function run_chat at 0x000001822E3F9BC0>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_current_user at 0x000002207C6C7E20>",
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_current_user at 0x000001822C443D80>",
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -419,11 +419,11 @@
         "POST"
       ],
       "name": "chat_stream",
-      "endpoint": "<function chat_stream at 0x000002207E676660>",
+      "endpoint": "<function chat_stream at 0x000001822E3FA5C0>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_current_user at 0x000002207C6C7E20>",
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_current_user at 0x000001822C443D80>",
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -432,11 +432,11 @@
         "POST"
       ],
       "name": "generate_title_endpoint",
-      "endpoint": "<function generate_title_endpoint at 0x000002207E6772E0>",
+      "endpoint": "<function generate_title_endpoint at 0x000001822E3FB240>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_current_user at 0x000002207C6C7E20>",
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_current_user at 0x000001822C443D80>",
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -445,11 +445,11 @@
         "GET"
       ],
       "name": "list_sessions",
-      "endpoint": "<function list_sessions at 0x000002207EAF0860>",
+      "endpoint": "<function list_sessions at 0x00000182468A1B20>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_current_user at 0x000002207C6C7E20>",
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_current_user at 0x000001822C443D80>",
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -458,11 +458,11 @@
         "GET"
       ],
       "name": "get_session",
-      "endpoint": "<function get_session at 0x000002207EAF11C0>",
+      "endpoint": "<function get_session at 0x00000182468A0EA0>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_current_user at 0x000002207C6C7E20>",
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_current_user at 0x000001822C443D80>",
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -471,11 +471,11 @@
         "POST"
       ],
       "name": "save_session",
-      "endpoint": "<function save_session at 0x000002207EAF39C0>",
+      "endpoint": "<function save_session at 0x00000182468A3920>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_current_user at 0x000002207C6C7E20>",
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_current_user at 0x000001822C443D80>",
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -484,11 +484,11 @@
         "DELETE"
       ],
       "name": "delete_session",
-      "endpoint": "<function delete_session at 0x000002207EAF2A20>",
+      "endpoint": "<function delete_session at 0x00000182468A2C00>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_current_user at 0x000002207C6C7E20>",
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_current_user at 0x000001822C443D80>",
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -497,9 +497,9 @@
         "GET"
       ],
       "name": "get_tree",
-      "endpoint": "<function get_tree at 0x000002207EAF2520>",
+      "endpoint": "<function get_tree at 0x00000182468A2200>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -508,9 +508,9 @@
         "GET"
       ],
       "name": "node_documents",
-      "endpoint": "<function node_documents at 0x000002207EAF2B60>",
+      "endpoint": "<function node_documents at 0x00000182468A2D40>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -519,9 +519,9 @@
         "GET"
       ],
       "name": "highlight_paths",
-      "endpoint": "<function highlight_paths at 0x000002207EAF3380>",
+      "endpoint": "<function highlight_paths at 0x00000182468A3420>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -530,9 +530,9 @@
         "GET"
       ],
       "name": "full_graph",
-      "endpoint": "<function full_graph at 0x000002207EA1DEE0>",
+      "endpoint": "<function full_graph at 0x00000182467CDB20>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -541,9 +541,9 @@
         "GET"
       ],
       "name": "neighborhood",
-      "endpoint": "<function neighborhood at 0x000002207EA1EFC0>",
+      "endpoint": "<function neighborhood at 0x00000182467CF060>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -552,9 +552,9 @@
         "GET"
       ],
       "name": "traversal_highlight",
-      "endpoint": "<function traversal_highlight at 0x000002207EA1E700>",
+      "endpoint": "<function traversal_highlight at 0x00000182467CE8E0>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -563,9 +563,9 @@
         "GET"
       ],
       "name": "list_documents",
-      "endpoint": "<function list_documents at 0x000002207E8A80E0>",
+      "endpoint": "<function list_documents at 0x000001824665C0E0>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -574,9 +574,9 @@
         "GET"
       ],
       "name": "get_document",
-      "endpoint": "<function get_document at 0x000002207E828D60>",
+      "endpoint": "<function get_document at 0x00000182465D54E0>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -585,9 +585,9 @@
         "POST"
       ],
       "name": "ingest_file",
-      "endpoint": "<function ingest_file at 0x000002207EA1C400>",
+      "endpoint": "<function ingest_file at 0x00000182467CD620>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -596,9 +596,9 @@
         "POST"
       ],
       "name": "ingest_batch",
-      "endpoint": "<function ingest_batch at 0x000002207EA1E8E0>",
+      "endpoint": "<function ingest_batch at 0x00000182467CFBA0>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -607,7 +607,7 @@
         "GET"
       ],
       "name": "ingest_status",
-      "endpoint": "<function ingest_status at 0x000002207EA4CD60>",
+      "endpoint": "<function ingest_status at 0x00000182467FCAE0>",
       "dependencies": []
     },
     {
@@ -616,9 +616,9 @@
         "GET"
       ],
       "name": "status",
-      "endpoint": "<function status at 0x000002207EB440E0>",
+      "endpoint": "<function status at 0x00000182468F4040>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -627,9 +627,9 @@
         "GET"
       ],
       "name": "data_planes",
-      "endpoint": "<function data_planes at 0x000002207EB44680>",
+      "endpoint": "<function data_planes at 0x00000182468F45E0>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -638,9 +638,9 @@
         "GET"
       ],
       "name": "health",
-      "endpoint": "<function health at 0x000002207EAF20C0>",
+      "endpoint": "<function health at 0x00000182468A0B80>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -649,11 +649,11 @@
         "POST"
       ],
       "name": "run_compliance_audit",
-      "endpoint": "<function run_compliance_audit at 0x000002207E78D080>",
+      "endpoint": "<function run_compliance_audit at 0x00000182464E8FE0>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_current_user_optional at 0x000002207C6C8040>",
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_current_user_optional at 0x000001822C443F60>",
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -662,9 +662,9 @@
         "GET"
       ],
       "name": "get_violations",
-      "endpoint": "<function get_violations at 0x000002207E78E340>",
+      "endpoint": "<function get_violations at 0x00000182464EA2A0>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -673,9 +673,9 @@
         "GET"
       ],
       "name": "get_fund_violations",
-      "endpoint": "<function get_fund_violations at 0x000002207E78E520>",
+      "endpoint": "<function get_fund_violations at 0x00000182464EA480>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -684,10 +684,10 @@
         "POST"
       ],
       "name": "resolve_violation",
-      "endpoint": "<function resolve_violation at 0x000002207E78E5C0>",
+      "endpoint": "<function resolve_violation at 0x00000182464EA520>",
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>",
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_client_role at 0x000001822C491800>",
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -696,11 +696,11 @@
         "GET"
       ],
       "name": "get_compliance_scorecard",
-      "endpoint": "<function get_compliance_scorecard at 0x000002207E78EB60>",
+      "endpoint": "<function get_compliance_scorecard at 0x00000182464EAAC0>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_current_user_optional at 0x000002207C6C8040>",
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_current_user_optional at 0x000001822C443F60>",
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -709,9 +709,9 @@
         "GET"
       ],
       "name": "get_agent_metrics",
-      "endpoint": "<function get_agent_metrics at 0x000002207E78FC40>",
+      "endpoint": "<function get_agent_metrics at 0x00000182464EBBA0>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -720,9 +720,9 @@
         "GET"
       ],
       "name": "get_compliance_health",
-      "endpoint": "<function get_compliance_health at 0x000002207E78F100>",
+      "endpoint": "<function get_compliance_health at 0x00000182464EB060>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -731,9 +731,9 @@
         "GET"
       ],
       "name": "get_prometheus_metrics",
-      "endpoint": "<function get_prometheus_metrics at 0x000002207E78DD00>",
+      "endpoint": "<function get_prometheus_metrics at 0x00000182464E9C60>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -742,9 +742,9 @@
         "GET"
       ],
       "name": "generate_audit_report",
-      "endpoint": "<function generate_audit_report at 0x000002207E78E3E0>",
+      "endpoint": "<function generate_audit_report at 0x00000182464EA340>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -753,9 +753,9 @@
         "POST"
       ],
       "name": "run_batch_audit",
-      "endpoint": "<function run_batch_audit at 0x000002207E78DF80>",
+      "endpoint": "<function run_batch_audit at 0x00000182464E9260>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -764,9 +764,9 @@
         "POST"
       ],
       "name": "load_rules",
-      "endpoint": "<function load_rules at 0x000002207E78EDE0>",
+      "endpoint": "<function load_rules at 0x00000182464E9620>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -775,9 +775,9 @@
         "POST"
       ],
       "name": "run_multi_agent_audit",
-      "endpoint": "<function run_multi_agent_audit at 0x000002207E78F240>",
+      "endpoint": "<function run_multi_agent_audit at 0x00000182464EAF20>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -786,9 +786,9 @@
         "GET"
       ],
       "name": "export_violations_csv",
-      "endpoint": "<function export_violations_csv at 0x000002207E828040>",
+      "endpoint": "<function export_violations_csv at 0x00000182465D4040>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -797,9 +797,9 @@
         "GET"
       ],
       "name": "get_fund_details",
-      "endpoint": "<function get_fund_details at 0x000002207E78F4C0>",
+      "endpoint": "<function get_fund_details at 0x00000182464EB560>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -808,9 +808,9 @@
         "GET"
       ],
       "name": "get_rule_violations",
-      "endpoint": "<function get_rule_violations at 0x000002207E78CE00>",
+      "endpoint": "<function get_rule_violations at 0x00000182464E91C0>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -819,9 +819,9 @@
         "GET"
       ],
       "name": "get_compliance_status",
-      "endpoint": "<function get_compliance_status at 0x000002207E8284A0>",
+      "endpoint": "<function get_compliance_status at 0x00000182465D4400>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -830,7 +830,7 @@
         "GET"
       ],
       "name": "get_rule_regulatory_metadata",
-      "endpoint": "<function get_rule_regulatory_metadata at 0x000002207E828EA0>",
+      "endpoint": "<function get_rule_regulatory_metadata at 0x00000182465D4E00>",
       "dependencies": []
     },
     {
@@ -839,7 +839,7 @@
         "GET"
       ],
       "name": "list_compliance_funds",
-      "endpoint": "<function list_compliance_funds at 0x000002207E78ECA0>",
+      "endpoint": "<function list_compliance_funds at 0x00000182464E96C0>",
       "dependencies": []
     },
     {
@@ -848,7 +848,7 @@
         "GET"
       ],
       "name": "get_fund_audit_metadata",
-      "endpoint": "<function get_fund_audit_metadata at 0x000002207E829080>",
+      "endpoint": "<function get_fund_audit_metadata at 0x00000182465D4FE0>",
       "dependencies": []
     },
     {
@@ -857,7 +857,7 @@
         "GET"
       ],
       "name": "get_violation_remediation_metrics",
-      "endpoint": "<function get_violation_remediation_metrics at 0x000002207E829940>",
+      "endpoint": "<function get_violation_remediation_metrics at 0x00000182465D58A0>",
       "dependencies": []
     },
     {
@@ -866,7 +866,7 @@
         "GET"
       ],
       "name": "get_remediation_sla_report",
-      "endpoint": "<function get_remediation_sla_report at 0x000002207E829BC0>",
+      "endpoint": "<function get_remediation_sla_report at 0x00000182465D5B20>",
       "dependencies": []
     },
     {
@@ -875,9 +875,9 @@
         "GET"
       ],
       "name": "filter_compliance_violations",
-      "endpoint": "<function filter_compliance_violations at 0x000002207E828860>",
+      "endpoint": "<function filter_compliance_violations at 0x00000182465D47C0>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -886,7 +886,7 @@
         "GET"
       ],
       "name": "get_violation_root_cause",
-      "endpoint": "<function get_violation_root_cause at 0x000002207E82B4C0>",
+      "endpoint": "<function get_violation_root_cause at 0x00000182465D7420>",
       "dependencies": []
     },
     {
@@ -895,7 +895,7 @@
         "POST"
       ],
       "name": "create_or_update_root_cause",
-      "endpoint": "<function create_or_update_root_cause at 0x000002207E82B2E0>",
+      "endpoint": "<function create_or_update_root_cause at 0x00000182465D7240>",
       "dependencies": []
     },
     {
@@ -904,7 +904,7 @@
         "GET"
       ],
       "name": "list_violation_clusters",
-      "endpoint": "<function list_violation_clusters at 0x000002207E829EE0>",
+      "endpoint": "<function list_violation_clusters at 0x00000182465D5E40>",
       "dependencies": []
     },
     {
@@ -913,7 +913,7 @@
         "GET"
       ],
       "name": "get_violation_cluster_details",
-      "endpoint": "<function get_violation_cluster_details at 0x000002207E82A200>",
+      "endpoint": "<function get_violation_cluster_details at 0x00000182465D6160>",
       "dependencies": []
     },
     {
@@ -922,7 +922,7 @@
         "POST"
       ],
       "name": "create_violation_cluster",
-      "endpoint": "<function create_violation_cluster at 0x000002207E82B240>",
+      "endpoint": "<function create_violation_cluster at 0x00000182465D71A0>",
       "dependencies": []
     },
     {
@@ -931,7 +931,7 @@
         "GET"
       ],
       "name": "get_amc_family_analysis",
-      "endpoint": "<function get_amc_family_analysis at 0x000002207E829DA0>",
+      "endpoint": "<function get_amc_family_analysis at 0x00000182465D5D00>",
       "dependencies": []
     },
     {
@@ -940,7 +940,7 @@
         "POST"
       ],
       "name": "run_amc_family_analysis",
-      "endpoint": "<function run_amc_family_analysis at 0x000002207E82BB00>",
+      "endpoint": "<function run_amc_family_analysis at 0x00000182465D7A60>",
       "dependencies": []
     },
     {
@@ -949,7 +949,7 @@
         "GET"
       ],
       "name": "get_evidence_metadata_record",
-      "endpoint": "<function get_evidence_metadata_record at 0x000002207E8293A0>",
+      "endpoint": "<function get_evidence_metadata_record at 0x00000182465D5300>",
       "dependencies": []
     },
     {
@@ -958,7 +958,7 @@
         "POST"
       ],
       "name": "record_evidence_metadata_record",
-      "endpoint": "<function record_evidence_metadata_record at 0x000002207E82A2A0>",
+      "endpoint": "<function record_evidence_metadata_record at 0x00000182465D6200>",
       "dependencies": []
     },
     {
@@ -967,7 +967,7 @@
         "GET"
       ],
       "name": "get_compliance_dashboard_kpis",
-      "endpoint": "<function get_compliance_dashboard_kpis at 0x000002207E82BD80>",
+      "endpoint": "<function get_compliance_dashboard_kpis at 0x00000182464EAC00>",
       "dependencies": []
     },
     {
@@ -976,7 +976,7 @@
         "POST"
       ],
       "name": "refresh_compliance_dashboard_kpis",
-      "endpoint": "<function refresh_compliance_dashboard_kpis at 0x000002207E82AFC0>",
+      "endpoint": "<function refresh_compliance_dashboard_kpis at 0x00000182465D6980>",
       "dependencies": []
     },
     {
@@ -985,7 +985,7 @@
         "GET"
       ],
       "name": "get_realtime_compliance_monitoring",
-      "endpoint": "<function get_realtime_compliance_monitoring at 0x000002207E828400>",
+      "endpoint": "<function get_realtime_compliance_monitoring at 0x00000182465D4720>",
       "dependencies": []
     },
     {
@@ -994,7 +994,7 @@
         "GET"
       ],
       "name": "list_audit_trail_access_logs",
-      "endpoint": "<function list_audit_trail_access_logs at 0x000002207E78F2E0>",
+      "endpoint": "<function list_audit_trail_access_logs at 0x00000182465D7880>",
       "dependencies": []
     },
     {
@@ -1003,7 +1003,7 @@
         "POST"
       ],
       "name": "log_audit_trail_access_event",
-      "endpoint": "<function log_audit_trail_access_event at 0x000002207E829E40>",
+      "endpoint": "<function log_audit_trail_access_event at 0x00000182465D7BA0>",
       "dependencies": []
     },
     {
@@ -1012,7 +1012,7 @@
         "GET"
       ],
       "name": "verify_audit_trail_integrity",
-      "endpoint": "<function verify_audit_trail_integrity at 0x000002207E8A8720>",
+      "endpoint": "<function verify_audit_trail_integrity at 0x000001824665C680>",
       "dependencies": []
     },
     {
@@ -1021,7 +1021,7 @@
         "GET"
       ],
       "name": "verify_audit_trail_integrity",
-      "endpoint": "<function verify_audit_trail_integrity at 0x000002207E8A8720>",
+      "endpoint": "<function verify_audit_trail_integrity at 0x000001824665C680>",
       "dependencies": []
     },
     {
@@ -1030,7 +1030,7 @@
         "POST"
       ],
       "name": "sync_metrics_to_neo4j",
-      "endpoint": "<function sync_metrics_to_neo4j at 0x000002207E8A8860>",
+      "endpoint": "<function sync_metrics_to_neo4j at 0x000001824665C7C0>",
       "dependencies": []
     },
     {
@@ -1039,7 +1039,7 @@
         "POST"
       ],
       "name": "record_new_remediation",
-      "endpoint": "<function record_new_remediation at 0x000002207E8296C0>",
+      "endpoint": "<function record_new_remediation at 0x00000182465D6E80>",
       "dependencies": []
     },
     {
@@ -1048,7 +1048,7 @@
         "PATCH"
       ],
       "name": "update_violation_remediation",
-      "endpoint": "<function update_violation_remediation at 0x000002207E829620>",
+      "endpoint": "<function update_violation_remediation at 0x00000182465D6C00>",
       "dependencies": []
     },
     {
@@ -1057,7 +1057,7 @@
         "GET"
       ],
       "name": "export_compliance_data",
-      "endpoint": "<function export_compliance_data at 0x000002207E8A9120>",
+      "endpoint": "<function export_compliance_data at 0x000001824665D080>",
       "dependencies": []
     },
     {
@@ -1066,7 +1066,7 @@
         "GET"
       ],
       "name": "list_compliance_alerts",
-      "endpoint": "<function list_compliance_alerts at 0x000002207E8A9760>",
+      "endpoint": "<function list_compliance_alerts at 0x000001824665D6C0>",
       "dependencies": []
     },
     {
@@ -1075,7 +1075,7 @@
         "POST"
       ],
       "name": "evaluate_sla_breaches",
-      "endpoint": "<function evaluate_sla_breaches at 0x000002207E8A8180>",
+      "endpoint": "<function evaluate_sla_breaches at 0x000001824665CB80>",
       "dependencies": []
     },
     {
@@ -1084,7 +1084,7 @@
         "POST"
       ],
       "name": "acknowledge_compliance_alert",
-      "endpoint": "<function acknowledge_compliance_alert at 0x000002207E8A9B20>",
+      "endpoint": "<function acknowledge_compliance_alert at 0x000001824665DA80>",
       "dependencies": []
     },
     {
@@ -1093,7 +1093,7 @@
         "POST"
       ],
       "name": "resolve_compliance_alert",
-      "endpoint": "<function resolve_compliance_alert at 0x000002207E8AACA0>",
+      "endpoint": "<function resolve_compliance_alert at 0x000001824665EC00>",
       "dependencies": []
     },
     {
@@ -1102,7 +1102,7 @@
         "GET"
       ],
       "name": "verify_audit_trail_rsa_signatures",
-      "endpoint": "<function verify_audit_trail_rsa_signatures at 0x000002207E8AA3E0>",
+      "endpoint": "<function verify_audit_trail_rsa_signatures at 0x000001824665E340>",
       "dependencies": []
     },
     {
@@ -1111,7 +1111,7 @@
         "GET"
       ],
       "name": "get_dead_letter_queue",
-      "endpoint": "<function get_dead_letter_queue at 0x000002207E8AA200>",
+      "endpoint": "<function get_dead_letter_queue at 0x000001824665E160>",
       "dependencies": []
     },
     {
@@ -1120,7 +1120,7 @@
         "POST"
       ],
       "name": "replay_dead_letter_queue",
-      "endpoint": "<function replay_dead_letter_queue at 0x000002207E8A8EA0>",
+      "endpoint": "<function replay_dead_letter_queue at 0x000001824665CD60>",
       "dependencies": []
     },
     {
@@ -1129,7 +1129,7 @@
         "POST"
       ],
       "name": "dispatch_active_alerts",
-      "endpoint": "<function dispatch_active_alerts at 0x000002207E8A82C0>",
+      "endpoint": "<function dispatch_active_alerts at 0x000001824665C2C0>",
       "dependencies": []
     },
     {
@@ -1138,7 +1138,7 @@
         "GET"
       ],
       "name": "get_failure_taxonomy",
-      "endpoint": "<function get_failure_taxonomy at 0x000002207E8AA660>",
+      "endpoint": "<function get_failure_taxonomy at 0x000001824665E5C0>",
       "dependencies": []
     },
     {
@@ -1147,11 +1147,11 @@
         "GET"
       ],
       "name": "get_feedback_telemetry",
-      "endpoint": "<function get_feedback_telemetry at 0x000002207E8AA8E0>",
+      "endpoint": "<function get_feedback_telemetry at 0x000001824665E840>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>",
-        "<function get_current_user_optional at 0x000002207C6C8040>"
+        "<function get_client_role at 0x000001822C491800>",
+        "<function get_current_user_optional at 0x000001822C443F60>"
       ]
     },
     {
@@ -1160,10 +1160,10 @@
         "GET"
       ],
       "name": "get_pending_feedback_notice",
-      "endpoint": "<function get_pending_feedback_notice at 0x000002207E82A7A0>",
+      "endpoint": "<function get_pending_feedback_notice at 0x00000182465D5080>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>",
-        "<function get_client_role at 0x000002207C70D8A0>"
+        "<function get_db at 0x000001822E05D580>",
+        "<function get_client_role at 0x000001822C491800>"
       ]
     },
     {
@@ -1172,10 +1172,10 @@
         "GET"
       ],
       "name": "get_feedback_status",
-      "endpoint": "<function get_feedback_status at 0x000002207E8A9800>",
+      "endpoint": "<function get_feedback_status at 0x000001824665D760>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>",
-        "<function get_client_role at 0x000002207C70D8A0>"
+        "<function get_db at 0x000001822E05D580>",
+        "<function get_client_role at 0x000001822C491800>"
       ]
     },
     {
@@ -1184,11 +1184,11 @@
         "GET"
       ],
       "name": "get_my_feedback",
-      "endpoint": "<function get_my_feedback at 0x000002207E8AA700>",
+      "endpoint": "<function get_my_feedback at 0x000001824665E7A0>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_current_user at 0x000002207C6C7E20>",
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_current_user at 0x000001822C443D80>",
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1197,10 +1197,10 @@
         "POST"
       ],
       "name": "reconcile_feedback_categories",
-      "endpoint": "<function reconcile_feedback_categories at 0x000002207E82ACA0>",
+      "endpoint": "<function reconcile_feedback_categories at 0x00000182465D5A80>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>",
-        "<function get_client_role at 0x000002207C70D8A0>"
+        "<function get_db at 0x000001822E05D580>",
+        "<function get_client_role at 0x000001822C491800>"
       ]
     },
     {
@@ -1209,12 +1209,12 @@
         "POST"
       ],
       "name": "initiate_issue_repair",
-      "endpoint": "<function initiate_issue_repair at 0x000002207E8A8AE0>",
+      "endpoint": "<function initiate_issue_repair at 0x000001824665DB20>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>",
-        "<function get_client_role at 0x000002207C70D8A0>",
-        "<function get_current_user_optional at 0x000002207C6C8040>"
+        "<function get_db at 0x000001822E05D580>",
+        "<function get_client_role at 0x000001822C491800>",
+        "<function get_current_user_optional at 0x000001822C443F60>"
       ]
     },
     {
@@ -1223,12 +1223,12 @@
         "POST"
       ],
       "name": "transition_issue_lifecycle_status",
-      "endpoint": "<function transition_issue_lifecycle_status at 0x000002207E934900>",
+      "endpoint": "<function transition_issue_lifecycle_status at 0x00000182466E4680>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>",
-        "<function get_client_role at 0x000002207C70D8A0>",
-        "<function get_current_user_optional at 0x000002207C6C8040>"
+        "<function get_db at 0x000001822E05D580>",
+        "<function get_client_role at 0x000001822C491800>",
+        "<function get_current_user_optional at 0x000001822C443F60>"
       ]
     },
     {
@@ -1237,12 +1237,12 @@
         "GET"
       ],
       "name": "get_feedback_issue",
-      "endpoint": "<function get_feedback_issue at 0x000002207E9342C0>",
+      "endpoint": "<function get_feedback_issue at 0x00000182466E40E0>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>",
-        "<function get_client_role at 0x000002207C70D8A0>",
-        "<function get_current_user_optional at 0x000002207C6C8040>"
+        "<function get_db at 0x000001822E05D580>",
+        "<function get_client_role at 0x000001822C491800>",
+        "<function get_current_user_optional at 0x000001822C443F60>"
       ]
     },
     {
@@ -1251,12 +1251,12 @@
         "GET"
       ],
       "name": "list_feedback_issues",
-      "endpoint": "<function list_feedback_issues at 0x000002207E8AB6A0>",
+      "endpoint": "<function list_feedback_issues at 0x000001824665F1A0>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>",
-        "<function get_client_role at 0x000002207C70D8A0>",
-        "<function get_current_user_optional at 0x000002207C6C8040>"
+        "<function get_db at 0x000001822E05D580>",
+        "<function get_client_role at 0x000001822C491800>",
+        "<function get_current_user_optional at 0x000001822C443F60>"
       ]
     },
     {
@@ -1265,11 +1265,11 @@
         "POST"
       ],
       "name": "submit_feedback",
-      "endpoint": "<function submit_feedback at 0x000002207E8AB4C0>",
+      "endpoint": "<function submit_feedback at 0x000001824665F600>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>",
-        "<function get_current_user_optional at 0x000002207C6C8040>"
+        "<function get_client_role at 0x000001822C491800>",
+        "<function get_current_user_optional at 0x000001822C443F60>"
       ]
     },
     {
@@ -1278,7 +1278,7 @@
         "GET"
       ],
       "name": "get_feedback",
-      "endpoint": "<function get_feedback at 0x000002207E934E00>",
+      "endpoint": "<function get_feedback at 0x00000182466E4EA0>",
       "dependencies": []
     },
     {
@@ -1287,7 +1287,7 @@
         "GET"
       ],
       "name": "get_feedback_category_analytics",
-      "endpoint": "<function get_feedback_category_analytics at 0x000002207E934F40>",
+      "endpoint": "<function get_feedback_category_analytics at 0x00000182466E4AE0>",
       "dependencies": []
     },
     {
@@ -1296,9 +1296,9 @@
         "POST"
       ],
       "name": "refresh_feedback_category_analytics",
-      "endpoint": "<function refresh_feedback_category_analytics at 0x000002207E935F80>",
+      "endpoint": "<function refresh_feedback_category_analytics at 0x00000182466E6200>",
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>"
+        "<function get_client_role at 0x000001822C491800>"
       ]
     },
     {
@@ -1307,9 +1307,9 @@
         "GET"
       ],
       "name": "get_high_priority_feedback",
-      "endpoint": "<function get_high_priority_feedback at 0x000002207E936E80>",
+      "endpoint": "<function get_high_priority_feedback at 0x00000182466E6DE0>",
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>"
+        "<function get_client_role at 0x000001822C491800>"
       ]
     },
     {
@@ -1318,7 +1318,7 @@
         "GET"
       ],
       "name": "get_response_quality_metrics",
-      "endpoint": "<function get_response_quality_metrics at 0x000002207E9368E0>",
+      "endpoint": "<function get_response_quality_metrics at 0x00000182466E6700>",
       "dependencies": []
     },
     {
@@ -1327,7 +1327,7 @@
         "GET"
       ],
       "name": "get_feedback_quality_metrics",
-      "endpoint": "<function get_feedback_quality_metrics at 0x000002207E935BC0>",
+      "endpoint": "<function get_feedback_quality_metrics at 0x00000182466E5D00>",
       "dependencies": []
     },
     {
@@ -1336,9 +1336,9 @@
         "PATCH"
       ],
       "name": "update_feedback_quality_assessment",
-      "endpoint": "<function update_feedback_quality_assessment at 0x000002207E934AE0>",
+      "endpoint": "<function update_feedback_quality_assessment at 0x00000182466E5BC0>",
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>"
+        "<function get_client_role at 0x000001822C491800>"
       ]
     },
     {
@@ -1347,9 +1347,9 @@
         "POST"
       ],
       "name": "detect_follow_up_correction",
-      "endpoint": "<function detect_follow_up_correction at 0x000002207E9351C0>",
+      "endpoint": "<function detect_follow_up_correction at 0x00000182466E6CA0>",
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>"
+        "<function get_client_role at 0x000001822C491800>"
       ]
     },
     {
@@ -1358,12 +1358,12 @@
         "POST"
       ],
       "name": "escalate_answer",
-      "endpoint": "<function escalate_answer at 0x000002207EA4FF60>",
+      "endpoint": "<function escalate_answer at 0x00000182467FFEC0>",
       "requires_auth": true,
       "dependencies": [
-        "<function _role_guard.<locals>.guard at 0x000002207EA4FCE0>",
-        "<function get_current_user at 0x000002207C6C7E20>",
-        "<function review_repo_dependency at 0x000002207EA4D440>"
+        "<function _role_guard.<locals>.guard at 0x00000182467FFC40>",
+        "<function get_current_user at 0x000001822C443D80>",
+        "<function review_repo_dependency at 0x00000182467FD300>"
       ]
     },
     {
@@ -1372,12 +1372,12 @@
         "GET"
       ],
       "name": "get_pending_reviews",
-      "endpoint": "<function get_pending_reviews at 0x000002207EA4E0C0>",
+      "endpoint": "<function get_pending_reviews at 0x00000182467FE7A0>",
       "requires_auth": true,
       "dependencies": [
-        "<function _role_guard.<locals>.guard at 0x000002207EA4FCE0>",
-        "<function get_current_user at 0x000002207C6C7E20>",
-        "<function review_repo_dependency at 0x000002207EA4D440>"
+        "<function _role_guard.<locals>.guard at 0x00000182467FFC40>",
+        "<function get_current_user at 0x000001822C443D80>",
+        "<function review_repo_dependency at 0x00000182467FD300>"
       ]
     },
     {
@@ -1386,10 +1386,10 @@
         "GET"
       ],
       "name": "get_unassigned_reviews",
-      "endpoint": "<function get_unassigned_reviews at 0x000002207EAF0360>",
+      "endpoint": "<function get_unassigned_reviews at 0x00000182468A04A0>",
       "dependencies": [
-        "<function _role_guard.<locals>.guard at 0x000002207EA4FD80>",
-        "<function review_repo_dependency at 0x000002207EA4D440>"
+        "<function _role_guard.<locals>.guard at 0x00000182467FFCE0>",
+        "<function review_repo_dependency at 0x00000182467FD300>"
       ]
     },
     {
@@ -1398,10 +1398,10 @@
         "POST"
       ],
       "name": "assign_review",
-      "endpoint": "<function assign_review at 0x000002207EA4F380>",
+      "endpoint": "<function assign_review at 0x00000182467FF380>",
       "dependencies": [
-        "<function _role_guard.<locals>.guard at 0x000002207EA4FD80>",
-        "<function review_repo_dependency at 0x000002207EA4D440>"
+        "<function _role_guard.<locals>.guard at 0x00000182467FFCE0>",
+        "<function review_repo_dependency at 0x00000182467FD300>"
       ]
     },
     {
@@ -1410,12 +1410,12 @@
         "POST"
       ],
       "name": "approve_review",
-      "endpoint": "<function approve_review at 0x000002207EAF05E0>",
+      "endpoint": "<function approve_review at 0x00000182468A0680>",
       "requires_auth": true,
       "dependencies": [
-        "<function _role_guard.<locals>.guard at 0x000002207EA4FCE0>",
-        "<function review_repo_dependency at 0x000002207EA4D440>",
-        "<function get_current_user_id at 0x000002207EA4FE20>"
+        "<function _role_guard.<locals>.guard at 0x00000182467FFC40>",
+        "<function review_repo_dependency at 0x00000182467FD300>",
+        "<function get_current_user_id at 0x00000182467FFD80>"
       ]
     },
     {
@@ -1424,12 +1424,12 @@
         "POST"
       ],
       "name": "reject_review",
-      "endpoint": "<function reject_review at 0x000002207EAF0EA0>",
+      "endpoint": "<function reject_review at 0x00000182468A0AE0>",
       "requires_auth": true,
       "dependencies": [
-        "<function _role_guard.<locals>.guard at 0x000002207EA4FCE0>",
-        "<function review_repo_dependency at 0x000002207EA4D440>",
-        "<function get_current_user_id at 0x000002207EA4FE20>"
+        "<function _role_guard.<locals>.guard at 0x00000182467FFC40>",
+        "<function review_repo_dependency at 0x00000182467FD300>",
+        "<function get_current_user_id at 0x00000182467FFD80>"
       ]
     },
     {
@@ -1438,10 +1438,10 @@
         "GET"
       ],
       "name": "get_review_stats",
-      "endpoint": "<function get_review_stats at 0x000002207EA4F240>",
+      "endpoint": "<function get_review_stats at 0x00000182467FE700>",
       "dependencies": [
-        "<function _role_guard.<locals>.guard at 0x000002207EA4FD80>",
-        "<function review_repo_dependency at 0x000002207EA4D440>"
+        "<function _role_guard.<locals>.guard at 0x00000182467FFCE0>",
+        "<function review_repo_dependency at 0x00000182467FD300>"
       ]
     },
     {
@@ -1450,9 +1450,9 @@
         "GET"
       ],
       "name": "get_pending_corrections",
-      "endpoint": "<function get_pending_corrections at 0x000002207EA1D1C0>",
+      "endpoint": "<function get_pending_corrections at 0x00000182467CD120>",
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>"
+        "<function get_client_role at 0x000001822C491800>"
       ]
     },
     {
@@ -1461,9 +1461,9 @@
         "GET"
       ],
       "name": "get_correction_detail",
-      "endpoint": "<function get_correction_detail at 0x000002207EA1CE00>",
+      "endpoint": "<function get_correction_detail at 0x00000182467CCD60>",
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>"
+        "<function get_client_role at 0x000001822C491800>"
       ]
     },
     {
@@ -1472,9 +1472,9 @@
         "POST"
       ],
       "name": "approve_correction",
-      "endpoint": "<function approve_correction at 0x000002207EA1DB20>",
+      "endpoint": "<function approve_correction at 0x00000182467CDA80>",
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>"
+        "<function get_client_role at 0x000001822C491800>"
       ]
     },
     {
@@ -1483,9 +1483,9 @@
         "POST"
       ],
       "name": "reject_correction",
-      "endpoint": "<function reject_correction at 0x000002207EA1EF20>",
+      "endpoint": "<function reject_correction at 0x00000182467CEE80>",
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>"
+        "<function get_client_role at 0x000001822C491800>"
       ]
     },
     {
@@ -1494,9 +1494,9 @@
         "POST"
       ],
       "name": "batch_approve_corrections",
-      "endpoint": "<function batch_approve_corrections at 0x000002207EA1DC60>",
+      "endpoint": "<function batch_approve_corrections at 0x00000182467CDBC0>",
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>"
+        "<function get_client_role at 0x000001822C491800>"
       ]
     },
     {
@@ -1505,10 +1505,10 @@
         "POST"
       ],
       "name": "run_governance_batch",
-      "endpoint": "<function run_governance_batch at 0x000002207EA1F4C0>",
+      "endpoint": "<function run_governance_batch at 0x00000182467CF420>",
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>",
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_client_role at 0x000001822C491800>",
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1517,10 +1517,10 @@
         "POST"
       ],
       "name": "promote_approved_proposals",
-      "endpoint": "<function promote_approved_proposals at 0x000002207EA1C220>",
+      "endpoint": "<function promote_approved_proposals at 0x00000182467CC180>",
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>",
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_client_role at 0x000001822C491800>",
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1529,9 +1529,9 @@
         "POST"
       ],
       "name": "promote_patch_direct",
-      "endpoint": "<function promote_patch_direct at 0x000002207EA1EC00>",
+      "endpoint": "<function promote_patch_direct at 0x00000182467CEB60>",
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>"
+        "<function get_client_role at 0x000001822C491800>"
       ]
     },
     {
@@ -1540,10 +1540,10 @@
         "GET"
       ],
       "name": "list_repair_proposals",
-      "endpoint": "<function list_repair_proposals at 0x000002207EA1E480>",
+      "endpoint": "<function list_repair_proposals at 0x00000182467CE700>",
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>",
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_client_role at 0x000001822C491800>",
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1552,10 +1552,10 @@
         "POST"
       ],
       "name": "review_repair_proposal",
-      "endpoint": "<function review_repair_proposal at 0x000002207EA1F880>",
+      "endpoint": "<function review_repair_proposal at 0x00000182467CF880>",
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>",
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_client_role at 0x000001822C491800>",
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1564,10 +1564,10 @@
         "GET"
       ],
       "name": "list_graph_mutations",
-      "endpoint": "<function list_graph_mutations at 0x000002207EA4D1C0>",
+      "endpoint": "<function list_graph_mutations at 0x00000182467FD120>",
       "dependencies": [
-        "<function get_client_role at 0x000002207C70D8A0>",
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_client_role at 0x000001822C491800>",
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1576,7 +1576,7 @@
         "GET"
       ],
       "name": "download_file",
-      "endpoint": "<function download_file at 0x000002202A6F25C0>",
+      "endpoint": "<function download_file at 0x0000018272206480>",
       "dependencies": []
     },
     {
@@ -1585,7 +1585,7 @@
         "GET"
       ],
       "name": "get_file",
-      "endpoint": "<function get_file at 0x000002207C6CB920>",
+      "endpoint": "<function get_file at 0x000001822C44B880>",
       "dependencies": []
     },
     {
@@ -1594,7 +1594,7 @@
         "GET"
       ],
       "name": "get_summary",
-      "endpoint": "<function get_summary at 0x000002207EA4D300>",
+      "endpoint": "<function get_summary at 0x00000182467FD260>",
       "dependencies": []
     },
     {
@@ -1603,7 +1603,7 @@
         "GET"
       ],
       "name": "get_circuit_breakers",
-      "endpoint": "<function get_circuit_breakers at 0x000002207EA4D8A0>",
+      "endpoint": "<function get_circuit_breakers at 0x00000182467FD800>",
       "dependencies": []
     },
     {
@@ -1612,7 +1612,7 @@
         "GET"
       ],
       "name": "get_recent",
-      "endpoint": "<function get_recent at 0x000002207EA4DA80>",
+      "endpoint": "<function get_recent at 0x00000182467FD9E0>",
       "dependencies": []
     },
     {
@@ -1621,7 +1621,7 @@
         "POST"
       ],
       "name": "reset_metrics",
-      "endpoint": "<function reset_metrics at 0x000002207EA1E340>",
+      "endpoint": "<function reset_metrics at 0x00000182467CE160>",
       "dependencies": []
     },
     {
@@ -1630,7 +1630,7 @@
         "GET"
       ],
       "name": "get_prometheus_metrics",
-      "endpoint": "<function get_prometheus_metrics at 0x000002207EA1E660>",
+      "endpoint": "<function get_prometheus_metrics at 0x00000182467CE200>",
       "dependencies": []
     },
     {
@@ -1639,7 +1639,7 @@
         "GET"
       ],
       "name": "get_dashboard",
-      "endpoint": "<function get_dashboard at 0x000002207EA4D260>",
+      "endpoint": "<function get_dashboard at 0x00000182467FD1C0>",
       "dependencies": []
     },
     {
@@ -1648,7 +1648,7 @@
         "GET"
       ],
       "name": "prometheus_metrics",
-      "endpoint": "<function create_app.<locals>.prometheus_metrics at 0x000002207F5C2F20>",
+      "endpoint": "<function create_app.<locals>.prometheus_metrics at 0x000001824833FF60>",
       "dependencies": []
     },
     {
@@ -1657,7 +1657,7 @@
         "GET"
       ],
       "name": "prometheus_metrics",
-      "endpoint": "<function create_app.<locals>.prometheus_metrics at 0x000002207F5C2F20>",
+      "endpoint": "<function create_app.<locals>.prometheus_metrics at 0x000001824833FF60>",
       "dependencies": []
     },
     {
@@ -1666,7 +1666,7 @@
         "GET"
       ],
       "name": "get_response_quality_direct",
-      "endpoint": "<function create_app.<locals>.get_response_quality_direct at 0x000002207F5C2AC0>",
+      "endpoint": "<function create_app.<locals>.get_response_quality_direct at 0x00000182482C7240>",
       "dependencies": []
     },
     {
@@ -1675,9 +1675,9 @@
         "GET"
       ],
       "name": "root_health",
-      "endpoint": "<function create_app.<locals>.root_health at 0x000002207F643060>",
+      "endpoint": "<function create_app.<locals>.root_health at 0x00000182483BB100>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -1686,9 +1686,9 @@
         "GET"
       ],
       "name": "root_health",
-      "endpoint": "<function create_app.<locals>.root_health at 0x000002207F643060>",
+      "endpoint": "<function create_app.<locals>.root_health at 0x00000182483BB100>",
       "dependencies": [
-        "<function get_container at 0x000002207C6C7CE0>"
+        "<function get_container at 0x000001822C443C40>"
       ]
     },
     {
@@ -1697,7 +1697,7 @@
         "GET"
       ],
       "name": "passive_feedback_health",
-      "endpoint": "<function create_app.<locals>.passive_feedback_health at 0x000002207F642F20>",
+      "endpoint": "<function create_app.<locals>.passive_feedback_health at 0x00000182483BB240>",
       "dependencies": []
     },
     {
@@ -1706,7 +1706,7 @@
         "GET"
       ],
       "name": "root_metrics_dashboard",
-      "endpoint": "<function create_app.<locals>.root_metrics_dashboard at 0x000002207F642340>",
+      "endpoint": "<function create_app.<locals>.root_metrics_dashboard at 0x00000182483BA2A0>",
       "dependencies": []
     },
     {
@@ -1715,7 +1715,7 @@
         "GET"
       ],
       "name": "download_file",
-      "endpoint": "<function download_file at 0x000002202A6F25C0>",
+      "endpoint": "<function download_file at 0x0000018272206480>",
       "dependencies": []
     },
     {
@@ -1724,7 +1724,7 @@
         "GET"
       ],
       "name": "get_file",
-      "endpoint": "<function get_file at 0x000002207C6CB920>",
+      "endpoint": "<function get_file at 0x000001822C44B880>",
       "dependencies": []
     },
     {
@@ -1733,9 +1733,9 @@
         "POST"
       ],
       "name": "submit_feedback_and_evaluate",
-      "endpoint": "<function submit_feedback_and_evaluate at 0x000002207EE81BC0>",
+      "endpoint": "<function submit_feedback_and_evaluate at 0x0000018246C356C0>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1744,9 +1744,9 @@
         "GET"
       ],
       "name": "list_feedback_records",
-      "endpoint": "<function list_feedback_records at 0x000002207EEA0AE0>",
+      "endpoint": "<function list_feedback_records at 0x0000018246C50A40>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1755,9 +1755,9 @@
         "GET"
       ],
       "name": "get_evaluations_for_response",
-      "endpoint": "<function get_evaluations_for_response at 0x000002207EEA1620>",
+      "endpoint": "<function get_evaluations_for_response at 0x0000018246C51580>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1766,9 +1766,9 @@
         "POST"
       ],
       "name": "create_audit_metadata",
-      "endpoint": "<function create_audit_metadata at 0x000002207EF4D580>",
+      "endpoint": "<function create_audit_metadata at 0x0000018246D014E0>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1777,9 +1777,9 @@
         "GET"
       ],
       "name": "list_audit_metadata",
-      "endpoint": "<function list_audit_metadata at 0x000002207EF4ECA0>",
+      "endpoint": "<function list_audit_metadata at 0x0000018246D02C00>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1788,9 +1788,9 @@
         "GET"
       ],
       "name": "get_audit_metadata",
-      "endpoint": "<function get_audit_metadata at 0x000002207EF4F7E0>",
+      "endpoint": "<function get_audit_metadata at 0x0000018246D03740>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1799,9 +1799,9 @@
         "POST"
       ],
       "name": "create_violation",
-      "endpoint": "<function create_violation at 0x000002207EF4EA20>",
+      "endpoint": "<function create_violation at 0x0000018246D02980>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1810,9 +1810,9 @@
         "GET"
       ],
       "name": "list_violations",
-      "endpoint": "<function list_violations at 0x000002207EF4E200>",
+      "endpoint": "<function list_violations at 0x0000018246D02160>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1821,9 +1821,9 @@
         "POST"
       ],
       "name": "create_response_feedback",
-      "endpoint": "<function create_response_feedback at 0x000002207EF8C680>",
+      "endpoint": "<function create_response_feedback at 0x0000018246D3C5E0>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1832,9 +1832,9 @@
         "GET"
       ],
       "name": "list_response_feedback",
-      "endpoint": "<function list_response_feedback at 0x000002207EF4D8A0>",
+      "endpoint": "<function list_response_feedback at 0x0000018246D01760>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1843,11 +1843,11 @@
         "POST"
       ],
       "name": "create_query_evidence",
-      "endpoint": "<function create_query_evidence at 0x000002207EF8C7C0>",
+      "endpoint": "<function create_query_evidence at 0x0000018246D032E0>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_current_user at 0x000002207C6C7E20>",
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_current_user at 0x000001822C443D80>",
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1856,11 +1856,11 @@
         "GET"
       ],
       "name": "list_query_evidence",
-      "endpoint": "<function list_query_evidence at 0x000002207EF4E7A0>",
+      "endpoint": "<function list_query_evidence at 0x0000018246D02520>",
       "requires_auth": true,
       "dependencies": [
-        "<function get_current_user at 0x000002207C6C7E20>",
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_current_user at 0x000001822C443D80>",
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1869,9 +1869,9 @@
         "POST"
       ],
       "name": "create_compliance_rule",
-      "endpoint": "<function create_compliance_rule at 0x000002207EF8CAE0>",
+      "endpoint": "<function create_compliance_rule at 0x0000018246D3CA40>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1880,9 +1880,9 @@
         "GET"
       ],
       "name": "list_compliance_rules",
-      "endpoint": "<function list_compliance_rules at 0x000002207EF4FB00>",
+      "endpoint": "<function list_compliance_rules at 0x0000018246D03BA0>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1891,9 +1891,9 @@
         "POST"
       ],
       "name": "create_fund_scheme",
-      "endpoint": "<function create_fund_scheme at 0x000002207EF8CEA0>",
+      "endpoint": "<function create_fund_scheme at 0x0000018246D3CE00>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1902,9 +1902,9 @@
         "GET"
       ],
       "name": "list_fund_schemes",
-      "endpoint": "<function list_fund_schemes at 0x000002207EF4F420>",
+      "endpoint": "<function list_fund_schemes at 0x0000018246D034C0>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1913,9 +1913,9 @@
         "POST"
       ],
       "name": "create_session",
-      "endpoint": "<function create_session at 0x000002207EF4FEC0>",
+      "endpoint": "<function create_session at 0x0000018246D03EC0>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1924,9 +1924,9 @@
         "POST"
       ],
       "name": "create_session",
-      "endpoint": "<function create_session at 0x000002207EF4FEC0>",
+      "endpoint": "<function create_session at 0x0000018246D03EC0>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1935,9 +1935,9 @@
         "GET"
       ],
       "name": "list_sessions",
-      "endpoint": "<function list_sessions at 0x000002207EF8D6C0>",
+      "endpoint": "<function list_sessions at 0x0000018246D3D620>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1946,9 +1946,9 @@
         "GET"
       ],
       "name": "list_sessions",
-      "endpoint": "<function list_sessions at 0x000002207EF8D6C0>",
+      "endpoint": "<function list_sessions at 0x0000018246D3D620>",
       "dependencies": [
-        "<function get_db at 0x000002207E2E1620>"
+        "<function get_db at 0x000001822E05D580>"
       ]
     },
     {
@@ -1957,7 +1957,7 @@
         "GET"
       ],
       "name": "serve_index",
-      "endpoint": "<function create_app.<locals>.serve_index at 0x000002207F6EB060>",
+      "endpoint": "<function create_app.<locals>.serve_index at 0x0000018248467060>",
       "dependencies": []
     },
     {
@@ -1966,7 +1966,7 @@
         "GET"
       ],
       "name": "serve_spa",
-      "endpoint": "<function create_app.<locals>.serve_spa at 0x000002207F6EB240>",
+      "endpoint": "<function create_app.<locals>.serve_spa at 0x0000018248466F20>",
       "dependencies": []
     }
   ],

@@ -337,6 +337,7 @@ class CorrectionPatchLayer:
         """
         patches: List[CorrectionPatch] = []
         seen_keys = set()
+        seen_patch_ids = set()
 
         if self.redis is not None:
             try:
@@ -349,7 +350,8 @@ class CorrectionPatchLayer:
                         if val:
                             try:
                                 p = CorrectionPatch(**json.loads(val))
-                                if not self._is_expired(p):
+                                if not self._is_expired(p) and p.patch_id not in seen_patch_ids:
+                                    seen_patch_ids.add(p.patch_id)
                                     patches.append(p)
                             except Exception:
                                 pass
@@ -363,7 +365,9 @@ class CorrectionPatchLayer:
                 if k not in seen_keys:
                     p = CorrectionPatch(**data)
                     if not self._is_expired(p):
-                        patches.append(p)
+                        if p.patch_id not in seen_patch_ids:
+                            seen_patch_ids.add(p.patch_id)
+                            patches.append(p)
                     else:
                         del self._mem_store[k]
 
@@ -415,6 +419,9 @@ class CorrectionPatchLayer:
             for attribute in self.CHECKABLE_ATTRIBUTES:
                 patch = self.get_correction(entity_id, attribute)
                 if patch and patch.patch_id not in found_patches:
+                    # G02-T13: Exclude pending/unapproved patches from serving context
+                    if not patch.approved:
+                        continue
                     found_patches.add(patch.patch_id)
                     block = (
                         f"\n[CORRECTION - {patch.attribute}]\n"
@@ -422,11 +429,9 @@ class CorrectionPatchLayer:
                         f"Corrected Value: {patch.corrected_value}\n"
                         f"Original Value: {patch.canonical_value}\n"
                         f"Confidence: {patch.confidence:.2f}\n"
-                        f"Approved: {'Yes' if patch.approved else 'Pending governance review'}\n"
-                        f"Source: {patch.provenance.get('source', 'User feedback')}\n"
+                        f"Approved: Yes\n"
+                        f"Source: {patch.provenance.get('source', 'Governance Review')}\n"
                         f"Created: {patch.created_at}\n"
-                        f"\n⚠️ INSTRUCTION: Use corrected value ({patch.corrected_value}) "
-                        f"in your response if confidence >= 0.70. Mention that value was recently updated.\n"
                     )
                     correction_blocks.append(block)
 
@@ -597,7 +602,7 @@ class CorrectionPatchLayer:
         return self.promote_to_permanent(patch_id, neo4j_session=neo4j_session)
 
     def get_active_patches(self, entity_id: Optional[str] = None) -> List[CorrectionPatch]:
-        """Returns all non-expired patches, optionally filtered by entity_id.
+        """Returns all non-expired, approved patches, optionally filtered by entity_id.
 
         Args:
             entity_id (Optional[str]): Unique identifier of the entity.
@@ -605,7 +610,7 @@ class CorrectionPatchLayer:
         Returns:
             List[CorrectionPatch]: List of resulting items or records.
         """
-        patches = self.get_all_patches()
+        patches = [p for p in self.get_all_patches() if p.approved]
         if entity_id:
             patches = [p for p in patches if p.entity_id == entity_id.strip()]
         return patches

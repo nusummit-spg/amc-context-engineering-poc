@@ -26,10 +26,28 @@ Architecture:
 - ingester.py: Full-file CSV/XLSX parsing and staging
 """
 
+from app.tabular.contracts import *
+from app.tabular.repository import FinancialDataRepository, SourceRow, NAVObservation, AAUMObservation
+from app.tabular.csv_excel_loader import StreamingCSVParser, IngestionPipeline, CanonicalNormalizer
+from app.tabular.planner import PlanIntent, QueryPlan, QueryPlanner
+from app.tabular.executor import QueryResult, QueryExecutor
+
 __all__ = [
     "contracts",
     "repository", 
+    "csv_excel_loader",
     "planner",
     "executor",
-    "ingester"
+    "FinancialDataRepository",
+    "SourceRow",
+    "NAVObservation",
+    "AAUMObservation",
+    "StreamingCSVParser",
+    "IngestionPipeline",
+    "CanonicalNormalizer",
+    "PlanIntent",
+    "QueryPlan",
+    "QueryPlanner",
+    "QueryResult",
+    "QueryExecutor",
 ]

@@ -1,0 +1,155 @@
+{
+  "task": "G04_INGESTION",
+  "dataset_version": "v1_baseline",
+  "declared_rows": 16245,
+  "processed_rows": 16245,
+  "valid_rows": 16245,
+  "quarantined_rows": 0,
+  "reconciled": true,
+  "status": "RECONCILED",
+  "activated": true,
+  "chunks_count": 22,
+  "elapsed_seconds": 20.79,
+  "db_stats": {
+    "dataset_version": "v1_baseline",
+    "total_source_rows": 16245,
+    "valid_rows": 16245,
+    "quarantined_rows": 0,
+    "nav_observations": 14208,
+    "aaum_observations": 8178
+  },
+  "chunk_summaries": [
+    {
+      "chunk": "mutual_fund_data_chunk_001.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_002.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_003.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_004.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_005.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_006.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_007.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_008.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_009.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_010.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_011.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_012.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_013.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_014.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_015.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_016.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_017.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_018.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_019.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_020.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_021.csv",
+      "rows_processed": 750,
+      "valid": 750,
+      "quarantined": 0
+    },
+    {
+      "chunk": "mutual_fund_data_chunk_022.csv",
+      "rows_processed": 495,
+      "valid": 495,
+      "quarantined": 0
+    }
+  ]
+}
