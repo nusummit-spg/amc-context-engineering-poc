@@ -117,15 +117,27 @@ def limit_requests(max_requests: int = 100, window_seconds: int = 60):
 
 def get_client_role(x_user_role: Optional[str] = Header(None)) -> Role:
     """Extract and validate client user role from request headers.
-
+    
+    SECURITY FIX (G02-T03): Reject unauthenticated requests instead of defaulting to ADMIN.
+    This is a containment fix. Full JWT-based authentication required in Wave 1.
+    
     Args:
-        x_user_role (Optional[str]): The x user role.
+        x_user_role (Optional[str]): The x user role from header (temporary auth mechanism).
 
     Returns:
-        Role: Resulting Role instance.
+        Role: Validated role enum.
+        
+    Raises:
+        HTTPException: 401 if no authentication provided, 400 if invalid role.
     """
     if not x_user_role:
-        return Role.ADMIN  # Default to ADMIN in open internal demo environment
+        # G02-T03 FIX: Reject instead of defaulting to ADMIN (GOV-01 containment)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required: X-User-Role header missing. "
+                   "This endpoint requires authentication. "
+                   "Wave 0 containment: header-based auth is temporary; JWT required in production."
+        )
 
     role_str = x_user_role.lower().strip().replace(" ", "_")
     try:

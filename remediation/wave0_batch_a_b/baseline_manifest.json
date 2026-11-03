@@ -1,0 +1,52 @@
+{
+  "manifest_version": "1.0",
+  "created_at": "2026-11-03T00:00:00Z",
+  "purpose": "G01-T01: Pin branch SHA and all runtime data/model/config versions",
+  "git": {
+    "repository": "nusummit-spg/amc-context-engineering-poc",
+    "branch": "amc-dev",
+    "commit_sha": "e3c74e011d70e2921b8e0ee2287e6fc71cb30bb0",
+    "commit_date": "2026-11-03"
+  },
+  "runtime": {
+    "python_version": "3.12.0",
+    "platform": "Windows (win32)",
+    "shell": "powershell"
+  },
+  "core_dependencies": {
+    "fastapi": ">=0.115",
+    "pydantic": "2.7.1",
+    "neo4j": ">=5.24",
+    "faiss-cpu": ">=1.8",
+    "sqlalchemy": "2.0.23",
+    "sentence-transformers": ">=3.0",
+    "groq": ">=0.9.0",
+    "redis": ">=5.0"
+  },
+  "datasets": {
+    "csv_manifest_path": "backend/data/source_docs/chunks/manifest.json",
+    "declared_total_rows": 16245,
+    "declared_chunks": 22,
+    "chunk_pattern": "chunk_001 to chunk_022 (21 × 750 + 495)",
+    "source_file_hash": "NOT_YET_COMPUTED",
+    "reconciliation_status": "PENDING_G01-T08"
+  },
+  "models": {
+    "embedding_model": "paraphrase-multilingual-MiniLM-L12-v2",
+    "llm_provider": "groq",
+    "ner_model": "gliner>=0.2"
+  },
+  "corpus_versions": {
+    "active_dataset_version": "UNKNOWN_PENDING_INVESTIGATION",
+    "active_corpus_version": "UNKNOWN_PENDING_INVESTIGATION",
+    "graph_node_count": "PENDING_G01-T03",
+    "vector_index_count": "PENDING_G01-T03"
+  },
+  "acceptance": "Manifest lists exact SHA, providers, active corpus and dataset hash",
+  "status": "BASELINE_CAPTURED",
+  "next_tasks": [
+    "G01-T02: Export OpenAPI schema and routes",
+    "G01-T03: Record graph/vector/SQL manifests",
+    "G01-T08: Build reconciliation probe for 16,245 rows"
+  ]
+}

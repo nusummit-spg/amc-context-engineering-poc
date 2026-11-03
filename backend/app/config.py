@@ -98,6 +98,26 @@ class Settings(BaseSettings):
     feedback_category_breakdown_enabled: bool = True  # Enable category breakdown in feedback status banner (Phase 1)
     feedback_cache_enabled: bool = True               # Enable short-TTL status cache (Phase 5)
     feedback_cache_ttl_seconds: float = 10.0          # TTL in seconds for feedback status cache (Phase 5)
+    
+    # --- Repair Safety (G02-T12, G10-T01: Wave 0 Containment) ---
+    repair_auto_approve_enabled: bool = False         # G02-T12: DISABLED - no auto-promotion
+    repair_confidence_threshold: float = 0.95         # Advisory only, not authorization
+    repair_require_human_approval: bool = True        # All repairs require explicit approval
+    repair_require_four_eyes: bool = True             # G10-T09: Proposer cannot self-approve
+    repair_min_approvers: int = 1                     # Minimum number of approvers required
+    repair_approval_roles: list[str] = Field(         # Roles authorized to approve repairs
+        default_factory=lambda: ["GOVERNANCE_APPROVER", "ADMIN"]
+    )
+    # Categories requiring mandatory approval (all by default in Wave 0)
+    repair_mandatory_approval_categories: list[str] = Field(
+        default_factory=lambda: [
+            "financial_data",
+            "regulatory_interpretation",
+            "graph_mutation",
+            "canonical_entity",
+            "all"  # Catch-all: ALL repairs require approval
+        ]
+    )
 
     # ── Microservices Configuration ──────────────────────────────
     microservices_mode: bool = Field(

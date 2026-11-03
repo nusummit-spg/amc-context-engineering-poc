@@ -1,0 +1,254 @@
+================================================================================
+G01-T02: Route Inventory Summary
+================================================================================
+
+
+ADMIN (24 routes)
+--------------------------------------------------------------------------------
+  🔓 GET        /api/admin/users
+  🔓 POST       /api/admin/users/sync
+  🔓 POST       /api/admin/users
+  🔒 DELETE     /api/admin/users/{username}
+  🔓 GET        /api/admin/rbac
+  🔓 GET        /api/admin/audit
+  🔓 POST       /api/admin/ingestion/run
+  🔓 POST       /api/admin/ingestion/staleness
+  🔓 POST       /api/admin/ingestion/upload
+  🔓 GET        /api/admin/ingestion/tasks
+  🔓 GET        /api/admin/ingestion/tasks/active
+  🔓 GET        /api/admin/ingestion/notifications
+  🔓 POST       /api/admin/ingestion/notifications/{task_id}/read
+  🔓 POST       /api/admin/ingestion/notifications/read-all
+  🔓 GET        /api/admin/ingestion/proposed-edges
+  🔓 POST       /api/admin/ingestion/edges/{edge_id}/confirm
+  🔓 POST       /api/admin/ingestion/edges/{edge_id}/reject
+  🔓 GET        /api/admin/ingestion/compliance-report
+  🔓 GET        /api/admin/cache/stats
+  🔓 GET        /api/admin/intent-cache/stats
+  🔓 POST       /api/admin/intent-cache/invalidate-domain
+  🔓 POST       /api/admin/intent-cache/clear
+  🔓 POST       /api/admin/cache/clear
+  🔒 GET        /api/admin/feedback/issues
+
+AUDIT-SCHEMA (17 routes)
+--------------------------------------------------------------------------------
+  🔓 POST       /api/audit-schema/audit-metadata
+  🔓 GET        /api/audit-schema/audit-metadata
+  🔓 GET        /api/audit-schema/audit-metadata/{audit_id}
+  🔓 POST       /api/audit-schema/violations
+  🔓 GET        /api/audit-schema/violations
+  🔓 POST       /api/audit-schema/response-feedback
+  🔓 GET        /api/audit-schema/response-feedback
+  🔒 POST       /api/audit-schema/query-evidence
+  🔒 GET        /api/audit-schema/query-evidence
+  🔓 POST       /api/audit-schema/compliance-rules
+  🔓 GET        /api/audit-schema/compliance-rules
+  🔓 POST       /api/audit-schema/fund-schemes
+  🔓 GET        /api/audit-schema/fund-schemes
+  🔓 POST       /api/audit-schema/chat-sessions
+  🔓 POST       /api/audit-schema/chat_sessions
+  🔓 GET        /api/audit-schema/chat-sessions
+  🔓 GET        /api/audit-schema/chat_sessions
+
+AUTH (3 routes)
+--------------------------------------------------------------------------------
+  🔓 POST       /api/auth/login
+  🔓 POST       /api/auth/logout
+  🔓 GET        /api/auth/me
+
+CHAT (5 routes)
+--------------------------------------------------------------------------------
+  🔒 POST       /api/chat/v2
+  🔒 POST       /api/chat
+  🔒 POST       /api/chat/query
+  🔒 POST       /api/chat/stream
+  🔒 POST       /api/chat/title
+
+COMPLIANCE (50 routes)
+--------------------------------------------------------------------------------
+  🔒 POST       /api/compliance/audit
+  🔓 GET        /api/compliance/violations
+  🔓 GET        /api/compliance/fund/{fund_id}/violations
+  🔓 POST       /api/compliance/violations/{violation_id}/resolve
+  🔒 GET        /api/compliance/scorecard
+  🔓 GET        /api/compliance/agents/metrics
+  🔓 GET        /api/compliance/health
+  🔓 GET        /api/compliance/metrics/prometheus
+  🔓 GET        /api/compliance/audit-report
+  🔓 POST       /api/compliance/batch-audit
+  🔓 POST       /api/compliance/load-rules
+  🔓 POST       /api/compliance/agents/audit
+  🔓 GET        /api/compliance/export/violations-csv
+  🔓 GET        /api/compliance/fund/{fund_id}
+  🔓 GET        /api/compliance/rules/{rule_id}/violations
+  🔓 GET        /api/compliance/status
+  🔓 GET        /api/compliance/rules/{rule_id}/regulatory-metadata
+  🔓 GET        /api/compliance/funds
+  🔓 GET        /api/compliance/funds/{fund_id}/audit-metadata
+  🔓 GET        /api/compliance/violations/{violation_id}/remediation-metrics
+  🔓 GET        /api/compliance/remediation-sla-report
+  🔓 GET        /api/compliance/violations/filter
+  🔓 GET        /api/compliance/violations/{violation_id}/root-cause
+  🔓 POST       /api/compliance/violations/{violation_id}/root-cause
+  🔓 GET        /api/compliance/violation-clusters
+  🔓 GET        /api/compliance/violation-clusters/{cluster_id}
+  🔓 POST       /api/compliance/violation-clusters
+  🔓 GET        /api/compliance/amc/{amc_id}/family-analysis
+  🔓 POST       /api/compliance/amc/{amc_id}/family-analysis/run
+  🔓 GET        /api/compliance/evidence/{evidence_id}
+  🔓 POST       /api/compliance/evidence
+  🔓 GET        /api/compliance/dashboard/kpis
+  🔓 POST       /api/compliance/dashboard/kpis/refresh
+  🔓 GET        /api/compliance/dashboard/realtime-monitoring
+  🔓 GET        /api/compliance/audit-trail/access-logs
+  🔓 POST       /api/compliance/audit-trail/access-logs
+  🔓 GET        /api/compliance/audit-trail/verify
+  🔓 GET        /api/compliance/audit-trail/verify-integrity
+  🔓 POST       /api/compliance/sync-neo4j
+  🔓 POST       /api/compliance/remediations
+  🔓 PATCH      /api/compliance/violations/{violation_id}/remediation
+  🔓 GET        /api/compliance/export
+  🔓 GET        /api/compliance/alerts
+  🔓 POST       /api/compliance/alerts/evaluate-breaches
+  🔓 POST       /api/compliance/alerts/{alert_id}/acknowledge
+  🔓 POST       /api/compliance/alerts/{alert_id}/resolve
+  🔓 GET        /api/compliance/audit-trail/verify-signature
+  🔓 GET        /api/compliance/dlq
+  🔓 POST       /api/compliance/dlq/replay
+  🔓 POST       /api/compliance/alerts/dispatch
+
+DOCS (2 routes)
+--------------------------------------------------------------------------------
+  🔓 GET        /api/docs
+  🔓 GET        /api/docs/{document_id}
+
+FEEDBACK (19 routes)
+--------------------------------------------------------------------------------
+  🔓 GET        /api/feedback/taxonomy
+  🔒 GET        /api/feedback/telemetry
+  🔓 GET        /api/feedback/pending-notice
+  🔓 GET        /api/feedback/status
+  🔒 GET        /api/feedback/mine
+  🔓 POST       /api/feedback/reconcile-categories
+  🔒 POST       /api/feedback/issues/{issue_id}/repair
+  🔒 POST       /api/feedback/issues/{issue_id}/status
+  🔒 GET        /api/feedback/issues/{issue_id}
+  🔒 GET        /api/feedback/issues
+  🔒 POST       /api/feedback
+  🔓 GET        /api/feedback
+  🔓 GET        /api/feedback/category-analytics
+  🔓 POST       /api/feedback/category-analytics/refresh
+  🔓 GET        /api/feedback/high-priority
+  🔓 GET        /api/feedback/responses/{response_id}/quality-score
+  🔓 GET        /api/feedback/{feedback_id}/quality-metrics
+  🔓 PATCH      /api/feedback/{feedback_id}/quality-metrics
+  🔓 POST       /api/feedback/follow-up-detection
+
+FEEDBACK-EVALUATION (3 routes)
+--------------------------------------------------------------------------------
+  🔓 POST       /api/feedback-evaluation
+  🔓 GET        /api/feedback-evaluation/records
+  🔓 GET        /api/feedback-evaluation/{response_id}
+
+FILES (2 routes)
+--------------------------------------------------------------------------------
+  🔓 GET        /api/files/download/{document_id:path}
+  🔓 GET        /api/files/{document_id:path}
+
+FRONTEND (11 routes)
+--------------------------------------------------------------------------------
+  🔓 HEAD,GET   /openapi.json
+  🔓 HEAD,GET   /docs
+  🔓 HEAD,GET   /docs/oauth2-redirect
+  🔓 HEAD,GET   /redoc
+  🔓 GET        /metrics
+  🔓 GET        /health
+  🔓 GET        /metrics/dashboard
+  🔓 GET        /files/download/{document_id:path}
+  🔓 GET        /files/{document_id:path}
+  🔓 GET        /
+  🔓 GET        /{full_path:path}
+
+GOVERNANCE (11 routes)
+--------------------------------------------------------------------------------
+  🔓 GET        /api/governance/pending-corrections
+  🔓 GET        /api/governance/correction/{patch_id}
+  🔓 POST       /api/governance/approve/{patch_id}
+  🔓 POST       /api/governance/reject/{patch_id}
+  🔓 POST       /api/governance/batch-approve
+  🔓 POST       /api/governance/run-batch
+  🔓 POST       /api/governance/promote
+  🔓 POST       /api/governance/promote/{patch_id}
+  🔓 GET        /api/governance/proposals
+  🔓 POST       /api/governance/proposals/{proposal_id}/review
+  🔓 GET        /api/governance/mutations
+
+GRAPH (3 routes)
+--------------------------------------------------------------------------------
+  🔓 GET        /api/graph
+  🔓 GET        /api/graph/neighborhood
+  🔓 GET        /api/graph/traversal
+
+HEALTH (2 routes)
+--------------------------------------------------------------------------------
+  🔓 GET        /api/health
+  🔓 GET        /api/health/passive-feedback
+
+INGEST (3 routes)
+--------------------------------------------------------------------------------
+  🔓 POST       /api/ingest/file
+  🔓 POST       /api/ingest/batch
+  🔓 GET        /api/ingest/status/{job_id}
+
+METRICS (7 routes)
+--------------------------------------------------------------------------------
+  🔓 GET        /api/metrics/summary
+  🔓 GET        /api/metrics/circuit-breakers
+  🔓 GET        /api/metrics/recent
+  🔓 POST       /api/metrics/reset
+  🔓 GET        /api/metrics/prometheus
+  🔓 GET        /api/metrics/dashboard
+  🔓 GET        /api/metrics/prometheus
+
+QUERY (7 routes)
+--------------------------------------------------------------------------------
+  🔒 POST       /api/query/v2
+  🔓 POST       /api/query/traditional
+  🔓 POST       /api/query/contextgraph
+  🔓 POST       /api/query
+  🔒 POST       /api/query/stream
+  🔓 GET        /api/query/health/stream-test
+  🔓 GET        /api/query/{response_id}/pending-feedback
+
+RESPONSES (1 routes)
+--------------------------------------------------------------------------------
+  🔓 GET        /api/responses/{response_id}/quality-score
+
+REVIEW-QUEUE (7 routes)
+--------------------------------------------------------------------------------
+  🔒 POST       /api/review-queue/escalate
+  🔒 GET        /api/review-queue/pending
+  🔓 GET        /api/review-queue/unassigned
+  🔓 POST       /api/review-queue/{item_id}/assign
+  🔒 POST       /api/review-queue/{item_id}/approve
+  🔒 POST       /api/review-queue/{item_id}/reject
+  🔓 GET        /api/review-queue/stats
+
+SESSIONS (4 routes)
+--------------------------------------------------------------------------------
+  🔒 GET        /api/sessions
+  🔒 GET        /api/sessions/{session_id}
+  🔒 POST       /api/sessions/{session_id}
+  🔒 DELETE     /api/sessions/{session_id}
+
+STATUS (3 routes)
+--------------------------------------------------------------------------------
+  🔓 GET        /api/status
+  🔓 GET        /api/status/data-planes
+  🔓 GET        /api/status/health
+
+TAXONOMY (3 routes)
+--------------------------------------------------------------------------------
+  🔓 GET        /api/taxonomy
+  🔓 GET        /api/taxonomy/node/docs
+  🔓 GET        /api/taxonomy/highlight

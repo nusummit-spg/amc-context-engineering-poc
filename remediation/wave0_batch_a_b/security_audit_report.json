@@ -1,0 +1,127 @@
+{
+  "task": "G02-T01, G02-T02, G02-T03",
+  "purpose": "Security posture audit and threat model",
+  "timestamp": "2026-11-03T00:00:00Z",
+  "critical_vulnerabilities": [
+    {
+      "id": "GOV-01",
+      "severity": "P0",
+      "title": "Default ADMIN role when X-User-Role header absent",
+      "file": "backend/app/compliance/security.py",
+      "function": "get_client_role()",
+      "line_approx": 125,
+      "current_behavior": "return Role.ADMIN  # Default to ADMIN in open internal demo environment",
+      "threat": "Unauthenticated requests gain ADMIN privileges",
+      "impact": "Complete authentication bypass, unauthorized data access and mutation",
+      "exploitation": "curl http://localhost:8000/api/admin/* (no headers required)",
+      "cvss": "CRITICAL (9.8)",
+      "remediation_required": "Return 401 Unauthorized when X-User-Role is absent AND no authenticated principal exists"
+    },
+    {
+      "id": "GOV-02",
+      "severity": "P0",
+      "title": "Client-controlled role via X-User-Role header",
+      "file": "backend/app/compliance/security.py",
+      "function": "get_client_role()",
+      "threat": "Client can specify any role including ADMIN",
+      "impact": "Privilege escalation, cross-tenant data access",
+      "exploitation": "curl -H 'X-User-Role: admin' http://localhost:8000/api/*",
+      "cvss": "CRITICAL (9.1)",
+      "remediation_required": "Derive role from server-authenticated JWT/session, never from client header"
+    },
+    {
+      "id": "GOV-02b",
+      "severity": "P0",
+      "title": "Missing authentication on admin, ingest, and governance routes",
+      "files": [
+        "backend/app/api/routes/admin.py",
+        "backend/app/api/routes/ingest.py",
+        "backend/app/api/routes/graph.py",
+        "backend/app/api/routes/governance.py"
+      ],
+      "threat": "Anonymous users can create accounts, upload data, modify graph",
+      "impact": "Data injection, account creation, system manipulation",
+      "exploitation": "Direct API calls without authentication",
+      "cvss": "CRITICAL (9.4)",
+      "remediation_required": "Add CurrentUser dependency to all sensitive routes"
+    }
+  ],
+  "route_classification": {
+    "public_anonymous": [],
+    "requires_auth": [],
+    "admin_only": [
+      {
+        "endpoint": "/api/admin/users",
+        "methods": [
+          "GET",
+          "POST",
+          "DELETE"
+        ],
+        "current_security": "VULNERABLE - NONE or X-User-Role header only",
+        "threat": "User management without auth",
+        "required_security": "JWT with ADMIN role from server"
+      },
+      {
+        "endpoint": "/api/ingest",
+        "methods": [
+          "POST"
+        ],
+        "current_security": "VULNERABLE - NONE or X-User-Role header only",
+        "threat": "Document upload without auth",
+        "required_security": "JWT with INGESTION_MANAGER role"
+      },
+      {
+        "endpoint": "/api/graph/*",
+        "methods": [
+          "POST",
+          "DELETE"
+        ],
+        "current_security": "VULNERABLE - NONE or X-User-Role header only",
+        "threat": "Graph mutation without auth",
+        "required_security": "JWT with GRAPH_ADMIN role"
+      },
+      {
+        "endpoint": "/api/governance/proposals/*/approve",
+        "methods": [
+          "POST"
+        ],
+        "current_security": "VULNERABLE - NONE or X-User-Role header only",
+        "threat": "Approve repairs without auth",
+        "required_security": "JWT with GOVERNANCE_APPROVER role + 4-eyes check"
+      }
+    ],
+    "unclear_auth": []
+  },
+  "recommendations": [
+    {
+      "priority": "P0",
+      "action": "IMMEDIATE: Block admin, ingest, graph, governance routes at firewall/gateway",
+      "rationale": "Prevent exploitation while implementing proper auth"
+    },
+    {
+      "priority": "P0",
+      "action": "Replace get_client_role() to reject missing auth",
+      "implementation": "raise HTTPException(401) when no Bearer token AND no X-User-Role"
+    },
+    {
+      "priority": "P0",
+      "action": "Implement JWT-based authentication with server-side session store",
+      "implementation": "Use backend/app/auth/security.py verify_token(), never trust client headers"
+    },
+    {
+      "priority": "P0",
+      "action": "Add CurrentUser = Depends(get_current_user) to all protected routes",
+      "implementation": "Modify route signatures to require authenticated principal"
+    },
+    {
+      "priority": "P0",
+      "action": "Disable automatic repair promotion (GOV-03)",
+      "implementation": "Set confidence_auto_approve_threshold = None in config"
+    },
+    {
+      "priority": "P0",
+      "action": "Exclude pending patches from serving (GOV-04, GOV-05)",
+      "implementation": "Filter patches WHERE status='ACTIVE' in all retrieval queries"
+    }
+  ]
+}
