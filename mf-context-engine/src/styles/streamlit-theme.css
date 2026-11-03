@@ -3081,6 +3081,10 @@ table.stDataFrame td.idx, table.stDataFrame th.idx { color: var(--color-ink-400)
 .cg-cmp-turn { margin-bottom: 0.5rem; }
 
 .cg-cmp-query {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   font-size: 0.95rem;
   line-height: 1.5;
   color: var(--color-ink-900);
@@ -3088,6 +3092,41 @@ table.stDataFrame td.idx, table.stDataFrame th.idx { color: var(--color-ink-400)
   margin: 0.75rem 0;
   background: var(--color-surface-tan);
   border-radius: var(--radius-md);
+}
+
+.cg-cmp-query-text {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cg-cmp-query-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--color-ink-500);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.cg-cmp-query-copy-btn:hover {
+  color: var(--color-navy-700);
+  border-color: var(--color-navy-700);
+  background: var(--color-navy-100);
+}
+
+.cg-cmp-query-copy-btn--copied {
+  color: var(--color-success, #16a34a);
+  border-color: rgba(22, 163, 74, 0.4);
+  background: rgba(22, 163, 74, 0.08);
 }
 
 .cg-cmp-summary {
@@ -3296,10 +3335,20 @@ table.stDataFrame td.idx, table.stDataFrame th.idx { color: var(--color-ink-400)
   animation: stFadeUp var(--duration-slow) var(--ease-out) backwards;
 }
 
+/* User message container — right-aligned group holding bubble and action row */
+.cg-msg-user-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  align-self: flex-end;
+  max-width: 78%;
+  gap: 4px;
+}
+
 /* User message — plain ChatGPT-style bubble, right-leaning */
 .cg-msg-user {
   align-self: flex-end;
-  max-width: 78%;
+  max-width: 100%;
   background: var(--color-navy-100);
   color: var(--color-ink-900);
   padding: 10px 16px;
@@ -3309,6 +3358,58 @@ table.stDataFrame td.idx, table.stDataFrame th.idx { color: var(--color-ink-400)
   white-space: pre-wrap;
   word-break: break-word;
   box-shadow: inset 0 1px 0 var(--surface-edge);
+}
+
+.cg-msg-user-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.cg-msg-user-time {
+  font-size: 11px;
+  color: var(--color-ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.cg-msg-user-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--color-ink-400);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard),
+              background-color var(--duration-fast) var(--ease-standard),
+              opacity var(--duration-fast) var(--ease-standard);
+  opacity: 0.75;
+}
+
+.cg-msg-user-container:hover .cg-msg-user-action-btn,
+.cg-msg-user-container:focus-within .cg-msg-user-action-btn,
+.cg-msg-user-action-btn--copied {
+  opacity: 1;
+}
+
+.cg-msg-user-action-btn:hover {
+  color: var(--color-navy-700);
+  background: var(--color-navy-100);
+  border-color: var(--color-border);
+}
+
+.cg-msg-user-action-btn--copied {
+  color: var(--color-success, #16a34a);
+  background: rgba(22, 163, 74, 0.08);
+  border-color: rgba(22, 163, 74, 0.2);
 }
 
 /* Assistant message — open, unbordered, spacious */
@@ -3964,6 +4065,7 @@ table.stDataFrame td.idx, table.stDataFrame th.idx { color: var(--color-ink-400)
 }
 
 @media (max-width: 640px) {
+  .cg-msg-user-container,
   .cg-msg-user { max-width: 90%; }
   .cg-msg-actions { flex-wrap: wrap; }
   /* Modals become full-height sheets that slide up from the bottom edge */

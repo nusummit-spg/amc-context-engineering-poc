@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+logging.getLogger("faiss.loader").setLevel(logging.WARNING)
 import faiss
 import numpy as np
 from fastembed import TextEmbedding
@@ -479,8 +480,10 @@ class VectorStore:
                         continue
 
                 if apply_scope and taxonomy_paths:
-                    if not set(payload.get("taxonomy_paths") or []) & set(taxonomy_paths):
-                        continue
+                    doc_tax = payload.get("taxonomy_paths")
+                    if doc_tax:
+                        if not set(doc_tax) & set(taxonomy_paths):
+                            continue
 
                 # Text-level deduplication: avoid duplicate copies of the same section
                 raw_text = payload.get("text", "")

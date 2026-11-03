@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from app.core.llm import LLMClient
 from app.prompts import get_prompt
-from app.models.documents import Document, DocumentCategory
+from app.models.documents import Document, DocumentCategory, DocumentType
 from app.models.taxonomy import TaxonomyTree
 
 logger = logging.getLogger("extraction")
@@ -46,6 +46,12 @@ class TaxonomyClassifier:
         self._valid_paths = {n.path for n in taxonomy.flatten()}
 
     async def classify(self, document: Document) -> ClassificationResult:
+        if getattr(document, "doc_type", None) == DocumentType.CSV or (document.filename and document.filename.lower().endswith(".csv")):
+            paths = [p for p in ["Product/Mutual Funds", "Operations/NAV"] if p in self._valid_paths]
+            return ClassificationResult(
+                taxonomy_paths=paths or ["Product/Mutual Funds", "Operations/NAV"],
+                category=DocumentCategory.TRACKER,
+            )
         """Classify user query intent and category.
 
         Args:

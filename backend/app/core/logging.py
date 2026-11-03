@@ -348,12 +348,12 @@ def log_v2_query_audit(audit_data: dict, log_dir: Optional[Path | str] = None) -
     in_tokens = audit_data.get("input_tokens", 0)
     out_tokens = audit_data.get("output_tokens", 0)
 
-    lat_ner = audit_data.get("latency_ner_ms", 0.0)
-    lat_graph = audit_data.get("latency_graph_ms", 0.0)
-    lat_vector = audit_data.get("latency_vector_ms", 0.0)
-    lat_asm = audit_data.get("latency_assembly_ms", 0.0)
-    lat_llm = audit_data.get("latency_llm_ms", 0.0)
-    lat_total = audit_data.get("latency_total_ms", 0.0)
+    lat_ner = audit_data.get("latency_ner_ms", audit_data.get("ner_ms", 0.0))
+    lat_graph = audit_data.get("latency_graph_ms", audit_data.get("graph_ms", 0.0))
+    lat_vector = audit_data.get("latency_vector_ms", audit_data.get("vector_ms", 0.0))
+    lat_asm = audit_data.get("latency_assembly_ms", audit_data.get("assembly_ms", 0.0))
+    lat_llm = audit_data.get("latency_llm_ms", audit_data.get("llm_ms", audit_data.get("generation_ms", 0.0)))
+    lat_total = audit_data.get("latency_total_ms", audit_data.get("total_ms", 0.0))
 
     # Legacy-equivalent terminal banner for V2
     print("\n================================================================================", flush=True)
@@ -465,6 +465,7 @@ def setup_logging(
             root_logger.warning("Could not initialize JSON file logging at %s: %s", target_json, exc)
 
     # Filter third-party log noise
+    logging.getLogger("faiss.loader").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("neo4j.notifications").setLevel(logging.ERROR)
     logging.getLogger("huggingface_hub").setLevel(logging.ERROR)

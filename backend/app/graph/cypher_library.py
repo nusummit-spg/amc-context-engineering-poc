@@ -78,11 +78,12 @@ ENTITY_FACTS = """
 MATCH (e)-[r]-(other)
 WHERE (coalesce(e.name, e.text) = $entity_name 
    OR toLower(coalesce(e.name, e.text, '')) = toLower($entity_name)
-   OR toLower(coalesce(e.name, e.text, '')) CONTAINS toLower($entity_name))
-  AND coalesce(other.name, other.text) IS NOT NULL
+   OR toLower(coalesce(e.name, e.text, '')) CONTAINS toLower($entity_name)
+   OR (size(coalesce(e.name, e.text, '')) > 8 AND toLower($entity_name) CONTAINS toLower(coalesce(e.name, e.text, ''))))
+  AND coalesce(other.name, other.text, toString(other.value)) IS NOT NULL
 RETURN coalesce(e.name, e.text) AS entity, type(r) AS rel_type,
        CASE WHEN startNode(r) = e THEN 'out' ELSE 'in' END AS direction,
-       coalesce(other.name, other.text) AS other, labels(other)[0] AS other_type,
+       coalesce(other.name, other.text, toString(other.value)) AS other, labels(other)[0] AS other_type,
        properties(r) AS props
 LIMIT 50
 """

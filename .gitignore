@@ -80,14 +80,16 @@ coverage/
 Thumbs.db
 .DS_Store
 
-# Temporary
+# Temporary & Backups
 temp/
 tmp/
 *.tmp
-*.bak
-*.backup
+*.bak*
+*.backup*
+backend/data/backups/
+data/backups/
 
-# Data dumps (keep in original directory only)
+# Data dumps and ledgers (keep in original directory only)
 *.cypher
 *.json.gz
 *_dump.json
@@ -95,6 +97,8 @@ tmp/
 scratch/
 scratch/**
 backend/data/vector_store/**/payload.json
+backend/data/vector_store/**/payloads.json
+backend/data/corpora/**/ledger.json
 
 # Documentation builds
 docs/_build/

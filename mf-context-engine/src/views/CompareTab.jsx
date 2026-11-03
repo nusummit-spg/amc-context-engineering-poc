@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Copy, Check } from "lucide-react";
 import TextInput from "../components/widgets/TextInput";
 import AutoGrowTextarea from "../components/widgets/AutoGrowTextarea";
 import Button from "../components/widgets/Button";
@@ -11,6 +11,7 @@ import { useToast } from "../components/widgets/Toast";
 import TraditionalPanel from "./panels/TraditionalPanel";
 import ContextGraphPanel from "./panels/ContextGraphPanel";
 import ComparisonSummary from "./panels/ComparisonSummary";
+import { getPromptText, copyTextToClipboard } from "../utils/promptUtils";
 
 /** Placeholder card with the shape of a result panel, shown while one is generating. */
 function PendingPanel({ kind, label }) {
@@ -31,6 +32,37 @@ function PendingPanel({ kind, label }) {
       <span className="stSkeleton stSkeleton--text is-short" />
       <span className="stSkeleton stSkeleton--block" />
       <span className="stSkeleton stSkeleton--text is-medium" />
+    </div>
+  );
+}
+
+function CompareQuery({ content }) {
+  const [copied, setCopied] = useState(false);
+
+  const queryText = getPromptText(content);
+
+  const handleCopy = async () => {
+    if (!queryText) return;
+    const ok = await copyTextToClipboard(queryText);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    }
+  };
+
+  return (
+    <div className="cg-cmp-query">
+      <div className="cg-cmp-query-text">{queryText}</div>
+      <button
+        type="button"
+        className={`cg-cmp-query-copy-btn ${copied ? "cg-cmp-query-copy-btn--copied" : ""}`}
+        onClick={handleCopy}
+        title={copied ? "Copied to clipboard" : "Copy prompt"}
+        aria-label={copied ? "Copied to clipboard" : "Copy prompt"}
+      >
+        {copied ? <Check size={12} strokeWidth={2} /> : <Copy size={12} strokeWidth={1.75} />}
+        <span>{copied ? "Copied" : "Copy"}</span>
+      </button>
     </div>
   );
 }
@@ -157,7 +189,7 @@ export default function CompareTab({ role }) {
 
       {turns.map(([userMsg, asstMsg], i) => (
         <div key={i} className="cg-cmp-turn">
-          <div className="cg-cmp-query">{userMsg.content}</div>
+          <CompareQuery content={userMsg.content} />
           {!asstMsg ? (
             <Divider />
           ) : asstMsg.loading ? (

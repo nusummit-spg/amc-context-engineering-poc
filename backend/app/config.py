@@ -56,11 +56,19 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o"
     gemini_model: str = "gemini-2.0-flash"
     
+    # --- OpenRouter LLM Configuration ---
+    openrouter_api_key: str = ""
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_model: str = "openrouter/free"
+    openrouter_fast_model: str = "openrouter/free"
+    
     # Provider Fallbacks (Configurable - DISABLED BY DEFAULT)
     enable_multi_provider_fallback: bool = False      # Default False: only primary provider (Groq) is used
     enable_local_llm_fallback: bool = False           # Default False: local small model disabled by default
     local_llm_endpoint: str = "http://127.0.0.1:11434/v1"
     local_llm_model: str = "qwen2.5:3b"
+    ollama_endpoint: Optional[str] = None
+    ollama_model: Optional[str] = None
     
     llm_max_tokens: int = 2048
     llm_max_retries: int = 3
@@ -221,7 +229,7 @@ class Settings(BaseSettings):
             errors.append("service_timeout should not exceed 300 seconds (5 minutes)")
         
         # LLM configuration
-        if self.llm_provider not in ("groq", "openai", "gemini"):
+        if self.llm_provider not in ("groq", "openai", "gemini", "openrouter", "ollama", "local"):
             errors.append(f"Invalid llm_provider: {self.llm_provider}")
         
         # Database constraints

@@ -77,7 +77,8 @@ async def resolve_cross_doc_entities(
             if is_exact or sim >= similarity_threshold:
                 # Merge / Create SAME_AS relationship in Cypher
                 merge_cypher = """
-                MATCH (a), (b)
+                MATCH (a)
+                MATCH (b)
                 WHERE id(a) = $id_a AND id(b) = $id_b
                 MERGE (a)-[r:SAME_AS]->(b)
                 SET r.confidence = $sim, r.resolved_type = $rel_type

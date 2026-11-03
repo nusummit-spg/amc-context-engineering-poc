@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from app.core.llm import LLMClient
 from app.prompts import get_prompt
-from app.models.documents import Document
+from app.models.documents import Document, DocumentType
 
 logger = logging.getLogger("extraction")
 
@@ -69,6 +69,52 @@ class EntityExtractor:
         self._llm = llm
 
     async def extract(self, document: Document) -> list[ExtractedMention]:
+        if getattr(document, "doc_type", None) == DocumentType.CSV or (document.filename and document.filename.lower().endswith(".csv")):
+            import re
+            mentions: list[ExtractedMention] = []
+            seen: set[tuple[str, str]] = set()
+            for sec in document.sections:
+                for line in sec.text.splitlines():
+                    m_scheme = re.search(r"Scheme_Name:\s*([^|\n]+)", line)
+                    if m_scheme:
+                        s_name = m_scheme.group(1).strip()
+                        if s_name and ("Scheme", s_name.lower()) not in seen:
+                            seen.add(("Scheme", s_name.lower()))
+                            mentions.append(ExtractedMention(
+                                type="Scheme",
+                                surface_form=s_name,
+                                normalized_name=s_name,
+                                properties={},
+                                context=line[:200],
+                                confidence=0.95,
+                            ))
+                    m_amc = re.search(r"\bAMC:\s*([^|\n]+)", line)
+                    if m_amc:
+                        a_name = m_amc.group(1).strip()
+                        if a_name and ("Issuer", a_name.lower()) not in seen:
+                            seen.add(("Issuer", a_name.lower()))
+                            mentions.append(ExtractedMention(
+                                type="Issuer",
+                                surface_form=a_name,
+                                normalized_name=a_name,
+                                properties={},
+                                context=line[:200],
+                                confidence=0.95,
+                            ))
+                    m_cat = re.search(r"Scheme_Category:\s*([^|\n]+)", line)
+                    if m_cat:
+                        c_name = m_cat.group(1).strip()
+                        if c_name and ("Sector", c_name.lower()) not in seen:
+                            seen.add(("Sector", c_name.lower()))
+                            mentions.append(ExtractedMention(
+                                type="Sector",
+                                surface_form=c_name,
+                                normalized_name=c_name,
+                                properties={},
+                                context=line[:200],
+                                confidence=0.95,
+                            ))
+            return mentions
         """Extract operation.
 
         Args:

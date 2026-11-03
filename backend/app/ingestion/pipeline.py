@@ -34,7 +34,7 @@ from app.ingestion.chunker import chunk_document
 from app.ingestion.ledger import IngestionLedger, IngestionStage
 from app.ingestion.parsers import build_registry
 from app.ingestion.pii import PiiScrubber
-from app.models.documents import Document
+from app.models.documents import Document, DocumentType
 from app.vector.client import VectorStore
 
 logger = logging.getLogger("ingestion")
@@ -154,7 +154,7 @@ class IngestionPipeline:
         # 6. Relationship extraction (rule-based always; LLM only when gate fires)
         relationships = await self._relationship_extractor.extract(
             document, resolved,
-            skip_llm=not should_run_relationship_llm(ambiguity_report),
+            skip_llm=True if getattr(document, "doc_type", None) == DocumentType.CSV else not should_run_relationship_llm(ambiguity_report),
         )
 
         # 7. Persist — graph population
@@ -198,7 +198,8 @@ class IngestionPipeline:
                 await self._graph.upsert_entity(entity)
                 await self._graph.run(
                     f"""
-                    MATCH (v:DocumentVersion {{document_version_id: $doc_ver_id}}), (e:{entity.entity_type.value} {{name: $name}})
+                    MATCH (v:DocumentVersion {{document_version_id: $doc_ver_id}})
+                    MATCH (e:{entity.entity_type.value} {{name: $name}})
                     MERGE (v)-[:MENTIONS]->(e)
                     """,
                     doc_ver_id=doc_ver_id,

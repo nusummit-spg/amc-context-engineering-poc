@@ -230,10 +230,16 @@ class RetrievalOrchestrator:
             list[RetrievedChunk]: List of resulting items or records.
         """
         effective_k = max(top_k or 8, 8)
+        tax_paths = list(intent.taxonomy_paths) if intent.taxonomy_paths else None
+        q_low = search_query.lower()
+        if tax_paths and any(term in q_low for term in ["nav", "aum", "net asset value", "scheme code", "portfolio aum", "regular growth", "direct growth", "idcw"]):
+            for p in ["Operations/NAV", "Product/Mutual Funds"]:
+                if p not in tax_paths:
+                    tax_paths.append(p)
         hits = await self._vector.search(
             search_query,
             top_k=effective_k,
-            taxonomy_paths=intent.taxonomy_paths or None,
+            taxonomy_paths=tax_paths,
             entity_names=[e.name for e in resolved_entities] or None,
             user_id=user_id,
             tenant_id=tenant_id,
@@ -741,6 +747,11 @@ class RetrievalOrchestrator:
                     "llm_model": "guardrail_deterministic",
                     "input_tokens": 0,
                     "output_tokens": len(synth.answer.split()) * 2,
+                    "latency_ner_ms": 0.0,
+                    "latency_graph_ms": 0.0,
+                    "latency_vector_ms": 0.0,
+                    "latency_assembly_ms": 0.0,
+                    "latency_llm_ms": 0.0,
                     "latency_total_ms": total_ms,
                     "status": "REFUSAL",
                     "session_id": session_id,
@@ -788,6 +799,11 @@ class RetrievalOrchestrator:
                     "llm_model": "fast_path_deterministic",
                     "input_tokens": 0,
                     "output_tokens": len(fast_resp.synthesis.answer.split()) * 2 if fast_resp.synthesis else 0,
+                    "latency_ner_ms": 0.0,
+                    "latency_graph_ms": 0.0,
+                    "latency_vector_ms": 0.0,
+                    "latency_assembly_ms": 0.0,
+                    "latency_llm_ms": 0.0,
                     "latency_total_ms": total_ms,
                     "status": "FAST_PATH",
                     "session_id": session_id,
@@ -1481,6 +1497,11 @@ class RetrievalOrchestrator:
             "llm_model": getattr(self._synthesizer, "_model", "default"),
             "input_tokens": context.token_count,
             "output_tokens": len(synthesis.answer.split()) * 2 if synthesis.answer else 0,
+            "latency_ner_ms": t_ner_ms,
+            "latency_graph_ms": t_graph_ms,
+            "latency_vector_ms": t_vector_ms,
+            "latency_assembly_ms": t_asm_ms,
+            "latency_llm_ms": t_gen_ms,
             "latency_total_ms": total_ms,
             "status": "COMPLETED",
             "session_id": session_id,
@@ -2217,6 +2238,11 @@ class RetrievalOrchestrator:
             "llm_model": getattr(self._synthesizer, "_model", "default"),
             "input_tokens": in_toks,
             "output_tokens": out_toks,
+            "latency_ner_ms": t_ner_ms,
+            "latency_graph_ms": t_graph_ms,
+            "latency_vector_ms": t_vector_ms,
+            "latency_assembly_ms": t_assembly_ms,
+            "latency_llm_ms": generation_ms,
             "latency_total_ms": total_ms,
             "status": "STREAM_COMPLETED",
             "session_id": session_id,

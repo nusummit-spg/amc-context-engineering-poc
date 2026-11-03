@@ -6,6 +6,7 @@ import StreamingAnswer from "../components/widgets/StreamingAnswer";
 import { useAppState } from "../state/AppState";
 import { useToast } from "../components/widgets/Toast";
 import AssistantMessage from "./chat/AssistantMessage";
+import UserMessage from "./chat/UserMessage";
 import EvidenceModal from "./chat/EvidenceModal";
 import OntologyModal from "./chat/OntologyModal";
 import FeedbackModal from "./chat/FeedbackModal";
@@ -291,7 +292,7 @@ export default function ChatTab() {
 
         {turns.map(([userMsg, asstMsg], i) => (
           <div key={i} className="cg-msg-group">
-            <div className="cg-msg-user">{userMsg.content}</div>
+            <UserMessage content={userMsg.content} timestamp={userMsg.timestamp} />
 
             {!asstMsg ? null : asstMsg.loading ? (
               i === lastTurnIdx && isStreaming && streamingAnswer ? (

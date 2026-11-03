@@ -107,9 +107,11 @@ def extract_csv_text_full(path: str, rows_per_page: int = 25,
     # Truncation used to be silent: a 16k-row export quietly became 1,250 rows.
     capacity = rows_per_page * max_pages
     if len(body) > capacity:
-        print(f"  [WARN] {Path(path).name}: ingesting {capacity:,} of {len(body):,} rows "
-              f"(CSV_MAX_PAGES={max_pages} x {rows_per_page} rows/page). "
-              f"Raise CSV_MAX_PAGES to index the full file.", flush=True)
+        # For chunked CSVs, this is expected behavior - each chunk is a subset
+        if "chunk" not in Path(path).stem.lower():
+            print(f"  [WARN] {Path(path).name}: ingesting {capacity:,} of {len(body):,} rows "
+                  f"(CSV_MAX_PAGES={max_pages} x {rows_per_page} rows/page). "
+                  f"Raise CSV_MAX_PAGES to index the full file.", flush=True)
     header_md = ["| " + " | ".join(header) + " |",
                  "| " + " | ".join(["---"] * len(header)) + " |"]
     

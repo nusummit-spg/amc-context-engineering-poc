@@ -17,7 +17,7 @@ import re
 
 from app.core.llm import LLMClient
 from app.prompts import get_prompt
-from app.models.documents import Document
+from app.models.documents import Document, DocumentType
 from app.models.entities import BaseEntity, EntityType
 from app.models.relationships import Relationship, RelationshipType
 
@@ -111,6 +111,61 @@ class RelationshipExtractor:
         """
         results: list[tuple[Relationship, str, str]] = []
         schemes = [e for e in by_name.values() if e.entity_type == EntityType.SCHEME]
+
+        # Fast rule-based extraction for structured CSV mutual fund datasets
+        is_csv = getattr(document, "doc_type", None) == DocumentType.CSV or (
+            bool(document.filename) and document.filename.lower().endswith(".csv")
+        )
+        if is_csv:
+            seen_rels: set[tuple[str, str, str]] = set()
+            for section in document.sections:
+                for line in section.text.splitlines():
+                    m_scheme = re.search(r"Scheme_Name:\s*([^|\n]+)", line)
+                    if not m_scheme:
+                        continue
+                    s_name = m_scheme.group(1).strip()
+                    s_ent = by_name.get(s_name.lower())
+                    if not s_ent:
+                        continue
+
+                    # 1. Scheme -> ISSUED_BY -> Issuer (AMC)
+                    m_amc = re.search(r"\bAMC:\s*([^|\n]+)", line)
+                    if m_amc:
+                        a_name = m_amc.group(1).strip()
+                        a_ent = by_name.get(a_name.lower())
+                        if a_ent and (s_ent.name, RelationshipType.ISSUED_BY.value, a_ent.name) not in seen_rels:
+                            seen_rels.add((s_ent.name, RelationshipType.ISSUED_BY.value, a_ent.name))
+                            results.append((
+                                Relationship(
+                                    relationship_type=RelationshipType.ISSUED_BY,
+                                    source_entity_id=s_ent.entity_id,
+                                    target_entity_id=a_ent.entity_id,
+                                    properties={"source": document.filename},
+                                    extraction_method="rule",
+                                    confidence=1.0,
+                                ),
+                                s_ent.name, a_ent.name,
+                            ))
+
+                    # 2. Scheme -> IN_SECTOR -> Sector (Scheme_Category)
+                    m_cat = re.search(r"Scheme_Category:\s*([^|\n]+)", line)
+                    if m_cat:
+                        c_name = m_cat.group(1).strip()
+                        c_ent = by_name.get(c_name.lower())
+                        if c_ent and (s_ent.name, RelationshipType.IN_SECTOR.value, c_ent.name) not in seen_rels:
+                            seen_rels.add((s_ent.name, RelationshipType.IN_SECTOR.value, c_ent.name))
+                            results.append((
+                                Relationship(
+                                    relationship_type=RelationshipType.IN_SECTOR,
+                                    source_entity_id=s_ent.entity_id,
+                                    target_entity_id=c_ent.entity_id,
+                                    properties={"source": document.filename},
+                                    extraction_method="rule",
+                                    confidence=1.0,
+                                ),
+                                s_ent.name, c_ent.name,
+                            ))
+            return results
 
         for section in document.sections:
             text = section.text

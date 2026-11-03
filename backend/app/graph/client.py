@@ -135,7 +135,8 @@ class GraphClient:
             props["source_document_id"] = rel.source_document_id
         await self.run(
             f"""
-            MATCH (a {{name: $source_name}}), (b {{name: $target_name}})
+            MATCH (a {{name: $source_name}})
+            MATCH (b {{name: $target_name}})
             MERGE (a)-[r:{rel_type}]->(b)
             SET r += $props
             """,
