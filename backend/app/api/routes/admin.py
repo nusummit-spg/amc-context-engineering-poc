@@ -19,7 +19,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile, status
 from pydantic import BaseModel, EmailStr, Field
 
-from app.api.deps import OptionalCurrentUser
+from app.api.deps import CurrentUser, OptionalCurrentUser
 from app.compliance.security import Role, get_client_role
 logger = logging.getLogger(__name__)
 
