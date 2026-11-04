@@ -42,23 +42,11 @@ class GovernanceBatch:
         log_step_info(logger, "GOVERNANCE_BATCH_START", "Starting governance batch with %d pending patches (dry_run=%s)", len(pending), dry_run)
 
         for patch in pending[:self.config.batch_size]:
+            # REP-01 / REP-02: Human authorization mandatory.
+            # Confidence is a triage score, NOT authorization. No automatic approvals or promotions.
             if patch.confidence >= self.config.auto_approve_confidence:
-                report.approved += 1
-                log_step_info(logger, "PATCH_AUTO_APPROVED", "Patch %s auto-approved (confidence=%.2f >= %.2f)", patch.patch_id, patch.confidence, self.config.auto_approve_confidence)
-                if not dry_run:
-                    await self.patch_layer.approve_patch(patch.patch_id)
-                    success = await self.graph.apply_entity_patch(
-                        entity_id=patch.entity_id,
-                        attribute=patch.attribute,
-                        value=patch.corrected_value
-                    )
-                    if success:
-                        report.promoted_to_graph += 1
-                        log_step_info(logger, "GRAPH_MUTATION_APPLIED", "Promoted patch %s to canonical graph: %s.%s = %s", patch.patch_id, patch.entity_id, patch.attribute, patch.corrected_value)
-                        try:
-                            await self.graph.delete_shadow_patch(patch.patch_id)
-                        except Exception:
-                            pass
+                report.needs_review += 1
+                log_step_info(logger, "PATCH_RECOMMENDED_APPROVAL", "Patch %s recommended for human approval (confidence=%.2f >= %.2f) - auto-approval disabled per REP-01", patch.patch_id, patch.confidence, self.config.auto_approve_confidence)
             elif patch.confidence < 0.5:
                 report.rejected += 1
                 log_step_info(logger, "PATCH_REJECTED", "Patch %s rejected (confidence=%.2f < 0.5)", patch.patch_id, patch.confidence)

@@ -5,12 +5,12 @@
 #
 # ===========================================================================
 
-"""WS3 — /ingest endpoints: upload, batch, status polling."""
+"""WS3 — /ingest endpoints: upload, batch, status polling with mandatory authentication."""
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 
-from app.api.deps import Container, get_container
+from app.api.deps import Container, CurrentUser, get_container
 from app.core.errors import NotFoundError, ValidationFailedError
 from app.models.api import IngestJobResponse, IngestStatusResponse
 from app.tasks.queue import ingest_queue
@@ -18,20 +18,24 @@ from app.tasks.queue import ingest_queue
 router = APIRouter(prefix="/ingest", tags=["ingest"])
 
 
+def _require_ingest_permission(current_user: CurrentUser) -> None:
+    """Ensure user has admin or compliance_officer privileges for ingestion."""
+    r = (current_user.role or "").lower()
+    if "admin" not in r and "compliance" not in r:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Ingestion requires admin or compliance_officer role. Current: {current_user.role}",
+        )
+
+
 @router.post("/file", response_model=IngestJobResponse)
 async def ingest_file(
     file: UploadFile,
+    current_user: CurrentUser,
     container: Container = Depends(get_container),
 ) -> IngestJobResponse:
-    """Create or process ingest file.
-
-    Args:
-        file (UploadFile): Uploaded file or file handle.
-        container (Container): Dependency injection container providing application services.
-
-    Returns:
-        IngestJobResponse: IngestJobResponse object containing the operation result.
-    """
+    """Create or process ingest file. Requires authenticated admin/compliance_officer."""
+    _require_ingest_permission(current_user)
     upload_dir = Path(container.settings.upload_dir)
     upload_dir.mkdir(parents=True, exist_ok=True)
     safe_name = Path(file.filename or "upload").name
@@ -49,15 +53,12 @@ async def ingest_file(
 
 
 @router.post("/batch", response_model=IngestJobResponse)
-async def ingest_batch(container: Container = Depends(get_container)) -> IngestJobResponse:
-    """Ingest every supported file in the configured corpus directory.
-
-    Args:
-        container (Container): Dependency injection container providing application services.
-
-    Returns:
-        IngestJobResponse: IngestJobResponse object containing the operation result.
-    """
+async def ingest_batch(
+    current_user: CurrentUser,
+    container: Container = Depends(get_container),
+) -> IngestJobResponse:
+    """Ingest every supported file in the configured corpus directory."""
+    _require_ingest_permission(current_user)
     corpus_dir = Path(container.settings.corpus_dir)
     if not corpus_dir.exists():
         raise NotFoundError(f"Corpus directory not found: {corpus_dir}")
@@ -75,15 +76,12 @@ async def ingest_batch(container: Container = Depends(get_container)) -> IngestJ
 
 
 @router.get("/status/{job_id}", response_model=IngestStatusResponse)
-async def ingest_status(job_id: str) -> IngestStatusResponse:
-    """Retrieve ingest status.
-
-    Args:
-        job_id (str): Unique identifier of the job.
-
-    Returns:
-        IngestStatusResponse: IngestStatusResponse object containing the operation result.
-    """
+async def ingest_status(
+    job_id: str,
+    current_user: CurrentUser,
+) -> IngestStatusResponse:
+    """Retrieve ingest status."""
+    _require_ingest_permission(current_user)
     job = ingest_queue.get_job(job_id)
     if job is None:
         raise NotFoundError(f"Unknown ingest job: {job_id}")

@@ -164,6 +164,10 @@ async def create_patch(request: CreatePatchRequest):
         )
         engine = get_repair_engine()
         
+        # REP-01 / REP-03: Client cannot self-approve patches at creation time
+        if request.approved:
+            log_step_info(logger, "PATCH_AUTO_APPROVE_REJECTED", "Client submitted approved=True for patch on entity %s; forcing approved=False per REP-01 policy", request.entity_id)
+
         patch_id = await engine.add_correction(
             entity_id=request.entity_id,
             attribute=request.attribute,
@@ -171,7 +175,7 @@ async def create_patch(request: CreatePatchRequest):
             corrected_value=request.corrected_value,
             confidence=request.confidence,
             provenance=request.provenance,
-            approved=request.approved
+            approved=False  # Always false on creation
         )
         
         log_step_info(logger, "PATCH_CREATED", "Patch %s created successfully for entity=%s", patch_id, request.entity_id)

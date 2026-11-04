@@ -24,7 +24,8 @@ import urllib.parse
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from app.api.deps import CurrentUser
 from fastapi.responses import FileResponse
 
 from app.config import get_settings
@@ -196,19 +197,26 @@ def get_pdf_url(document_id: str, page: Optional[int] = None) -> Optional[str]:
 
 
 @router.get("/download/{document_id:path}")
-async def download_file(document_id: str):
-    """Force download of the requested document (CSV, PDF, etc.) to user's local disk."""
+async def download_file(
+    document_id: str,
+    current_user: CurrentUser,
+):
+    """Force download of the requested document (CSV, PDF, etc.) to user's local disk.
+    Requires authenticated user (SEC-01).
+    """
     return await _serve_file_response(document_id=document_id, force_download=True)
 
 
 @router.get("/{document_id:path}")
 async def get_file(
     document_id: str,
+    current_user: CurrentUser,
     download: bool = Query(default=False, description="Whether to force attachment download"),
 ):
     """Serve or download requested document.
     - CSV files default to attachment download into user's local system.
     - PDF files default to inline viewing with page anchoring.
+    Requires authenticated user (SEC-01).
     """
     return await _serve_file_response(document_id=document_id, force_download=download)
 

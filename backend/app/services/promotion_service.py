@@ -153,6 +153,12 @@ class PromotionService:
                 "Graph database connection required for canonical mutations."
             )
 
+        if not proposal.mutation_cypher or not proposal.mutation_cypher.strip():
+            error_msg = f"Proposal {proposal.proposal_id} has no mutation_cypher. Cannot apply empty mutation."
+            logger.error("PROMOTION_BLOCKED: %s", error_msg)
+            self._log_mutation(proposal, db, success=False, error=error_msg)
+            raise PromotionFailedError(error_msg)
+
         with driver.session(database=config.NEO4J_DATABASE) as session:
             tx = session.begin_transaction()
             try:

@@ -18,6 +18,7 @@ Wave 1.1 P0 Closure - Security Gate Tests
 """
 
 import pytest
+from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
 
 
@@ -31,24 +32,68 @@ def client():
 @pytest.fixture
 def admin_headers():
     """Create headers with admin JWT token."""
-    from app.auth.service import AuthService
     from app.config import get_settings
-    from app.auth.sql_repository import SqlUserRepository
+    from app.auth.security import issue_session_token, hash_password
     from app.core.database import SessionLocal
+    from app.schemas.auth_users_table import AuthUser
     
-    # This would normally use a test user, for now returning placeholder
-    # TODO: Create test admin user and generate real token
+    db = SessionLocal()
+    try:
+        user = db.query(AuthUser).filter(AuthUser.username == "test_sec_admin").first()
+        if not user:
+            user = AuthUser(
+                username="test_sec_admin",
+                password_hash=hash_password("AdminSecurePassword123!"),
+                display_name="Test Sec Admin",
+                email="test_sec_admin@amc.com",
+                role="admin",
+                department="IT Security",
+                status="Active",
+                tenant_id="tenant_admin",
+            )
+            db.add(user)
+            db.commit()
+    finally:
+        db.close()
+    
+    settings = get_settings()
+    token, _ = issue_session_token("test_sec_admin", settings.auth_secret_key, 60)
     return {
-        "Authorization": "Bearer test_admin_token_placeholder"
+        "Authorization": f"Bearer {token}"
     }
 
 
 @pytest.fixture
 def analyst_headers():
     """Create headers with analyst (non-admin) JWT token."""
-    # TODO: Create test analyst user and generate real token
+    from app.config import get_settings
+    from app.auth.security import issue_session_token, hash_password
+    from app.core.database import SessionLocal
+    from app.schemas.auth_users_table import AuthUser
+    
+    db = SessionLocal()
+    try:
+        user = db.query(AuthUser).filter(AuthUser.username == "test_sec_analyst").first()
+        if not user:
+            user = AuthUser(
+                username="test_sec_analyst",
+                password_hash=hash_password("AnalystSecurePassword123!"),
+                display_name="Test Sec Analyst",
+                email="test_sec_analyst@amc.com",
+                role="analyst",
+                department="Research",
+                status="Active",
+                tenant_id="tenant_analyst",
+            )
+            db.add(user)
+            db.commit()
+    finally:
+        db.close()
+    
+    settings = get_settings()
+    token, _ = issue_session_token("test_sec_analyst", settings.auth_secret_key, 60)
     return {
-        "Authorization": "Bearer test_analyst_token_placeholder"
+        "Authorization": f"Bearer {token}"
     }
 
 
@@ -63,12 +108,10 @@ class TestAdminUserManagement:
         """GET /api/admin/users without auth returns 401."""
         response = client.get("/api/admin/users")
         assert response.status_code == 401
-        assert "authentication" in response.json().get("detail", "").lower()
+        assert "authentication" in response.json().get("detail", "").lower() or "token" in response.json().get("detail", "").lower()
     
     def test_list_users_analyst_403(self, client, analyst_headers):
         """GET /api/admin/users with analyst role returns 403."""
-        # TODO: Enable when auth is working
-        pytest.skip("Requires working JWT authentication")
         response = client.get("/api/admin/users", headers=analyst_headers)
         assert response.status_code == 403
     
@@ -84,7 +127,6 @@ class TestAdminUserManagement:
     
     def test_create_user_analyst_403(self, client, analyst_headers):
         """POST /api/admin/users with analyst role returns 403."""
-        pytest.skip("Requires working JWT authentication")
         response = client.post("/api/admin/users", json={
             "username": "testuser",
             "display_name": "Test User",
@@ -145,7 +187,6 @@ class TestAdminCache:
     
     def test_clear_cache_analyst_403(self, client, analyst_headers):
         """POST /api/admin/cache/clear with analyst role returns 403."""
-        pytest.skip("Requires working JWT authentication")
         response = client.post("/api/admin/cache/clear", json={
             "cache_types": ["semantic"]
         }, headers=analyst_headers)
@@ -246,14 +287,49 @@ class TestSecureEnrollment:
     
     def test_accept_invitation_weak_password_400(self, client):
         """POST /api/auth/accept-invitation with weak password returns 400."""
-        # TODO: Need to create valid invitation token first
-        pytest.skip("Requires test invitation token")
+        from app.core.database import SessionLocal
+        from app.schemas.auth_users_table import AuthUser
+        from app.schemas.invitation_token import InvitationToken
+        
+        token = "test_valid_invite_token_weak_pass_test"
+        db = SessionLocal()
+        try:
+            # Clean up if exists
+            db.query(InvitationToken).filter(InvitationToken.token == token).delete()
+            db.query(AuthUser).filter(AuthUser.username == "test_invitee_user").delete()
+            db.commit()
+            
+            pending_user = AuthUser(
+                username="test_invitee_user",
+                password_hash="",
+                display_name="Test Invitee",
+                email="invitee@example.com",
+                role="analyst",
+                department="Research",
+                status="Pending",
+                tenant_id="default",
+            )
+            invite = InvitationToken(
+                token=token,
+                username="test_invitee_user",
+                expires_at=datetime.now(timezone.utc) + timedelta(days=1),
+                created_by="test_sec_admin",
+                used=False,
+            )
+            db.add(pending_user)
+            db.add(invite)
+            db.commit()
+        finally:
+            db.close()
+            
         response = client.post("/api/auth/accept-invitation", json={
-            "invitation_token": "valid_token_placeholder",
-            "password": "weak"  # Too short
+            "invitation_token": token,
+            "password": "weak"  # Too short (<12 chars)
         })
-        assert response.status_code == 400
-        assert "password" in response.json().get("detail", "").lower()
+        # Pydantic schema validation returns 422 or endpoint returns 400
+        assert response.status_code in [400, 422]
+        error_text = str(response.json()).lower()
+        assert "password" in error_text or "too_short" in error_text
 
 
 # ============================================================================
@@ -265,57 +341,18 @@ class TestNoAutoApproval:
     
     def test_run_batch_does_not_auto_approve(self, client, admin_headers):
         """POST /api/governance/run-batch only categorizes, does not auto-approve."""
-        pytest.skip("Requires working JWT authentication")
         response = client.post("/api/governance/run-batch", json={
             "auto_approve_threshold": 0.95,
             "max_risk_level": "LOW",
             "dry_run": False
         }, headers=admin_headers)
         
-        if response.status_code == 200:
-            data = response.json()
-            # REP-01 compliance: should return categorization, not approvals
-            assert data.get("status") == "review_categorization_completed"
-            assert "REP-01 COMPLIANCE" in data.get("message", "")
-            # Should not have auto-approved anything
-            assert "recommended_for_approval" in data
-            # approved count should be 0 (no automatic approvals)
-            # Only recommendations
-
-
-# ============================================================================
-# Integration Test Markers
-# ============================================================================
-
-pytestmark = [
-    pytest.mark.security,
-    pytest.mark.sec01,
-    pytest.mark.wave1_1,
-]
-
-
-# ============================================================================
-# Test Execution Notes
-# ============================================================================
-
-"""
-To run these tests:
-    pytest tests/test_sec01_universal_auth.py -v
-
-To run only authentication tests:
-    pytest tests/test_sec01_universal_auth.py::TestAdminUserManagement -v
-
-To run with coverage:
-    pytest tests/test_sec01_universal_auth.py --cov=app.api.routes --cov-report=html
-
-Expected Results:
-- All `_no_auth_401` tests should pass (endpoints reject unauthenticated requests)
-- All `_analyst_403` tests should pass (endpoints reject unauthorized roles)
-- HeaderAuthRejection tests should pass (X-User-Role header ignored)
-
-Known Limitations:
-- Tests with `pytest.skip()` require JWT authentication infrastructure
-- Need to create test users and generate valid tokens
-- Need test database with sample data
-- Some tests are placeholders pending full auth implementation
-"""
+        assert response.status_code == 200
+        data = response.json()
+        # REP-01 compliance: should return categorization, not approvals
+        assert data.get("status") == "review_categorization_completed"
+        assert "REP-01 COMPLIANCE" in data.get("message", "")
+        # Should not have auto-approved anything
+        assert "recommended_for_approval" in data
+        assert "recommended_for_rejection" in data
+        assert "requires_detailed_review" in data

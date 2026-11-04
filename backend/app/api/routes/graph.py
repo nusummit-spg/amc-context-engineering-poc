@@ -8,7 +8,7 @@
 """WS3 — /graph endpoints: full graph fetch, node neighbourhood, traversal highlight."""
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import Container, get_container
+from app.api.deps import Container, CurrentUser, get_container
 from app.core.errors import NotFoundError
 from app.models.api import GraphEdgeOut, GraphNodeOut, GraphResponse
 
@@ -66,6 +66,7 @@ def _edge_label(edge: dict) -> str:
 
 @router.get("", response_model=GraphResponse)
 async def full_graph(
+    current_user: CurrentUser,
     limit: int = Query(500, le=2000),
     container: Container = Depends(get_container),
 ) -> GraphResponse:
@@ -84,6 +85,7 @@ async def full_graph(
 
 @router.get("/neighborhood", response_model=GraphResponse)
 async def neighborhood(
+    current_user: CurrentUser,
     name: str = Query(..., description="Canonical entity name"),
     depth: int = Query(1, ge=1, le=3),
     container: Container = Depends(get_container),
@@ -108,6 +110,7 @@ async def neighborhood(
 
 @router.get("/traversal")
 async def traversal_highlight(
+    current_user: CurrentUser,
     query: str = Query(...),
     container: Container = Depends(get_container),
 ) -> dict:

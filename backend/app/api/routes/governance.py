@@ -123,6 +123,23 @@ def log_governance_audit(action: str, patch_id: str, actor: str, details: Option
         logger.error("Failed writing to governance audit log: %s", exc)
 
 
+def _normalize_role(role: str | None) -> str:
+    r = (role or "").lower().strip().replace(" ", "_").replace("&", "_")
+    while "__" in r:
+        r = r.replace("__", "_")
+    if "admin" in r:
+        return "admin"
+    if "compliance" in r:
+        return "compliance_officer"
+    if "review" in r:
+        return "reviewer"
+    if "analyst" in r:
+        return "analyst"
+    if "view" in r:
+        return "viewer"
+    return r
+
+
 def require_governance_role(current_user: CurrentUser) -> None:
     """Check if user has governance privileges (compliance_officer, admin, or reviewer).
     
@@ -134,8 +151,9 @@ def require_governance_role(current_user: CurrentUser) -> None:
     Raises:
         HTTPException(403): If user lacks governance privileges
     """
+    norm = _normalize_role(current_user.role)
     allowed_roles = ["compliance_officer", "admin", "reviewer"]
-    if current_user.role not in allowed_roles:
+    if norm not in allowed_roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Governance access requires one of: {allowed_roles}. Your role: {current_user.role}"
@@ -153,8 +171,9 @@ def require_approval_role(current_user: CurrentUser) -> None:
     Raises:
         HTTPException(403): If user lacks approval privileges
     """
+    norm = _normalize_role(current_user.role)
     allowed_roles = ["compliance_officer", "admin"]
-    if current_user.role not in allowed_roles:
+    if norm not in allowed_roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Approval actions require one of: {allowed_roles}. Your role: {current_user.role}"

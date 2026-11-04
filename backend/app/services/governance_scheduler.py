@@ -69,19 +69,17 @@ class GovernanceBatchScheduler:
             manual_review: List[str] = []
 
             for proposal in proposals:
-                if proposal.confidence >= 0.95:
-                    regression_score = await self._run_regression_test(proposal, db)
-                    proposal.regression_score = regression_score
-
-                    if regression_score < 0.05:  # Less than 5% regression risk
-                        proposal.status = "approved"
-                        proposal.reviewed_at = datetime.now(timezone.utc).isoformat()
-                        proposal.reviewed_by = "auto_governance_batch"
-                        auto_approved.append(proposal.proposal_id)
-                    else:
-                        manual_review.append(proposal.proposal_id)
-                else:
-                    manual_review.append(proposal.proposal_id)
+                # REP-01: No automatic approval based on confidence or risk score.
+                # All proposals require explicit human authorization.
+                regression_score = await self._run_regression_test(proposal, db)
+                proposal.regression_score = regression_score
+                manual_review.append(proposal.proposal_id)
+                logger.info(
+                    "REP-01: Proposal %s triaged (confidence=%.2f, regression=%.4f) - flagged for human review",
+                    proposal.proposal_id,
+                    proposal.confidence,
+                    regression_score,
+                )
 
             db.commit()
 
