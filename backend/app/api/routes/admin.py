@@ -269,44 +269,72 @@ class UserProfileSchema(BaseModel):
 
 
 @router.get("/users")
-async def list_users(active_only: bool = False, sync: bool = False) -> Dict[str, Any]:
+async def list_users(
+    current_user: CurrentUser,
+    active_only: bool = False,
+    sync: bool = False
+) -> Dict[str, Any]:
     """List all registered AMC user profiles synchronized with data.db auth_users.
+    
+    SEC-01 / W1.1-10: Requires authentication for user management access.
 
     Args:
+        current_user: Authenticated user
         active_only (bool): The active only.
         sync (bool): The sync.
 
     Returns:
         Dict[str, Any]: Dictionary containing result data or status.
     """
+    from app.auth.service import require_admin
+    require_admin(current_user)
+    
     users = _load_users(active_only=active_only)
     return {"users": users, "total": len(users), "synced": True}
 
 
 @router.post("/users/sync")
-async def sync_users(active_only: bool = False) -> Dict[str, Any]:
+async def sync_users(
+    current_user: CurrentUser,
+    active_only: bool = False
+) -> Dict[str, Any]:
     """Force re-synchronization of active user profiles from data.db auth_users.
+    
+    SEC-01 / W1.1-10: Requires admin authentication for user synchronization.
 
     Args:
+        current_user: Authenticated user
         active_only (bool): The active only.
 
     Returns:
         Dict[str, Any]: Dictionary containing result data or status.
     """
+    from app.auth.service import require_admin
+    require_admin(current_user)
+    
     users = _load_users(active_only=active_only)
     return {"users": users, "total": len(users), "status": "synced"}
 
 
 @router.post("/users")
-async def create_or_update_user(payload: UserProfileSchema) -> Dict[str, Any]:
+async def create_or_update_user(
+    payload: UserProfileSchema,
+    current_user: CurrentUser
+) -> Dict[str, Any]:
     """Create or update an AMC user profile and synchronize with the auth store.
+    
+    SEC-01 / W1.1-10: Requires admin authentication for user creation/modification.
 
     Args:
         payload (UserProfileSchema): Request or event payload.
+        current_user: Authenticated user
 
     Returns:
         Dict[str, Any]: Dictionary containing result data or status.
     """
+    from app.auth.service import require_admin
+    require_admin(current_user)
+    
     users = _load_users()
     username = payload.username.strip()
     full_name = payload.full_name.strip()
@@ -459,30 +487,29 @@ def _normalize_username(uname: str | None) -> str:
 @router.delete("/users/{username}")
 async def delete_user(
     username: str,
-    current_user: OptionalCurrentUser = None,
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
+    current_user: CurrentUser
 ) -> Dict[str, Any]:
     """Delete a user profile. System users and self-deletion are protected.
+    
+    SEC-01 / W1.1-10: Requires admin authentication. Removed X-User-ID header trust.
 
     Args:
         username (str): User's login username.
-        current_user (OptionalCurrentUser): Authenticated user context.
-        x_user_id (Optional[str]): Unique identifier of the x user.
+        current_user: Authenticated user context.
 
     Returns:
         Dict[str, Any]: Dictionary containing result data or status.
     """
+    from app.auth.service import require_admin
+    require_admin(current_user)
+    
     clean_username = username.strip()
 
-    # Determine caller identity from authenticated session or header
-    caller = ""
-    if current_user and current_user.username:
-        caller = current_user.username
-    elif x_user_id:
-        caller = x_user_id
+    # SEC-01 / W1.1-10: Caller identity from authenticated user only (no X-User-ID trust)
+    caller = current_user.username
 
     # Enforce self-deletion prevention
-    if caller and _normalize_username(caller) == _normalize_username(clean_username):
+    if _normalize_username(caller) == _normalize_username(clean_username):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Administrators cannot delete their own account.",

@@ -98,8 +98,14 @@ def _create_row(db: Session, model_cls, data: dict):
 # ---------------------------------------------------------
 
 @router.post("/audit-metadata", response_model=dict, status_code=status.HTTP_201_CREATED)
-def create_audit_metadata(payload: AuditMetadataCreate, db: Session = Depends(get_db)):
+def create_audit_metadata(
+    payload: AuditMetadataCreate,
+    current_user: CurrentUser,
+    db: Session = Depends(get_db)
+):
     """Create or process create audit metadata.
+    
+    SEC-01 / W1.1-10: Requires authentication for audit record creation.
 
     Args:
         payload (AuditMetadataCreate): Request or event payload.
@@ -114,8 +120,14 @@ def create_audit_metadata(payload: AuditMetadataCreate, db: Session = Depends(ge
 
 
 @router.get("/audit-metadata", response_model=List[dict])
-def list_audit_metadata(limit: int = Query(50, ge=1, le=500), db: Session = Depends(get_db)):
+def list_audit_metadata(
+    current_user: CurrentUser,
+    limit: int = Query(50, ge=1, le=500),
+    db: Session = Depends(get_db)
+):
     """Retrieve list audit metadata.
+    
+    SEC-01 / W1.1-10: Requires authentication for audit record access.
 
     Args:
         limit (int): Maximum number of records to return.
@@ -129,8 +141,14 @@ def list_audit_metadata(limit: int = Query(50, ge=1, le=500), db: Session = Depe
 
 
 @router.get("/audit-metadata/{audit_id}", response_model=dict)
-def get_audit_metadata(audit_id: str, db: Session = Depends(get_db)):
+def get_audit_metadata(
+    audit_id: str,
+    current_user: CurrentUser,
+    db: Session = Depends(get_db)
+):
     """Retrieve get audit metadata.
+    
+    SEC-01 / W1.1-10: Requires authentication for audit record access.
 
     Args:
         audit_id (str): Unique identifier of the audit.
@@ -150,8 +168,14 @@ def get_audit_metadata(audit_id: str, db: Session = Depends(get_db)):
 # ---------------------------------------------------------
 
 @router.post("/violations", response_model=dict, status_code=status.HTTP_201_CREATED)
-def create_violation(payload: ViolationCreate, db: Session = Depends(get_db)):
+def create_violation(
+    payload: ViolationCreate,
+    current_user: CurrentUser,
+    db: Session = Depends(get_db)
+):
     """Create or process create violation.
+    
+    SEC-01 / W1.1-10: Requires authentication for violation reporting.
 
     Args:
         payload (ViolationCreate): Request or event payload.
@@ -168,6 +192,7 @@ def create_violation(payload: ViolationCreate, db: Session = Depends(get_db)):
 
 @router.get("/violations", response_model=List[dict])
 def list_violations(
+    current_user: CurrentUser,
     audit_id: str | None = Query(None),
     limit: int = Query(50, ge=1, le=500),
     db: Session = Depends(get_db),
@@ -194,8 +219,14 @@ def list_violations(
 # ---------------------------------------------------------
 
 @router.post("/response-feedback", response_model=dict, status_code=status.HTTP_201_CREATED)
-def create_response_feedback(payload: ResponseFeedbackCreate, db: Session = Depends(get_db)):
+def create_response_feedback(
+    payload: ResponseFeedbackCreate,
+    current_user: CurrentUser,
+    db: Session = Depends(get_db)
+):
     """Create or process create response feedback.
+    
+    SEC-01 / W1.1-10: Requires authentication for feedback submission.
 
     Args:
         payload (ResponseFeedbackCreate): Request or event payload.
@@ -211,6 +242,7 @@ def create_response_feedback(payload: ResponseFeedbackCreate, db: Session = Depe
 
 @router.get("/response-feedback", response_model=List[dict])
 def list_response_feedback(
+    current_user: CurrentUser,
     response_id: str | None = Query(None),
     limit: int = Query(50, ge=1, le=500),
     db: Session = Depends(get_db),
@@ -292,8 +324,14 @@ def list_query_evidence(
 # ---------------------------------------------------------
 
 @router.post("/compliance-rules", response_model=dict, status_code=status.HTTP_201_CREATED)
-def create_compliance_rule(payload: ComplianceRuleCreate, db: Session = Depends(get_db)):
+def create_compliance_rule(
+    payload: ComplianceRuleCreate,
+    current_user: CurrentUser,
+    db: Session = Depends(get_db)
+):
     """Create or process create compliance rule.
+    
+    SEC-01 / W1.1-10: Requires authentication for compliance rule management.
 
     Args:
         payload (ComplianceRuleCreate): Request or event payload.
@@ -309,6 +347,7 @@ def create_compliance_rule(payload: ComplianceRuleCreate, db: Session = Depends(
 
 @router.get("/compliance-rules", response_model=List[dict])
 def list_compliance_rules(
+    current_user: CurrentUser,
     region: str | None = Query(None),
     limit: int = Query(50, ge=1, le=500),
     db: Session = Depends(get_db),
@@ -335,8 +374,14 @@ def list_compliance_rules(
 # ---------------------------------------------------------
 
 @router.post("/fund-schemes", response_model=dict, status_code=status.HTTP_201_CREATED)
-def create_fund_scheme(payload: FundSchemeCreate, db: Session = Depends(get_db)):
+def create_fund_scheme(
+    payload: FundSchemeCreate,
+    current_user: CurrentUser,
+    db: Session = Depends(get_db)
+):
     """Create or process create fund scheme.
+    
+    SEC-01 / W1.1-10: Requires authentication for fund scheme management.
 
     Args:
         payload (FundSchemeCreate): Request or event payload.
@@ -351,8 +396,14 @@ def create_fund_scheme(payload: FundSchemeCreate, db: Session = Depends(get_db))
 
 
 @router.get("/fund-schemes", response_model=List[dict])
-def list_fund_schemes(limit: int = Query(50, ge=1, le=500), db: Session = Depends(get_db)):
+def list_fund_schemes(
+    current_user: CurrentUser,
+    limit: int = Query(50, ge=1, le=500),
+    db: Session = Depends(get_db)
+):
     """Retrieve list fund schemes.
+    
+    SEC-01 / W1.1-10: Requires authentication for fund scheme access.
 
     Args:
         limit (int): Maximum number of records to return.
@@ -371,8 +422,14 @@ def list_fund_schemes(limit: int = Query(50, ge=1, le=500), db: Session = Depend
 
 @router.post("/chat_sessions", response_model=dict, status_code=status.HTTP_201_CREATED)
 @router.post("/chat-sessions", response_model=dict, status_code=status.HTTP_201_CREATED, include_in_schema=False)
-def create_session(payload: ChatSessionCreate, db: Session = Depends(get_db)):
+def create_session(
+    payload: ChatSessionCreate,
+    current_user: CurrentUser,
+    db: Session = Depends(get_db)
+):
     """Create or process create session.
+    
+    SEC-01 / W1.1-10: Requires authentication for session management.
 
     Args:
         payload (ChatSessionCreate): Request or event payload.
@@ -388,8 +445,14 @@ def create_session(payload: ChatSessionCreate, db: Session = Depends(get_db)):
 
 @router.get("/chat_sessions", response_model=List[dict])
 @router.get("/chat-sessions", response_model=List[dict], include_in_schema=False)
-def list_sessions(limit: int = Query(50, ge=1, le=500), db: Session = Depends(get_db)):
+def list_sessions(
+    current_user: CurrentUser,
+    limit: int = Query(50, ge=1, le=500),
+    db: Session = Depends(get_db)
+):
     """Retrieve list sessions.
+    
+    SEC-01 / W1.1-10: Requires authentication for session access.
 
     Args:
         limit (int): Maximum number of records to return.

@@ -194,3 +194,59 @@ class AuthService:
         """
         user, _ = self.resolve_session_with_status(token)
         return user
+
+
+# ============================================================================
+# SEC-01 / W1.1-10: Role-Based Access Control Helpers
+# ============================================================================
+
+def require_admin(user: AuthenticatedUser) -> None:
+    """Verify user has admin role, raise 403 if not.
+    
+    Args:
+        user: Authenticated user from CurrentUser dependency
+        
+    Raises:
+        HTTPException: 403 Forbidden if user is not admin
+    """
+    from fastapi import HTTPException, status
+    
+    if user.role.lower() not in ["admin", "administrator"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Admin role required. Current role: {user.role}"
+        )
+
+
+def require_role(user: AuthenticatedUser, allowed_roles: list[str]) -> None:
+    """Verify user has one of the allowed roles, raise 403 if not.
+    
+    Args:
+        user: Authenticated user from CurrentUser dependency
+        allowed_roles: List of acceptable role names (case-insensitive)
+        
+    Raises:
+        HTTPException: 403 Forbidden if user role not in allowed list
+    """
+    from fastapi import HTTPException, status
+    
+    user_role_lower = user.role.lower()
+    allowed_roles_lower = [r.lower() for r in allowed_roles]
+    
+    if user_role_lower not in allowed_roles_lower:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Insufficient permissions. Required roles: {allowed_roles}. Current role: {user.role}"
+        )
+
+
+def get_tenant_id(user: AuthenticatedUser) -> str:
+    """Extract tenant ID from authenticated user.
+    
+    Args:
+        user: Authenticated user from CurrentUser dependency
+        
+    Returns:
+        Tenant ID (defaults to department or "default" if not set)
+    """
+    return user.tenant_id or user.department or "default"
