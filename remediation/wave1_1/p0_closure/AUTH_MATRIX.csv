@@ -1,0 +1,46 @@
+Method,Path,Public,Roles_Required,Tenant_Filtering,Auth_Dependency,Status,Notes
+GET,/health,YES,NONE,NO,None,✅ DONE,Public health check
+GET,/api/health,YES,NONE,NO,None,✅ DONE,Public health check
+GET,/api/health/passive-feedback,YES,NONE,NO,None,⚠️ REVIEW,Should this be public?
+GET,/metrics,YES,NONE,NO,None,⚠️ REVIEW,Prometheus metrics - public or authenticated?
+GET,/api/metrics/prometheus,YES,NONE,NO,None,⚠️ REVIEW,Prometheus metrics - public or authenticated?
+GET,/metrics/dashboard,NO,UNKNOWN,UNKNOWN,Unknown,⚠️ REVIEW,Metrics dashboard needs auth review
+POST,/api/auth/login,YES,NONE,NO,None,✅ DONE,Public login endpoint
+POST,/api/auth/logout,NO,ANY,NO,Optional Bearer,✅ DONE,Optional auth (graceful if missing)
+GET,/api/auth/me,NO,ANY,NO,CurrentUser,✅ DONE,Requires valid JWT
+POST,/api/auth/accept-invitation,YES,NONE,NO,None,✅ DONE,Public invitation acceptance
+GET,/api/admin/users,NO,"admin,compliance_officer",YES,CurrentUser,✅ DONE,List users with tenant filtering
+POST,/api/admin/users,NO,admin,NO,CurrentUser,✅ DONE,Create user
+GET,/api/admin/users/{username},NO,"admin,compliance_officer,self",YES,CurrentUser,✅ DONE,Get user (self or admin)
+PATCH,/api/admin/users/{username},NO,admin,NO,CurrentUser,✅ DONE,Update user
+DELETE,/api/admin/users/{username},NO,admin,NO,CurrentUser,✅ DONE,Delete user (not self)
+POST,/api/admin/ingestion/run,NO,"admin,compliance_officer",NO,CurrentUser,✅ DONE,Trigger ingestion
+POST,/api/admin/ingestion/upload,NO,"admin,compliance_officer",NO,CurrentUser,✅ DONE,Upload source file
+POST,/api/admin/cache/clear,NO,admin,NO,CurrentUser,✅ DONE,Clear caches
+GET,/api/governance/pending-corrections,NO,"admin,compliance_officer,reviewer",NO,CurrentUser,✅ DONE,List pending patches
+GET,/api/governance/correction/{patch_id},NO,"admin,compliance_officer,reviewer",NO,CurrentUser,✅ DONE,Get patch details
+POST,/api/governance/approve/{patch_id},NO,"admin,compliance_officer",NO,CurrentUser,✅ DONE,Approve patch
+POST,/api/governance/reject/{patch_id},NO,"admin,compliance_officer",NO,CurrentUser,✅ DONE,Reject patch
+POST,/api/governance/batch-approve,NO,"admin,compliance_officer",NO,CurrentUser,✅ DONE,Batch approve/reject
+POST,/api/governance/run-batch,NO,"admin,compliance_officer",NO,CurrentUser,✅ DONE,Categorize patches (REP-01 fix)
+POST,/api/governance/promote,NO,"admin,compliance_officer",NO,CurrentUser,✅ DONE,Promote proposals
+POST,/api/governance/promote/{patch_id},NO,"admin,compliance_officer",NO,CurrentUser,✅ DONE,Promote single patch
+GET,/api/governance/proposals,NO,"admin,compliance_officer,reviewer",NO,CurrentUser,✅ DONE,List repair proposals
+POST,/api/governance/proposals/{id}/review,NO,"admin,compliance_officer",NO,CurrentUser,✅ DONE,Review proposal
+GET,/api/governance/mutations,NO,"admin,compliance_officer,reviewer",NO,CurrentUser,✅ DONE,List graph mutations
+GET,/api/query/*,⚠️ UNKNOWN,UNKNOWN,UNKNOWN,Unknown,⚠️ REVIEW,Query endpoints need auth review
+POST,/api/chat/*,⚠️ UNKNOWN,UNKNOWN,UNKNOWN,Unknown,⚠️ REVIEW,Chat endpoints need auth review
+GET,/api/sessions/*,⚠️ UNKNOWN,UNKNOWN,UNKNOWN,Unknown,⚠️ REVIEW,Session endpoints need auth review
+GET,/api/taxonomy/*,⚠️ UNKNOWN,UNKNOWN,UNKNOWN,Unknown,⚠️ REVIEW,Taxonomy endpoints need auth review
+GET,/api/graph/*,⚠️ UNKNOWN,UNKNOWN,UNKNOWN,Unknown,⚠️ REVIEW,Graph endpoints need auth review
+GET,/api/docs/*,YES,NONE,NO,None,⚠️ REVIEW,Documentation - likely public
+GET,/api/ingest/*,⚠️ UNKNOWN,UNKNOWN,UNKNOWN,Unknown,⚠️ REVIEW,Ingestion endpoints need auth review
+GET,/api/status/*,YES,NONE,NO,None,⚠️ REVIEW,Status endpoints - likely public
+GET,/api/compliance/*,⚠️ UNKNOWN,UNKNOWN,UNKNOWN,Unknown,⚠️ REVIEW,Compliance endpoints need auth review
+GET,/api/feedback/*,⚠️ UNKNOWN,UNKNOWN,UNKNOWN,Unknown,⚠️ REVIEW,Feedback endpoints need auth review
+GET,/api/review_queue/*,⚠️ UNKNOWN,UNKNOWN,UNKNOWN,Unknown,⚠️ REVIEW,Review queue needs auth review
+GET,/api/files/*,⚠️ UNKNOWN,UNKNOWN,UNKNOWN,Unknown,⚠️ REVIEW,File endpoints need auth review
+GET,/api/metrics/*,⚠️ UNKNOWN,UNKNOWN,UNKNOWN,Unknown,⚠️ REVIEW,Metrics API needs auth review
+GET,/api/feedback-evaluation/*,⚠️ UNKNOWN,UNKNOWN,UNKNOWN,Unknown,⚠️ REVIEW,Feedback evaluation needs auth review
+GET,/api/audit/*,⚠️ UNKNOWN,UNKNOWN,UNKNOWN,Unknown,⚠️ REVIEW,Audit endpoints need auth review
+GET,/api/responses/{id}/quality-score,⚠️ UNKNOWN,UNKNOWN,UNKNOWN,Unknown,⚠️ REVIEW,Quality score endpoint needs auth review

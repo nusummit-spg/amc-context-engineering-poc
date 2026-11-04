@@ -26,9 +26,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from app.compliance.security import get_client_role, require_roles
+from app.api.deps import CurrentUser  # SEC-02 FIX: Use JWT-verified role instead of header
 from app.graph.correction_patch_layer import CorrectionPatch, get_correction_patch_layer
-from app.models.compliance_models import Role
 from app.core.database import get_db
 from sqlalchemy.orm import Session
 from app.schemas.repair_proposals import RepairProposal
@@ -124,19 +123,59 @@ def log_governance_audit(action: str, patch_id: str, actor: str, details: Option
         logger.error("Failed writing to governance audit log: %s", exc)
 
 
+def require_governance_role(current_user: CurrentUser) -> None:
+    """Check if user has governance privileges (compliance_officer, admin, or reviewer).
+    
+    SEC-02 FIX: Server-authoritative role checking from JWT, not headers.
+    
+    Args:
+        current_user: Authenticated user from JWT
+    
+    Raises:
+        HTTPException(403): If user lacks governance privileges
+    """
+    allowed_roles = ["compliance_officer", "admin", "reviewer"]
+    if current_user.role not in allowed_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Governance access requires one of: {allowed_roles}. Your role: {current_user.role}"
+        )
+
+
+def require_approval_role(current_user: CurrentUser) -> None:
+    """Check if user has approval privileges (compliance_officer or admin only).
+    
+    SEC-02 FIX: Server-authoritative role checking from JWT, not headers.
+    
+    Args:
+        current_user: Authenticated user from JWT
+    
+    Raises:
+        HTTPException(403): If user lacks approval privileges
+    """
+    allowed_roles = ["compliance_officer", "admin"]
+    if current_user.role not in allowed_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Approval actions require one of: {allowed_roles}. Your role: {current_user.role}"
+        )
+
+
 @router.get("/pending-corrections", response_model=List[CorrectionProposal])
-@require_roles([Role.COMPLIANCE_OFFICER, Role.ADMIN, Role.REVIEWER])
 async def get_pending_corrections(
-    current_role: Role = Depends(get_client_role)
+    current_user: CurrentUser,
 ) -> List[CorrectionProposal]:
     """Retrieve all pending (unapproved) fact corrections in the shadow graph.
 
+    SEC-02 FIX: Uses JWT-verified role from CurrentUser instead of X-User-Role header.
+
     Args:
-        current_role (Role): The current role.
+        current_user: Authenticated user from JWT
 
     Returns:
         List[CorrectionProposal]: List of resulting items or records.
     """
+    require_governance_role(current_user)
     patch_layer = get_correction_patch_layer()
     pending_patches = list(patch_layer.get_all_pending())
 
@@ -215,20 +254,22 @@ async def get_pending_corrections(
 
 
 @router.get("/correction/{patch_id}", response_model=CorrectionProposal)
-@require_roles([Role.COMPLIANCE_OFFICER, Role.ADMIN, Role.REVIEWER])
 def get_correction_detail(
     patch_id: str,
-    current_role: Role = Depends(get_client_role)
+    current_user: CurrentUser,
 ) -> CorrectionProposal:
     """Retrieve detailed metadata and evidence for a specific patch.
 
+    SEC-02 FIX: Uses JWT-verified role from CurrentUser instead of X-User-Role header.
+
     Args:
         patch_id (str): Unique identifier of the patch.
-        current_role (Role): The current role.
+        current_user: Authenticated user from JWT
 
     Returns:
         CorrectionProposal: Resulting CorrectionProposal instance.
     """
+    require_governance_role(current_user)
     patch_layer = get_correction_patch_layer()
     patch = patch_layer.get_patch_by_id(patch_id)
     if not patch:
@@ -273,22 +314,24 @@ def get_correction_detail(
 
 
 @router.post("/approve/{patch_id}", response_model=Dict[str, Any])
-@require_roles([Role.COMPLIANCE_OFFICER, Role.ADMIN])
 def approve_correction(
     patch_id: str,
+    current_user: CurrentUser,
     payload: Optional[ApproveRejectIn] = None,
-    current_role: Role = Depends(get_client_role)
 ) -> Dict[str, Any]:
     """Approve correction patch: promotes to permanent canonical status and removes TTL.
+
+    SEC-02 FIX: Uses JWT-verified role from CurrentUser instead of X-User-Role header.
 
     Args:
         patch_id (str): Unique identifier of the patch.
         payload (Optional[ApproveRejectIn]): Request or event payload.
-        current_role (Role): The current role.
+        current_user: Authenticated user from JWT
 
     Returns:
         Dict[str, Any]: Dictionary containing result data or status.
     """
+    require_approval_role(current_user)
     patch_layer = get_correction_patch_layer()
     patch = patch_layer.get_patch_by_id(patch_id)
     if not patch:
@@ -323,34 +366,37 @@ def approve_correction(
         )
 
     comment = payload.comment if payload else None
-    log_governance_audit("APPROVE", patch_id, current_role.value, {"comment": comment})
+    log_governance_audit("APPROVE", patch_id, current_user.username, {"comment": comment})
 
     return {
         "status": "approved",
         "patch_id": patch_id,
-        "approved_by": current_role.value,
+        "approved_by": current_user.username,
         "approved_at": datetime.utcnow().isoformat() + "Z",
         "comment": comment
     }
 
 
 @router.post("/reject/{patch_id}", response_model=Dict[str, Any])
-@require_roles([Role.COMPLIANCE_OFFICER, Role.ADMIN])
 def reject_correction(
     patch_id: str,
+    current_user: CurrentUser,
     payload: Optional[ApproveRejectIn] = None,
-    current_role: Role = Depends(get_client_role)
 ) -> Dict[str, Any]:
     """Reject correction patch: deletes patch from shadow graph.
+
+    SEC-02 FIX: Uses JWT-verified role from CurrentUser instead of X-User-Role header.
 
     Args:
         patch_id (str): Unique identifier of the patch.
         payload (Optional[ApproveRejectIn]): Request or event payload.
-        current_role (Role): The current role.
+        current_user: Authenticated user from JWT
 
     Returns:
         Dict[str, Any]: Dictionary containing result data or status.
     """
+    require_approval_role(current_user)
+    
     patch_layer = get_correction_patch_layer()
     patch = patch_layer.get_patch_by_id(patch_id)
     if not patch:
@@ -367,32 +413,34 @@ def reject_correction(
         )
 
     reason = payload.reason if payload else (payload.comment if payload else "Rejected by compliance officer")
-    log_governance_audit("REJECT", patch_id, current_role.value, {"reason": reason})
+    log_governance_audit("REJECT", patch_id, current_user.username, {"reason": reason})
 
     return {
         "status": "rejected",
         "patch_id": patch_id,
-        "rejected_by": current_role.value,
+        "rejected_by": current_user.username,
         "rejected_at": datetime.utcnow().isoformat() + "Z",
         "reason": reason
     }
 
 
 @router.post("/batch-approve", response_model=Dict[str, Any])
-@require_roles([Role.COMPLIANCE_OFFICER, Role.ADMIN])
 def batch_approve_corrections(
     payload: BatchApprovalIn,
-    current_role: Role = Depends(get_client_role)
+    current_user: CurrentUser,
 ) -> Dict[str, Any]:
     """Batch process (approve or reject) multiple correction patches at once.
 
+    SEC-02 FIX: Uses JWT-verified role from CurrentUser instead of X-User-Role header.
+
     Args:
         payload (BatchApprovalIn): Request or event payload.
-        current_role (Role): The current role.
+        current_user: Authenticated user from JWT
 
     Returns:
         Dict[str, Any]: Dictionary containing result data or status.
     """
+    require_approval_role(current_user)
     patch_layer = get_correction_patch_layer()
     succeeded = []
     failed = []
@@ -403,14 +451,14 @@ def batch_approve_corrections(
                 ok = patch_layer.promote_to_permanent(pid)
                 if ok:
                     succeeded.append(pid)
-                    log_governance_audit("APPROVE_BATCH", pid, current_role.value, {"comment": payload.comment})
+                    log_governance_audit("APPROVE_BATCH", pid, current_user.username, {"comment": payload.comment})
                 else:
                     failed.append(pid)
             elif payload.action == "reject":
                 ok = patch_layer.delete_patch(pid)
                 if ok:
                     succeeded.append(pid)
-                    log_governance_audit("REJECT_BATCH", pid, current_role.value, {"comment": payload.comment})
+                    log_governance_audit("REJECT_BATCH", pid, current_user.username, {"comment": payload.comment})
                 else:
                     failed.append(pid)
         except Exception as exc:
@@ -434,27 +482,43 @@ class GovernanceBatchIn(BaseModel):
 
 
 @router.post("/run-batch", response_model=Dict[str, Any])
-@require_roles([Role.COMPLIANCE_OFFICER, Role.ADMIN])
 async def run_governance_batch(
+    current_user: CurrentUser,
     payload: Optional[GovernanceBatchIn] = None,
-    current_role: Role = Depends(get_client_role),
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
-    """Run automated hands-free governance batch processor:
-    Evaluates all pending patches. Those with confidence >= auto_approve_threshold (default 0.95)
-    and risk_level == LOW are canonically promoted to the Neo4j graph and fast-path, retiring shadow patches.
+    """Run automated governance batch processor (REP-01 FIX: confidence-based auto-approval DISABLED).
+    
+    SEC-02 FIX: Uses JWT-verified role instead of X-User-Role header.
+    REP-01 FIX: Confidence threshold now only affects REVIEW PRIORITY, not automatic approval.
+    All patches require explicit human approval via /approve/{patch_id} or /batch-approve.
+    
+    Evaluates all pending patches and categorizes them by risk/confidence for review prioritization:
+    - High-confidence (>= threshold) LOW risk patches → "recommended_for_approval" list
+    - Very low confidence (< 0.50) → "recommended_for_rejection" list  
+    - All others → "requires_detailed_review" list
+    
+    NO PATCHES ARE AUTOMATICALLY APPROVED OR PROMOTED.
 
     Args:
         payload (Optional[GovernanceBatchIn]): Request or event payload.
-        current_role (Role): The current role.
+        current_user: Authenticated user from JWT
         db (Session): Database session instance.
 
     Returns:
         Dict[str, Any]: Dictionary containing result data or status.
     """
+    require_approval_role(current_user)
+    
     threshold = payload.auto_approve_threshold if payload else 0.95
     max_risk = payload.max_risk_level if payload else "LOW"
     dry_run = payload.dry_run if payload else False
+    
+    logger.warning(
+        "REP-01 COMPLIANCE: run_governance_batch invoked but automatic approval is DISABLED. "
+        "User %s must review and explicitly approve patches via /approve or /batch-approve endpoints.",
+        current_user.username
+    )
 
     patch_layer = get_correction_patch_layer()
     pending = list(patch_layer.get_all_pending())
@@ -486,107 +550,65 @@ async def run_governance_batch(
         logger.debug("Microservice batch sync notice: %s", exc)
 
     total_evaluated = len(pending)
-    approved_ids: List[str] = []
-    rejected_ids: List[str] = []
-    needs_review_ids: List[str] = []
+    recommended_for_approval: List[str] = []  # High confidence + low risk (still needs human approval)
+    recommended_for_rejection: List[str] = []  # Very low confidence
+    requires_detailed_review: List[str] = []   # Medium confidence or higher risk
 
-    neo4j_session = None
-    try:
-        from app.engine.graph_store import get_driver, config as g_config
-        driver = get_driver()
-        if driver:
-            neo4j_session = driver.session(database=getattr(g_config, "NEO4J_DATABASE", "neo4j"))
-    except Exception as exc:
-        logger.debug("Neo4j session acquisition notice: %s", exc)
+    # No actual mutations - only categorization for review prioritization
+    for patch in pending:
+        risk = assess_risk_level(patch.confidence, patch.canonical_value, patch.corrected_value)
+        risk_acceptable = (risk == "LOW") if max_risk == "LOW" else (risk in ("LOW", "MEDIUM"))
 
-    try:
-        from app.services.repair_integration import get_repair_integration
-        repair_int = get_repair_integration()
-    except Exception:
-        repair_int = None
-
-    try:
-        for patch in pending:
-            risk = assess_risk_level(patch.confidence, patch.canonical_value, patch.corrected_value)
-            risk_acceptable = (risk == "LOW") if max_risk == "LOW" else (risk in ("LOW", "MEDIUM"))
-
-            if patch.confidence >= threshold and risk_acceptable:
-                if not dry_run:
-                    ok = patch_layer.promote_to_permanent(patch.patch_id, neo4j_session=neo4j_session)
-                    if ok:
-                        approved_ids.append(patch.patch_id)
-                        log_governance_audit("AUTO_APPROVE_BATCH", patch.patch_id, current_role.value, {
-                            "confidence": patch.confidence,
-                            "threshold": threshold,
-                            "risk_level": risk
-                        })
-                        if repair_int:
-                            try:
-                                await repair_int.promote_patch(patch.patch_id)
-                            except Exception:
-                                pass
-                    else:
-                        needs_review_ids.append(patch.patch_id)
-                else:
-                    approved_ids.append(patch.patch_id)
-            elif patch.confidence < 0.50:
-                if not dry_run:
-                    patch_layer.delete_patch(patch.patch_id)
-                    rejected_ids.append(patch.patch_id)
-                    log_governance_audit("AUTO_REJECT_BATCH", patch.patch_id, current_role.value, {
-                        "confidence": patch.confidence
-                    })
-                else:
-                    rejected_ids.append(patch.patch_id)
-            else:
-                needs_review_ids.append(patch.patch_id)
-    finally:
-        if neo4j_session:
-            try:
-                neo4j_session.close()
-            except Exception:
-                pass
-
-    # Also synchronize microservice batch runner if available
-    microservice_report = None
-    if repair_int and not dry_run:
-        try:
-            microservice_report = await repair_int.run_governance_batch(auto_approve_threshold=threshold)
-        except Exception as exc:
-            logger.debug("Microservice run_governance_batch notice: %s", exc)
-
-    # Also synchronize SQL RepairProposal batch scheduler if database session active
-    try:
-        from app.services.governance_scheduler import GovernanceBatchScheduler
-        scheduler = GovernanceBatchScheduler(confidence_threshold=threshold)
-        await scheduler.run_weekly_batch()
-    except Exception as s_exc:
-        logger.debug("SQL governance scheduler batch notice: %s", s_exc)
-
-    ms_approved = (microservice_report.get("approved", 0) if microservice_report else 0)
-    ms_evaluated = (microservice_report.get("total_evaluated", 0) if microservice_report else 0)
-    ms_promoted = (microservice_report.get("deployed", 0) if microservice_report else 0)
-    ms_rejected = (microservice_report.get("rejected", 0) if microservice_report else 0)
-    ms_review = (microservice_report.get("needs_review", 0) if microservice_report else 0)
-
-    final_total = max(total_evaluated, ms_evaluated)
-    final_approved = max(len(approved_ids), ms_approved)
-    final_promoted = max(len(approved_ids), ms_promoted)
-    final_rejected = max(len(rejected_ids), ms_rejected)
-    final_review = max(len(needs_review_ids), ms_review)
+        if patch.confidence >= threshold and risk_acceptable:
+            # REP-01: DO NOT auto-approve, only recommend
+            recommended_for_approval.append(patch.patch_id)
+            logger.info(
+                "Patch %s recommended for approval (confidence=%.2f, risk=%s) - REQUIRES HUMAN APPROVAL",
+                patch.patch_id, patch.confidence, risk
+            )
+        elif patch.confidence < 0.50:
+            # Recommend rejection for very low confidence
+            recommended_for_rejection.append(patch.patch_id)
+            logger.info(
+                "Patch %s recommended for rejection (confidence=%.2f)",
+                patch.patch_id, patch.confidence
+            )
+        else:
+            # Requires detailed human review
+            requires_detailed_review.append(patch.patch_id)
+            logger.info(
+                "Patch %s requires detailed review (confidence=%.2f, risk=%s)",
+                patch.patch_id, patch.confidence, risk
+            )
+    
+    #  REP-01 FIX: DO NOT call microservice or scheduler auto-approval - those also need fixing
+    # Commenting out to prevent bypassing human approval requirement
+    # microservice_report = None
+    # if repair_int and not dry_run:
+    #     try:
+    #         microservice_report = await repair_int.run_governance_batch(auto_approve_threshold=threshold)
+    #     except Exception as exc:
+    #         logger.debug("Microservice run_governance_batch notice: %s", exc)
+    
+    logger.warning(
+        "REP-01 COMPLIANCE: Microservice and scheduler auto-approval calls DISABLED. "
+        "All approvals must go through explicit /approve or /batch-approve endpoints."
+    )
 
     return {
-        "status": "completed",
-        "total_evaluated": final_total,
-        "approved": final_approved,
-        "promoted_to_graph": final_promoted,
-        "rejected": final_rejected,
-        "needs_review": final_review,
-        "approved_patches": approved_ids,
+        "status": "review_categorization_completed",
+        "message": "REP-01 COMPLIANCE: No automatic approvals performed. Use /batch-approve to approve recommended patches.",
+        "total_evaluated": total_evaluated,
+        "recommended_for_approval": len(recommended_for_approval),
+        "recommended_for_rejection": len(recommended_for_rejection),
+        "requires_detailed_review": len(requires_detailed_review),
+        "recommended_approval_patches": recommended_for_approval,
+        "recommended_rejection_patches": recommended_for_rejection,
+        "detailed_review_patches": requires_detailed_review,
         "dry_run": dry_run,
         "threshold_used": threshold,
         "max_risk_level": max_risk,
-        "microservice_sync": microservice_report,
+        "categorized_by": current_user.username,
         "timestamp": datetime.utcnow().isoformat() + "Z"
     }
 
@@ -597,24 +619,26 @@ class ProposalReviewIn(BaseModel):
 
 
 @router.post("/promote", response_model=Dict[str, Any])
-@require_roles([Role.COMPLIANCE_OFFICER, Role.ADMIN])
 def promote_approved_proposals(
+    current_user: CurrentUser,
     batch_id: Optional[str] = None,
     proposal_id: Optional[str] = None,
-    current_role: Role = Depends(get_client_role),
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
     """Apply approved repair proposals to canonical Neo4j graph and vector stores.
 
+    SEC-02 FIX: Uses JWT-verified role instead of X-User-Role header.
+
     Args:
         batch_id (Optional[str]): Unique identifier of the batch.
         proposal_id (Optional[str]): Unique identifier of the proposal.
-        current_role (Role): The current role.
+        current_user: Authenticated user from JWT
         db (Session): Database session instance.
 
     Returns:
         Dict[str, Any]: Dictionary containing result data or status.
     """
+    require_approval_role(current_user)
     service = PromotionService(db=db)
     try:
         result = service.apply_approved_proposals(batch_id=batch_id, proposal_id=proposal_id, db=db)
@@ -628,22 +652,24 @@ def promote_approved_proposals(
 
 
 @router.post("/promote/{patch_id}", response_model=Dict[str, Any])
-@require_roles([Role.COMPLIANCE_OFFICER, Role.ADMIN])
 async def promote_patch_direct(
     patch_id: str,
+    current_user: CurrentUser,
     payload: Optional[ApproveRejectIn] = None,
-    current_role: Role = Depends(get_client_role)
 ) -> Dict[str, Any]:
     """Directly promote a single patch into canonical Neo4j graph and retire its shadow patch.
+
+    SEC-02 FIX: Uses JWT-verified role instead of X-User-Role header.
 
     Args:
         patch_id (str): Unique identifier of the patch.
         payload (Optional[ApproveRejectIn]): Request or event payload.
-        current_role (Role): The current role.
+        current_user: Authenticated user from JWT
 
     Returns:
         Dict[str, Any]: Dictionary containing result data or status.
     """
+    require_approval_role(current_user)
     patch_layer = get_correction_patch_layer()
     patch = patch_layer.get_patch_by_id(patch_id)
     if not patch:
@@ -686,38 +712,40 @@ async def promote_patch_direct(
         logger.debug("Repair microservice promote notification: %s", exc)
 
     comment = payload.comment if payload else None
-    log_governance_audit("PROMOTE_DIRECT", patch_id, current_role.value, {"comment": comment})
+    log_governance_audit("PROMOTE_DIRECT", patch_id, current_user.username, {"comment": comment})
 
     return {
         "status": "promoted",
         "patch_id": patch_id,
-        "promoted_by": current_role.value,
+        "promoted_by": current_user.username,
         "promoted_at": datetime.utcnow().isoformat() + "Z",
         "comment": comment
     }
 
 
 @router.get("/proposals", response_model=List[Dict[str, Any]])
-@require_roles([Role.COMPLIANCE_OFFICER, Role.ADMIN, Role.REVIEWER])
 def list_repair_proposals(
+    current_user: CurrentUser,
     status_filter: Optional[str] = None,
     proposal_type: Optional[str] = None,
     limit: int = 50,
-    current_role: Role = Depends(get_client_role),
     db: Session = Depends(get_db),
 ) -> List[Dict[str, Any]]:
     """List repair proposals from the repair proposal queue.
+
+    SEC-02 FIX: Uses JWT-verified role instead of X-User-Role header.
 
     Args:
         status_filter (Optional[str]): The status filter.
         proposal_type (Optional[str]): The proposal type.
         limit (int): Maximum number of records to return.
-        current_role (Role): The current role.
+        current_user: Authenticated user from JWT
         db (Session): Database session instance.
 
     Returns:
         List[Dict[str, Any]]: List of resulting items or records.
     """
+    require_governance_role(current_user)
     query = db.query(RepairProposal)
     if status_filter:
         query = query.filter(RepairProposal.status == status_filter)
@@ -748,24 +776,26 @@ def list_repair_proposals(
 
 
 @router.post("/proposals/{proposal_id}/review", response_model=Dict[str, Any])
-@require_roles([Role.COMPLIANCE_OFFICER, Role.ADMIN])
 def review_repair_proposal(
     proposal_id: str,
     payload: ProposalReviewIn,
-    current_role: Role = Depends(get_client_role),
+    current_user: CurrentUser,
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
     """Review, approve, or reject a repair proposal.
 
+    SEC-02 FIX: Uses JWT-verified role instead of X-User-Role header.
+
     Args:
         proposal_id (str): Unique identifier of the proposal.
         payload (ProposalReviewIn): Request or event payload.
-        current_role (Role): The current role.
+        current_user: Authenticated user from JWT
         db (Session): Database session instance.
 
     Returns:
         Dict[str, Any]: Dictionary containing result data or status.
     """
+    require_approval_role(current_user)
     proposal = db.query(RepairProposal).filter(RepairProposal.proposal_id == proposal_id).first()
     if not proposal:
         raise HTTPException(
@@ -774,7 +804,7 @@ def review_repair_proposal(
         )
     proposal.status = "approved" if payload.action == "approve" else "rejected"
     proposal.reviewed_at = datetime.utcnow().isoformat() + "Z"
-    proposal.reviewed_by = current_role.value
+    proposal.reviewed_by = current_user.username
     db.commit()
     return {
         "status": proposal.status,
@@ -785,22 +815,24 @@ def review_repair_proposal(
 
 
 @router.get("/mutations", response_model=List[Dict[str, Any]])
-@require_roles([Role.COMPLIANCE_OFFICER, Role.ADMIN, Role.REVIEWER])
 def list_graph_mutations(
+    current_user: CurrentUser,
     limit: int = 50,
-    current_role: Role = Depends(get_client_role),
     db: Session = Depends(get_db),
 ) -> List[Dict[str, Any]]:
     """List historical graph mutations applied to Neo4j.
 
+    SEC-02 FIX: Uses JWT-verified role instead of X-User-Role header.
+
     Args:
         limit (int): Maximum number of records to return.
-        current_role (Role): The current role.
+        current_user: Authenticated user from JWT
         db (Session): Database session instance.
 
     Returns:
         List[Dict[str, Any]]: List of resulting items or records.
     """
+    require_governance_role(current_user)
     mutations = db.query(GraphMutation).order_by(GraphMutation.applied_at.desc()).limit(limit).all()
     return [
         {

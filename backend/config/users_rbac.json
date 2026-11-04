@@ -1,14 +1,14 @@
 [
   {
     "username": "amc_admin",
-    "full_name": "AMC Administrator",
+    "password_hash": "pbkdf2_sha256$260000$cb1432dd9337e0a125676d2ca9b7bbd7$dcae74b2f70f22cd5c71c1c95c27b85531cb75b19a6c88d5feac89ec7330345c",
     "display_name": "AMC Administrator",
+    "full_name": "AMC Administrator",
     "role": "Compliance & Regulatory Officer",
     "department": "Regulatory & Legal Compliance",
     "email": "amc_admin@amc.com",
     "avatar_initials": "AA",
     "status": "Active",
-    "tenant_id": null,
-    "is_superuser": true
+    "is_superuser": 1
   }
 ]

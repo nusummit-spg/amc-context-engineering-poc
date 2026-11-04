@@ -16,6 +16,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from pydantic import BaseModel, Field
 
 from app.api.deps import get_auth_service
 from app.auth.service import AuthResult, AuthService
@@ -191,3 +192,125 @@ async def me(
         raise SessionInvalidError("Session is missing, invalid, or has expired.")
 
     return MeResponse(user=UserPublic(**user.__dict__))
+
+
+# ── Secure Enrollment ────────────────────────────────────────────────────────
+
+class AcceptInvitationRequest(BaseModel):
+    """Request to accept invitation and set initial password."""
+    invitation_token: str = Field(..., min_length=32)
+    password: str = Field(..., min_length=12, max_length=256)
+
+
+class AcceptInvitationResponse(BaseModel):
+    """Response after accepting invitation."""
+    success: bool
+    message: str
+    username: str | None = None
+
+
+@router.post("/accept-invitation", response_model=AcceptInvitationResponse)
+async def accept_invitation(
+    payload: AcceptInvitationRequest,
+    request: Request,
+    auth_service: AuthService = Depends(get_auth_service),
+) -> AcceptInvitationResponse:
+    """Accept invitation and set initial password (SEC-03 fix).
+    
+    Args:
+        payload: Invitation acceptance request
+        request: FastAPI request object  
+        auth_service: Authentication service
+    
+    Returns:
+        Acceptance status
+        
+    Raises:
+        HTTPException(400): If token invalid or expired
+        HTTPException(409): If token already used
+    """
+    from app.core.database import SessionLocal
+    from app.schemas.invitation_token import InvitationToken
+    from app.schemas.auth_users_table import AuthUser
+    from app.auth.security import hash_password
+    from datetime import datetime, timezone
+    
+    db = SessionLocal()
+    try:
+        # Find invitation token
+        invitation = db.query(InvitationToken).filter(
+            InvitationToken.token == payload.invitation_token
+        ).first()
+        
+        if not invitation:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid invitation token"
+            )
+        
+        # Check if already used
+        if invitation.used:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Invitation token has already been used"
+            )
+        
+        # Check expiration
+        if datetime.now(timezone.utc) > invitation.expires_at.replace(tzinfo=timezone.utc):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invitation token has expired"
+            )
+        
+        # Validate password strength
+        if len(payload.password) < 12:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password must be at least 12 characters"
+            )
+        
+        # Find user
+        user = db.query(AuthUser).filter(AuthUser.username == invitation.username).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User account not found"
+            )
+        
+        # Set password and activate
+        user.password_hash = hash_password(payload.password)
+        user.status = "Active"
+        user.updated_at = datetime.now(timezone.utc)
+        
+        # Mark invitation as used
+        client_ip = request.client.host if request.client else None
+        invitation.used = True
+        invitation.used_at = datetime.now(timezone.utc)
+        invitation.used_from_ip = client_ip
+        
+        db.commit()
+        
+        logger.info(
+            "Invitation accepted: username=%s, ip=%s",
+            invitation.username, client_ip
+        )
+        
+        return AcceptInvitationResponse(
+            success=True,
+            message="Account activated successfully. You can now log in.",
+            username=invitation.username
+        )
+        
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.error("Failed to accept invitation: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to process invitation"
+        )
+    finally:
+        db.close()
+
