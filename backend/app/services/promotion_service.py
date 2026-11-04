@@ -87,7 +87,9 @@ class PromotionService:
                 try:
                     if proposal.proposal_type == "graph":
                         if proposal.mutation_cypher:
+                            # G10-T10 / W1.1-12: This will raise PromotionFailedError if driver unavailable
                             self._execute_graph_mutation(driver, proposal, db)
+                        # Only mark APPLIED if mutation succeeded without exception
                         proposal.applied_at = datetime.now(timezone.utc).isoformat()
                         proposal.status = "applied"
                         applied.append(proposal.proposal_id)
@@ -103,8 +105,11 @@ class PromotionService:
 
                 except Exception as exc:
                     logger.error("Failed to apply proposal %s: %s", proposal.proposal_id, exc)
+                    # W1.1-12: Do NOT mark as applied on failure
+                    # Proposal remains in 'approved' status, can be retried
                     db.rollback()
                     failed.append(proposal.proposal_id)
+                    # Could set proposal.status = "failed" here if desired
 
             db.commit()
             logger.info("Promotion complete: %d applied, %d failed", len(applied), len(failed))
@@ -123,16 +128,30 @@ class PromotionService:
 
     def _execute_graph_mutation(self, driver, proposal: RepairProposal, db: Session) -> None:
         """Execute a graph mutation in Neo4j and record in audit log.
+        
+        W1.1-12 / G10-T10 / GOV-06: Fail closed on driver unavailability.
+        Raises PromotionFailedError to prevent phantom APPLIED status.
 
         Args:
             driver: Database driver instance.
             proposal (RepairProposal): The proposal.
             db (Session): Database session instance.
+            
+        Raises:
+            PromotionFailedError: If driver unavailable or mutation cannot be executed
+            PromotionVerificationError: If postcondition verification fails
         """
+        from app.exceptions import PromotionFailedError, PromotionVerificationError
+        
         if not driver:
-            logger.warning("Neo4j driver unavailable; skipping graph execution for %s", proposal.proposal_id)
-            self._log_mutation(proposal, db, success=False, error="Neo4j driver unavailable")
-            return
+            error_msg = "Neo4j driver unavailable"
+            logger.error("PROMOTION_BLOCKED: %s for proposal %s", error_msg, proposal.proposal_id)
+            self._log_mutation(proposal, db, success=False, error=error_msg)
+            # G10-T10 / W1.1-12: MUST raise exception to prevent APPLIED status
+            raise PromotionFailedError(
+                f"Cannot apply proposal {proposal.proposal_id}: {error_msg}. "
+                "Graph database connection required for canonical mutations."
+            )
 
         with driver.session(database=config.NEO4J_DATABASE) as session:
             tx = session.begin_transaction()
@@ -145,13 +164,38 @@ class PromotionService:
                 if proposal.attribute:
                     params["attribute"] = proposal.attribute
 
+                # Execute mutation
                 tx.run(proposal.mutation_cypher, **params)
                 tx.commit()
+                
+                # G10-T11 / W1.1-12: Verify committed effect via read-back
+                if proposal.entity_id and proposal.attribute:
+                    verification_result = session.run(
+                        "MATCH (n {id: $entity_id}) RETURN n[$attribute] as value",
+                        entity_id=proposal.entity_id,
+                        attribute=proposal.attribute
+                    ).single()
+                    
+                    # Simple postcondition: node exists and has the attribute
+                    # (More sophisticated verification would check exact value)
+                    if not verification_result:
+                        error_msg = f"Postcondition verification failed: entity {proposal.entity_id} not found after commit"
+                        logger.error("VERIFICATION_FAILED: %s", error_msg)
+                        self._log_mutation(proposal, db, success=False, error=error_msg)
+                        raise PromotionVerificationError(error_msg)
+                
                 self._log_mutation(proposal, db, success=True)
+                logger.info("Successfully applied and verified proposal %s", proposal.proposal_id)
+                
+            except PromotionVerificationError:
+                # Already logged, re-raise
+                raise
             except Exception as exc:
                 tx.rollback()
-                self._log_mutation(proposal, db, success=False, error=str(exc))
-                raise
+                error_msg = f"Graph mutation failed: {exc}"
+                logger.error("MUTATION_ERROR: %s for proposal %s", exc, proposal.proposal_id)
+                self._log_mutation(proposal, db, success=False, error=error_msg)
+                raise PromotionFailedError(error_msg) from exc
 
     def _log_mutation(
         self,

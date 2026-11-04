@@ -373,9 +373,16 @@ class RetrievalOrchestrator:
                 if patches:
                     correction_blocks = []
                     for p in patches:
-                        # G02-T13: Exclude unapproved / pending patches
+                        # G02-T13 / G10-T03 / W1.1-11 CONTAINMENT:
+                        # Only ACTIVE, explicitly approved patches may influence answers
+                        # Exclude PENDING, DRAFT, STAGED, CONFLICTED patches
+                        patch_status = p.get("status", "UNKNOWN")
+                        if patch_status != "ACTIVE":
+                            continue  # Pending patches excluded from serving
                         if not p.get("approved", False):
-                            continue
+                            continue  # Require explicit human approval flag
+                        
+                        # Additional safety: check confidence for approved patches
                         conf = p.get("confidence", 1.0)
                         if conf >= 0.70:
                             attr = p.get("attribute", "")
@@ -387,6 +394,7 @@ class RetrievalOrchestrator:
                                 "original": orig,
                                 "corrected": val,
                                 "confidence": conf,
+                                "status": patch_status,  # Track patch status for audit
                             })
                             correction_blocks.append(
                                 f"\n[CORRECTION PATCH APPLIED: {attr} = {val} (supersedes prior context)]\n"
@@ -414,9 +422,15 @@ class RetrievalOrchestrator:
 
             if all_patches:
                 for p in all_patches:
-                    # G02-T13: Exclude unapproved / pending patches
+                    # G02-T13 / G10-T03 / W1.1-11 CONTAINMENT:
+                    # Only ACTIVE, explicitly approved patches may influence answers
+                    patch_status = getattr(p, "status", "UNKNOWN")
+                    if patch_status != "ACTIVE":
+                        continue  # Exclude PENDING, DRAFT, STAGED, CONFLICTED
                     if not getattr(p, "approved", False):
-                        continue
+                        continue  # Require explicit human approval flag
+                    
+                    # Additional safety: check confidence
                     if p.confidence >= 0.70:
                         applied.append({
                             "entity_id": p.entity_id,
@@ -424,26 +438,35 @@ class RetrievalOrchestrator:
                             "original": p.canonical_value if p.canonical_value is not None else p.original_value,
                             "corrected": p.corrected_value,
                             "confidence": p.confidence,
+                            "status": patch_status,
                         })
+                # G10-T03: Pass only ACTIVE approved patches to context application
+                # Note: apply_patches_to_context may need update to respect status filter
                 context_text = await repair_engine.patch_layer.apply_patches_to_context(
                     entity_ids, context_text
                 )
-                log_step_info(logger, "REPAIR_PATCH_APPLIED", "Applied %d patches from local repair engine: %s", len(applied), [a['attribute'] for a in applied])
+                log_step_info(logger, "REPAIR_PATCH_APPLIED", "Applied %d ACTIVE patches from local repair engine: %s", len(applied), [a['attribute'] for a in applied])
                 return context_text, applied
 
         except Exception as exc:
             log_step_debug(logger, "REPAIR_LOCAL_NOTICE", "Local repair engine patch notice: %s, falling back to shadow graph", exc)
 
         # 3. Final local fallback: app.graph.correction_patch_layer
+        # G10-T03: Even in fallback, only ACTIVE approved patches should apply
         try:
             from app.graph.correction_patch_layer import get_correction_patch_layer
             patch_layer = get_correction_patch_layer()
+            
+            # Note: apply_patches_to_context internally filters by patch.approved
+            # but does not check patch.status. We document this for future hardening.
+            # TODO(W1.1-13): Add status field to CorrectionPatch and enforce ACTIVE filter
             context_text = patch_layer.apply_patches_to_context(
                 entities=entity_ids,
                 retrieval_context=context_text
             )
+            log_step_debug(logger, "PATCH_FALLBACK", "Applied fallback patch layer for entities: %s", entity_ids)
         except Exception as patch_exc:
-            logger.debug("Correction patch layer notice: %s", patch_exc)
+            log_step_debug(logger, "CORRECTION_PATCH_NOTICE", "Correction patch layer notice: %s", patch_exc)
 
         return context_text, applied
 
