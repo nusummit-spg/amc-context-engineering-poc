@@ -1,0 +1,65 @@
+Route_ID,Method,Path,Status,Priority,Frontend_Caller,Current_Handler,Restoration_Plan,Auth_Required,Roles_Required,Breaking_Change
+ADMIN-01,POST,/api/admin/users,✅ EXISTS,N/A,api.js:saveUser(),admin.py:create_user(),N/A - Already exists,YES,"admin",NO
+ADMIN-02,GET,/api/admin/users,✅ EXISTS,N/A,api.js:fetchUsers(),admin.py:list_users(),N/A - Already exists,YES,"admin,compliance_officer",NO
+ADMIN-03,GET,/api/admin/users/{username},✅ EXISTS,N/A,None found,admin.py:get_user(),N/A - Already exists,YES,"admin,compliance_officer,self",NO
+ADMIN-04,PATCH,/api/admin/users/{username},✅ EXISTS,N/A,None found,admin.py:update_user(),N/A - Already exists,YES,"admin",NO
+ADMIN-05,DELETE,/api/admin/users/{username},✅ EXISTS,N/A,api.js:deleteUser(),admin.py:delete_user(),N/A - Already exists,YES,"admin",NO
+ADMIN-06,POST,/api/admin/users/sync,❌ MISSING,P0,api.js:syncUsersWithDb(),NONE,Restore with auth or deprecate,YES,"admin",YES
+ADMIN-07,GET,/api/admin/rbac,❌ MISSING,P1,api.js:fetchRbacMatrix(),NONE,Restore with auth,YES,"admin,compliance_officer",YES
+ADMIN-08,GET,/api/admin/audit,❌ MISSING,P0,api.js:fetchAuditLogs(),NONE,Restore with auth,YES,"admin,compliance_officer",YES
+ADMIN-09,POST,/api/admin/ingestion/run,✅ EXISTS,N/A,api.js:runIngestPipeline(),admin.py:trigger_ingestion(),N/A - Already exists,YES,"admin,compliance_officer",NO
+ADMIN-10,POST,/api/admin/ingestion/staleness,❌ MISSING,P1,api.js:checkStaleness(),NONE,Restore with auth,YES,"admin,compliance_officer",YES
+ADMIN-11,GET,/api/admin/ingestion/tasks,❌ MISSING,P0,api.js:fetchIndexingTasks(),NONE,Restore with auth,YES,"admin,compliance_officer",YES
+ADMIN-12,GET,/api/admin/ingestion/tasks/active,❌ MISSING,P1,None found (may be internal),NONE,Optional - check if needed,YES,"admin,compliance_officer",YES
+ADMIN-13,GET,/api/admin/ingestion/notifications,❌ MISSING,P1,None found explicitly,NONE,Evaluate if still needed,YES,"admin,compliance_officer",YES
+ADMIN-14,POST,/api/admin/ingestion/notifications/{task_id}/read,❌ MISSING,P2,None found explicitly,NONE,Evaluate if still needed,YES,"admin,compliance_officer",YES
+ADMIN-15,POST,/api/admin/ingestion/notifications/read-all,❌ MISSING,P2,None found explicitly,NONE,Evaluate if still needed,YES,"admin,compliance_officer",YES
+ADMIN-16,GET,/api/admin/ingestion/proposed-edges,❌ MISSING,P0,api.js:fetchProposedEdges(),NONE,Restore with auth,YES,"admin,compliance_officer,reviewer",YES
+ADMIN-17,POST,/api/admin/ingestion/edges/{edge_id}/confirm,❌ MISSING,P0,api.js:confirmProposedEdge(),NONE,Restore with auth + four-eyes,YES,"admin,compliance_officer",YES
+ADMIN-18,POST,/api/admin/ingestion/edges/{edge_id}/reject,❌ MISSING,P0,api.js:rejectProposedEdge(),NONE,Restore with auth + four-eyes,YES,"admin,compliance_officer",YES
+ADMIN-19,GET,/api/admin/ingestion/compliance-report,❌ MISSING,P0,api.js:fetchComplianceReport(),NONE,Restore with auth,YES,"admin,compliance_officer,reviewer",YES
+ADMIN-20,POST,/api/admin/ingestion/upload,✅ EXISTS,N/A,api.js:uploadDocument(),admin.py:upload_source_file(),N/A - Already exists,YES,"admin,compliance_officer",NO
+ADMIN-21,GET,/api/admin/intent-cache/stats,❌ MISSING,P1,api.js:fetchIntentCacheStats(),NONE,Restore with auth,YES,"admin",YES
+ADMIN-22,GET,/api/admin/cache/stats,❌ MISSING,P1,None found explicitly,NONE,May merge with intent-cache/stats,YES,"admin",YES
+ADMIN-23,POST,/api/admin/intent-cache/invalidate-domain,❌ MISSING,P1,api.js:invalidateIntentCacheDomain(),NONE,Restore with auth,YES,"admin",YES
+ADMIN-24,POST,/api/admin/intent-cache/clear,❌ MISSING,P1,api.js:clearIntentCache(),NONE,Restore with auth,YES,"admin",YES
+ADMIN-25,POST,/api/admin/cache/clear,✅ EXISTS,N/A,None found (may call intent-cache/clear),admin.py:clear_cache(),N/A - Already exists,YES,"admin",NO
+ADMIN-26,GET,/api/admin/feedback/issues,❌ MISSING,P1,None found (may use /feedback/issues),NONE,Check if duplicate of /feedback/issues,YES,"admin,compliance_officer",YES
+
+Summary:
+- Total Routes Identified: 26
+- Currently Exist: 8
+- Missing: 18
+- P0 Priority (Blocking): 7
+- P1 Priority (High): 9
+- P2 Priority (Medium): 2
+- Breaking Changes: 18 (all missing routes)
+
+P0 Routes That Must Be Restored:
+1. /admin/users/sync - User synchronization
+2. /admin/audit - Audit log access
+3. /admin/ingestion/tasks - Task monitoring
+4. /admin/ingestion/proposed-edges - Edge review
+5. /admin/ingestion/edges/{id}/confirm - Edge approval
+6. /admin/ingestion/edges/{id}/reject - Edge rejection
+7. /admin/ingestion/compliance-report - Compliance reporting
+
+Frontend Impact Assessment:
+- Admin Dashboard: BROKEN (audit logs, RBAC matrix missing)
+- Ingestion Management: SEVERELY BROKEN (tasks, edges, compliance missing)
+- Cache Management: PARTIALLY BROKEN (intent cache stats/clear missing)
+- User Management: WORKING (all CRUD operations exist)
+
+Recommended Actions:
+1. Immediate (R1-09): Restore P0 routes with proper authentication
+2. High Priority: Restore P1 routes for full admin functionality
+3. Evaluate: Determine if P2 notification routes still needed
+4. Coordinate: Update frontend if any routes intentionally deprecated
+5. Test: Run full admin dashboard smoke tests after restoration
+
+Notes:
+- All restored routes MUST have CurrentUser authentication
+- Edge approval/rejection need four-eyes enforcement (REP-11)
+- Cache operations need tenant-aware invalidation
+- Audit logs need tenant filtering
+- No insecure backwards compatibility - all routes require JWT

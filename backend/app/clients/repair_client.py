@@ -35,8 +35,11 @@ class RepairServiceClient:
         """
         return hashlib.sha256(f"{issue_id}:{canonical_query}".encode()).hexdigest()[:16]
 
-    async def get_pending_patches(self) -> List[Dict[str, Any]]:
+    async def get_pending_patches(self, auth_token: Optional[str] = None) -> List[Dict[str, Any]]:
         """Retrieve pending patches.
+        
+        Args:
+            auth_token: Optional JWT bearer token for authentication
 
         Returns:
             List[Dict[str, Any]]: List of resulting items or records.
@@ -53,11 +56,23 @@ class RepairServiceClient:
                 write=5.0,     # Time to send request body
                 pool=5.0,      # Time to acquire connection from pool
             )
+            
+            headers = {}
+            if auth_token:
+                headers["Authorization"] = f"Bearer {auth_token}"
+            
             async with httpx.AsyncClient(timeout=timeout) as client:
-                res = await client.get(f"{self.base_url}/api/patches/pending")
+                res = await client.get(
+                    f"{self.base_url}/api/patches/pending",
+                    headers=headers
+                )
                 if res.status_code == 200:
                     self.breaker.record_success()
                     return res.json()
+                elif res.status_code in (401, 403):
+                    logger.error("Repair service authentication failed: HTTP %d", res.status_code)
+                    self.breaker.record_failure()
+                    return []
                 else:
                     self.breaker.record_failure()
                     logger.warning("Repair service HTTP %d: %s", res.status_code, res.text[:200])
@@ -71,8 +86,12 @@ class RepairServiceClient:
             logger.warning("Failed to call remote repair service (%s)", exc)
             raise
 
-    async def approve_patch(self, patch_id: str) -> bool:
+    async def approve_patch(self, patch_id: str, auth_token: Optional[str] = None) -> bool:
         """Approve patch.
+        
+        Args:
+            patch_id: Unique identifier of the patch
+            auth_token: JWT bearer token for authentication
 
         Args:
             patch_id (str): Unique identifier of the patch.
@@ -85,11 +104,23 @@ class RepairServiceClient:
 
         try:
             timeout = httpx.Timeout(connect=5.0, read=10.0, write=5.0, pool=5.0)
+            
+            headers = {}
+            if auth_token:
+                headers["Authorization"] = f"Bearer {auth_token}"
+            
             async with httpx.AsyncClient(timeout=timeout) as client:
-                res = await client.post(f"{self.base_url}/api/patches/{patch_id}/approve")
+                res = await client.post(
+                    f"{self.base_url}/api/patches/{patch_id}/approve",
+                    headers=headers
+                )
                 if res.status_code == 200:
                     self.breaker.record_success()
                     return True
+                elif res.status_code in (401, 403):
+                    logger.error("Repair service authentication/authorization failed: HTTP %d - %s", res.status_code, res.text[:200])
+                    self.breaker.record_failure()
+                    return False
                 else:
                     self.breaker.record_failure()
                     logger.warning("Approve patch HTTP %d: %s", res.status_code, res.text[:200])
