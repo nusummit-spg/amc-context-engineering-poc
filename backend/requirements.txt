@@ -44,7 +44,7 @@ spacy>=3.8.16                    # NER Layer A (blank pipeline)
 easyocr>=1.7                 # PDF image OCR (index-time only)
 pillow>=10.0
 python-dotenv>=1.0
-numpy>=1.26.4
+numpy>=2.0.2
 pandas>=2.2
 scikit-learn==1.4.2
 rapidfuzz>=3.0
@@ -72,7 +72,7 @@ locust>=2.31
 # but listing them keeps standalone training and evaluation scripts reproducible.
 torch>=2.2
 transformers>=4.41
-datasets>=2.19
+datasets==3.6.0
 
 # --- Phase 0 Task 0.3: background scheduler ---
 # Optional but recommended: without it TaskScheduler falls back to a stdlib
@@ -82,9 +82,9 @@ apscheduler>=3.10.4
 truststore==0.10.4
 
 # --- Human feedback loop ---
-human-feedback-loop@git+https://github.com/nusummit-spg/human-feedback-loop@v0.1.7
+#amc-feedback-loop@git+https://github.com/nusummit-spg/human-feedback-loop@v0.1.7
 
 # --- Phase 2: Modular Packages ──────────────────────────────────
 # Install from local packages during development
--e ../packages/amc-feedback-loop
+# -e ../packages/amc-feedback-loop
 -e ../packages/amc-repair-engine

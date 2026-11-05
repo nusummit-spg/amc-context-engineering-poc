@@ -1,7 +1,7 @@
 [
   {
     "username": "amc_admin",
-    "password_hash": "pbkdf2_sha256$260000$cb1432dd9337e0a125676d2ca9b7bbd7$dcae74b2f70f22cd5c71c1c95c27b85531cb75b19a6c88d5feac89ec7330345c",
+    "password_hash": "pbkdf2_sha256$260000$8e3157a403aa23149c618a95443079d6$3c1e6b9768e70364db6de94cf4269335dfd2853ce8fa193266174dbc085a001d",
     "display_name": "AMC Administrator",
     "full_name": "AMC Administrator",
     "role": "Compliance & Regulatory Officer",
