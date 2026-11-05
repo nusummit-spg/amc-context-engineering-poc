@@ -901,6 +901,8 @@ def review_repair_proposal(
     """Review, approve, or reject a repair proposal.
 
     SEC-02 FIX: Uses JWT-verified role instead of X-User-Role header.
+    A07 FIX: Four-eyes enforcement - proposer and reviewer/approver must be different users.
+    A07 FIX: Does NOT directly promote to permanent status - approval is separate from promotion.
 
     Args:
         proposal_id (str): Unique identifier of the proposal.
@@ -918,7 +920,38 @@ def review_repair_proposal(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Proposal {proposal_id} not found"
         )
-    proposal.status = "approved" if payload.action == "approve" else "rejected"
+    
+    # A07: Four-eyes enforcement - reviewer cannot be proposer
+    proposer_username = getattr(proposal, 'created_by', None) or getattr(proposal, 'proposed_by', None)
+    current_user_id = getattr(current_user, 'user_id', None) or current_user.username
+    
+    if proposer_username and proposer_username == current_user.username:
+        logger.warning(
+            "FOUR_EYES_VIOLATION: User %s attempted to review their own proposal %s",
+            current_user.username,
+            proposal_id
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Four-eyes policy violation: Cannot review your own proposal (proposed by {proposer_username})"
+        )
+    
+    # A07: Only update review status, NOT the approval state
+    # Approval must go through explicit approval workflow with four-eyes
+    if payload.action == "approve":
+        # Set to "reviewed_approved" instead of "approved" - requires separate approval step
+        proposal.status = "reviewed_approved"
+        logger.info(
+            "REVIEW_ONLY: Proposal %s marked as reviewed_approved by %s (not yet approved)",
+            proposal_id, current_user.username
+        )
+    else:
+        proposal.status = "rejected"
+        logger.info(
+            "Proposal %s marked as rejected by %s",
+            proposal_id, current_user.username
+        )
+    
     proposal.reviewed_at = datetime.utcnow().isoformat() + "Z"
     proposal.reviewed_by = current_user.username
     db.commit()
@@ -926,7 +959,8 @@ def review_repair_proposal(
         "status": proposal.status,
         "proposal_id": proposal_id,
         "reviewed_by": proposal.reviewed_by,
-        "reviewed_at": proposal.reviewed_at
+        "reviewed_at": proposal.reviewed_at,
+        "note": "Review recorded. Separate approval step required via /approve/{patch_id} or /promote."
     }
 
 
