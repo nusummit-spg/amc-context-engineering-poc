@@ -298,17 +298,48 @@ async def get_pending_patches(user: RepairUser = Depends(get_current_user)):
 
 
 @app.get("/api/patches/for-entities")
-async def get_patches_for_entities(entity_ids: str):
+async def get_patches_for_entities(
+    entity_ids: str,
+    user: RepairUser = Depends(get_current_user)
+):
     """Get patches for specified entities (comma-separated IDs).
+    
+    **Authentication Required**: Bearer JWT token with patch_read scope.
+    **A02 FIX**: Closes unauthenticated read access (C-03).
+    **Tenant Isolation**: Filters to user's tenant unless service with explicit authority.
+    
+    NOTE: This endpoint is for REVIEWER access to examine patches under review.
+    The serving/answer path should use a separate filtered endpoint that only
+    returns ACTIVE patches with verified publication receipts.
 
     Args:
         entity_ids (str): Collection or list of entity ids.
+        user (RepairUser): Authenticated user from JWT token.
 
     Returns:
-        The requested patches for entities.
+        The requested patches for entities (filtered by tenant and permissions).
+        
+    Raises:
+        HTTPException(401): If unauthenticated
+        HTTPException(403): If wrong scope or cross-tenant access
     """
     try:
-        log_step_info(logger, "ENTITY_PATCHES_QUERY", "Querying patches for entities: %s", entity_ids)
+        log_step_info(
+            logger,
+            "ENTITY_PATCHES_QUERY",
+            "Querying patches for entities: %s by user=%s (tenant=%s)",
+            entity_ids,
+            user.username,
+            user.tenant_id or "all"
+        )
+        
+        # Verify user has read permission
+        if not user.is_service and not user.has_role("reviewer") and not user.has_role("admin"):
+            raise HTTPException(
+                status_code=403,
+                detail="Patch read access requires reviewer or admin role"
+            )
+        
         engine = get_repair_engine()
         
         entity_id_list = [eid.strip() for eid in entity_ids.split(",") if eid.strip()]
@@ -324,8 +355,21 @@ async def get_patches_for_entities(entity_ids: str):
             if p.patch_id not in seen_ids:
                 seen_ids.add(p.patch_id)
                 unique_patches.append(p)
+        
+        # A02: Tenant filtering - service tokens require explicit tenant authority
+        if user.tenant_id and not (user.is_service and "tenant:all" in user.roles):
+            unique_patches = [
+                p for p in unique_patches
+                if p.provenance.get("tenant_id") == user.tenant_id
+            ]
 
-        log_step_info(logger, "ENTITY_PATCHES_RESPONSE", "Found %d unique patches for entities", len(unique_patches))
+        log_step_info(
+            logger,
+            "ENTITY_PATCHES_RESPONSE",
+            "Found %d unique patches for entities (after tenant filter) for user=%s",
+            len(unique_patches),
+            user.username
+        )
         return {
             "patches": [
                 {
@@ -341,32 +385,97 @@ async def get_patches_for_entities(entity_ids: str):
             ]
         }
     
+    except HTTPException:
+        raise
     except Exception as exc:
         log_step_error(logger, "ENTITY_PATCHES_ERROR", "Get patches for entities error: %s", exc)
         raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.get("/api/patches/{patch_id}")
-async def get_patch_by_id(patch_id: str):
+async def get_patch_by_id(
+    patch_id: str,
+    user: RepairUser = Depends(get_current_user)
+):
     """Get details of a specific patch by ID.
+    
+    **Authentication Required**: Bearer JWT token with patch_read scope.
+    **A02 FIX**: Closes unauthenticated read access (C-03).
+    **Tenant Isolation**: Only returns patch if user has access to its tenant.
+    
+    NOTE: This endpoint exposes full patch details including provenance.
+    It should only be used by reviewers. The serving path should filter
+    to ACTIVE patches only and redact sensitive reviewer metadata.
 
     Args:
         patch_id (str): Unique identifier of the patch.
+        user (RepairUser): Authenticated user from JWT token.
 
     Returns:
-        The requested patch by id.
+        The requested patch by id (if authorized).
+        
+    Raises:
+        HTTPException(401): If unauthenticated
+        HTTPException(403): If cross-tenant access
+        HTTPException(404): If patch not found or not accessible
     """
     try:
-        log_step_info(logger, "PATCH_GET_REQUEST", "Fetching patch details for %s", patch_id)
+        log_step_info(
+            logger,
+            "PATCH_GET_REQUEST",
+            "Fetching patch details for %s by user=%s (tenant=%s)",
+            patch_id,
+            user.username,
+            user.tenant_id or "all"
+        )
+        
+        # Verify user has read permission
+        if not user.is_service and not user.has_role("reviewer") and not user.has_role("admin"):
+            raise HTTPException(
+                status_code=403,
+                detail="Patch read access requires reviewer or admin role"
+            )
+        
         engine = get_repair_engine()
         
         patch = await engine.patch_layer.get_patch(patch_id)
         
         if not patch:
-            log_step_warning(logger, "PATCH_GET_NOT_FOUND", "Patch %s not found", patch_id)
+            log_step_warning(
+                logger,
+                "PATCH_GET_NOT_FOUND",
+                "Patch %s not found for user=%s",
+                patch_id,
+                user.username
+            )
             raise HTTPException(status_code=404, detail=f"Patch {patch_id} not found")
         
-        log_step_info(logger, "PATCH_GET_SUCCESS", "Retrieved patch %s for entity %s", patch_id, patch.entity_id)
+        # A02: Tenant isolation - verify access
+        patch_tenant = patch.provenance.get("tenant_id", "default")
+        if user.tenant_id and user.tenant_id != patch_tenant:
+            if not (user.is_service and "tenant:all" in user.roles):
+                log_step_warning(
+                    logger,
+                    "PATCH_GET_CROSS_TENANT_DENIED",
+                    "User %s (tenant=%s) denied access to patch %s (tenant=%s)",
+                    user.username,
+                    user.tenant_id,
+                    patch_id,
+                    patch_tenant
+                )
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Patch {patch_id} not found"
+                )
+        
+        log_step_info(
+            logger,
+            "PATCH_GET_SUCCESS",
+            "Retrieved patch %s for entity %s by user=%s",
+            patch_id,
+            patch.entity_id,
+            user.username
+        )
         return {
             "patch_id": patch.patch_id,
             "entity_id": patch.entity_id,
@@ -388,7 +497,7 @@ async def get_patch_by_id(patch_id: str):
     except HTTPException:
         raise
     except Exception as exc:
-        log_step_error(logger, "PATCH_GET_ERROR", "Get patch by ID error: %s", exc)
+        log_step_error(logger, "PATCH_GET_ERROR", "Get patch by ID error for user=%s: %s", user.username, exc)
         raise HTTPException(status_code=500, detail=str(exc))
 
 
