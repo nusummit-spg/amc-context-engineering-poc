@@ -20,6 +20,7 @@ import threading
 import uuid
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from app.monitoring.patch_metrics import get_patch_metrics  # GAP 2: Metrics
@@ -27,10 +28,67 @@ from app.monitoring.patch_metrics import get_patch_metrics  # GAP 2: Metrics
 logger = logging.getLogger("app.graph.correction_patch_layer")
 
 
+class PatchStatus(str, Enum):
+    """
+    B01: Authoritative patch lifecycle states.
+    
+    Normal flow:
+    PENDING -> APPROVED -> STAGED -> VERIFIED -> ACTIVE
+    
+    Terminal states:
+    REJECTED - Declined by reviewer
+    FAILED - Technical failure during promotion
+    ROLLED_BACK - Reverted after deployment
+    SUPERSEDED - Replaced by newer version
+    """
+    # Initial state
+    PENDING = "PENDING"              # Created, awaiting approval
+    
+    # Approval states  
+    APPROVED = "APPROVED"            # Human approved, not yet published
+    
+    # Publication states
+    STAGED = "STAGED"                # Queued for publication
+    VERIFIED = "VERIFIED"            # Published and verified
+    ACTIVE = "ACTIVE"                # Serving in answers (requires VERIFIED + receipt)
+    
+    # Terminal/failure states
+    REJECTED = "REJECTED"            # Declined by reviewer
+    FAILED = "FAILED"                # Technical failure
+    ROLLED_BACK = "ROLLED_BACK"     # Reverted after deployment
+    SUPERSEDED = "SUPERSEDED"        # Replaced by newer version
+
+
+# B01: Allowed state transitions
+ALLOWED_TRANSITIONS = {
+    PatchStatus.PENDING: [PatchStatus.APPROVED, PatchStatus.REJECTED],
+    PatchStatus.APPROVED: [PatchStatus.STAGED, PatchStatus.REJECTED],
+    PatchStatus.STAGED: [PatchStatus.VERIFIED, PatchStatus.FAILED],
+    PatchStatus.VERIFIED: [PatchStatus.ACTIVE, PatchStatus.FAILED],
+    PatchStatus.ACTIVE: [PatchStatus.ROLLED_BACK, PatchStatus.SUPERSEDED],
+    # Terminal states have no valid transitions
+    PatchStatus.REJECTED: [],
+    PatchStatus.FAILED: [],
+    PatchStatus.ROLLED_BACK: [],
+    PatchStatus.SUPERSEDED: [],
+}
+
+
+class StateTransitionError(Exception):
+    """B01: Raised when invalid state transition attempted."""
+    pass
+
+
 @dataclass
 class CorrectionPatch:
     """
-    Represents a single fact correction patch.
+    Represents a single fact correction patch with B01 state machine.
+    
+    Normal lifecycle:
+    PENDING -> APPROVED -> STAGED -> VERIFIED -> ACTIVE
+    
+    Terminal states:
+    REJECTED, FAILED, ROLLED_BACK, SUPERSEDED
     """
     patch_id: str
     entity_id: str
@@ -39,16 +97,84 @@ class CorrectionPatch:
     corrected_value: Any
     confidence: float
     provenance: Dict[str, Any]
-    approved: bool
-    created_at: str
-    expires_at: Optional[str] = None
     
-    # NEW FIELDS for conflict resolution (GAP 1)
+    # B01: State machine (replaces simple approved boolean)
+    status: PatchStatus = PatchStatus.PENDING
+    
+    # B01: Backward compatibility - computed from status
+    approved: bool = False  # Computed property
+    
+    # B01: Timestamps for state transitions
+    approved_at: Optional[str] = None
+    staged_at: Optional[str] = None
+    verified_at: Optional[str] = None
+    activated_at: Optional[str] = None
+    
+    # B01: Publication receipts
+    publication_receipt: Optional[Dict[str, Any]] = None
+    active_dataset_version: Optional[str] = None
+    active_corpus_version: Optional[str] = None
+    
+    # Versioning fields for conflict resolution
     version: int = 1  # Monotonic version counter
     supersedes_patch_id: Optional[str] = None  # Tracks patch lineage
     superseded_by_patch_id: Optional[str] = None  # Bidirectional link
     conflict_resolution_reason: Optional[str] = None  # Audit trail for auto-resolution
     source_type: str = "user_feedback"  # "user_feedback" or "regulatory"
+    
+    created_at: str = ""
+    expires_at: Optional[str] = None
+    
+    def __post_init__(self):
+        """Set created_at if not provided and sync approved from status."""
+        if not self.created_at:
+            self.created_at = datetime.now(timezone.utc).isoformat() + "Z"
+        # Sync approved from status for backward compatibility
+        self.approved = self.status in [
+            PatchStatus.APPROVED,
+            PatchStatus.STAGED,
+            PatchStatus.VERIFIED,
+            PatchStatus.ACTIVE
+        ]
+    
+    def can_serve(self) -> bool:
+        """B01: Check if patch can serve in answers.
+        
+        Only ACTIVE patches with verified publication can serve.
+        """
+        return (
+            self.status == PatchStatus.ACTIVE and
+            self.publication_receipt is not None and
+            self.verified_at is not None
+        )
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for storage."""
+        return {
+            "patch_id": self.patch_id,
+            "entity_id": self.entity_id,
+            "attribute": self.attribute,
+            "canonical_value": self.canonical_value,
+            "corrected_value": self.corrected_value,
+            "confidence": self.confidence,
+            "provenance": self.provenance,
+            "status": self.status.value if hasattr(self.status, 'value') else str(self.status),
+            "approved": self.approved,
+            "approved_at": self.approved_at,
+            "staged_at": self.staged_at,
+            "verified_at": self.verified_at,
+            "activated_at": self.activated_at,
+            "publication_receipt": self.publication_receipt,
+            "active_dataset_version": self.active_dataset_version,
+            "active_corpus_version": self.active_corpus_version,
+            "version": self.version,
+            "supersedes_patch_id": self.supersedes_patch_id,
+            "superseded_by_patch_id": self.superseded_by_patch_id,
+            "conflict_resolution_reason": self.conflict_resolution_reason,
+            "source_type": self.source_type,
+            "created_at": self.created_at,
+            "expires_at": self.expires_at,
+        }
 
 
 class CorrectionPatchLayer:
@@ -76,6 +202,17 @@ class CorrectionPatchLayer:
         self._lock = threading.Lock()
         # In-memory storage fallback when Redis is absent
         self._mem_store: Dict[str, Dict[str, Any]] = {}
+    
+    def _key(self, patch_id: str) -> str:
+        """Key.
+
+        Args:
+            patch_id (str): Unique identifier of the patch.
+
+        Returns:
+            str: Resulting str instance.
+        """
+        return f"patch:{patch_id}"
 
     def _make_key(self, entity_id: str, attribute: str) -> str:
         """Make key.
@@ -614,6 +751,198 @@ class CorrectionPatchLayer:
         if entity_id:
             patches = [p for p in patches if p.entity_id == entity_id.strip()]
         return patches
+
+    # B01: State machine methods
+    async def transition_patch(
+        self,
+        patch_id: str,
+        new_status: PatchStatus,
+        actor: Optional[str] = None,
+        receipt: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """B01: Transition patch to new status with validation.
+        
+        Validates that the transition is allowed and updates timestamps.
+        
+        Args:
+            patch_id: Patch ID to transition
+            new_status: Target status
+            actor: Username/identity performing transition
+            receipt: Publication receipt (for VERIFIED/ACTIVE transitions)
+        
+        Returns:
+            True if transition successful
+            
+        Raises:
+            StateTransitionError: If transition not allowed
+        """
+        target_patch = self.get_patch_by_id(patch_id)
+        if not target_patch:
+            logger.error("PATCH_TRANSITION_MISS: Patch %s not found", patch_id)
+            return False
+        
+        # B01: Validate transition
+        current_status = target_patch.status if hasattr(target_patch, 'status') else PatchStatus.APPROVED
+        if isinstance(current_status, str):
+            current_status = PatchStatus(current_status)
+        
+        allowed = ALLOWED_TRANSITIONS.get(current_status, [])
+        if new_status not in allowed:
+            raise StateTransitionError(
+                f"Invalid transition from {current_status} to {new_status}. "
+                f"Allowed transitions: {allowed}"
+            )
+        
+        # Update status
+        old_status = current_status
+        target_patch.status = new_status
+        
+        # B01: Update transition timestamps
+        now = datetime.now(timezone.utc).isoformat() + "Z"
+        if new_status == PatchStatus.APPROVED:
+            target_patch.approved_at = now
+            target_patch.approved_by = actor
+        elif new_status == PatchStatus.STAGED:
+            target_patch.staged_at = now
+        elif new_status == PatchStatus.VERIFIED:
+            target_patch.verified_at = now
+            if receipt:
+                target_patch.publication_receipt = receipt
+        elif new_status == PatchStatus.ACTIVE:
+            target_patch.activated_at = now
+            if receipt:
+                target_patch.publication_receipt = receipt
+        
+        # Update store
+        await self._update_patch(patch_id, target_patch)
+        
+        logger.info(
+            "PATCH_TRANSITION: Patch %s: %s → %s (actor=%s)",
+            patch_id, old_status, new_status, actor or "system"
+        )
+        return True
+    
+    async def approve_patch(self, patch_id: str, actor: Optional[str] = None) -> bool:
+        """B01: Approve patch (PENDING → APPROVED).
+        
+        Args:
+            patch_id: Unique identifier of the patch.
+            actor: Username performing approval
+
+        Returns:
+            bool: True if transition successful
+        """
+        try:
+            return await self.transition_patch(patch_id, PatchStatus.APPROVED, actor=actor)
+        except StateTransitionError as e:
+            logger.error("PATCH_APPROVE_INVALID: Cannot approve %s: %s", patch_id, e)
+            return False
+    
+    async def reject_patch(self, patch_id: str, actor: Optional[str] = None) -> bool:
+        """B01: Reject patch (PENDING/APPROVED → REJECTED).
+        
+        Args:
+            patch_id: Unique identifier of the patch.
+            actor: Username performing rejection
+
+        Returns:
+            bool: True if transition successful
+        """
+        try:
+            success = await self.transition_patch(patch_id, PatchStatus.REJECTED, actor=actor)
+            if success:
+                await self.delete_patch(patch_id)
+                logger.info("PATCH_REJECTED: Patch %s rejected and removed", patch_id)
+            return success
+        except StateTransitionError as e:
+            logger.error("PATCH_REJECT_INVALID: Cannot reject %s: %s", patch_id, e)
+            return False
+    
+    async def stage_patch(self, patch_id: str, receipt: Optional[Dict[str, Any]] = None) -> bool:
+        """B01: Stage patch (APPROVED → STAGED).
+        
+        Args:
+            patch_id: Unique identifier of the patch.
+            receipt: Staging receipt (optional)
+
+        Returns:
+            bool: True if transition successful
+        """
+        try:
+            return await self.transition_patch(patch_id, PatchStatus.STAGED, receipt=receipt)
+        except StateTransitionError as e:
+            logger.error("PATCH_STAGE_INVALID: Cannot stage %s: %s", patch_id, e)
+            return False
+    
+    async def verify_patch(self, patch_id: str, receipt: Dict[str, Any]) -> bool:
+        """B01: Verify patch (STAGED → VERIFIED).
+        
+        Args:
+            patch_id: Unique identifier of the patch.
+            receipt: Verification receipt (required)
+
+        Returns:
+            bool: True if transition successful
+        """
+        try:
+            return await self.transition_patch(patch_id, PatchStatus.VERIFIED, receipt=receipt)
+        except StateTransitionError as e:
+            logger.error("PATCH_VERIFY_INVALID: Cannot verify %s: %s", patch_id, e)
+            return False
+    
+    async def activate_patch(self, patch_id: str, receipt: Dict[str, Any]) -> bool:
+        """B01: Activate patch (VERIFIED → ACTIVE).
+        
+        Args:
+            patch_id: Unique identifier of the patch.
+            receipt: Activation receipt (required)
+
+        Returns:
+            bool: True if transition successful
+        """
+        try:
+            return await self.transition_patch(patch_id, PatchStatus.ACTIVE, receipt=receipt)
+        except StateTransitionError as e:
+            logger.error("PATCH_ACTIVATE_INVALID: Cannot activate %s: %s", patch_id, e)
+            return False
+    
+    async def rollback_patch(self, patch_id: str, actor: Optional[str] = None) -> bool:
+        """B01: Rollback patch (ACTIVE → ROLLED_BACK).
+        
+        Args:
+            patch_id: Unique identifier of the patch.
+            actor: Username performing rollback
+
+        Returns:
+            bool: True if transition successful
+        """
+        try:
+            return await self.transition_patch(patch_id, PatchStatus.ROLLED_BACK, actor=actor)
+        except StateTransitionError as e:
+            logger.error("PATCH_ROLLBACK_INVALID: Cannot rollback %s: %s", patch_id, e)
+            return False
+    
+    async def _update_patch(self, patch_id: str, patch: CorrectionPatch) -> None:
+        """B01: Update patch in stores.
+        
+        Args:
+            patch_id: Unique identifier of the patch.
+            patch: The updated patch object.
+        """
+        patch_key = self._key(patch_id)
+        
+        patch_dict = patch.to_dict() if hasattr(patch, 'to_dict') else asdict(patch)
+        patch_json = json.dumps(patch_dict)
+        
+        if self.redis is not None:
+            try:
+                self.redis.set(patch_key, patch_json)
+            except Exception as exc:
+                logger.debug("Redis update notice: %s", exc)
+        
+        with self._lock:
+            self._mem_store[patch_key] = patch_dict
+            self._mem_store[patch_id] = patch_dict
 
 
 _global_patch_layer: Optional[CorrectionPatchLayer] = None
