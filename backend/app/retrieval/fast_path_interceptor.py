@@ -35,6 +35,15 @@ from app.models.query import (
 )
 from app.monitoring.patch_metrics import get_patch_metrics  # GAP 2: Metrics
 
+# A06: Import PatchStatus for serving eligibility checks
+try:
+    from amc_repair.schemas import PatchStatus
+except ImportError:
+    from enum import Enum
+    class PatchStatus(str, Enum):
+        ACTIVE = "ACTIVE"
+        PENDING = "PENDING"
+
 logger = logging.getLogger("retrieval.fast_path")
 
 # Keywords mapping user query phrasing to standardized patch attributes
