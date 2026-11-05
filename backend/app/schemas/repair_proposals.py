@@ -72,7 +72,7 @@ class RepairProposal(Base):
 
     __table_args__ = (
         CheckConstraint("proposal_type IN ('vector', 'graph')", name="ck_proposal_type"),
-        CheckConstraint("status IN ('pending', 'approved', 'rejected', 'applied')", name="ck_proposal_status"),
+        CheckConstraint("status IN ('pending', 'approved', 'rejected', 'applied', 'rolled_back')", name="ck_proposal_status"),
         CheckConstraint("confidence BETWEEN 0.0 AND 1.0", name="ck_proposal_confidence"),
         Index("idx_proposal_status_confidence", "status", "confidence"),
         Index("idx_proposal_created", "created_at"),

@@ -190,6 +190,14 @@ class CorrectionPatchLayer:
         
         await self.cache.set(self._key(patch_id), patch.to_dict())
         
+        # B07: Record state transition metric (if metrics available)
+        try:
+            from app.services.publication_metrics import get_publication_metrics
+            metrics = get_publication_metrics()
+            metrics.record_state_transition(str(old_status), str(new_status), success=True)
+        except (ImportError, Exception):
+            pass  # Metrics not available in repair engine standalone mode
+        
         log_step_info(
             logger,
             "PATCH_TRANSITION",
