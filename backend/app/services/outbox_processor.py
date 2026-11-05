@@ -162,11 +162,15 @@ class OutboxProcessor:
     async def _execute_graph_mutation(self, payload: Dict[str, Any], db: Session) -> None:
         """Execute graph mutation from outbox event.
         
+        FIX A04: Fail closed until real implementation exists.
+        
         Args:
             payload: Event payload with mutation details
             db: Database session
+            
+        Raises:
+            NotImplementedError: Until real implementation exists
         """
-        from app.services.promotion_service import PromotionService
         from app.schemas.repair_proposals import RepairProposal
         
         proposal_id = payload.get("proposal_id")
@@ -180,9 +184,14 @@ class OutboxProcessor:
         if not proposal:
             raise ValueError(f"Proposal {proposal_id} not found")
         
-        service = PromotionService(db=db)
-        # Note: In B05, this would coordinate the full saga
-        logger.info("B05: Would execute graph mutation for %s", proposal_id)
+        # FIX A04: Fail closed until real implementation
+        error_msg = (
+            "A04: GRAPH_MUTATION_REQUIRED handler not implemented. "
+            "Outbox event cannot be completed without actual graph mutation execution. "
+            "This event has been quarantined."
+        )
+        logger.error("A04: %s", error_msg)
+        raise NotImplementedError(error_msg)
     
     async def _execute_vector_reindex(self, payload: Dict[str, Any], db: Session) -> None:
         """Execute vector reindex from outbox event.
@@ -212,9 +221,14 @@ class OutboxProcessor:
     async def _execute_state_transition(self, payload: Dict[str, Any], db: Session) -> None:
         """Execute patch state transition from outbox event.
         
+        FIX A04: Fail closed until real implementation exists.
+        
         Args:
             payload: Event payload with transition details
             db: Database session
+            
+        Raises:
+            NotImplementedError: Until real implementation exists
         """
         patch_id = payload.get("patch_id")
         new_status = payload.get("new_status")
@@ -222,8 +236,14 @@ class OutboxProcessor:
         if not patch_id or not new_status:
             raise ValueError("State transition event missing patch_id or new_status")
         
-        # B05: Would call repair engine to transition patch
-        logger.info("B05: Would transition patch %s to %s", patch_id, new_status)
+        # FIX A04: Fail closed until real implementation
+        error_msg = (
+            "A04: PATCH_STATE_TRANSITION handler not implemented. "
+            "Outbox event cannot be completed without actual patch state transition. "
+            "This event has been quarantined."
+        )
+        logger.error("A04: %s", error_msg)
+        raise NotImplementedError(error_msg)
 
 
 def create_outbox_event(

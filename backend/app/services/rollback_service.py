@@ -138,15 +138,19 @@ class RollbackService:
     ) -> None:
         """Rollback a graph mutation by restoring previous value.
         
-        B06: Graph rollback operation.
+        FIX A05: Fail closed until real implementation exists.
         
         Args:
             proposal: The proposal to rollback
             reason: Rollback reason
             db: Database session
+            
+        Raises:
+            NotImplementedError: Until real implementation exists
         """
         from app.engine.graph_store import get_driver, config
         from app.schemas.graph_mutations_table import GraphMutation
+        from app.exceptions import RollbackNotImplementedError
         
         # B06: Fetch the original mutation to find previous value
         original_mutation = db.query(GraphMutation).filter(
@@ -155,24 +159,24 @@ class RollbackService:
         ).order_by(GraphMutation.applied_at.desc()).first()
         
         if not original_mutation:
-            logger.warning("B06: No successful mutation found for proposal %s", proposal.proposal_id)
-            return
+            error_msg = f"B06: No successful mutation found for proposal {proposal.proposal_id}"
+            logger.error("A05: %s", error_msg)
+            raise RollbackNotImplementedError(error_msg)
         
         # B06: Get previous value from verification receipt
         verified_value = original_mutation.verified_value
         entity_id = proposal.entity_id
         attribute = proposal.attribute
         
-        # B06: For full rollback, we would need to store the previous value
-        # For now, we log the intention
-        logger.info(
-            "B06: Would restore %s.%s to previous value (current verified: %s, reason: %s)",
+        # FIX A05: Fail closed until real implementation
+        error_msg = (
+            "A05: Graph rollback not implemented. Would restore %s.%s to previous value "
+            "(current verified: %s, reason: %s). "
+            "Rollback cannot proceed without real graph reversal implementation.",
             entity_id, attribute, verified_value, reason
         )
-        
-        # B06: In production, execute reverse mutation:
-        # rollback_cypher = f"MATCH (n {{id: '{entity_id}'}}) SET n.{attribute} = $previous_value"
-        # Then verify the rollback
+        logger.error("A05: %s", error_msg)
+        raise RollbackNotImplementedError(error_msg)
     
     async def _rollback_vector_reindex(
         self,
@@ -182,14 +186,18 @@ class RollbackService:
     ) -> None:
         """Rollback a vector reindex by removing affected documents.
         
-        B06: Vector rollback operation.
+        FIX A05: Fail closed until real implementation exists.
         
         Args:
             proposal: The proposal to rollback
             reason: Rollback reason
             db: Database session
+            
+        Raises:
+            NotImplementedError: Until real implementation exists
         """
         from app.schemas.reindex_jobs_table import ReindexJob
+        from app.exceptions import RollbackNotImplementedError
         
         # B06: Fetch the reindex job
         reindex_job = db.query(ReindexJob).filter(
@@ -198,18 +206,21 @@ class RollbackService:
         ).order_by(ReindexJob.completed_at.desc()).first()
         
         if not reindex_job:
-            logger.warning("B06: No verified reindex job found for proposal %s", proposal.proposal_id)
-            return
+            error_msg = f"B06: No verified reindex job found for proposal {proposal.proposal_id}"
+            logger.error("A05: %s", error_msg)
+            raise RollbackNotImplementedError(error_msg)
         
         document_ids = proposal.document_ids or []
         
-        logger.info(
-            "B06: Would rollback reindex for %d documents (job=%s, reason: %s)",
+        # FIX A05: Fail closed until real implementation
+        error_msg = (
+            "A05: Vector rollback not implemented. Would rollback reindex for %d documents "
+            "(job=%s, reason: %s). "
+            "Rollback cannot proceed without real vector index rebuild implementation.",
             len(document_ids), reindex_job.job_id, reason
         )
-        
-        # B06: In production, trigger reindex WITHOUT the corrections
-        # This would rebuild FAISS vectors from original source documents
+        logger.error("A05: %s", error_msg)
+        raise RollbackNotImplementedError(error_msg)
     
     async def rollback_patch(
         self,

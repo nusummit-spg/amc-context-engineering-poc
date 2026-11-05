@@ -16,3 +16,8 @@ class PromotionFailedError(Exception):
 class PromotionVerificationError(Exception):
     """Raised when promotion postcondition read-back verification fails."""
     pass
+
+
+class RollbackNotImplementedError(Exception):
+    """Raised when rollback operation cannot proceed without implementation."""
+    pass
