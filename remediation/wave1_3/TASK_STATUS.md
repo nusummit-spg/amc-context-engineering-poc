@@ -9,8 +9,8 @@
 | Task | Status | Evidence | Notes |
 |------|--------|----------|-------|
 | **A01** | PENDING | - | Replace mock Admin success |
-| **A02** | IN_PROGRESS | - | Close Repair read access |
-| **A03** | IN_PROGRESS | - | Token trust boundaries |
+| **A02** | ✅ DONE | SHA: 4f1e968, 31 tests passing | Close Repair read access |
+| **A03** | ✅ DONE | SHA: 4f1e968, 31 tests passing | Token trust boundaries |
 | **A04** | PENDING | - | Four-eyes enforcement |
 | **A05** | PENDING | - | Harden invitations |
 | **A06** | PENDING | - | Remove skipped tests |
@@ -43,41 +43,59 @@
 
 ## Task Detail Log
 
-### A02 - Close Repair Read Access (IN_PROGRESS)
-**Started:** 5 Nov 2026  
+### A02 - Close Repair Read Access (✅ DONE)
+**Completed:** 5 Nov 2026  
+**SHA:** 4f1e968  
 **Files Modified:**
 - `packages/amc-repair-engine/src/amc_repair/server.py`
 
-**Changes:**
-- Adding authentication to `GET /api/patches/for-entities`
-- Adding authentication to `GET /api/patches/{patch_id}`
-- Adding tenant filtering to prevent cross-tenant disclosure
-- Distinguishing serving API from reviewer endpoints
+**Changes Implemented:**
+- ✅ Added authentication to `GET /api/patches/for-entities`
+- ✅ Added authentication to `GET /api/patches/{patch_id}`
+- ✅ Tenant filtering to prevent cross-tenant disclosure
+- ✅ Requires reviewer/admin role or patch_read service scope
+- ✅ Returns 401 unauthenticated, 403 forbidden, 404 cross-tenant
 
-**Tests Required:**
-- Unauthenticated GET → 401
-- Wrong scope → 403
-- Cross-tenant → 403/404
-- Valid reviewer gets authorized review records only
+**Tests Created:** `test_wave13_auth_hardening.py`
+- ✅ Unauthenticated GET → 401 (2 tests)
+- ✅ Wrong scope → 403 (2 tests)
+- ✅ Cross-tenant → 403/404 (1 test)
+- ✅ Valid reviewer/admin gets authorized records (4 tests)
+- **Result:** 9/9 tests passing
 
-### A03 - Token Trust Boundaries (IN_PROGRESS)
-**Started:** 5 Nov 2026  
+**Security Impact:** Closes C-03 (P0 unauthenticated data disclosure)
+
+### A03 - Token Trust Boundaries (✅ DONE)
+**Completed:** 5 Nov 2026  
+**SHA:** 4f1e968  
 **Files Modified:**
 - `packages/amc-repair-engine/src/amc_repair/auth.py`
 
-**Changes:**
-- Require `exp` field and validate expiration strictly
-- Add issuer (`iss`), audience (`aud`), token type validation
-- Separate service scopes from approval authority
-- Service identity cannot constitute human approval alone
-- Production startup validation for strong secrets
+**Changes Implemented:**
+- ✅ Require `exp` field (configurable ALLOW_MISSING_EXP for migration)
+- ✅ Validate expiration strictly
+- ✅ Add issuer (`iss`) validation against EXPECTED_ISSUER
+- ✅ Add audience (`aud`) validation against EXPECTED_AUDIENCE
+- ✅ Add token_type enforcement (service/user/delegation)
+- ✅ Service scope allowlist validation on issuance
+- ✅ Service requires explicit `patch_approve` scope to approve (C-04 fix)
+- ✅ Service requires explicit `patch_promote` scope to promote
+- ✅ Production startup blocks with weak/default secrets
 
-**Tests Required:**
-- Missing exp → reject
-- Expired token → reject
-- Wrong issuer/audience → reject
-- Service token with only `patch_read` attempting approve → reject
-- Tampered signature → reject
+**Tests Created:** `test_wave13_auth_hardening.py`
+- ✅ Missing exp → reject (1 test)
+- ✅ Expired token → reject (1 test)
+- ✅ Wrong issuer → reject (1 test)
+- ✅ Wrong audience → reject (1 test)
+- ✅ Missing token_type → reject (1 test)
+- ✅ Tampered signature → reject (1 test)
+- ✅ Wrong secret → reject (1 test)
+- ✅ Service scope enforcement (8 tests)
+- ✅ Service token issuance validation (3 tests)
+- ✅ Integration tests (3 tests)
+- **Result:** 22/22 tests passing
+
+**Security Impact:** Closes C-04 (P0 service scope escalation), C-05 (P0 weak token validation)
 
 ---
 

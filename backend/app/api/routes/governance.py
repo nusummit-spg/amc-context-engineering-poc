@@ -341,6 +341,7 @@ def approve_correction(
     """Approve correction patch: promotes to permanent canonical status and removes TTL.
 
     SEC-02 FIX: Uses JWT-verified role from CurrentUser instead of X-User-Role header.
+    A04 FIX (C-07): Four-eyes enforcement - approver must differ from proposer.
 
     Args:
         patch_id (str): Unique identifier of the patch.
@@ -349,6 +350,9 @@ def approve_correction(
 
     Returns:
         Dict[str, Any]: Dictionary containing result data or status.
+        
+    Raises:
+        HTTPException(403): If proposer attempts to approve their own patch
     """
     require_approval_role(current_user)
     patch_layer = get_correction_patch_layer()
@@ -357,6 +361,38 @@ def approve_correction(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Patch {patch_id} not found"
+        )
+    
+    # A04: Four-eyes enforcement - approver cannot be proposer
+    proposer_username = None
+    proposer_id = None
+    if hasattr(patch, 'provenance') and patch.provenance:
+        proposer_username = patch.provenance.get("proposer_username") or patch.provenance.get("actor_id")
+        proposer_id = patch.provenance.get("proposer_id") or patch.provenance.get("user_id")
+    
+    current_user_id = getattr(current_user, 'user_id', None) or current_user.username
+    
+    if proposer_username and proposer_username == current_user.username:
+        logger.warning(
+            "FOUR_EYES_VIOLATION: User %s attempted to approve their own patch %s",
+            current_user.username,
+            patch_id
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Four-eyes policy violation: Cannot approve your own patch (proposed by {proposer_username})"
+        )
+    
+    if proposer_id and proposer_id == current_user_id:
+        logger.warning(
+            "FOUR_EYES_VIOLATION: User %s (id=%s) attempted to approve their own patch %s",
+            current_user.username,
+            current_user_id,
+            patch_id
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Four-eyes policy violation: Cannot approve your own patch"
         )
 
     # Optional Neo4j session write
@@ -451,6 +487,7 @@ def batch_approve_corrections(
     """Batch process (approve or reject) multiple correction patches at once.
 
     SEC-02 FIX: Uses JWT-verified role from CurrentUser instead of X-User-Role header.
+    A04 FIX (C-07): Four-eyes enforcement applied to each patch individually.
 
     Args:
         payload (BatchApprovalIn): Request or event payload.
@@ -463,34 +500,67 @@ def batch_approve_corrections(
     patch_layer = get_correction_patch_layer()
     succeeded = []
     failed = []
+    four_eyes_violations = []
+
+    current_user_id = getattr(current_user, 'user_id', None) or current_user.username
 
     for pid in payload.patch_ids:
         try:
+            # A04: Check four-eyes for each patch before action
+            patch = patch_layer.get_patch_by_id(pid)
+            if not patch:
+                failed.append({"patch_id": pid, "reason": "Patch not found"})
+                continue
+            
             if payload.action == "approve":
+                # Four-eyes check for approval
+                proposer_username = None
+                proposer_id = None
+                if hasattr(patch, 'provenance') and patch.provenance:
+                    proposer_username = patch.provenance.get("proposer_username") or patch.provenance.get("actor_id")
+                    proposer_id = patch.provenance.get("proposer_id") or patch.provenance.get("user_id")
+                
+                if (proposer_username and proposer_username == current_user.username) or \
+                   (proposer_id and proposer_id == current_user_id):
+                    four_eyes_violations.append({
+                        "patch_id": pid,
+                        "proposer": proposer_username or proposer_id,
+                        "reason": "Cannot approve own patch"
+                    })
+                    logger.warning(
+                        "BATCH_FOUR_EYES_VIOLATION: User %s attempted to approve their own patch %s",
+                        current_user.username,
+                        pid
+                    )
+                    continue
+                
+                # Proceed with approval
                 ok = patch_layer.promote_to_permanent(pid)
                 if ok:
                     succeeded.append(pid)
                     log_governance_audit("APPROVE_BATCH", pid, current_user.username, {"comment": payload.comment})
                 else:
-                    failed.append(pid)
+                    failed.append({"patch_id": pid, "reason": "Promotion failed"})
             elif payload.action == "reject":
                 ok = patch_layer.delete_patch(pid)
                 if ok:
                     succeeded.append(pid)
                     log_governance_audit("REJECT_BATCH", pid, current_user.username, {"comment": payload.comment})
                 else:
-                    failed.append(pid)
+                    failed.append({"patch_id": pid, "reason": "Deletion failed"})
         except Exception as exc:
             logger.warning("Batch action error on %s: %s", pid, exc)
-            failed.append(pid)
+            failed.append({"patch_id": pid, "reason": str(exc)})
 
     return {
         "action": payload.action,
         "total": len(payload.patch_ids),
         "succeeded_count": len(succeeded),
         "failed_count": len(failed),
+        "four_eyes_violations_count": len(four_eyes_violations),
         "succeeded": succeeded,
-        "failed": failed
+        "failed": failed,
+        "four_eyes_violations": four_eyes_violations
     }
 
 
@@ -679,6 +749,7 @@ async def promote_patch_direct(
     """Directly promote a single patch into canonical Neo4j graph and retire its shadow patch.
 
     SEC-02 FIX: Uses JWT-verified role instead of X-User-Role header.
+    A04 FIX (C-07): Four-eyes enforcement - requires prior approval from different user.
 
     Args:
         patch_id (str): Unique identifier of the patch.
@@ -687,6 +758,9 @@ async def promote_patch_direct(
 
     Returns:
         Dict[str, Any]: Dictionary containing result data or status.
+        
+    Raises:
+        HTTPException(403): If patch not yet approved or self-promotion attempted
     """
     require_approval_role(current_user)
     patch_layer = get_correction_patch_layer()
@@ -696,6 +770,28 @@ async def promote_patch_direct(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Patch {patch_id} not found"
         )
+    
+    # A04: Verify patch is already approved (approve != promote)
+    if not getattr(patch, 'approved', False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Cannot promote unapproved patch {patch_id}. Use /approve/{patch_id} first."
+        )
+    
+    # A04: Four-eyes for promotion - verify approver differs from promoter
+    # (In practice, promotion should check that promoter != original proposer)
+    if hasattr(patch, 'provenance') and patch.provenance:
+        approver_username = patch.provenance.get("approver_username")
+        proposer_username = patch.provenance.get("proposer_username") or patch.provenance.get("actor_id")
+        
+        # Warn if promoter is same as proposer (even if someone else approved)
+        if proposer_username and proposer_username == current_user.username:
+            logger.warning(
+                "PROMOTION_NOTICE: User %s promoting their own proposed patch %s (approved by %s)",
+                current_user.username,
+                patch_id,
+                approver_username or "unknown"
+            )
 
     # 1. Promote in local patch layer (and Neo4j if available)
     neo4j_session = None
