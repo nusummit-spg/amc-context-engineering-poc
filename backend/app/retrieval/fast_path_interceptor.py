@@ -586,6 +586,31 @@ class FastPathInterceptor:
             metrics.record_fast_path_miss()
             return None  # Fall through to vector retrieval
 
+    def _is_serving_eligible_patch(self, patch: Dict[str, Any]) -> bool:
+        """A06 FIX: Check if patch can serve in user responses.
+        
+        Only patches with ACTIVE status AND verified publication receipt can serve.
+        This is the single authoritative check for all patch serving.
+        
+        Args:
+            patch: Patch dictionary from repair engine or local store
+            
+        Returns:
+            True if patch is eligible for serving
+        """
+        status = patch.get("status", "")
+        can_serve_method = patch.get("can_serve", False)
+        publication_receipt = patch.get("publication_receipt")
+        verified_at = patch.get("verified_at")
+        
+        # A06: Strict check - must be ACTIVE with verified receipt
+        is_active = status == "ACTIVE" or status == PatchStatus.ACTIVE.value
+        has_receipt = publication_receipt is not None
+        is_verified = verified_at is not None
+        
+        # B01: Also check can_serve() method if available
+        return is_active and has_receipt and is_verified and can_serve_method
+
     def _build_aggregation_response(
         self,
         query: str,
