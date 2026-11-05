@@ -1,0 +1,20 @@
+Task ID,Task Description,Status,Details,Commit,Test Evidence
+A01,Fix invitation redemption (hash lookup, atomic one-time redemption, rate-limit/expiry),DONE,Hash lookup with HMAC-SHA256, row locking with with_for_update(), rate-limiting, constant-time verification,9ecc54e,test_wave14_p0_containment.py:5 tests
+A02,Fix async promotion route (promote_approved_proposals),DONE,Converted sync endpoint to async with proper await,9ecc54e,test_wave14_p0_containment.py:1 test
+A03,Disable fabricated vector success (_trigger_reindex),DONE,Added indexer availability check before marking verified,5da8c1e,test_wave14_p0_containment.py:2 tests
+A04,Disable fabricated outbox completion,DONE,Outbox handlers raise NotImplementedError for unimplemented operations,5da8c1e,test_wave14_p0_containment.py:2 tests
+A05,Disable fabricated rollback success,DONE,Rollback handlers raise RollbackNotImplementedError with new exception class,5da8c1e,test_wave14_p0_containment.py:2 tests
+A06,Seal pending synthetic-vector ingestion,DONE,Added _is_serving_eligible_patch() with ACTIVE + verified receipt check,e102709,test_wave14_p0_containment.py:2 tests
+A07,Close obvious approval bypasses,DONE,Four-eyes check in review_repair_proposal - reviewer cannot be proposer,28e14f9,test_wave14_p0_containment.py:2 tests
+A08,Fail closed Admin operational placeholders,DONE,Admin endpoints return 503 instead of mock data for unimplemented features,eb1999e,test_wave14_p0_containment.py:2 tests
+A09,Add cross-system regression tests,DONE,Created test_wave14_p0_containment.py with 18 passing tests,136f648,18 tests passing
+B01,One stored lifecycle (PENDING→APPROVED→STAGED→VERIFIED→ACTIVE),DONE,Implemented PatchStatus state machine in backend shadow layer,af4dfcc,Syntax verified
+B02,Approval evidence and four-eyes,PENDING,Requires: persist proposer/reviewer/approver identities, immutable source version, evidence receipt,---
+B03,Real vector index staging,PENDING,Requires: actual FAISS integration with staging generation, read-only activation switch,---
+B04,Exact graph postconditions,PENDING,Requires: parameterized mutations, preimage capture, read-back validation,---
+B05,One authoritative worker (outbox),PENDING,Requires: durable lease, claim-based execution, atomic state transitions,---
+B06,Retry/recovery/deduplication,PENDING,Requires: idempotency keys, capped retry/backoff, dead-letter queue,---
+B07,Real graph rollback,PENDING,Requires: preimage capture, conflict/version checks, read-back proof,---
+B08,Real vector rollback,PENDING,Requires: prior active vector snapshot restoration, hash verification,---
+B09,Unified serving authorization,PENDING,Requires: shared is_serving_eligible() across all lookup modes,---
+B10,End-to-end failure injection,PENDING,Requires: graph outage, wrong readback, vector failure, crash recovery,---
