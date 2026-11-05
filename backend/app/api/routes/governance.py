@@ -708,7 +708,7 @@ class ProposalReviewIn(BaseModel):
 
 
 @router.post("/promote", response_model=Dict[str, Any])
-def promote_approved_proposals(
+async def promote_approved_proposals(
     current_user: CurrentUser,
     batch_id: Optional[str] = None,
     proposal_id: Optional[str] = None,
@@ -717,6 +717,7 @@ def promote_approved_proposals(
     """Apply approved repair proposals to canonical Neo4j graph and vector stores.
 
     SEC-02 FIX: Uses JWT-verified role instead of X-User-Role header.
+    A02 FIX: Made async and properly awaits PromotionService.apply_approved_proposals().
 
     Args:
         batch_id (Optional[str]): Unique identifier of the batch.
@@ -730,7 +731,7 @@ def promote_approved_proposals(
     require_approval_role(current_user)
     service = PromotionService(db=db)
     try:
-        result = service.apply_approved_proposals(batch_id=batch_id, proposal_id=proposal_id, db=db)
+        result = await service.apply_approved_proposals(batch_id=batch_id, proposal_id=proposal_id, db=db)
         return {"status": "success", "result": result}
     except Exception as exc:
         logger.error("Promotion failed: %s", exc)

@@ -217,6 +217,13 @@ async def accept_invitation(
 ) -> AcceptInvitationResponse:
     """Accept invitation and set initial password (SEC-03 fix).
     
+    A05 (C-14) Security Hardening:
+    - Query by token_hash (HMAC-SHA256), not plaintext token
+    - Constant-time verification to prevent timing attacks
+    - Atomic one-time redemption with row locking (FOR UPDATE)
+    - Rate limiting on failed attempts
+    - Replay rejection with idempotency
+    
     Args:
         payload: Invitation acceptance request
         request: FastAPI request object  
@@ -226,23 +233,59 @@ async def accept_invitation(
         Acceptance status
         
     Raises:
-        HTTPException(400): If token invalid or expired
+        HTTPException(400): If token invalid, expired, or rate limited
         HTTPException(409): If token already used
     """
     from app.core.database import SessionLocal
     from app.schemas.invitation_token import InvitationToken
     from app.schemas.auth_users_table import AuthUser
     from app.auth.security import hash_password
+    from app.auth.invitation_tokens import (
+        hash_invitation_token,
+        verify_invitation_token,
+        check_rate_limit
+    )
     from datetime import datetime, timezone
     
     db = SessionLocal()
     try:
-        # Find invitation token
+        # A05: Hash the incoming token to query by stored hash
+        incoming_token_hash = hash_invitation_token(payload.invitation_token)
+        
+        # A05: Use row locking (FOR UPDATE) for atomic redemption
+        # This prevents race conditions in concurrent redemption attempts
         invitation = db.query(InvitationToken).filter(
-            InvitationToken.token == payload.invitation_token
-        ).first()
+            InvitationToken.token_hash == incoming_token_hash
+        ).with_for_update().first()
         
         if not invitation:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid invitation token"
+            )
+        
+        # A05: Check rate limiting before any other validation
+        allowed, reason = check_rate_limit(
+            invitation.redemption_attempts, 
+            invitation.last_attempt_at
+        )
+        if not allowed:
+            # Increment attempt counter even for rate-limited requests
+            invitation.redemption_attempts += 1
+            invitation.last_attempt_at = datetime.now(timezone.utc)
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=reason
+            )
+        
+        # A05: Constant-time verification (not strictly needed since we hash first,
+        # but defensive for completeness)
+        if not verify_invitation_token(payload.invitation_token, invitation.token_hash):
+            # Increment failed attempt counter
+            invitation.redemption_attempts += 1
+            invitation.last_attempt_at = datetime.now(timezone.utc)
+            db.commit()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid invitation token"
@@ -287,6 +330,9 @@ async def accept_invitation(
         invitation.used = True
         invitation.used_at = datetime.now(timezone.utc)
         invitation.used_from_ip = client_ip
+        # Reset attempt counter on successful redemption
+        invitation.redemption_attempts = 0
+        invitation.last_attempt_at = None
         
         db.commit()
         
