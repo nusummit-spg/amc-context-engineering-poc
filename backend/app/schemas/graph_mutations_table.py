@@ -29,6 +29,11 @@ class GraphMutation(Base):
     applied_by: Mapped[str] = mapped_column(String(64), nullable=False, default="promotion_service")
     success: Mapped[bool] = mapped_column(Boolean, default=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    
+    # B03: Immutable verification receipt (C-11 integrity proof)
+    verified_value: Mapped[str | None] = mapped_column(Text, nullable=True)  # Value read back from graph
+    verification_timestamp: Mapped[str | None] = mapped_column(String(40), nullable=True)  # When verified
+    verification_receipt: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # Full receipt with entity_id, attribute, tx_id
 
     __table_args__ = (
         Index("idx_mutation_applied_at", "applied_at"),

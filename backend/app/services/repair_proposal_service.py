@@ -190,6 +190,7 @@ RETURN e
             proposal_type="graph",
             entity_id=entity_id,
             attribute=attribute,
+            corrected_value=corrected_value,  # B03: Store for verification
             mutation_cypher=mutation_cypher,
             affected_nodes=affected_nodes,
             confidence=confidence,

@@ -47,6 +47,9 @@ class RepairProposal(Base):
     proposal_type: Mapped[str] = mapped_column(String(20), nullable=False)  # 'vector' | 'graph'
     entity_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     attribute: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    
+    # B03: Corrected value for verification (Wave 1.3)
+    corrected_value: Mapped[str | None] = mapped_column(Text, nullable=True)  # Expected value after mutation
 
     # For graph repairs
     mutation_cypher: Mapped[str | None] = mapped_column(Text, nullable=True)

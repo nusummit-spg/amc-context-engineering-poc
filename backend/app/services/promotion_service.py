@@ -174,7 +174,7 @@ class PromotionService:
                 tx.run(proposal.mutation_cypher, **params)
                 tx.commit()
                 
-                # G10-T11 / W1.1-12: Verify committed effect via read-back
+                # B03 / G10-T11 / W1.1-12: Verify committed effect via read-back with EXACT value comparison
                 if proposal.entity_id and proposal.attribute:
                     verification_result = session.run(
                         "MATCH (n {id: $entity_id}) RETURN n[$attribute] as value",
@@ -182,16 +182,65 @@ class PromotionService:
                         attribute=proposal.attribute
                     ).single()
                     
-                    # Simple postcondition: node exists and has the attribute
-                    # (More sophisticated verification would check exact value)
                     if not verification_result:
-                        error_msg = f"Postcondition verification failed: entity {proposal.entity_id} not found after commit"
+                        error_msg = f"B03 verification failed: entity {proposal.entity_id} not found after commit"
                         logger.error("VERIFICATION_FAILED: %s", error_msg)
                         self._log_mutation(proposal, db, success=False, error=error_msg)
                         raise PromotionVerificationError(error_msg)
+                    
+                    # B03: Verify EXACT value match (C-11 integrity)
+                    actual_value = verification_result["value"]
+                    expected_value = proposal.corrected_value
+                    
+                    # Type-aware comparison for numeric values
+                    if expected_value is not None:
+                        # Normalize for comparison (handle string vs numeric, decimal precision)
+                        actual_str = str(actual_value) if actual_value is not None else None
+                        expected_str = str(expected_value)
+                        
+                        # B03: Try numeric comparison first for decimal precision issues
+                        values_match = False
+                        if actual_str == expected_str:
+                            values_match = True
+                        else:
+                            # Try comparing as floats for numeric values
+                            try:
+                                actual_float = float(actual_value) if actual_value is not None else None
+                                expected_float = float(expected_value)
+                                # Use small epsilon for float comparison
+                                if actual_float is not None and abs(actual_float - expected_float) < 1e-9:
+                                    values_match = True
+                            except (ValueError, TypeError):
+                                # Not numeric, stick with string comparison
+                                pass
+                        
+                        if not values_match:
+                            error_msg = (
+                                f"B03 value mismatch: entity {proposal.entity_id}.{proposal.attribute} "
+                                f"expected '{expected_value}' but read back '{actual_value}'"
+                            )
+                            logger.error("VERIFICATION_FAILED: %s", error_msg)
+                            self._log_mutation(proposal, db, success=False, error=error_msg)
+                            raise PromotionVerificationError(error_msg)
+                    
+                    # B03: Create immutable verification receipt
+                    verification_receipt = {
+                        "entity_id": proposal.entity_id,
+                        "attribute": proposal.attribute,
+                        "expected_value": expected_value,
+                        "verified_value": actual_value,
+                        "verified_at": datetime.now(timezone.utc).isoformat(),
+                        "mutation_id": f"mut_{uuid.uuid4().hex[:12]}",
+                        "proposal_id": proposal.proposal_id
+                    }
                 
-                self._log_mutation(proposal, db, success=True)
-                logger.info("Successfully applied and verified proposal %s", proposal.proposal_id)
+                self._log_mutation(
+                    proposal, 
+                    db, 
+                    success=True,
+                    verification_receipt=verification_receipt if proposal.entity_id and proposal.attribute else None
+                )
+                logger.info("B03: Successfully applied and verified proposal %s", proposal.proposal_id)
                 
             except PromotionVerificationError:
                 # Already logged, re-raise
@@ -208,18 +257,22 @@ class PromotionService:
         proposal: RepairProposal,
         db: Session,
         success: bool = True,
-        error: Optional[str] = None
+        error: Optional[str] = None,
+        verification_receipt: Optional[Dict[str, Any]] = None
     ) -> None:
         """Log graph mutation to graph_mutations audit table.
+        
+        B03: Now includes verification receipt for integrity proof.
 
         Args:
             proposal (RepairProposal): The proposal.
             db (Session): Database session instance.
             success (bool): The success.
             error (Optional[str]): The error.
+            verification_receipt (Optional[Dict[str, Any]]): B03 verification receipt with exact value proof
         """
         mutation = GraphMutation(
-            mutation_id=f"mut_{uuid.uuid4().hex[:12]}",
+            mutation_id=verification_receipt.get("mutation_id") if verification_receipt else f"mut_{uuid.uuid4().hex[:12]}",
             proposal_id=proposal.proposal_id,
             mutation_cypher=proposal.mutation_cypher,
             affected_nodes=proposal.affected_nodes,
@@ -227,6 +280,10 @@ class PromotionService:
             applied_by="promotion_service",
             success=success,
             error=error,
+            # B03 fields
+            verified_value=str(verification_receipt.get("verified_value")) if verification_receipt else None,
+            verification_timestamp=verification_receipt.get("verified_at") if verification_receipt else None,
+            verification_receipt=verification_receipt
         )
         db.add(mutation)
 
