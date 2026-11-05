@@ -739,6 +739,7 @@ async def check_staleness(
     """Check data staleness and freshness.
     
     R1-09b: Restored with authentication. Requires admin or compliance_officer.
+    A08 FIX (C-01): Returns explicit 503 unavailable instead of mock data.
     
     Args:
         request: Staleness check parameters
@@ -749,6 +750,7 @@ async def check_staleness(
     
     Raises:
         HTTPException(403): If insufficient privileges
+        HTTPException(503): Staleness checking not yet implemented
     """
     user_role = _normalize_role(current_user.role)
     if user_role not in ["admin", "compliance_officer"]:
@@ -759,20 +761,17 @@ async def check_staleness(
     
     threshold_hours = request.threshold_hours if request else 24
     
-    # TODO: Implement actual staleness checking logic
-    # Check financial data, graph data, vector index timestamps
+    # A08 (C-01 FIX): Return explicit unavailable instead of mock data
+    logger.warning(
+        "Staleness check requested by %s but data freshness provider not implemented",
+        current_user.username
+    )
     
-    return {
-        "status": "checked",
-        "threshold_hours": threshold_hours,
-        "financial_data_age_hours": 0,
-        "graph_data_age_hours": 0,
-        "vector_index_age_hours": 0,
-        "is_stale": False,
-        "checked_by": current_user.username,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "note": "Staleness checking not yet fully implemented"
-    }
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Data staleness checking not yet implemented. "
+               "Configure data freshness monitoring for financial data, graph, and vector index."
+    )
 
 
 @router.get("/ingestion/tasks")
@@ -785,6 +784,7 @@ async def list_ingestion_tasks(
     """List ingestion tasks with status.
     
     R1-09a: Restored with authentication. Requires admin or compliance_officer.
+    A08 FIX (C-01): Returns explicit 503 unavailable instead of mock data.
     
     Args:
         limit: Maximum tasks to return
@@ -797,6 +797,7 @@ async def list_ingestion_tasks(
     
     Raises:
         HTTPException(403): If insufficient privileges
+        HTTPException(503): Ingestion task queue not yet implemented
     """
     user_role = _normalize_role(current_user.role)
     if user_role not in ["admin", "compliance_officer"]:
@@ -805,36 +806,17 @@ async def list_ingestion_tasks(
             detail="Ingestion tasks require admin or compliance_officer role"
         )
     
-    # TODO: Query actual task queue/database
-    # For now return mock structure
+    # A08 (C-01 FIX): Return explicit unavailable instead of mock data
+    logger.warning(
+        "Ingestion tasks requested by %s but task queue integration not implemented",
+        current_user.username
+    )
     
-    tasks = [
-        {
-            "task_id": "task_001",
-            "type": "csv_ingestion",
-            "status": "completed",
-            "source_file": "financial_data_2026Q3.csv",
-            "started_at": "2026-11-04T10:00:00Z",
-            "completed_at": "2026-11-04T10:05:00Z",
-            "records_processed": 16245,
-            "errors": 0
-        }
-    ]
-    
-    if status_filter:
-        tasks = [t for t in tasks if t["status"] == status_filter]
-    
-    total = len(tasks)
-    tasks = tasks[offset:offset+limit]
-    
-    return {
-        "tasks": tasks,
-        "total": total,
-        "limit": limit,
-        "offset": offset,
-        "retrieved_by": current_user.username,
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Ingestion task queue integration not yet implemented. "
+               "Configure task queue (Celery/RQ) or use synchronous ingestion for now."
+    )
 
 
 @router.get("/ingestion/tasks/active")
@@ -844,6 +826,7 @@ async def list_active_ingestion_tasks(
     """List currently active/running ingestion tasks.
     
     R1-09b: Restored with authentication. Requires admin or compliance_officer.
+    A08 FIX (C-01): Returns explicit 503 unavailable instead of mock data.
     
     Args:
         current_user: Authenticated user
@@ -853,6 +836,7 @@ async def list_active_ingestion_tasks(
     
     Raises:
         HTTPException(403): If insufficient privileges
+        HTTPException(503): Active task tracking not yet implemented
     """
     user_role = _normalize_role(current_user.role)
     if user_role not in ["admin", "compliance_officer"]:
@@ -861,14 +845,17 @@ async def list_active_ingestion_tasks(
             detail="Active tasks require admin or compliance_officer role"
         )
     
-    # TODO: Query running tasks from task queue
+    # A08 (C-01 FIX): Return explicit unavailable instead of mock data
+    logger.warning(
+        "Active ingestion tasks requested by %s but task queue integration not implemented",
+        current_user.username
+    )
     
-    return {
-        "active_tasks": [],
-        "count": 0,
-        "retrieved_by": current_user.username,
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Active task tracking not yet implemented. "
+               "Configure task queue (Celery/RQ) for real-time task monitoring."
+    )
 
 
 # ── Regulatory Edge Review ──────────────────────────────────────────────────
