@@ -10,6 +10,7 @@ Implements the saga pattern for atomic operations across:
 """
 
 import logging
+import uuid
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
@@ -247,10 +248,14 @@ def create_outbox_event(
         Created outbox event
     """
     event = OutboxEvent(
+        event_id=f"evt_{uuid.uuid4().hex[:12]}",  # Explicit ID generation
         aggregate_type=aggregate_type,
         aggregate_id=aggregate_id,
         event_type=event_type,
         payload=payload,
+        status="pending",  # Explicit default
+        created_at=datetime.now(timezone.utc).isoformat(),  # Explicit timestamp
+        retry_count=0,  # Explicit default
         max_retries=max_retries
     )
     db.add(event)
