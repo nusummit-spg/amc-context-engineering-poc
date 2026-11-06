@@ -62,7 +62,7 @@ jobs:
           echo "All imports validated"
 
       - name: Scan for secrets
-        uses: gitleaks/gitleaks-action@v8.22.0
+        uses: gitleaks/gitleaks-action@v3
         with:
           config-path: ".gitleaks.toml"
           exit-code: 1
@@ -167,16 +167,13 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Run regression tests
-        env:
-          REGRESSION_COMMIT_SHA: ${{ github.sha }}
-          REGRESSION_COMMAND: "pytest tests/regression/"
-          REGRESSION_ENV: "${{ toJSON(env) }}"
         run: |
           cd backend
           if [ -d "tests/regression" ]; then
-            pytest tests/regression/ -v
+            pytest tests/regression/ -v || exit 1
           else
-            echo "No regression tests directory; skipping"
+            echo "ERROR: No regression tests directory; test discovery failed"
+            exit 1
           fi
           echo "Deterministic regression completed"
 
@@ -198,10 +195,10 @@ jobs:
         run: |
           cd backend
           if [ -d "tests/fault_injection" ]; then
-            pytest tests/fault_injection/ -v --tb=short
+            pytest tests/fault_injection/ -v --tb=short || exit 1
           else
-            echo "No fault_injection tests directory; using test_wave15_publication_fault_injection.py"
-            pytest tests/test_wave15_publication_fault_injection.py -v --tb=short || exit 0
+            echo "ERROR: No fault_injection tests directory; test discovery failed"
+            exit 1
           fi
           echo "Fault injection tests completed"
 

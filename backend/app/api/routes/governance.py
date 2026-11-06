@@ -894,11 +894,12 @@ async def promote_patch_direct(
             current_status = PatchStatus.VERIFIED
         
         if current_status == PatchStatus.VERIFIED:
-            # ACTIVATE patch (vector activation deferred - requires full implementation per W17-02)
-            # receipt = await _execute_vector_activation(patch_id)  # MISSING - deferred to B02/B09
-            receipt = {"type": "patch_activation", "patch_id": patch_id, "verified": True, "timestamp": datetime.now(timezone.utc).isoformat()}
-            await patch_layer.activate_patch(patch_id, receipt)
-            current_status = PatchStatus.ACTIVE
+            # ACTIVATE patch - vector activation deferred until D2-03
+            # Return 202 Accepted to signal intent only; actual ACTIVE status requires worker verification
+            raise HTTPException(
+                status_code=status.HTTP_202_ACCEPTED,
+                detail="Publication intent created. Worker will verify graph/vector effects before marking ACTIVE."
+            )
     except Exception as exc:
         logger.error("Promotion failed: %s", exc)
         raise HTTPException(

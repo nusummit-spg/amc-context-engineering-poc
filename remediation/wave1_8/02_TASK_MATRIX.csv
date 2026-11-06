@@ -1,0 +1,33 @@
+Task,Status,Files,Tests,Commit
+R0-01,IMPLEMENTED_UNVERIFIED,.github/workflows/amc-assurance.yml,,v8.22.0→v3
+R0-02,IMPLEMENTED_UNVERIFIED,.github/workflows/amc-assurance.yml,,removed || exit 0
+R0-03,IMPLEMENTED_UNVERIFIED,backend/app/api/routes/governance.py,,promote/{patch_id} returns 202
+R0-04,IMPLEMENTED_UNVERIFIED,backend/app/graph/correction_patch_layer.py,,is_serving_eligible() added
+R0-05,IMPLEMENTED_UNVERIFIED,backend/app/services/promotion_service.py,,outbox-only, no direct mutation
+R0-06,IMPLEMENTED_UNVERIFIED,backend/app/vector/client.py,,delete_by_chunk_id removes from index
+R0-07,IMPLEMENTED_UNVERIFIED,remediation/wave1_8/02_TASK_MATRIX.csv,,this file
+D1-01,BLOCKED,,,
+D1-02,BLOCKED,,,
+D1-03,BLOCKED,,,
+D1-04,BLOCKED,,,
+D1-05,BLOCKED,,,
+D1-06,BLOCKED,,,
+D1-07,BLOCKED,,,
+D2-01,BLOCKED,,,
+D2-02,BLOCKED,,,
+D2-03,BLOCKED,,,
+D2-04,BLOCKED,,,
+D2-05,BLOCKED,,,
+D2-06,BLOCKED,,,
+D2-07,BLOCKED,,,
+D2-08,BLOCKED,,,
+Q-01,BLOCKED,,,
+Q-02,BLOCKED,,,
+Q-03,BLOCKED,,,
+Q-04,BLOCKED,,,
+Q-05,BLOCKED,,,
+A-01,BLOCKED,,,
+A-02,BLOCKED,,,
+A-03,BLOCKED,,,
+A-04,BLOCKED,,,
+A-05,BLOCKED,,,

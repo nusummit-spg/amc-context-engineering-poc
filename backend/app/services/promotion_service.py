@@ -89,32 +89,27 @@ class PromotionService:
 
             for proposal in proposals:
                 try:
+                    # W18-05 FIX: Only create outbox events - no direct canonical execution
+                    # The outbox worker will process these events atomically
+                    
                     if proposal.proposal_type == "graph":
-                        if proposal.mutation_cypher:
-                            # B05: Create outbox event for atomicity
-                            from app.services.outbox_processor import create_outbox_event
-                            create_outbox_event(
-                                db=db,
-                                aggregate_type="repair_proposal",
-                                aggregate_id=proposal.proposal_id,
-                                event_type="GRAPH_MUTATION_REQUIRED",
-                                payload={
-                                    "proposal_id": proposal.proposal_id,
-                                    "entity_id": proposal.entity_id,
-                                    "attribute": proposal.attribute,
-                                    "corrected_value": proposal.corrected_value
-                                }
-                            )
-                            
-                            # G10-T10 / W1.1-12: This will raise PromotionFailedError if driver unavailable
-                            self._execute_graph_mutation(driver, proposal, db)
-                        # Only mark APPLIED if mutation succeeded without exception
-                        proposal.applied_at = datetime.now(timezone.utc).isoformat()
-                        proposal.status = "applied"
-                        applied.append(proposal.proposal_id)
-
+                        from app.services.outbox_processor import create_outbox_event
+                        create_outbox_event(
+                            db=db,
+                            aggregate_type="repair_proposal",
+                            aggregate_id=proposal.proposal_id,
+                            event_type="GRAPH_MUTATION_REQUIRED",
+                            payload={
+                                "proposal_id": proposal.proposal_id,
+                                "entity_id": proposal.entity_id,
+                                "attribute": proposal.attribute,
+                                "corrected_value": proposal.corrected_value
+                            }
+                        )
+                        # Do NOT call _execute_graph_mutation directly
+                        # Let the outbox worker handle this
+                        
                     elif proposal.proposal_type == "vector":
-                        # B05: Create outbox event for atomicity
                         from app.services.outbox_processor import create_outbox_event
                         create_outbox_event(
                             db=db,
@@ -126,15 +121,17 @@ class PromotionService:
                                 "document_ids": proposal.document_ids
                             }
                         )
-                        
-                        # B04: Verify reindex completion
-                        reindex_receipt = await self._trigger_reindex(proposal, db)
-                        proposal.applied_at = datetime.now(timezone.utc).isoformat()
-                        proposal.status = "applied"
-                        applied.append(proposal.proposal_id)
+                        # Do NOT call _trigger_reindex directly
+                        # Let the outbox worker handle this
                     else:
                         logger.warning("Unknown proposal type: %s", proposal.proposal_type)
                         failed.append(proposal.proposal_id)
+                        continue
+                    
+                    # Mark proposal as queued for processing by outbox worker
+                    proposal.status = "queued"
+                    proposal.applied_at = datetime.now(timezone.utc).isoformat()
+                    applied.append(proposal.proposal_id)
 
                 except Exception as exc:
                     logger.error("Failed to apply proposal %s: %s", proposal.proposal_id, exc)

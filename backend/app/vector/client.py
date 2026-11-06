@@ -752,7 +752,7 @@ class VectorStore:
     async def delete_by_chunk_id(self, chunk_id: str) -> bool:
         """Delete document by exact chunk_id.
 
-        B03: Exact chunk ID lookup instead of similarity search.
+        W18-06 FIX: Exact chunk ID lookup with FAISS IndexIDMap2 removal.
         
         Args:
             chunk_id: Exact chunk ID to delete
@@ -762,14 +762,35 @@ class VectorStore:
         """
         async with self._lock:
             found_key = None
+            found_fid = None
             for fid, payload in list(self._payloads.items()):
                 if payload.get("chunk_id") == chunk_id:
                     found_key = fid
+                    found_fid = fid
                     break
             
             if found_key is not None:
                 del self._payloads[found_key]
+                
+                # Remove from FAISS index
+                if self._index is not None and hasattr(self._index, 'remove_ids'):
+                    try:
+                        await asyncio.to_thread(self._index.remove_ids, np.array([found_fid], dtype="int64"))
+                        logger.info("B03: Removed FAISS ID %s for chunk_id %s", found_fid, chunk_id)
+                    except Exception as e:
+                        logger.warning("B03: Failed to remove FAISS ID %s: %s", found_fid, e)
+                        # If removal fails, still remove from payloads and persist
+                        # The index mismatch will be caught during verification
+                
                 await asyncio.to_thread(self._persist)
+                
+                # Verify consistency
+                index_count = self._index.ntotal if self._index is not None else 0
+                payload_count = len(self._payloads)
+                if index_count != payload_count:
+                    logger.warning("B03: Index/payload count mismatch after delete: index=%d, payloads=%d", 
+                                  index_count, payload_count)
+                
                 logger.info("B03: Deleted document by exact chunk_id %s", chunk_id)
                 return True
         return False

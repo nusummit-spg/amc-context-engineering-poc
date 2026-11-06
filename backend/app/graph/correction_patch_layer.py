@@ -556,8 +556,9 @@ class CorrectionPatchLayer:
             for attribute in self.CHECKABLE_ATTRIBUTES:
                 patch = self.get_correction(entity_id, attribute)
                 if patch and patch.patch_id not in found_patches:
-                    # G02-T13: Exclude pending/unapproved patches from serving context
-                    if not patch.approved:
+                    # W18-04 FIX: Use is_serving_eligible instead of patch.approved
+                    # This ensures patch is ACTIVE + has verified receipt + not revoked
+                    if not is_serving_eligible(patch, tenant="default"):
                         continue
                     found_patches.add(patch.patch_id)
                     block = (
@@ -980,3 +981,46 @@ def get_correction_patch_layer() -> CorrectionPatchLayer:
                 logger.info("Redis unavailable for CorrectionPatchLayer (%s), running with in-memory fallback", exc)
             _global_patch_layer = CorrectionPatchLayer(redis_client=redis_client)
         return _global_patch_layer
+
+
+def is_serving_eligible(patch: CorrectionPatch, tenant: str) -> bool:
+    """Check if patch is eligible for serving in answers.
+    
+    B03/W18-04 FIX: Authoritative check using ACTIVE + verified receipt + not revoked.
+    Does NOT trust patch.approved or in-memory state.
+    
+    Args:
+        patch: The patch to check
+        tenant: Current tenant ID
+        
+    Returns:
+        True if patch can serve in answers
+    """
+    # Must be ACTIVE status
+    if hasattr(patch, 'status'):
+        current_status = patch.status if hasattr(patch.status, 'value') else patch.status
+        if isinstance(current_status, str):
+            current_status = PatchStatus(current_status)
+        if current_status != PatchStatus.ACTIVE:
+            logger.debug("is_serving_eligible: Patch %s not ACTIVE (status=%s)", 
+                        patch.patch_id, current_status)
+            return False
+    
+    # Must have publication receipt
+    if patch.publication_receipt is None:
+        logger.debug("is_serving_eligible: Patch %s missing publication_receipt", patch.patch_id)
+        return False
+    
+    # Must be tenant-scoped correctly
+    if hasattr(patch, 'tenant_id') and patch.tenant_id != tenant:
+        logger.debug("is_serving_eligible: Patch %s tenant mismatch (patch.tenant=%s, request.tenant=%s)",
+                    patch.patch_id, getattr(patch, 'tenant_id', 'unknown'), tenant)
+        return False
+    
+    # Must not be revoked (no revoked_at field set)
+    if hasattr(patch, 'revoked_at') and patch.revoked_at is not None:
+        logger.debug("is_serving_eligible: Patch %s has been revoked", patch.patch_id)
+        return False
+    
+    logger.debug("is_serving_eligible: Patch %s is serving eligible", patch.patch_id)
+    return True
