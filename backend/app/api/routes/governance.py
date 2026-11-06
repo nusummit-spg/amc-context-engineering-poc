@@ -17,7 +17,7 @@ Allows compliance officers and administrators to:
   - Perform batch approvals/rejections during weekly review cycles
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import logging
 from pathlib import Path
@@ -747,10 +747,10 @@ async def promote_patch_direct(
     current_user: CurrentUser,
     payload: Optional[ApproveRejectIn] = None,
 ) -> Dict[str, Any]:
-    """Directly promote a single patch into canonical Neo4j graph and retire its shadow patch.
+    """Directly promote a single patch using state machine (PENDING→APPROVED→STAGED→VERIFIED→ACTIVE).
 
-    SEC-02 FIX: Uses JWT-verified role instead of X-User-Role header.
-    A04 FIX (C-07): Four-eyes enforcement - requires prior approval from different user.
+    R06 FIX: Uses state machine transitions instead of direct promote_to_permanent bypass.
+    Approval must be done separately via /governance/approve/{patch_id} first.
 
     Args:
         patch_id (str): Unique identifier of the patch.
@@ -765,36 +765,46 @@ async def promote_patch_direct(
     """
     require_approval_role(current_user)
     patch_layer = get_correction_patch_layer()
-    patch = patch_layer.get_patch_by_id(patch_id)
+    
+    # Get patch from repair engine first to check status
+    patch = await patch_layer.get_patch(patch_id)
     if not patch:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Patch {patch_id} not found"
         )
     
-    # A04: Verify patch is already approved (approve != promote)
-    if not getattr(patch, 'approved', False):
+    # R06 FIX: Validate state machine transitions
+    # Must be at least APPROVED before promotion
+    current_status = patch.status if hasattr(patch, 'status') else 'APPROVED'
+    if isinstance(current_status, str):
+        from app.graph.correction_patch_layer import PatchStatus
+        current_status = PatchStatus(current_status)
+    
+    # R06: Only allow promotion from APPROVED, STAGED, or VERIFIED states
+    if current_status not in [PatchStatus.APPROVED, PatchStatus.STAGED, PatchStatus.VERIFIED]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Cannot promote unapproved patch {patch_id}. Use /approve/{patch_id} first."
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot promote patch in {current_status} status. Must be APPROVED, STAGED, or VERIFIED first."
         )
     
     # A04: Four-eyes for promotion - verify approver differs from promoter
-    # (In practice, promotion should check that promoter != original proposer)
     if hasattr(patch, 'provenance') and patch.provenance:
         approver_username = patch.provenance.get("approver_username")
         proposer_username = patch.provenance.get("proposer_username") or patch.provenance.get("actor_id")
         
-        # Warn if promoter is same as proposer (even if someone else approved)
         if proposer_username and proposer_username == current_user.username:
             logger.warning(
-                "PROMOTION_NOTICE: User %s promoting their own proposed patch %s (approved by %s)",
+                "PROMOTION_FOUR_EYES: User %s promoting their own proposed patch %s (approved by %s)",
                 current_user.username,
                 patch_id,
                 approver_username or "unknown"
             )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Four-eyes policy violation: Promoter cannot be the original proposer"
+            )
 
-    # 1. Promote in local patch layer (and Neo4j if available)
     neo4j_session = None
     try:
         from app.engine.graph_store import get_driver, config as g_config
@@ -803,22 +813,38 @@ async def promote_patch_direct(
             neo4j_session = driver.session(database=getattr(g_config, "NEO4J_DATABASE", "neo4j"))
     except Exception as exc:
         logger.debug("Neo4j session acquisition notice: %s", exc)
-
+    
+    # R06: Execute state machine transitions based on current status
     try:
-        success = patch_layer.promote_to_permanent(patch_id, neo4j_session=neo4j_session)
+        if current_status == PatchStatus.APPROVED:
+            # STAGE first
+            await patch_layer.stage_patch(patch_id)
+            current_status = PatchStatus.STAGED
+        
+        if current_status == PatchStatus.STAGED:
+            # VERIFY with actualNeo4j graph mutation
+            receipt = await _execute_graph_mutation_with_verification(patch_id, neo4j_session)
+            await patch_layer.verify_patch(patch_id, receipt)
+            current_status = PatchStatus.VERIFIED
+        
+        if current_status == PatchStatus.VERIFIED:
+            # ACTIVATE with vector indexing
+            receipt = await _execute_vector_activation(patch_id)
+            await patch_layer.activate_patch(patch_id, receipt)
+            current_status = PatchStatus.ACTIVE
+    except Exception as exc:
+        logger.error("Promotion failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Promotion failed: {str(exc)}"
+        )
     finally:
         if neo4j_session:
             try:
                 neo4j_session.close()
             except Exception:
                 pass
-
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to promote patch {patch_id}"
-        )
-
+    
     # 2. Also notify repair engine microservice
     try:
         from app.services.repair_integration import get_repair_integration
@@ -826,17 +852,86 @@ async def promote_patch_direct(
         await repair_int.promote_patch(patch_id)
     except Exception as exc:
         logger.debug("Repair microservice promote notification: %s", exc)
-
+    
     comment = payload.comment if payload else None
-    log_governance_audit("PROMOTE_DIRECT", patch_id, current_user.username, {"comment": comment})
-
+    log_governance_audit("PROMOTE_STATE_MACHINE", patch_id, current_user.username, {"comment": comment})
+    
     return {
         "status": "promoted",
         "patch_id": patch_id,
         "promoted_by": current_user.username,
         "promoted_at": datetime.utcnow().isoformat() + "Z",
-        "comment": comment
+        "comment": comment,
+        "note": "State machine transitions applied: PENDING→APPROVED→STAGED→VERIFIED→ACTIVE"
     }
+
+
+async def _execute_graph_mutation_with_verification(patch_id: str, neo4j_session: Any) -> Dict[str, Any]:
+    """Execute graph mutation and verify with readback.
+    
+    R06: Returns receipt with preimage, postimage, and verification status.
+    """
+    patch_layer = get_correction_patch_layer()
+    patch = await patch_layer.get_patch(patch_id)
+    if not patch:
+        raise ValueError(f"Patch {patch_id} not found for graph mutation")
+    
+    preimage = {
+        "entity_id": patch.entity_id,
+        "attribute": patch.attribute,
+        "original_value": str(patch.canonical_value) if hasattr(patch, 'canonical_value') else None
+    }
+    
+    # Execute actual Neo4j mutation if session available
+    if neo4j_session:
+        try:
+            # Execute the mutation
+            neo4j_session.run(
+                """
+                MATCH (e) WHERE (e.dedup_key = $entity_id OR e.isin = $entity_id OR e.id = $entity_id)
+                SET e.{attribute} = $new_value
+                """.format(attribute=patch.attribute.replace(".", "\\.")),
+                parameters={
+                    "entity_id": patch.entity_id,
+                    "new_value": str(patch.corrected_value)
+                }
+            )
+            
+            # Read back to verify
+            result = neo4j_session.run(
+                """
+                MATCH (e) WHERE (e.dedup_key = $entity_id OR e.isin = $entity_id OR e.id = $entity_id)
+                RETURN e.{attribute} as value
+                """.format(attribute=patch.attribute.replace(".", "\\.")),
+                parameters={"entity_id": patch.entity_id}
+            )
+            record = result.single()
+            postimage_value = str(record["value"]) if record else None
+            
+            postimage = {
+                "entity_id": patch.entity_id,
+                "attribute": patch.attribute,
+                "new_value": postimage_value
+            }
+            
+            # Verify match
+            if postimage_value != str(patch.corrected_value):
+                raise ValueError(f"Readback verification failed: expected {patch.corrected_value}, got {postimage_value}")
+            
+            return {
+                "type": "graph_mutation",
+                "patch_id": patch_id,
+                "preimage": preimage,
+                "postimage": postimage,
+                "verified": True,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        except Exception as exc:
+            logger.error("Graph mutation or verification failed: %s", exc)
+            raise
+    else:
+        # No Neo4j session - fail closed
+        raise ValueError("Neo4j session not available for graph mutation verification")
 
 
 @router.get("/proposals", response_model=List[Dict[str, Any]])
