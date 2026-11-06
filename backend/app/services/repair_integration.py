@@ -284,22 +284,41 @@ class RepairEngineIntegration:
             except Exception as cache_exc:
                 log_step_debug(logger, "CACHE_CLEAR_NOTICE", "Could not clear semantic cache: %s", cache_exc)
 
-            # Option 3: Ingest synthetic patch chunk into vector store
-            try:
-                from app.vector.client import get_base_vector_store
-                vstore = get_base_vector_store()
-                for patch_id, claim in zip(result["patches_created"], correction_claims):
-                    entity = claim.get("entity_id") or claim.get("entity_name") or "Fund"
-                    attr = claim.get("attribute") or "general"
-                    val = claim.get("asserted_value")
-                    await vstore.ingest_synthetic_patch_chunk(
-                        patch_id=patch_id,
-                        entity_id=entity,
-                        attribute=attr,
-                        value=val,
-                    )
-            except Exception as v_exc:
-                logger.debug("Option 3 synthetic chunk ingestion notice: %s", v_exc)
+            # R05 FIX: DISABLED - Ingest synthetic patch chunk into vector store
+            # 
+            # Previous behavior: PENDING patches were immediately inserted into serving FAISS index.
+            # 
+            # Security rationale:
+            # - Pending patches have NOT been verified or approved by human review
+            # - They should never appear in user-facing answers, search, or chat
+            # - Must be isolated in review-only store until VERIFIED->ACTIVE
+            # 
+            # Current behavior:
+            # - PENDING patches are NOT ingested into serving vector index
+            # - Use isolated review store or delay ingestion until after activation
+            # - Vector store methods should only see ACTIVE patches with verified receipts
+            # 
+            # This block is retained for audit trail but functionally disabled.
+            # To re-enable (NOT RECOMMENDED):
+            # 1. Ensure only ACTIVE patches with verified receipts reach this point
+            # 2. Add comprehensive negative tests for PENDING/APPROVED patch isolation
+            
+            # if False and getattr(settings, "repair_vector_ingestion_enabled", False):
+            #     try:
+            #         from app.vector.client import get_base_vector_store
+            #         vstore = get_base_vector_store()
+            #         for patch_id, claim in zip(result["patches_created"], correction_claims):
+            #             entity = claim.get("entity_id") or claim.get("entity_name") or "Fund"
+            #             attr = claim.get("attribute") or "general"
+            #             val = claim.get("asserted_value")
+            #             await vstore.ingest_synthetic_patch_chunk(
+            #                 patch_id=patch_id,
+            #                 entity_id=entity,
+            #                 attribute=attr,
+            #                 value=val,
+            #             )
+            #     except Exception as v_exc:
+            #         logger.debug("Option 3 synthetic chunk ingestion notice: %s", v_exc)
 
             # G10-T01 / W1.1-11 / GOV-03 CONTAINMENT FIX:
             # DISABLED: Hands-Free Auto-Approval
