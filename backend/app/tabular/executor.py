@@ -19,6 +19,8 @@ Tasks:
 - G05-T11: Deterministic tie-breaking and ordering
 - G05-T12: Exclusion counts and provenance receipts
 - G05-T14: Failure semantics (fail closed with structured errors, no generative numeric fallback)
+- F01: Reject unapproved metric operations (METRIC_POLICY_BLOCKED)
+- F02: Exact numeric arithmetic via Decimal conversion
 """
 
 from decimal import Decimal
@@ -32,6 +34,10 @@ from pydantic import BaseModel, Field
 from app.tabular.contracts import QueryErrorCode
 from app.tabular.planner import PlanIntent, QueryPlan
 from app.tabular.repository import FinancialDataRepository
+from app.services.financial_policy_service import FinancialPolicyService
+
+logger = logging.getLogger(__name__)
+policy_service = FinancialPolicyService()
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +115,25 @@ class QueryExecutor:
                 error_message="QueryPlan contains no compiled SQL template.",
             )
 
+        # F01: Check metric policy before execution
+        policy_check, policy_msg = policy_service.validate_metric_operation(
+            plan.metric_id,
+            "AGGREGATION" if plan.intent in [PlanIntent.AGGREGATION, PlanIntent.RANKING] else plan.intent.value
+        )
+        
+        if not policy_check:
+            # F01: METRIC_POLICY_BLOCKED - fail closed on unapproved metrics
+            latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+            return QueryResult(
+                success=False,
+                plan_id=plan.plan_id,
+                dataset_version=version,
+                result_set_hash="METRIC_POLICY_BLOCKED",
+                observed_latency_ms=latency_ms,
+                error_code=QueryErrorCode.METRIC_POLICY_BLOCKED.value,
+                error_message=policy_msg,
+            )
+        
         # Prepare parameters with active dataset version
         params = dict(plan.sql_parameters)
         params["dataset_version"] = version
@@ -128,14 +153,17 @@ class QueryExecutor:
                     if "source_row_id" in row_dict and row_dict["source_row_id"]:
                         source_row_ids.append(row_dict["source_row_id"])
                     
-                    # Convert Decimal representations safely to avoid IEEE 754 float drift (G05-T08)
+                    # F02: Convert numeric fields to Decimal strings to avoid IEEE 754 float drift
                     for k, v in row_dict.items():
-                        if "nav_per_unit" in k or "aaum_crore" in k or "decimal" in k:
-                            try:
-                                if v is not None:
-                                    row_dict[k] = str(Decimal(str(v)))
-                            except Exception:
-                                pass
+                        if v is not None:
+                            # Check if this is a financial numeric field
+                            if any(field in k for field in ["nav_per_unit", "aaum_crore", "aum_cr", "total_aum", "max_aum", "min_aum", "avg_aum"]):
+                                try:
+                                    decimal_val = policy_service.to_decimal(v, precision=10, scale=4)
+                                    if decimal_val is not None:
+                                        row_dict[k] = policy_service.format_decimal(decimal_val, scale=4)
+                                except Exception:
+                                    pass
                     result_rows.append(row_dict)
 
                 # Check for NO_MATCH on exact lookup queries (G05-T14)

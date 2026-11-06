@@ -138,6 +138,7 @@ class QueryErrorCode(str, Enum):
     NO_MATCH = "NO_MATCH"
     INVALID_PLAN = "INVALID_PLAN"
     EXECUTION_ERROR = "EXECUTION_ERROR"
+    METRIC_POLICY_BLOCKED = "METRIC_POLICY_BLOCKED"  # F01: Reject unapproved metric operations
 
 
 # ═══════════════════════════════════════════════════════════════════════════

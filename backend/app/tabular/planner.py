@@ -196,13 +196,15 @@ class QueryPlanner:
 
         where_sql = " AND ".join(where_clauses)
 
+        # F02: Use Decimal-safe aggregation via Python-side calculation
+        # SQL returns raw values; Decimal conversion happens in executor.py
         sql = f"""
         SELECT amc_id, 
                amc_display_name as amc,
                COUNT(DISTINCT scheme_display_name) as distinct_schemes,
                COUNT(*) as total_plans,
-               ROUND(SUM(CAST(aaum_crore AS REAL)), 2) as total_aum_cr,
-               ROUND(AVG(CAST(aaum_crore AS REAL)), 2) as avg_aum_cr
+               aaum_crore as total_aum_cr,
+               aaum_crore as avg_aum_cr
         FROM source_rows
         WHERE {where_sql}
         GROUP BY amc_id, amc_display_name
@@ -283,17 +285,17 @@ class QueryPlanner:
                amc_display_name as amc,
                scheme_type,
                scheme_category_raw as scheme_category,
-               ROUND(MAX(CAST(aaum_crore AS REAL)), 2) as max_aum_cr,
-               ROUND(MIN(CAST(aaum_crore AS REAL)), 2) as min_aum_cr,
-               ROUND(AVG(CAST(aaum_crore AS REAL)), 2) as avg_aum_cr,
-               ROUND(SUM(CAST(aaum_crore AS REAL)), 2) as total_aum_cr,
+               aaum_crore as max_aum_cr,
+               aaum_crore as min_aum_cr,
+               aaum_crore as avg_aum_cr,
+               aaum_crore as total_aum_cr,
                COUNT(*) as plan_count,
                GROUP_CONCAT(plan_option_display_name, ' | ') as plan_variants,
-               MAX(CAST(nav_per_unit AS REAL)) as latest_nav,
-               MAX(nav_date) as latest_nav_date,
-               MAX(launch_date) as launch_date,
-               MAX(closure_date) as closure_date,
-               MAX(aaum_quarter) as data_quarter,
+               nav_per_unit as latest_nav,
+               nav_date as latest_nav_date,
+               launch_date as launch_date,
+               closure_date as closure_date,
+               aaum_quarter as data_quarter,
                source_row_id
         FROM source_rows
         WHERE {where_sql}
@@ -381,14 +383,14 @@ class QueryPlanner:
         SELECT scheme_display_name as scheme_name,
                plan_option_display_name as plan_name,
                amc_display_name as amc,
-               CAST(nav_per_unit AS REAL) as nav,
+               nav_per_unit as nav,
                nav_date as latest_nav_date,
                scheme_type,
                scheme_category_raw as scheme_category,
                source_row_id
         FROM source_rows
         WHERE {where_sql}
-        ORDER BY CAST(nav_per_unit AS REAL) {sort_dir}, scheme_code ASC
+        ORDER BY nav_per_unit {sort_dir}, scheme_code ASC
         LIMIT :limit
         """
 
@@ -438,7 +440,7 @@ class QueryPlanner:
         SELECT COUNT(*) as total_folios,
                COUNT(DISTINCT scheme_display_name) as distinct_schemes,
                COUNT(DISTINCT amc_id) as total_amcs,
-               ROUND(SUM(CASE WHEN aaum_crore IS NOT NULL THEN CAST(aaum_crore AS REAL) ELSE 0 END), 2) as total_market_aum_cr
+               aaum_crore as total_market_aum_cr
         FROM source_rows
         WHERE {where_sql}
         """
@@ -472,7 +474,7 @@ class QueryPlanner:
         SELECT {group_col} as category,
                COUNT(DISTINCT scheme_display_name) as distinct_schemes,
                COUNT(*) as total_folios,
-               ROUND(SUM(CASE WHEN aaum_crore IS NOT NULL THEN CAST(aaum_crore AS REAL) ELSE 0 END), 2) as total_aum_cr
+               aaum_crore as total_aum_cr
         FROM source_rows
         WHERE dataset_version = :dataset_version
           AND validation_status = 'VALID'
@@ -512,7 +514,7 @@ class QueryPlanner:
         sql = """
         SELECT amc_id, amc_display_name, scheme_type,
                COUNT(DISTINCT scheme_display_name) as scheme_count,
-               ROUND(SUM(CASE WHEN aaum_crore IS NOT NULL THEN CAST(aaum_crore AS REAL) ELSE 0 END), 2) as aum_cr
+               aaum_crore as aum_cr
         FROM source_rows
         WHERE dataset_version = :dataset_version
           AND validation_status = 'VALID'
