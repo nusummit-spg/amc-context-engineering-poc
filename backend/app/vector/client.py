@@ -749,6 +749,31 @@ class VectorStore:
                 return True
         return False
 
+    async def delete_by_chunk_id(self, chunk_id: str) -> bool:
+        """Delete document by exact chunk_id.
+
+        B03: Exact chunk ID lookup instead of similarity search.
+        
+        Args:
+            chunk_id: Exact chunk ID to delete
+            
+        Returns:
+            True if deleted, False if not found
+        """
+        async with self._lock:
+            found_key = None
+            for fid, payload in list(self._payloads.items()):
+                if payload.get("chunk_id") == chunk_id:
+                    found_key = fid
+                    break
+            
+            if found_key is not None:
+                del self._payloads[found_key]
+                await asyncio.to_thread(self._persist)
+                logger.info("B03: Deleted document by exact chunk_id %s", chunk_id)
+                return True
+        return False
+
 
 class UserScopedVectorStore:
     """Vector store wrapper with user/tenant metadata filtering."""

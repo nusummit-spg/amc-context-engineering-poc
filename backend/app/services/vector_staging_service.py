@@ -107,7 +107,7 @@ class VectorStagingService:
     async def _capture_preimage(self, chunk_id: str) -> Optional[Dict[str, Any]]:
         """Capture current state of document before modification.
         
-        P02/P07: Preimage capture for rollback - use exact chunk_id lookup.
+        B03: Preimage capture for rollback - use exact chunk_id lookup via vector store.
         
         Args:
             chunk_id: Chunk ID to capture
@@ -116,10 +116,10 @@ class VectorStagingService:
             Preimage dict or None if doesn't exist
         """
         try:
-            # G03: Use exact ID lookup, not similarity search
-            # Search for existing document with exact chunk_id
+            # B03: Use exact ID lookup via similarity_search with exact chunk_id filter
             results = await self.vector_store.similarity_search(
-                query=f"chunk_id:\"{chunk_id}\"",  # Exact match with quotes
+                embedding=None,
+                query=f"chunk_id:\"{chunk_id}\"",
                 limit=1
             )
             
@@ -136,7 +136,7 @@ class VectorStagingService:
             return None
             
         except Exception as e:
-            logger.warning("P02/P07: Failed to capture preimage for %s: %s", chunk_id, e)
+            logger.warning("B03: Failed to capture preimage for %s: %s", chunk_id, e)
             return None
     
     async def apply_staged(self, intent_id: str) -> Dict[str, Any]:

@@ -1,0 +1,45 @@
+Task,Owner,Status,SHA,Tests,Gate
+A01,CI,Gitleaks scanner,"IMPLEMENTED_UNVERIFIED",,CI runs on amc-dev
+A02,CI,Full compileall,"IMPLEMENTED_UNVERIFIED",,Syntax and import check
+A03,CI,Test discovery,"IMPLEMENTED_UNVERIFIED",,No missing directory failures
+A04,CI,Branch quality gate,"IMPLEMENTED_UNVERIFIED",,amc-dev green/red gates
+A05,Governance,Async approval,"IMPLEMENTED_UNVERIFIED",,Single service, awaited
+A06,Governance,Four-eyes,"IMPLEMENTED_UNVERIFIED",,Same actor rejected
+A07,Governance,can_serve gate,"BLOCKED",,All paths use can_serve()
+A08,Governance,Remove shortcuts,"IMPLEMENTED_UNVERIFIED",,No promote_to_permanent
+A09,Tests,Real tests,"BLOCKED",,Authenticated route tests
+A10,Governance,Promote route,"IMPLEMENTED_UNVERIFIED",,get_patch fixed, no AttributeError
+B01,Durable,Effects schema,"VERIFIED",010_b07,Migration exists
+B02,Durable,FAISS generations,"BLOCKED",,Durable staging instead of dict
+B03,Durable,Preimage capture,"IMPLEMENTED_UNVERIFIED",,delete_by_chunk_id added
+B04,Durable,FAISS verification,"BLOCKED",,ID membership, count, hash checks
+B05,Durable,Neo4j writes,"BLOCKED",,Parameterized Cypher, persisted effects
+B06,Durable,Graph preimage,"BLOCKED",,Persist to publication_effects
+B07,Durable,Graph rollback,"BLOCKED",,CAS against expected postimage
+B08,Durable,Vector rollback,"BLOCKED",,Restore from prior generation
+B09,Durable,Vector API,"BLOCKED",,Real FAISS fixture tests
+P02,Pub,Worker orchestration,"BLOCKED",,Single authoritative worker
+P03,Pub,Outbox events,"BLOCKED",,Durable staging, leases, fencing
+P04,Pub,Feedback outcome,"BLOCKED",,Query DB not staging counts
+P05,Pub,Service integration,"BLOCKED",,PromotionService unified
+F01,Financial,AAUM policy,"VERIFIED",,PENDING_APPROVAL
+F02,Financial,Decimal math,"IMPLEMENTED_UNVERIFIED",,Exact arithmetic
+F03,Financial,Identity model,"IMPLEMENTED_UNVERIFIED",,Canonical IDs
+F04,Financial,NAV pairing,"IMPLEMENTED_UNVERIFIED",,Date/plan matching
+F05,Financial,Manifest hash,"BLOCKED",,Recompute SHA-256
+F06,Financial,Dataset version,"IMPLEMENTED_UNVERIFIED",,Versioned hashes
+F07,Financial,Provenance,"BLOCKED",,Full row ledger
+F08,Financial,Fail-closed,"IMPLEMENTED_UNVERIFIED",,No fallback
+F09,Financial,CSV controls,"NOT_STARTED",,
+F10,Financial,Planner clarity,"BLOCKED",,COUNT vs AAUM mismatch
+Q01,Query,Parity,"NOT_STARTED",,
+Q02,Query,Frontend,"NOT_STARTED",,
+Q03,Query,Feedback,"BLOCKED",,API contract
+Q04,Query,Citation,"IMPLEMENTED_UNVERIFIED",,source_row_id
+Q05,Query,PDF/TXT,"IMPLEMENTED_UNVERIFIED",,
+Q06,Query,Privacy,"NOT_STARTED",,
+Q07,Query,Performance,"NOT_STARTED",,
+A05,Assurance,SLO,"BLOCKED",,Real metrics
+A06,Assurance,SLO windows,"BLOCKED",,
+A07,Assurance,Credentials,"NOT_STARTED",,
+A08,Assurance,Release gates,"BLOCKED",,All P0 items

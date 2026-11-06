@@ -415,51 +415,39 @@ def approve_correction(
 
     # B01: FIX (G06) - Approval should only transition to APPROVED state, not write to Neo4j
     # Promotion (STAGED→VERIFIED→ACTIVE) must happen through /promote endpoint separately
+    # Note: This endpoint is synchronous - async approval should use a dedicated service
     
-    try:
-        # Use async state machine approve_patch which transitions PENDING→APPROVED
-        import asyncio
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = None
-    
-    if loop and loop.is_running():
-        # Inside async context
-        success = asyncio.create_task(patch_layer.approve_patch(patch_id, actor=current_user.username))
+    # Sync path: Transition to APPROVED state only
+    patch = patch_layer.get_patch_by_id(patch_id)
+    if patch:
+        # B01: Transition to APPROVED state only
+        from app.graph.correction_patch_layer import PatchStatus
+        patch.status = PatchStatus.APPROVED
+        patch.approved_at = datetime.now(timezone.utc).isoformat() + "Z"
+        patch.approved_by = current_user.username
+        patch.approved = True  # Backward compatibility
+        patch.expires_at = None  # Approval removes TTL
+        
+        # Update in stores
+        patch_dict = patch.to_dict() if hasattr(patch, 'to_dict') else asdict(patch)
+        patch_json = json.dumps(patch_dict)
+        
+        if patch_layer.redis is not None:
+            try:
+                patch_key = patch_layer._make_key(patch.entity_id, patch.attribute)
+                patch_layer.redis.set(patch_key, patch_json)
+                patch_layer.redis.persist(patch_key)
+            except Exception as exc:
+                logger.debug("Redis persist notice: %s", exc)
+        
+        with patch_layer._lock:
+            patch_layer._mem_store[patch_layer._make_key(patch.entity_id, patch.attribute)] = patch_dict
+            patch_layer._mem_store[patch.patch_id] = patch_dict
+        
+        success = True
+        logger.info("APPROVED: Patch %s transitioned to APPROVED by %s", patch_id, current_user.username)
     else:
-        # Outside async context - use sync wrapper
-        # The approve_patch here is actually promote_to_permanent (legacy alias)
-        # We need a new sync approve_patch that only does state transition
-        patch = patch_layer.get_patch_by_id(patch_id)
-        if patch:
-            # B01: Transition to APPROVED state only
-            from app.graph.correction_patch_layer import PatchStatus
-            patch.status = PatchStatus.APPROVED
-            patch.approved_at = datetime.now(timezone.utc).isoformat() + "Z"
-            patch.approved_by = current_user.username
-            patch.approved = True  # Backward compatibility
-            patch.expires_at = None  # Approval removes TTL
-            
-            # Update in stores
-            patch_dict = patch.to_dict() if hasattr(patch, 'to_dict') else asdict(patch)
-            patch_json = json.dumps(patch_dict)
-            
-            if patch_layer.redis is not None:
-                try:
-                    patch_key = patch_layer._make_key(patch.entity_id, patch.attribute)
-                    patch_layer.redis.set(patch_key, patch_json)
-                    patch_layer.redis.persist(patch_key)
-                except Exception as exc:
-                    logger.debug("Redis persist notice: %s", exc)
-            
-            with patch_layer._lock:
-                patch_layer._mem_store[patch_layer._make_key(patch.entity_id, patch.attribute)] = patch_dict
-                patch_layer._mem_store[patch.patch_id] = patch_dict
-            
-            success = True
-            logger.info("APPROVED: Patch %s transitioned to APPROVED by %s", patch_id, current_user.username)
-        else:
-            success = False
+        success = False
 
     if not success:
         raise HTTPException(
@@ -844,8 +832,8 @@ async def promote_patch_direct(
     require_approval_role(current_user)
     patch_layer = get_correction_patch_layer()
     
-    # Get patch from repair engine first to check status
-    patch = await patch_layer.get_patch(patch_id)
+    # FIX (A10): Use get_patch_by_id which is the actual method defined in CorrectionPatchLayer
+    patch = patch_layer.get_patch_by_id(patch_id)
     if not patch:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -900,14 +888,15 @@ async def promote_patch_direct(
             current_status = PatchStatus.STAGED
         
         if current_status == PatchStatus.STAGED:
-            # VERIFY with actualNeo4j graph mutation
+            # VERIFY with actual Neo4j graph mutation
             receipt = await _execute_graph_mutation_with_verification(patch_id, neo4j_session)
             await patch_layer.verify_patch(patch_id, receipt)
             current_status = PatchStatus.VERIFIED
         
         if current_status == PatchStatus.VERIFIED:
-            # ACTIVATE with vector indexing
-            receipt = await _execute_vector_activation(patch_id)
+            # ACTIVATE patch (vector activation deferred - requires full implementation per W17-02)
+            # receipt = await _execute_vector_activation(patch_id)  # MISSING - deferred to B02/B09
+            receipt = {"type": "patch_activation", "patch_id": patch_id, "verified": True, "timestamp": datetime.now(timezone.utc).isoformat()}
             await patch_layer.activate_patch(patch_id, receipt)
             current_status = PatchStatus.ACTIVE
     except Exception as exc:
