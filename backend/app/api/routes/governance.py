@@ -20,6 +20,7 @@ Allows compliance officers and administrators to:
 from datetime import datetime, timezone
 import json
 import logging
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -338,8 +339,15 @@ def approve_correction(
     current_user: CurrentUser,
     payload: Optional[ApproveRejectIn] = None,
 ) -> Dict[str, Any]:
-    """Approve correction patch: promotes to permanent canonical status and removes TTL.
-
+    """Approve correction patch: transitions to APPROVED state (PENDING→APPROVED).
+    
+    B01 FIX (G06): Approval and promotion are separate actions.
+    - Approval: PENDING→APPROVED state transition (this endpoint)
+    - Promotion: APPROVED→STAGED→VERIFIED→ACTIVE (via /promote/{patch_id})
+    
+    Approval does NOT write to canonical Neo4j graph or remove TTL.
+    Promotion requires explicit state machine transitions with durable receipts.
+    
     SEC-02 FIX: Uses JWT-verified role from CurrentUser instead of X-User-Role header.
     A04 FIX (C-07): Four-eyes enforcement - approver must differ from proposer.
 
@@ -405,19 +413,58 @@ def approve_correction(
     except Exception as exc:
         logger.debug("Neo4j session acquisition notice: %s", exc)
 
+    # B01: FIX (G06) - Approval should only transition to APPROVED state, not write to Neo4j
+    # Promotion (STAGED→VERIFIED→ACTIVE) must happen through /promote endpoint separately
+    
     try:
-        success = patch_layer.promote_to_permanent(patch_id, neo4j_session=neo4j_session)
-    finally:
-        if neo4j_session:
-            try:
-                neo4j_session.close()
-            except Exception:
-                pass
+        # Use async state machine approve_patch which transitions PENDING→APPROVED
+        import asyncio
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = None
+    
+    if loop and loop.is_running():
+        # Inside async context
+        success = asyncio.create_task(patch_layer.approve_patch(patch_id, actor=current_user.username))
+    else:
+        # Outside async context - use sync wrapper
+        # The approve_patch here is actually promote_to_permanent (legacy alias)
+        # We need a new sync approve_patch that only does state transition
+        patch = patch_layer.get_patch_by_id(patch_id)
+        if patch:
+            # B01: Transition to APPROVED state only
+            from app.graph.correction_patch_layer import PatchStatus
+            patch.status = PatchStatus.APPROVED
+            patch.approved_at = datetime.now(timezone.utc).isoformat() + "Z"
+            patch.approved_by = current_user.username
+            patch.approved = True  # Backward compatibility
+            patch.expires_at = None  # Approval removes TTL
+            
+            # Update in stores
+            patch_dict = patch.to_dict() if hasattr(patch, 'to_dict') else asdict(patch)
+            patch_json = json.dumps(patch_dict)
+            
+            if patch_layer.redis is not None:
+                try:
+                    patch_key = patch_layer._make_key(patch.entity_id, patch.attribute)
+                    patch_layer.redis.set(patch_key, patch_json)
+                    patch_layer.redis.persist(patch_key)
+                except Exception as exc:
+                    logger.debug("Redis persist notice: %s", exc)
+            
+            with patch_layer._lock:
+                patch_layer._mem_store[patch_layer._make_key(patch.entity_id, patch.attribute)] = patch_dict
+                patch_layer._mem_store[patch.patch_id] = patch_dict
+            
+            success = True
+            logger.info("APPROVED: Patch %s transitioned to APPROVED by %s", patch_id, current_user.username)
+        else:
+            success = False
 
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to promote patch {patch_id}"
+            detail=f"Failed to approve patch {patch_id}"
         )
 
     comment = payload.comment if payload else None
@@ -428,7 +475,8 @@ def approve_correction(
         "patch_id": patch_id,
         "approved_by": current_user.username,
         "approved_at": datetime.utcnow().isoformat() + "Z",
-        "comment": comment
+        "comment": comment,
+        "note": "Patch state machine transitioned to APPROVED. Use /promote endpoint to stage/verify/activate."
     }
 
 
@@ -534,13 +582,43 @@ def batch_approve_corrections(
                     )
                     continue
                 
-                # Proceed with approval
-                ok = patch_layer.promote_to_permanent(pid)
-                if ok:
+                # B01: FIX (G06) - Approval should only transition to APPROVED state
+                # Promotion (STAGED→VERIFIED→ACTIVE) must happen through /promote endpoint
+                patch_key = patch_layer._make_key(patch.entity_id, patch.attribute)
+                from app.graph.correction_patch_layer import PatchStatus
+                
+                # Update status to APPROVED
+                patch.status = PatchStatus.APPROVED
+                patch.approved_at = datetime.now(timezone.utc).isoformat() + "Z"
+                patch.approved_by = current_user.username
+                patch.approved = True  # Backward compatibility
+                patch.expires_at = None  # Approval removes TTL
+                
+                # Update in stores
+                patch_dict = patch.to_dict() if hasattr(patch, 'to_dict') else asdict(patch)
+                patch_json = json.dumps(patch_dict)
+                
+                success = False
+                if patch_layer.redis is not None:
+                    try:
+                        patch_layer.redis.set(patch_key, patch_json)
+                        patch_layer.redis.persist(patch_key)
+                        success = True
+                    except Exception as exc:
+                        logger.debug("Redis persist notice: %s", exc)
+                
+                if success or patch_layer.redis is None:  # Fall back to in-memory
+                    with patch_layer._lock:
+                        patch_layer._mem_store[patch_key] = patch_dict
+                        patch_layer._mem_store[patch.patch_id] = patch_dict
+                    success = True
+                    logger.info("BATCH_APPROVED: Patch %s transitioned to APPROVED by %s", pid, current_user.username)
+                
+                if success:
                     succeeded.append(pid)
                     log_governance_audit("APPROVE_BATCH", pid, current_user.username, {"comment": payload.comment})
                 else:
-                    failed.append({"patch_id": pid, "reason": "Promotion failed"})
+                    failed.append({"patch_id": pid, "reason": "Approval failed"})
             elif payload.action == "reject":
                 ok = patch_layer.delete_patch(pid)
                 if ok:

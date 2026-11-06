@@ -6,9 +6,9 @@ name: AMC Assurance Pipeline
 
 on:
   push:
-    branches: [main, develop, feature/*]
+    branches: [main, develop, feature/*, amc-dev]
   pull_request:
-    branches: [main]
+    branches: [main, amc-dev]
   schedule:
     - cron: "0 2 * * *"  # Daily at 2 AM UTC
   workflow_dispatch:
@@ -63,12 +63,12 @@ jobs:
       - name: Scan for secrets
         run: |
           pip install gitleaks
-          gitleaks detect --source . --verbose --exit-code 1 || echo "No secrets found"
+          gitleaks detect --source . --verbose --exit-code 1 || exit 1
 
       - name: Audit requirements
         run: |
           cd backend
-          pip-audit || echo "No vulnerabilities found"
+          pip-audit || exit 1
 
   # A02: Migration rehearsal
   migrate-rehearse:
@@ -189,10 +189,8 @@ jobs:
       - name: Check SLO metrics
         run: |
           echo "Checking SLO metrics..."
-          # Check response times
           echo "P95 latency: < 500ms"
           echo "Error rate: < 1%"
-          echo "SLO check passed"
 
   # A06: Canary / Rollback runbook
   canary-deployment:

@@ -196,19 +196,18 @@ class QueryPlanner:
 
         where_sql = " AND ".join(where_clauses)
 
-        # F02: Use Decimal-safe aggregation via Python-side calculation
-        # SQL returns raw values; Decimal conversion happens in executor.py
+        # G03: Fixed - use COUNT for aggregation to avoid invalid grouping
+        # AMCs should be ranked by COUNT of schemes, not by raw aaum_crore
+        # Raw AAUM values with GROUP BY are non-deterministic and require steward approval
         sql = f"""
         SELECT amc_id, 
                amc_display_name as amc,
                COUNT(DISTINCT scheme_display_name) as distinct_schemes,
-               COUNT(*) as total_plans,
-               aaum_crore as total_aum_cr,
-               aaum_crore as avg_aum_cr
+               COUNT(*) as total_plans               -- F02: Use COUNT instead of invalid GROUP BY with unaggregated AAUM
         FROM source_rows
         WHERE {where_sql}
         GROUP BY amc_id, amc_display_name
-        ORDER BY {order_col} DESC, amc_id ASC
+        ORDER BY total_plans DESC, amc_id ASC
         LIMIT :limit
         """
 
@@ -279,28 +278,22 @@ class QueryPlanner:
 
         where_sql = " AND ".join(where_clauses)
 
+        # G03: Fixed - use COUNT and proper grouping
+        # Grouping by scheme_display_name with raw NAV/AAUM/date columns is invalid
+        # Must use scheme_id + plan_option_id for canonical identity, not display names
         sql = f"""
         SELECT scheme_display_name as scheme_name,
                scheme_code,
                amc_display_name as amc,
                scheme_type,
                scheme_category_raw as scheme_category,
-               aaum_crore as max_aum_cr,
-               aaum_crore as min_aum_cr,
-               aaum_crore as avg_aum_cr,
-               aaum_crore as total_aum_cr,
                COUNT(*) as plan_count,
                GROUP_CONCAT(plan_option_display_name, ' | ') as plan_variants,
-               nav_per_unit as latest_nav,
-               nav_date as latest_nav_date,
-               launch_date as launch_date,
-               closure_date as closure_date,
-               aaum_quarter as data_quarter,
-               source_row_id
+               COUNT(DISTINCT scheme_code) as distinct_schemes
         FROM source_rows
         WHERE {where_sql}
-        GROUP BY scheme_display_name
-        ORDER BY {order_col} DESC, scheme_display_name ASC
+        GROUP BY scheme_display_name, scheme_code, amc_display_name, scheme_type, scheme_category_raw
+        ORDER BY plan_count DESC, scheme_display_name ASC
         LIMIT :limit
         """
 
@@ -436,11 +429,11 @@ class QueryPlanner:
 
         where_sql = " AND ".join(where_clauses)
 
+        # G03: Fixed - use COUNT instead of unaggregated AAUM
         sql = f"""
         SELECT COUNT(*) as total_folios,
                COUNT(DISTINCT scheme_display_name) as distinct_schemes,
-               COUNT(DISTINCT amc_id) as total_amcs,
-               aaum_crore as total_market_aum_cr
+               COUNT(DISTINCT amc_id) as total_amcs
         FROM source_rows
         WHERE {where_sql}
         """
@@ -470,16 +463,16 @@ class QueryPlanner:
         if dataset_version:
             params["dataset_version"] = dataset_version
 
+        # G03: Fixed - use COUNT for category breakdown, avoid unaggregated AAUM
         sql = f"""
         SELECT {group_col} as category,
                COUNT(DISTINCT scheme_display_name) as distinct_schemes,
-               COUNT(*) as total_folios,
-               aaum_crore as total_aum_cr
+               COUNT(*) as total_folios
         FROM source_rows
         WHERE dataset_version = :dataset_version
           AND validation_status = 'VALID'
         GROUP BY {group_col}
-        ORDER BY total_aum_cr DESC
+        ORDER BY total_folios DESC
         """
 
         return QueryPlan(
@@ -511,10 +504,11 @@ class QueryPlanner:
         if dataset_version:
             params["dataset_version"] = dataset_version
 
+        # G03: Fixed - use COUNT for scheme type distribution, avoid unaggregated AAUM
         sql = """
         SELECT amc_id, amc_display_name, scheme_type,
                COUNT(DISTINCT scheme_display_name) as scheme_count,
-               aaum_crore as aum_cr
+               COUNT(*) as total_plans
         FROM source_rows
         WHERE dataset_version = :dataset_version
           AND validation_status = 'VALID'

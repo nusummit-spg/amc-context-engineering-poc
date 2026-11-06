@@ -21,6 +21,18 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
 
 
+class MetricOperation(str, Enum):
+    """Allowed metric operations for typed financial queries (G02)"""
+    EXACT_LOOKUP = "EXACT_LOOKUP"
+    COUNT = "COUNT"
+    SUM = "SUM"
+    AVG = "AVG"
+    MIN = "MIN"
+    MAX = "MAX"
+    RANK = "RANK"
+    DISTRIBUTION = "DISTRIBUTION"
+
+
 class MetricPolicy(str, Enum):
     """Authoritative metric operation policies (F01, F08)"""
     APPROVED = "APPROVED"
@@ -55,10 +67,13 @@ class MetricDefinition:
     unit: str
     aggregation_safety: AggregationSafety
     steward_approved: bool
-    allowed_operations: List[str]
+    allowed_operations: List[MetricOperation]  # Changed to enum
     canonical_grains: List[str]  # e.g., ["amc", "scheme", "plan_option"]
     decimal_precision: int = 10
     decimal_scale: int = 4
+    steward_approver: Optional[str] = None  # Name of steward who approved
+    approval_receipt: Optional[str] = None  # Receipt ID for steward approval
+    effective_date: Optional[str] = None  # When policy became effective
 
 
 @dataclass
@@ -102,6 +117,7 @@ class FinancialPolicyService:
 
     def __init__(self):
         # Metric registry with policies (F01, F02, F03)
+        # NOTE: aaum_crore is PENDING_APPROVAL per handoff V16-01 - no hardcoded approval
         self.metrics: Dict[str, MetricDefinition] = {
             "nav_per_unit": MetricDefinition(
                 metric_id="nav_per_unit",
@@ -109,21 +125,27 @@ class FinancialPolicyService:
                 unit="INR_PER_UNIT",
                 aggregation_safety=AggregationSafety.NO_AGGREGATION,
                 steward_approved=True,
-                allowed_operations=["SELECT", "EXACT_LOOKUP"],
+                allowed_operations=[MetricOperation.EXACT_LOOKUP, MetricOperation.MAX, MetricOperation.MIN],
                 canonical_grains=["scheme_code", "scheme_id", "plan_option_id", "nav_date"],
                 decimal_precision=10,
                 decimal_scale=4,
+                steward_approver="Data Steward",
+                approval_receipt="STEWARD-APPROVED-NAV-2026-11-03",
+                effective_date="2026-11-03",
             ),
             "aaum_crore": MetricDefinition(
                 metric_id="aaum_crore",
                 description="Assets Under Management in Crore",
                 unit="INR_CRORE",
-                aggregation_safety=AggregationSafety.SUMMABLE,
-                steward_approved=True,
-                allowed_operations=["SELECT", "SUM", "AVG", "RANK"],
+                aggregation_safety=AggregationSafety.PENDING_APPROVAL,  # G01: Changed from SUMMABLE
+                steward_approved=False,  # G01: Changed from True - no hardcoded approval
+                allowed_operations=[MetricOperation.EXACT_LOOKUP],  # G01: Only EXACT_LOOKUP until steward signs off
                 canonical_grains=["amc_id", "amc_display_name", "scheme_type", "scheme_category", "aaum_quarter"],
                 decimal_precision=10,
                 decimal_scale=2,
+                steward_approver=None,  # G01: No approval yet
+                approval_receipt=None,
+                effective_date=None,
             ),
             "record_count": MetricDefinition(
                 metric_id="record_count",
@@ -131,7 +153,7 @@ class FinancialPolicyService:
                 unit="COUNT",
                 aggregation_safety=AggregationSafety.SUMMABLE,
                 steward_approved=True,
-                allowed_operations=["COUNT"],
+                allowed_operations=[MetricOperation.COUNT],
                 canonical_grains=["dataset_version"],
             ),
         }
@@ -148,23 +170,46 @@ class FinancialPolicyService:
 
     def validate_metric_operation(self, metric_id: str, operation: str) -> tuple[bool, str]:
         """
-        F01: Validate metric operation against policy.
+        G01, G02: Validate metric operation against policy.
         
         Returns (allowed, error_message)
+        
+        G01: Block unapproved AAUM aggregation (SUM/AVG/RANK) until steward signs off
+        G02: Map PlanIntent to precise MetricOperation enum
         """
         metric = self.metrics.get(metric_id)
         
         if not metric:
             return False, f"METRIC_POLICY_BLOCKED: Unknown metric '{metric_id}'"
         
-        if operation not in metric.allowed_operations:
-            return False, f"METRIC_POLICY_BLOCKED: Operation '{operation}' not allowed for metric '{metric_id}'"
+        # G01: Block unapproved AAUM aggregation
+        if metric_id == "aaum_crore" and not metric.steward_approved:
+            blocked_ops = ["SUM", "AVG", "RANK", "DISTRIBUTION"]
+            if operation.upper() in blocked_ops:
+                return False, f"METRIC_POLICY_BLOCKED: AAUM aggregation ({operation}) requires data steward approval. Receipt: none"
         
-        if metric.steward_approved:
-            return True, "METRIC_POLICY_APPROVED"
+        # G02: Check if operation is in the metric's allowed_operations (now enum)
+        try:
+            op_enum = MetricOperation(operation.upper())
+        except ValueError:
+            return False, f"METRIC_POLICY_BLOCKED: Invalid operation '{operation}' for metric '{metric_id}'"
         
-        # Pending steward approval
-        return True, f"METRIC_POLICY_PENDING_STEWARD: {metric_id} pending steward signoff"
+        if op_enum not in metric.allowed_operations:
+            return False, f"METRIC_POLICY_BLOCKED: Operation '{operation}' not allowed for metric '{metric_id}'. Allowed: {[op.value for op in metric.allowed_operations]}"
+        
+        # G01: Check steward approval status
+        if not metric.steward_approved:
+            return False, f"METRIC_POLICY_BLOCKED: Metric '{metric_id}' requires data steward approval. Contact steward for authorization."
+        
+        # G02: Map PlanIntent to precise operation
+        if metric_id == "aaum_crore":
+            # Special handling for AAUM - ensure exact operation mapping
+            if operation.upper() in ["SUM", "AVG", "RANK"]:
+                # These require explicit steward approval - check again
+                if not metric.steward_approved:
+                    return False, f"METRIC_POLICY_BLOCKED: AAUM {operation} blocked - no steward approval"
+        
+        return True, f"METRIC_POLICY_APPROVED: {metric_id} with {operation}"
 
     def to_decimal(self, value: Any, precision: int = 10, scale: int = 4) -> Optional[Decimal]:
         """

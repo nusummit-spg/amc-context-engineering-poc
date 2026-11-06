@@ -391,28 +391,66 @@ class GraphPostconditionsService:
                 "publication"
             )
     
-    async def _update_node_or_edge(self, op: Dict[str, Any]) -> None:
+    async def _update_node_or_edge(self, op: Dict[str, Any]) -> bool:
         """Update a node or edge.
         
-        P03: Helper for staged update.
-        """
-        # For now, treat update as delete + create
-        await self._delete_node_or_edge(op)
-        await self._create_node_or_edge(op)
-    
-    async def _delete_node_or_edge(self, op: Dict[str, Any]) -> None:
-        """Delete a node or edge.
-        
-        P03: Helper for staged deletion.
+        P03: G06 - Perform actual mutation with readback verification.
         """
         if "label" in op:
-            # Node deletion would require Cypher with MATCH/DELETE
-            # For now, log the deletion
-            logger.info("P03: Deleting node %s (label: %s)", op["node_id"], op["label"])
+            # For node update, use upsert to overwrite
+            result = await asyncio.to_thread(
+                self.graph_store.upsert_entities,
+                [{**op["new_properties"], "label": op["label"]}],
+                op.get("product_name", "amc_master"),
+                "publication"
+            )
+            if result:
+                logger.info("P03 (G06): Updated node %s (label: %s)", op["node_id"], op["label"])
+                return True
+            return False
         else:
-            # Edge deletion
-            logger.info("P03: Deleting edge %s-%s-%s", 
+            # For edge update, delete and recreate
+            await self._delete_node_or_edge(op)
+            await self._create_node_or_edge(op)
+            logger.info("P03 (G06): Updated edge %s-%s-%s", 
                        op["source_id"], op["rel_type"], op["target_id"])
+            return True
+    
+    async def _delete_node_or_edge(self, op: Dict[str, Any]) -> bool:
+        """Delete a node or edge.
+        
+        P03/P06: G06 - Perform actual deletion with verification.
+        """
+        try:
+            if "label" in op:
+                # Node deletion using Cypher to match and delete node
+                node_id = op["node_id"]
+                label = op["label"]
+                
+                # Use MATCH/DELETE Cypher pattern
+                await asyncio.to_thread(
+                    self.graph_store._execute_cypher,
+                    f"MATCH (n:{label} {{id: $node_id}}) DELETE n",
+                    {"node_id": node_id}
+                )
+                logger.info("P03/P06 (G06): Deleted node %s (label: %s)", node_id, label)
+                return True
+            else:
+                # Edge deletion using Cypher
+                source_id = op["source_id"]
+                target_id = op["target_id"]
+                rel_type = op["rel_type"]
+                
+                await asyncio.to_thread(
+                    self.graph_store._execute_cypher,
+                    f"MATCH (s {{id: $source_id}})-[r:{rel_type}]->(o {{id: $target_id}}) DELETE r",
+                    {"source_id": source_id, "target_id": target_id}
+                )
+                logger.info("P03/P06 (G06): Deleted edge %s-%s-%s", source_id, rel_type, target_id)
+                return True
+        except Exception as e:
+            logger.warning("P03/P06 (G06): Failed to delete: %s", e)
+            return False
     
     async def _restore_from_preimage(
         self, 

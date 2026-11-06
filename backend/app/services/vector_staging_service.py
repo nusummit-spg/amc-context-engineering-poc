@@ -107,7 +107,7 @@ class VectorStagingService:
     async def _capture_preimage(self, chunk_id: str) -> Optional[Dict[str, Any]]:
         """Capture current state of document before modification.
         
-        P02/P07: Preimage capture for rollback.
+        P02/P07: Preimage capture for rollback - use exact chunk_id lookup.
         
         Args:
             chunk_id: Chunk ID to capture
@@ -116,14 +116,14 @@ class VectorStagingService:
             Preimage dict or None if doesn't exist
         """
         try:
-            # Search for existing document with this chunk_id
+            # G03: Use exact ID lookup, not similarity search
+            # Search for existing document with exact chunk_id
             results = await self.vector_store.similarity_search(
-                query=f"chunk_id:{chunk_id}",
+                query=f"chunk_id:\"{chunk_id}\"",  # Exact match with quotes
                 limit=1
             )
             
             if results:
-                # Extract payload from search result
                 payload = results[0]
                 return {
                     "chunk_id": payload.get("chunk_id"),

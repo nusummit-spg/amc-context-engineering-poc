@@ -115,10 +115,23 @@ class QueryExecutor:
                 error_message="QueryPlan contains no compiled SQL template.",
             )
 
-        # F01: Check metric policy before execution
+        # F01, G02: Check metric policy before execution with proper operation mapping
+        # G02: Map PlanIntent to precise MetricOperation enum
+        operation_map = {
+            PlanIntent.EXACT_LOOKUP: "EXACT_LOOKUP",
+            PlanIntent.RANKING: "RANK",
+            PlanIntent.AGGREGATION: "SUM",  # Default aggregation is SUM
+            PlanIntent.DISTRIBUTION: "DISTRIBUTION",
+            PlanIntent.COUNT: "COUNT",
+            PlanIntent.MAX: "MAX",
+            PlanIntent.MIN: "MIN",
+            PlanIntent.AVERAGE: "AVG",
+        }
+        operation = operation_map.get(plan.intent, "EXACT_LOOKUP")
+        
         policy_check, policy_msg = policy_service.validate_metric_operation(
             plan.metric_id,
-            "AGGREGATION" if plan.intent in [PlanIntent.AGGREGATION, PlanIntent.RANKING] else plan.intent.value
+            operation,
         )
         
         if not policy_check:
