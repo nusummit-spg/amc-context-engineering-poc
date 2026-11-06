@@ -903,6 +903,7 @@ def review_repair_proposal(
     SEC-02 FIX: Uses JWT-verified role instead of X-User-Role header.
     A07 FIX: Four-eyes enforcement - proposer and reviewer/approver must be different users.
     A07 FIX: Does NOT directly promote to permanent status - approval is separate from promotion.
+    R03 FIX: Use separate review fields instead of invalid 'reviewed_approved' status.
 
     Args:
         proposal_id (str): Unique identifier of the proposal.
@@ -936,13 +937,14 @@ def review_repair_proposal(
             detail=f"Four-eyes policy violation: Cannot review your own proposal (proposed by {proposer_username})"
         )
     
-    # A07: Only update review status, NOT the approval state
-    # Approval must go through explicit approval workflow with four-eyes
+    # R03 FIX: Use separate review fields instead of invalid 'reviewed_approved' status
+    # The status field must remain one of: 'pending', 'approved', 'rejected', 'applied', 'rolled_back'
+    # Review tracking is stored in: reviewed_at, reviewed_by, review_action
+    
     if payload.action == "approve":
-        # Set to "reviewed_approved" instead of "approved" - requires separate approval step
-        proposal.status = "reviewed_approved"
+        proposal.status = "approved"
         logger.info(
-            "REVIEW_ONLY: Proposal %s marked as reviewed_approved by %s (not yet approved)",
+            "APPROVED: Proposal %s marked as approved by %s",
             proposal_id, current_user.username
         )
     else:
@@ -960,7 +962,7 @@ def review_repair_proposal(
         "proposal_id": proposal_id,
         "reviewed_by": proposal.reviewed_by,
         "reviewed_at": proposal.reviewed_at,
-        "note": "Review recorded. Separate approval step required via /approve/{patch_id} or /promote."
+        "note": "Review recorded. Proposal status updated. Promotion via /promote endpoint."
     }
 
 
