@@ -87,4 +87,4 @@ truststore==0.10.4
 # --- Phase 2: Modular Packages ──────────────────────────────────
 # Install from local packages during development
 # -e ../packages/amc-feedback-loop
--e ../packages/amc-repair-engine
+#-e ../packages/amc-repair-engine
