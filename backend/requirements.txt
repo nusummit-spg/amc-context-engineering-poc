@@ -88,6 +88,3 @@ truststore==0.10.4
 # Install from local packages during development
 # -e ../packages/amc-feedback-loop
 -e ../packages/amc-repair-engine
-
-
-setuptools>=84.1.0

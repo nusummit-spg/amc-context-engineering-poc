@@ -63,19 +63,10 @@ jobs:
           python -c "import app" || exit 1
           echo "All imports validated"
 
-      # - name: Scan for secrets
-      #   run: |
-      #     pip install gitleaks
-      #     gitleaks detect --source . --config .gitleaks.toml -v
-
-      - name: Upgrade setuptools
+      - name: Scan for secrets
         run: |
-          python -m pip install --upgrade "setuptools>=84.1.0"
-
-      # - name: Run pip audit
-      #   working-directory: backend
-      #   run: |
-      #     pip-audit
+          pip install gitleaks
+          gitleaks detect --source . --config .gitleaks.toml -v
 
       - name: Audit requirements
         run: |
