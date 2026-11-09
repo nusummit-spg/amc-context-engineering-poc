@@ -54,10 +54,12 @@ jobs:
           pip install -r requirements.txt --dry-run
           echo "Dependencies validated"
 
-      - name: Verify imports
+      - name: Compile
+        run: python -m compileall -q backend
+
+      - name: Import check
         run: |
           cd backend
-          python -m compileall -q . || exit 1
           python -c "import app" || exit 1
           echo "All imports validated"
 
@@ -72,7 +74,7 @@ jobs:
           cd backend
           python -m pip install --upgrade pip
           pip install pip-audit
-          pip-audit || exit 1
+          pip-audit
 
   # A02: Migration rehearsal
   migrate-rehearse:

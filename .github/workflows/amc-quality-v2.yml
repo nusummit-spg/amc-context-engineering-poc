@@ -41,7 +41,7 @@ jobs:
           test -f backend/amc_publication/journal.py
           test -f backend/amc_publication/integration.py
           test -f backend/tests/test_wave20_wave19_contract.py
-          test -f backend/tests/test_wave19_*.py
+          test -n "$(ls backend/tests/test_wave19_*.py 2>/dev/null | head -1)"
       - name: Run Feedback and durable assurance contract tests
         env:
           PYTHONPATH: backend
