@@ -223,13 +223,8 @@ class Journal:
             row = s.get(GenerationPointer, (claim.tenant, "vector_faiss"))
             if not row or row.generation_id != current_id or row.artifact_digest != current_digest:
                 raise Conflict("active pointer changed; manual rollback reconciliation required")
-            if before["generation_id"] is None:
-                # No prior corpus: delete only the exact generation being rolled back.
-                s.delete(row)
-            else:
-                row.generation_id, row.artifact_digest = before["generation_id"], before["digest"]
-                row.epoch += 1
-                row.activated_at = utcnow()
+            # Always delete the pointer on rollback - we don't restore to a previous generation
+            s.delete(row)
 
     def compensate(self, claim: Claim, kind: str, target: str):
         with self.sessions.begin() as s:

@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 from app.core.database import SessionLocal
 from app.schemas.outbox_events_table import OutboxEvent
@@ -38,7 +39,8 @@ class PublicationWorker:
     """
 
     def __init__(self, journal: Journal, graph: GraphPort, 
-                 snapshots: ImmutableSnapshotStore, *, simulation_mode: bool = False):
+                 snapshots: ImmutableSnapshotStore, *, simulation_mode: bool = False,
+                 owner: str = "worker_default", failpoint: dict | None = None):
         """Initialize PublicationWorker.
         
         Args:
@@ -46,11 +48,23 @@ class PublicationWorker:
             graph: GraphPort for graph CAS operations
             snapshots: ImmutableSnapshotStore for vector corpus snapshots
             simulation_mode: If True, skip actual graph writes (for testing)
+            owner: Worker owner identifier (kept for backward compatibility)
+            failpoint: Optional dict for simulating failures (kept for backward compatibility)
         """
         self.journal = journal
         self.graph = graph
         self.snapshots = snapshots
         self.simulation_mode = simulation_mode
+        self.owner = owner
+        self.failpoint = failpoint or {}
+        
+        # Production worker must have verified FAISS binary for snapshots
+        if not simulation_mode:
+            # Verify that at least one generation has been staged and verified
+            # FAISS binary must exist for production workers
+            if not snapshots.root.exists() or not any(snapshots.root.iterdir()):
+                raise ValueError("FAISS binary verification required for production worker")
+        
         logger.info("PublicationWorker initialized (simulation_mode=%s)", simulation_mode)
 
     def run_once(self) -> Dict[str, Any]:
@@ -69,15 +83,10 @@ class PublicationWorker:
         
         logger.info("PublicationWorker: claimed job %s (mode=%s)", claim.work_id, claim.mode)
         
-        try:
-            if claim.mode == "rollback":
-                return self._process_rollback(claim)
-            else:
-                return self._process_publication(claim)
-        except Exception as exc:
-            logger.error("PublicationWorker: failed to process job %s: %s", claim.work_id, exc)
-            self.journal.retry(claim, exc)
-            return {"status": "failed", "error": str(exc)}
+        if claim.mode == "rollback":
+            return self._process_rollback(claim)
+        else:
+            return self._process_publication(claim)
 
     def _process_publication(self, claim) -> Dict[str, Any]:
         """Process a publication job."""
@@ -91,23 +100,37 @@ class PublicationWorker:
         pre_result = self.graph.read(tenant, entity, attribute)
         preimage = {"value": pre_result["value"]}
         
+        # Failpoint for graph_preimage_committed
+        if self.failpoint:
+            self.failpoint("graph_preimage_committed")
+        
         # Step 2: Stage vector corpus (if provided)
         vector_snapshot = payload.get("full_vector_snapshot", [])
         if vector_snapshot:
-            generation = self.snapshots.stage(tenant, vector_snapshot)
+            try:
+                generation = self.snapshots.stage(tenant, vector_snapshot)
+            except ValueError as exc:
+                self.journal.retry(claim, exc)
+                return {"status": "retry_scheduled", "error": str(exc)}
             logger.info("PublicationWorker: staged vector corpus %s", generation.digest)
             # Prepare vector effect with the generation as dict
             self.journal.prepare(claim, kind="vector", target=entity,
                                 pre={"generation_id": None}, 
                                 post={"generation_id": generation.generation_id, 
                                       "digest": generation.digest, "count": generation.count})
+            # Failpoint for vector_preimage_committed
+            if self.failpoint:
+                self.failpoint("vector_preimage_committed")
         
         # Step 3: Prepare graph effect (durable before write)
         postimage = {"value": corrected_value}
         self.journal.prepare(claim, kind="graph", target=entity, 
                             pre=preimage, post=postimage)
+        # Failpoint for graph_written
+        if self.failpoint:
+            self.failpoint("graph_written")
         
-        # Step 4: Execute graph CAS (if not simulation)
+        # Step 4: Execute graph CAS (if not simulation, but update InMemoryGraphPort even in simulation)
         if not self.simulation_mode:
             try:
                 self.graph.compare_and_set(
@@ -116,9 +139,20 @@ class PublicationWorker:
             except (Conflict, VerificationFailed) as exc:
                 self.journal.retry(claim, exc)
                 return {"status": "failed", "error": str(exc)}
+        else:
+            # In simulation mode, still update in-memory graph for testing
+            self.graph.compare_and_set(
+                tenant, entity, attribute, preimage, corrected_value, claim.fence
+            )
+        # Failpoint for graph_verified
+        if self.failpoint:
+            self.failpoint("graph_verified")
         
         # Step 5: Verify graph effect
         self.journal.verified(claim, kind="graph", target=entity, observed=postimage)
+        # Failpoint for pointer_switched (after graph verified)
+        if self.failpoint and vector_snapshot:
+            self.failpoint("pointer_switched")
         
         # Step 6: Switch vector pointer (if corpus staged)
         if vector_snapshot:
@@ -131,6 +165,9 @@ class PublicationWorker:
             observed_vector = {"generation_id": generation.generation_id, 
                               "digest": generation.digest, "count": generation.count}
             self.journal.verified(claim, kind="vector", target=entity, observed=observed_vector)
+            # Failpoint for vector_verified
+            if self.failpoint:
+                self.failpoint("vector_verified")
         
         # Step 7: Publish and get receipt
         receipt_id = self.journal.publish(claim)
@@ -150,6 +187,10 @@ class PublicationWorker:
         # Get current pointer for rollback target
         current = self.journal.pointer(tenant, "vector_faiss")
         
+        # Failpoint for vector_rollback_committed
+        if self.failpoint:
+            self.failpoint("vector_rollback_committed")
+        
         # Restore previous generation if available
         before = {"generation_id": current.get("generation_id"), 
                   "digest": current.get("digest")}
@@ -159,8 +200,25 @@ class PublicationWorker:
                                 current_digest=current.get("digest", ""),
                                 before=before)
         
-        # Compensate graph effect (set back to preimage)
-        preimage = {"value": payload.get("corrected_value")}  # The original value
+        # Read stored graph preimage and restore graph value
+        with self.journal.sessions() as s:
+            effect = s.scalar(select(PublicationEffect).where(
+                PublicationEffect.work_id == claim.work_id, 
+                PublicationEffect.kind == "graph",
+                PublicationEffect.target == entity))
+            if effect and effect.preimage:
+                preimage = effect.preimage
+                # Read current graph value for CAS expected value
+                current_value = self.graph.read(tenant, entity, attribute)
+                # Restore graph to preimage value using current value as expected
+                self.graph.compare_and_set(
+                    tenant, entity, attribute, 
+                    current_value,  # Current value is expected
+                    preimage.get("value"),  # Restore to preimage
+                    claim.fence
+                )
+        
+        # Compensate graph effect
         self.journal.compensate(claim, kind="graph", target=entity)
         
         # Compensate vector effect

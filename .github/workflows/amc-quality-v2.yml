@@ -39,8 +39,10 @@ jobs:
       - name: Require Wave 1.9 integration before contract tests
         run: |
           test -f backend/amc_publication/journal.py
+          test -f backend/amc_publication/integration.py
           test -f backend/tests/test_wave20_wave19_contract.py
+          test -f backend/tests/test_wave19_*.py
       - name: Run Feedback and durable assurance contract tests
         env:
           PYTHONPATH: backend
-        run: python -m pytest -q backend/tests/test_wave20_wave19_contract.py
+        run: python -m pytest -q backend/tests/test_wave20_wave19_contract.py backend/tests/test_wave19_*.py

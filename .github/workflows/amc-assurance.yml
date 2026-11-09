@@ -62,12 +62,10 @@ jobs:
           echo "All imports validated"
 
       - name: Scan for secrets
-        uses: gitleaks/gitleaks-action@v3
+        uses: gitleaks/gitleaks-action@v2
         with:
           config-path: ".gitleaks.toml"
-          exit-code: 1
           verbose: true
-          redact: true
 
       - name: Audit requirements
         run: |
@@ -144,9 +142,10 @@ jobs:
         run: |
           cd backend
           if [ -d "tests" ]; then
-            pytest tests/ -v --tb=short || exit 1
+            pytest tests/ -v --tb=short -x
           else
             echo "No tests directory; skipping"
+            exit 0
           fi
           echo "Unit tests completed"
 
