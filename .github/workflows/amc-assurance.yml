@@ -113,15 +113,12 @@ jobs:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_amc"
         run: |
           cd backend
-          pip install -r requirements.txt
-          # Upgrade from scratch
-          alembic upgrade head
-          # Verify schema
-          alembic current
-          # Downgrade to initial
-          alembic downgrade base
-          # Upgrade again
-          alembic upgrade head
+          python -m venv .venv
+          .venv/bin/python -m pip install -r requirements.txt
+          .venv/bin/alembic upgrade head
+          .venv/bin/alembic current
+          .venv/bin/alembic downgrade base
+          .venv/bin/alembic upgrade head
           echo "Migration rehearsal passed"
 
   # A03: CI workflow - unit tests
@@ -148,6 +145,7 @@ jobs:
         run: |
           cd backend
           if [ -d "tests" ]; then
+            export PYTHONPATH=.
             pytest tests/ -v --tb=short -x
           else
             echo "No tests directory; skipping"
