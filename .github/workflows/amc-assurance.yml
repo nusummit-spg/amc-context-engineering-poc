@@ -65,6 +65,8 @@ jobs:
 
       - name: Scan for secrets
         uses: gitleaks/gitleaks-action@v3
+        env:
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
         with:
           config-path: ".gitleaks.toml"
           exit-code: 1
