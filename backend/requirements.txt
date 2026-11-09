@@ -46,10 +46,10 @@ pillow>=10.0
 python-dotenv>=1.0
 numpy>=2.0.2
 pandas>=2.2
-scikit-learn==1.4.2
+scikit-learn==1.5.0
 rapidfuzz>=3.0
 vaderSentiment==3.3.1
-pyarrow==19.0.1
+pyarrow==26.0.1
 
 # --- Security, validation, and operational monitoring ---
 cryptography>=42.0
@@ -73,7 +73,7 @@ setuptools>=84.1.0
 # but listing them keeps standalone training and evaluation scripts reproducible.
 torch>=2.2
 transformers>=4.41
-datasets==3.6.0
+datasets==5.0.1
 
 # --- Phase 0 Task 0.3: background scheduler ---
 # Optional but recommended: without it TaskScheduler falls back to a stdlib
@@ -89,3 +89,5 @@ truststore==0.10.4
 # Install from local packages during development
 # -e ../packages/amc-feedback-loop
 #-e ../packages/amc-repair-engine
+
+fsspec==2026.6.0
