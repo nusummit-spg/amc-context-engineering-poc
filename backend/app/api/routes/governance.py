@@ -877,11 +877,8 @@ async def promote_patch_direct(
         driver = get_driver()
         if driver:
             neo4j_session = driver.session(database=getattr(g_config, "NEO4J_DATABASE", "neo4j"))
-    except Exception as exc:
-        logger.debug("Neo4j session acquisition notice: %s", exc)
-    
-    # R06: Execute state machine transitions based on current status
-    try:
+        
+        # R06: Execute state machine transitions based on current status
         if current_status == PatchStatus.APPROVED:
             # STAGE first
             await patch_layer.stage_patch(patch_id)
@@ -900,12 +897,6 @@ async def promote_patch_direct(
                 status_code=status.HTTP_202_ACCEPTED,
                 detail="Publication intent created. Worker will verify graph/vector effects before marking ACTIVE."
             )
-    except Exception as exc:
-        logger.error("Promotion failed: %s", exc)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Promotion failed: {str(exc)}"
-        )
     finally:
         if neo4j_session:
             try:
