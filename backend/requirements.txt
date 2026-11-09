@@ -91,3 +91,4 @@ truststore==0.10.4
 #-e ../packages/amc-repair-engine
 
 fsspec==2026.6.0
+alembic>=1.13
