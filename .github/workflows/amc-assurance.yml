@@ -115,6 +115,8 @@ jobs:
           cd backend
           python -m venv .venv
           .venv/bin/python -m pip install -r requirements.txt
+          # Generate Alembic config with DATABASE_URL at runtime
+          sed -i "s|^url = .*|url = ${DATABASE_URL}|" alembic.ini
           .venv/bin/alembic upgrade head
           .venv/bin/alembic current
           .venv/bin/alembic downgrade base
@@ -145,8 +147,7 @@ jobs:
         run: |
           cd backend
           if [ -d "tests" ]; then
-            export PYTHONPATH=.
-            pytest tests/ -v --tb=short -x
+            .venv/bin/pytest tests/ -v --tb=short -x
           else
             echo "No tests directory; skipping"
             exit 0
