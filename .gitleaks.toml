@@ -1,0 +1,16 @@
+title = "AMC Context Engineering POC Gitleaks Configuration"
+
+[whitelist]
+files = [
+    ".*\\.pyc$",
+    "__pycache__/",
+    "node_modules/",
+    "\\.vscode/",
+]
+
+# Don't scan these paths
+paths = [
+    "\\.git/",
+]
+
+# Custom rules can be added here
