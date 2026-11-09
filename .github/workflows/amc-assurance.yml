@@ -110,13 +110,13 @@ jobs:
 
       - name: Run migration rehearsal
         env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_amc"
+          DATABASE_URL: "sqlite:///./data.db"
         run: |
           cd backend
           python -m venv .venv
           .venv/bin/python -m pip install -r requirements.txt
-          # Generate Alembic config with DATABASE_URL at runtime
-          sed -i "s|^url = .*|url = ${DATABASE_URL}|" alembic.ini
+          # Dynamically update the connection string in alembic.ini
+          sed -i "s|^sqlalchemy.url = .*|sqlalchemy.url = ${DATABASE_URL}|" alembic.ini
           .venv/bin/alembic upgrade head
           .venv/bin/alembic current
           .venv/bin/alembic downgrade base
@@ -147,6 +147,11 @@ jobs:
         run: |
           cd backend
           if [ -d "tests" ]; then
+            if [ ! -d ".venv" ]; then
+              python -m venv .venv
+              .venv/bin/python -m pip install --upgrade pip
+              .venv/bin/pip install -r requirements.txt
+            fi
             .venv/bin/pytest tests/ -v --tb=short -x
           else
             echo "No tests directory; skipping"
