@@ -1,0 +1,46 @@
+# Contract CI for Wave 2.0. Not a production deployment gate.
+name: AMC Quality V2 Contract Tests
+on:
+  push:
+    branches: [amc-dev, 'feature/**']
+  pull_request:
+    branches: [amc-dev]
+  workflow_dispatch:
+jobs:
+  quality-v2-independent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deterministic quality-test dependencies
+        run: python -m pip install 'pytest>=8,<10' 'SQLAlchemy>=2.0,<3'
+      - name: Refuse missing implementation or tests
+        run: |
+          test -f backend/amc_quality/manifest.py
+          test -f backend/tests/test_wave20_independent.py
+          test -f backend/tests/test_wave20_ingestion.py
+      - name: Compile
+        run: python -m compileall -q backend/amc_quality backend/tests/test_wave20_independent.py backend/tests/test_wave20_ingestion.py
+      - name: Run standalone source, financial and provenance tests
+        env:
+          PYTHONPATH: backend
+        run: python -m pytest -q backend/tests/test_wave20_independent.py backend/tests/test_wave20_ingestion.py
+  quality-v2-wave19-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: python -m pip install 'pytest>=8,<10' 'SQLAlchemy>=2.0,<3' 'alembic>=1.13,<2'
+      - name: Require Wave 1.9 integration before contract tests
+        run: |
+          test -f backend/amc_publication/journal.py
+          test -f backend/tests/test_wave20_wave19_contract.py
+      - name: Run Feedback and durable assurance contract tests
+        env:
+          PYTHONPATH: backend
+        run: python -m pytest -q backend/tests/test_wave20_wave19_contract.py

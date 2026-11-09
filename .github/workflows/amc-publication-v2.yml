@@ -1,0 +1,22 @@
+# Opt-in Wave 1.9 gate. Does not report production readiness.
+name: AMC Publication V2 Contract Tests
+on:
+  push:
+    branches: [amc-dev, 'feature/**']
+  pull_request:
+    branches: [amc-dev]
+jobs:
+  publication-v2-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deterministic contract dependencies
+        run: |
+          python -m pip install 'SQLAlchemy>=2.0,<3' 'pytest>=8,<10' 'alembic>=1.13,<2'
+      - name: Compile implemented modules
+        run: python -m compileall -q backend/amc_publication backend/tests/test_wave19_*.py backend/alembic/versions/012_wave19_durable_publication.py
+      - name: Run Wave 1.9 SQLite and contract suite
+        run: python -m pytest -q backend/tests/test_wave19_*.py

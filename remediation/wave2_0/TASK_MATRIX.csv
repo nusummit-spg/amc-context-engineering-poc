@@ -1,0 +1,15 @@
+Task,Priority,State,Owner,Required_evidence
+W20-I01,P0,PENDING_INTEGRATION,Local Codex,Overlay installed and source diff reviewed
+W20-I02,P0,PENDING_INTEGRATION,Local Codex,Actual importer refuses tampered source chunks
+W20-I03,P0,PENDING_INTEGRATION,Local Codex,Magic CSV totals removed and pinned digest verified
+W20-I04,P0,PENDING_INTEGRATION,Local Codex,Staging rollback and active pointer invariant
+W20-I05,P0,PENDING_INTEGRATION,Local Codex,Full contributor ledger for all supported routes
+W20-I06,P0,PENDING_STEWARD_REVIEW,Local Codex and steward,Independent financial golden results
+W20-I07,P0,PENDING_INTEGRATION,Local Codex,Exact NAV paired readbacks on duplicated-plan fixtures
+W20-I08,P0,PENDING_INTEGRATION,Local Codex,Feedback issue state and receipt are transactionally consistent
+W20-I09,P1,PENDING_INTEGRATION,Local Codex,Actual SLO windows with UNKNOWN for missing evidence
+W20-I10,P0,PENDING_WAVE19_INTEGRATION,Local Codex,One authoritative publication path only
+W20-I11,P0,PENDING_LIVE_SERVICES,Local Codex,Postgres Neo4j FAISS recovery and CAS tests
+W20-I12,P0,PENDING_CI,Local Codex,Green CI on the exact commit without suppressed steps
+W20-I13,P0,PENDING_MAINTAINER_DECISION,Maintainer,Feedback package restore or replacement approval
+W20-I14,P0,BLOCKED_RELEASE,Maintainer and independent reviewer,Signed go/no-go and verified rollback

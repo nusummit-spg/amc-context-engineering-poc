@@ -103,3 +103,12 @@ backend/data/corpora/**/ledger.json
 # Documentation builds
 docs/_build/
 site/
+
+# Wave 1_9 Implementation
+__pycache__/
+.pytest_cache/
+*.pyc
+*.sqlite
+*.db
+.gitleaks.toml.wave19-backup
+*.wave19-backup

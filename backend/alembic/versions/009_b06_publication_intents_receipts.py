@@ -26,7 +26,7 @@ def upgrade() -> None:
     # Create publication_intents table
     op.create_table(
         'publication_intents',
-        sa.Column('intent_id', sa.String(length=64), nullable=False, comment='P01: Unique intent identifier'),
+        sa.Column('intent_id', sa.String(length=64), nullable=False, primary_key=True, comment='P01: Unique intent identifier'),
         sa.Column('proposal_id', sa.String(length=64), nullable=False, comment='Reference to repair proposal'),
         sa.Column('approved_revision', sa.Integer(), nullable=False, comment='Version number at approval time'),
         sa.Column('tenant', sa.String(length=128), nullable=False, default='default', comment='Multi-tenant isolation'),
@@ -43,7 +43,6 @@ def upgrade() -> None:
         sa.Column('retry_count', sa.Integer(), nullable=False, default=0, comment='Number of retry attempts'),
         sa.Column('max_retries', sa.Integer(), nullable=False, default=3, comment='Maximum retry attempts'),
         sa.Column('error', sa.Text(), nullable=True, comment='Error message if failed'),
-        sa.PrimaryKeyConstraint('intent_id'),
         sa.CheckConstraint("status IN ('pending', 'approved', 'publishing', 'published', 'failed')", name='ck_publication_intent_status'),
         sa.CheckConstraint("publication_type IN ('graph_mutation', 'vector_reindex', 'patch_activation')", name='ck_publication_intent_type')
     )
@@ -68,7 +67,8 @@ def upgrade() -> None:
         sa.Column('tenant', sa.String(length=128), nullable=False, default='default', comment='Multi-tenant isolation'),
         sa.Column('signature', sa.String(length=256), nullable=True, comment='Optional cryptographic signature'),
         sa.Column('created_at', sa.String(length=40), nullable=False, comment='ISO timestamp when receipt created'),
-        sa.PrimaryKeyConstraint('receipt_id')
+        sa.PrimaryKeyConstraint('receipt_id'),
+        sa.ForeignKeyConstraint(['intent_id'], ['publication_intents.intent_id'], name='fk_receipt_intent')
     )
     
     # Create indexes for publication_receipts
@@ -86,6 +86,9 @@ def downgrade() -> None:
     op.drop_index('idx_receipt_tenant', table_name='publication_receipts')
     op.drop_index('idx_receipt_source_hash', table_name='publication_receipts')
     op.drop_index('idx_receipt_intent', table_name='publication_receipts')
+    
+    # Drop foreign key constraint on publication_receipts
+    op.drop_constraint('fk_receipt_intent', 'publication_receipts', type_='foreignkey')
     
     # Drop publication_receipts table
     op.drop_table('publication_receipts')

@@ -1,0 +1,22 @@
+{
+  "reviewed_upstream_repo": "nusummit-spg/amc-context-engineering-poc",
+  "reviewed_branch": "amc-dev",
+  "reviewed_sha": "91af9fa4eaa8abdb66c55b04fdee484ea0343a3c",
+  "execution_date": "2026-11-06",
+  "new_wave20_tests_passed": 77,
+  "previous_wave19_tests_passed": 35,
+  "combined_tests_passed": 112,
+  "command": "PYTHONPATH=<wave20>/backend:<wave19>/backend pytest -q <wave20>/backend/tests/test_wave20_*.py <wave19>/backend/tests/test_wave19_*.py",
+  "smoke": "PASS_SIMULATED",
+  "test_environment": "Temporary SQLite, synthetic CSV, simulated graph; no customer data",
+  "not_run": [
+    "Full AMC backend/frontend regression",
+    "Real 16245-row user corpus",
+    "PostgreSQL multi-worker concurrency",
+    "Real Neo4j mutation/readback",
+    "Real FAISS binary generation activation/rollback",
+    "GitHub Actions run for newly authored Wave 2.0 workflow",
+    "Production rollout or canary"
+  ],
+  "release_gate": "BLOCK"
+}

@@ -373,6 +373,7 @@ class TestIntegrationScenarios:
         with tempfile.TemporaryDirectory() as tmpdir:
             # 1. Create intent
             intent = PublicationIntent()
+            intent.intent_id = "intent_123"
             intent.proposal_id = "proposal_123"
             intent.approved_revision = 1
             intent.status = "approved"

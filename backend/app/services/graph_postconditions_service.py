@@ -27,6 +27,14 @@ class GraphPostconditionsService:
     P06: Graph rollback functionality using captured preimages.
     """
     
+    def __new__(cls, graph_store: Any = None):
+        instance = super().__new__(cls)
+        # Initialize attributes to None so __init__ can set them
+        instance.graph_store = None
+        instance._preimages = {}
+        instance._staging = {}
+        return instance
+    
     def __init__(self, graph_store: Any):
         """Initialize graph postconditions service.
         
@@ -258,6 +266,10 @@ class GraphPostconditionsService:
         Returns:
             Results of the operation
         """
+        # Fail fast if graph_store is not configured
+        if self.graph_store is None:
+            raise Exception("Neo4j unavailable")
+        
         pending = [
             (key, op) for key, op in self._staging.items()
             if op.get("intent_id") == intent_id
