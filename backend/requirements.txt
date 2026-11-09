@@ -63,9 +63,10 @@ httpx>=0.27
 tenacity>=9.0
 
 # --- Dev / test ---
-pytest==8.2.0
-pytest-asyncio==0.23.6
+pytest>=8.0
+pytest-asyncio>=0.24
 locust>=2.31
+setuptools>=84.1.0
 
 # --- Model evaluation / fine-tuning scripts ---
 # These are also transitive dependencies of sentence-transformers and GLiNER,
@@ -82,7 +83,7 @@ apscheduler>=3.10.4
 truststore==0.10.4
 
 # --- Human feedback loop ---
-#amc-feedback-loop@git+https://github.com/nusummit-spg/human-feedback-loop@v0.1.7
+# feedback-loop@git+https://github.com/nusummit-spg/human-feedback-loop@v0.1.7
 
 # --- Phase 2: Modular Packages ──────────────────────────────────
 # Install from local packages during development
