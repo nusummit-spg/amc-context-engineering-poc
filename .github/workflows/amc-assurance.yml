@@ -64,9 +64,12 @@ jobs:
           echo "All imports validated"
 
       - name: Scan for secrets
-        run: |
-          pip install gitleaks
-          gitleaks detect --source . --config .gitleaks.toml -v
+        uses: gitleaks/gitleaks-action@v3
+        with:
+          config-path: ".gitleaks.toml"
+          exit-code: 1
+          verbose: true
+          redact: true
 
       - name: Audit requirements
         run: |
