@@ -160,38 +160,55 @@ class OutboxProcessor:
             logger.warning("B05: Unknown event type: %s", event.event_type)
     
     async def _execute_graph_mutation(self, payload: Dict[str, Any], db: Session) -> None:
-        """Execute graph mutation from outbox event.
-        
-        FIX A04: Fail closed until real implementation exists.
-        
-        Args:
-            payload: Event payload with mutation details
-            db: Database session
-            
-        Raises:
-            NotImplementedError: Until real implementation exists
+        """PUB03 / W21-07: Bridge outbox event to Journal — no direct graph writes.
+
+        The OutboxProcessor must NOT execute graph mutations directly.
+        It translates the event into a Journal work record; PublicationWorker
+        claims and executes it with verified graph/vector effects.
         """
         from app.schemas.repair_proposals import RepairProposal
-        
+
         proposal_id = payload.get("proposal_id")
         if not proposal_id:
             raise ValueError("Graph mutation event missing proposal_id")
-        
+
         proposal = db.query(RepairProposal).filter(
             RepairProposal.proposal_id == proposal_id
         ).first()
-        
         if not proposal:
             raise ValueError(f"Proposal {proposal_id} not found")
-        
-        # FIX A04: Fail closed until real implementation
-        error_msg = (
-            "A04: GRAPH_MUTATION_REQUIRED handler not implemented. "
-            "Outbox event cannot be completed without actual graph mutation execution. "
-            "This event has been quarantined."
-        )
-        logger.error("A04: %s", error_msg)
-        raise NotImplementedError(error_msg)
+
+        # Create a Journal work record from this event
+        try:
+            from amc_publication.journal import Journal
+            from amc_publication.models import Base as PubBase
+            from sqlalchemy import create_engine
+            from sqlalchemy.orm import sessionmaker
+            from app.core.database import DATABASE_URL
+
+            engine = create_engine(DATABASE_URL, connect_args={"timeout": 10})
+            PubBase.metadata.create_all(engine)
+            sessions = sessionmaker(bind=engine, expire_on_commit=False)
+            journal = Journal(sessions)
+
+            tenant = payload.get("tenant", "default")
+            work_id = journal.submit(
+                tenant=tenant,
+                key=f"outbox:{proposal_id}",
+                proposal_id=proposal_id,
+                revision=getattr(proposal, 'approved_revision', 1) or 1,
+                payload={
+                    "entity": payload.get("entity_id", ""),
+                    "attribute": payload.get("attribute", ""),
+                    "corrected_value": str(proposal.corrected_value) if proposal.corrected_value else "",
+                    "full_vector_snapshot": [],
+                },
+            )
+            engine.dispose()
+            logger.info("PUB03: Bridged outbox event to Journal work %s", work_id)
+        except Exception as exc:
+            logger.error("PUB03: Failed to bridge outbox event to Journal: %s", exc)
+            raise
     
     async def _execute_vector_reindex(self, payload: Dict[str, Any], db: Session) -> None:
         """Execute vector reindex from outbox event.
@@ -219,31 +236,18 @@ class OutboxProcessor:
         logger.info("B05: Executed vector reindex for %s", proposal_id)
     
     async def _execute_state_transition(self, payload: Dict[str, Any], db: Session) -> None:
-        """Execute patch state transition from outbox event.
-        
-        FIX A04: Fail closed until real implementation exists.
-        
-        Args:
-            payload: Event payload with transition details
-            db: Database session
-            
-        Raises:
-            NotImplementedError: Until real implementation exists
+        """PUB03: State transitions are handled by the Journal pipeline.
+
+        The outbox must not directly mutate patch state. This event is
+        acknowledged (no-op) because the Journal + PublicationWorker
+        handles all canonical state transitions.
         """
         patch_id = payload.get("patch_id")
         new_status = payload.get("new_status")
-        
-        if not patch_id or not new_status:
-            raise ValueError("State transition event missing patch_id or new_status")
-        
-        # FIX A04: Fail closed until real implementation
-        error_msg = (
-            "A04: PATCH_STATE_TRANSITION handler not implemented. "
-            "Outbox event cannot be completed without actual patch state transition. "
-            "This event has been quarantined."
+        logger.info(
+            "PUB03: State transition for %s → %s is handled by Journal pipeline",
+            patch_id, new_status,
         )
-        logger.error("A04: %s", error_msg)
-        raise NotImplementedError(error_msg)
 
 
 def create_outbox_event(

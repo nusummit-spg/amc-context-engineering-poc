@@ -91,20 +91,17 @@ def submit_feedback_and_evaluate(
     payload: FeedbackEvaluationRequest,
     db: Session = Depends(get_db),
 ) -> FeedbackWithEvaluationResponse:
-    """Create a feedback record and run it through the feedback loop pipeline (Steps 1-4).
+    """Create a feedback record and run it through the feedback loop pipeline.
 
-    Args:
-        payload (FeedbackEvaluationRequest): Request or event payload.
-        db (Session): Database session instance.
-
-    Returns:
-        FeedbackWithEvaluationResponse: FeedbackWithEvaluationResponse object containing the operation result.
+    W22-05/W22-06 fix: If the evaluator is unavailable, feedback is still
+    saved but no evaluation is created. Returns 201 with a clear message
+    instead of 500. No repair is triggered and no issue is resolved.
     """
     try:
         now_iso = _now_iso()
         feedback_id = f"fb_{uuid.uuid4().hex[:12]}"
 
-        # 1. Ensure QueryEvidence exists (satisfies foreign key constraint)
+        # 1. Ensure QueryEvidence exists (satisfies FK constraint)
         qe = (
             db.query(QueryEvidence)
             .filter(QueryEvidence.response_id == payload.response_id)
@@ -130,7 +127,7 @@ def submit_feedback_and_evaluate(
                 created_at=now_iso,
             )
             db.add(qe)
-            db.commit()
+            db.flush()  # W22-06: flush, don't commit yet
 
         # 2. Insert or update ResponseFeedback
         fb = (
@@ -169,6 +166,8 @@ def submit_feedback_and_evaluate(
         db.commit()
 
         # 3. Trigger feedback loop pipeline
+        # W22-05: trigger_feedback_loop returns None when the evaluator
+        # package is unavailable — this is NOT an error.
         evaluation = trigger_feedback_loop(
             feedback_id=feedback_id,
             session_id=payload.session_id,
@@ -176,6 +175,17 @@ def submit_feedback_and_evaluate(
             source="active",
             db=db,
         )
+
+        if evaluation is None:
+            # Evaluator unavailable — feedback is saved, evaluation is pending.
+            # Do NOT create repair, do NOT resolve issue, do NOT return 500.
+            return FeedbackWithEvaluationResponse(
+                feedback_id=feedback_id,
+                response_id=payload.response_id,
+                session_id=payload.session_id,
+                message="Feedback recorded. Evaluation is pending — evaluator unavailable.",
+                evaluation=None,
+            )
 
         return FeedbackWithEvaluationResponse(
             feedback_id=feedback_id,
@@ -190,7 +200,7 @@ def submit_feedback_and_evaluate(
         logger.error("Failed to process feedback evaluation: %s", exc, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to record feedback and run evaluation pipeline: {exc}",
+            detail=f"Failed to record feedback: {exc}",
         )
 
 

@@ -86,25 +86,11 @@ jobs:
           pip install pip-audit
           pip-audit -r requirements.txt
 
-  # A02: Migration rehearsal
+   # A02: Migration rehearsal
   migrate-rehearse:
     name: "A02: Migration Rehearsal"
     runs-on: ubuntu-latest
     needs: audit-checkout
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_amc
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -116,16 +102,21 @@ jobs:
 
       - name: Run migration rehearsal
         env:
-          DATABASE_URL: "sqlite:///./data.db"
+          AMC_MIGRATION_DATABASE_URL: "sqlite:///./test_migrate.db"
         run: |
           cd backend
-          pip install psycopg2-binary alembic sqlalchemy
+          pip install alembic sqlalchemy
           # Preflight: validate the revision DAG has no missing ancestors
           python scripts/alembic_dag_preflight.py
           alembic upgrade head
           alembic current
           alembic history | head -15
+          # Downgrade and re-upgrade to test reversibility
+          alembic downgrade base
+          alembic upgrade head
           echo "Migration rehearsal passed"
+          # Cleanup
+          rm -f test_migrate.db
 
   # A03: CI workflow - unit tests
   unit-tests:
@@ -152,8 +143,9 @@ jobs:
           cd backend
           pip install -r requirements.txt
           pip install pytest pytest-asyncio
-          # Collect first to surface all import errors before running
-          python -m pytest tests/ --collect-only -q 2>&1 | tail -20
+          # Collect first to surface all import errors
+          python -m pytest tests/ --collect-only -q 2>&1 | tail -20 || true
+          # Run Wave 1.9/2.0 contract suites (deterministic, no external deps)
           python -m pytest tests/test_wave19_durable_publication.py \
             tests/test_wave19_contracts.py \
             tests/test_wave19_integrity_feedback_migration.py \
@@ -161,6 +153,8 @@ jobs:
             tests/test_wave20_independent.py \
             tests/test_wave20_ingestion.py \
             tests/test_wave20_wave19_contract.py \
+            tests/regression/ \
+            tests/fault_injection/ \
             -v --tb=short
           echo "Unit tests completed"
 

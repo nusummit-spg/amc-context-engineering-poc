@@ -130,7 +130,12 @@ class Journal:
                     "pre_hash": row.pre_hash, "post_hash": row.post_hash}
 
     def prepare(self, claim: Claim, *, kind: str, target: str, pre: dict, post: dict):
-        """Durable before any side effect. Replays must use the original preimage."""
+        """Durable before any side effect. Replays must use the original preimage.
+
+        REC02: The preimage stored here is the immutable anchor for rollback.
+        For vector effects, `pre` must contain the generation_id/digest that
+        was active BEFORE this publication so rollback can CAS-restore it.
+        """
         with self.sessions.begin() as s:
             self._require(s, claim)
             existing = s.scalar(select(PublicationEffect).where(

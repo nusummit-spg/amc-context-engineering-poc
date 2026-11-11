@@ -40,7 +40,7 @@ class PublicationWorker:
 
     def __init__(self, journal: Journal, graph: GraphPort, 
                  snapshots: ImmutableSnapshotStore, *, simulation_mode: bool = False,
-                 owner: str = "worker_default", failpoint: dict | None = None):
+                 owner: str = "worker_default", failpoint=None):
         """Initialize PublicationWorker.
         
         Args:
@@ -56,7 +56,7 @@ class PublicationWorker:
         self.snapshots = snapshots
         self.simulation_mode = simulation_mode
         self.owner = owner
-        self.failpoint = failpoint or {}
+        self.failpoint = failpoint
         
         # Production worker must have verified FAISS binary for snapshots
         if not simulation_mode:
@@ -75,7 +75,7 @@ class PublicationWorker:
         """
         # Claim a job from the journal
         now = datetime.now(timezone.utc).replace(tzinfo=None)
-        claim = self.journal.claim("worker_default", now)
+         claim = self.journal.claim(self.owner, now)
         
         if not claim:
             logger.debug("PublicationWorker: no jobs to process")
@@ -543,46 +543,16 @@ class DurableWorker:
         )
     
     def process_all(self, limit: int = 100, worker_id: str = "default") -> Dict[str, Any]:
-        """Process all pending events.
-        
-        Args:
-            limit: Maximum events per batch
-            worker_id: Worker identifier
-            
-        Returns:
-            Processing statistics
+         """Process all pending events — bridge outbox to Journal only.
+
+        W22-12 / PUB03: DurableWorker may only translate outbox events into
+        Journal work records. It must NOT execute or publish work.
+        PublicationWorker.run_once() is the sole authoritative execution path.
         """
-        # Step 1: Create publication work for pending events
         create_result = self.process_pending_events(limit)
-        
-        # Step 2: Claim and execute work
-        managed_session = False
-        if self._db is None:
-            db = SessionLocal()
-            managed_session = True
-        else:
-            db = self._db
-            
-        try:
-            repo = self._get_repo(db)
-            
-            # Get queued works
-            works = repo.get_works_by_status("queued", limit=limit)
-            
-            executed = 0
-            for work in works:
-                # Claim with fencing
-                if repo.get_work_by_id(work.id):
-                    self.claim_work(work.id, worker_id)
-                    self.execute_work(work)
-                    executed += 1
-            
-            return {
-                "created_work": create_result["processed"],
-                "executed_work": executed,
-                "failed": create_result["failed"]
-            }
-            
-        finally:
-            if managed_session:
-                db.close()
+        return {
+            "created_work": create_result["processed"],
+            "executed_work": 0,
+            "failed": create_result["failed"],
+            "note": "Work records created; PublicationWorker must claim and execute them.",
+        }

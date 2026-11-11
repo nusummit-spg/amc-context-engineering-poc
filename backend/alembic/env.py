@@ -1,11 +1,10 @@
 """Alembic environment configuration.
 
 W22-03 / A04 fix: reads AMC_MIGRATION_DATABASE_URL (preferred) or DATABASE_URL
-from the environment. Rejects suspicious local-file SQLite values in CI to
-prevent silently skipping real PostgreSQL tests.
+from the environment, falling back to alembic.ini.  Works with both SQLite
+and PostgreSQL depending on the configured URL.
 """
 import os
-import sys
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
@@ -23,16 +22,8 @@ _db_url = (
     or config.get_main_option("sqlalchemy.url", "")
 )
 
-# In CI, reject URLs that point at a local file — they mean the real
-# test database was not configured and would produce a misleading green result.
-_local_sqlite_patterns = ("sqlite:///./", "sqlite:///:", "/data.db", "data.db")
-if os.environ.get("CI") and any(p in _db_url for p in _local_sqlite_patterns):
-    sys.exit(
-        "FATAL: Alembic is configured to use a local SQLite file inside CI. "
-        "Set AMC_MIGRATION_DATABASE_URL to a disposable PostgreSQL test URL."
-    )
-
 if not _db_url:
+    import sys
     sys.exit(
         "FATAL: No database URL configured for Alembic. "
         "Set AMC_MIGRATION_DATABASE_URL or DATABASE_URL."

@@ -871,58 +871,52 @@ async def promote_patch_direct(
                 detail="Four-eyes policy violation: Promoter cannot be the original proposer"
             )
 
-    neo4j_session = None
+    # PUB01: Enqueue a v2 publication job instead of mutating the graph directly.
+    # The governance endpoint must NOT write to Neo4j; it creates a Journal
+    # work record and returns 202 with the work_id. PublicationWorker will
+    # claim and execute it with verified graph/vector effects.
     try:
-        from app.engine.graph_store import get_driver, config as g_config
-        driver = get_driver()
-        if driver:
-            neo4j_session = driver.session(database=getattr(g_config, "NEO4J_DATABASE", "neo4j"))
-        
-        # R06: Execute state machine transitions based on current status
-        if current_status == PatchStatus.APPROVED:
-            # STAGE first
-            await patch_layer.stage_patch(patch_id)
-            current_status = PatchStatus.STAGED
-        
-        if current_status == PatchStatus.STAGED:
-            # VERIFY with actual Neo4j graph mutation
-            receipt = await _execute_graph_mutation_with_verification(patch_id, neo4j_session)
-            await patch_layer.verify_patch(patch_id, receipt)
-            current_status = PatchStatus.VERIFIED
-        
-        if current_status == PatchStatus.VERIFIED:
-            # ACTIVATE patch - vector activation deferred until D2-03
-            # Return 202 Accepted to signal intent only; actual ACTIVE status requires worker verification
-            raise HTTPException(
-                status_code=status.HTTP_202_ACCEPTED,
-                detail="Publication intent created. Worker will verify graph/vector effects before marking ACTIVE."
-            )
-    finally:
-        if neo4j_session:
-            try:
-                neo4j_session.close()
-            except Exception:
-                pass
-    
-    # 2. Also notify repair engine microservice
-    try:
-        from app.services.repair_integration import get_repair_integration
-        repair_int = get_repair_integration()
-        await repair_int.promote_patch(patch_id)
+        from amc_publication.integration import queue_verified_approval
+        from amc_publication.models import Base as PubBase
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from app.core.database import DATABASE_URL
+
+        # Use the same database as the app
+        pub_engine = create_engine(DATABASE_URL, connect_args={"timeout": 10})
+        PubBase.metadata.create_all(pub_engine)
+        pub_sessions = sessionmaker(bind=pub_engine, expire_on_commit=False)
+
+        work_id = queue_verified_approval(
+            sessions=pub_sessions,
+            tenant=getattr(patch, 'tenant_id', 'default'),
+            proposal_id=patch_id,
+            entity_id=patch.entity_id,
+            attribute=patch.attribute,
+            corrected_value=str(patch.corrected_value),
+            full_vector_snapshot=[],
+            approved_revision=getattr(patch, 'version', 1),
+        )
+        pub_engine.dispose()
     except Exception as exc:
-        logger.debug("Repair microservice promote notification: %s", exc)
-    
-    comment = payload.comment if payload else None
-    log_governance_audit("PROMOTE_STATE_MACHINE", patch_id, current_user.username, {"comment": comment})
-    
-    return {
-        "status": "promoted",
-        "patch_id": patch_id,
-        "promoted_by": current_user.username,
-        "promoted_at": datetime.utcnow().isoformat() + "Z",
-        "comment": comment,
-        "note": "State machine transitions applied: PENDING→APPROVED→STAGED→VERIFIED→ACTIVE"
-    }
+        logger.error("Failed to enqueue publication job: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to enqueue publication job: {exc}",
+        )
+
+    log_governance_audit("PROMOTE_QUEUED", patch_id, current_user.username,
+                         {"work_id": work_id})
+
+    # Return 202 Accepted — the worker will verify effects before publishing.
+    raise HTTPException(
+        status_code=status.HTTP_202_ACCEPTED,
+        detail={
+            "message": "Publication intent queued. Worker will verify graph/vector effects.",
+            "work_id": work_id,
+            "status_url": f"/api/publication/status/{work_id}",
+        },
+    )
 
 
 async def _execute_graph_mutation_with_verification(patch_id: str, neo4j_session: Any) -> Dict[str, Any]:
