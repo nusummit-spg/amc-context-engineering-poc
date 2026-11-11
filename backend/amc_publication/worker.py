@@ -75,7 +75,7 @@ class PublicationWorker:
         """
         # Claim a job from the journal
         now = datetime.now(timezone.utc).replace(tzinfo=None)
-         claim = self.journal.claim(self.owner, now)
+        claim = self.journal.claim(self.owner, now)
         
         if not claim:
             logger.debug("PublicationWorker: no jobs to process")
