@@ -542,14 +542,16 @@ class DurableWorker:
             "Use Journal + PublicationWorker for verified publication."
         )
     
+    
     def process_all(self, limit: int = 100, worker_id: str = "default") -> Dict[str, Any]:
-         """Process all pending events — bridge outbox to Journal only.
+        """Process all pending events — bridge outbox to Journal only.
 
         W22-12 / PUB03: DurableWorker may only translate outbox events into
         Journal work records. It must NOT execute or publish work.
         PublicationWorker.run_once() is the sole authoritative execution path.
         """
         create_result = self.process_pending_events(limit)
+
         return {
             "created_work": create_result["processed"],
             "executed_work": 0,
