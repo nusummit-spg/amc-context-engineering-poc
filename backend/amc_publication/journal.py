@@ -217,14 +217,30 @@ class Journal:
             row.attempts = 0
 
     def switch_back(self, claim: Claim, *, current_id: str, current_digest: str, before: dict):
-        """Restores an existing previous generation; empty baseline requires a dedicated deactivation."""
+        """CAS-restore the pointer to the previous verified generation.
+
+        REC03 / W22-11 fix: when a prior generation exists (before["generation_id"]
+        is not None), restore it via CAS rather than deleting the pointer.
+        Only delete when rolling back the very first publication (no prior generation).
+        Raises Conflict if another writer has changed the pointer since publication.
+        """
         with self.sessions.begin() as s:
             self._require(s, claim)
             row = s.get(GenerationPointer, (claim.tenant, "vector_faiss"))
             if not row or row.generation_id != current_id or row.artifact_digest != current_digest:
-                raise Conflict("active pointer changed; manual rollback reconciliation required")
-            # Always delete the pointer on rollback - we don't restore to a previous generation
-            s.delete(row)
+                raise Conflict(
+                    "active pointer changed since publication; "
+                    "manual rollback reconciliation required"
+                )
+            if before.get("generation_id") is None:
+                # First-ever generation: deactivate explicitly by removing the row.
+                s.delete(row)
+            else:
+                # Restore to the previous verified generation via CAS.
+                row.generation_id = before["generation_id"]
+                row.artifact_digest = before["digest"]
+                row.epoch += 1
+                row.activated_at = utcnow()
 
     def compensate(self, claim: Claim, kind: str, target: str):
         with self.sessions.begin() as s:

@@ -144,12 +144,22 @@ class PublicationWorker:
             self.graph.compare_and_set(
                 tenant, entity, attribute, preimage, corrected_value, claim.fence
             )
-        # Failpoint for graph_verified
+       # Failpoint for graph_verified
         if self.failpoint:
             self.failpoint("graph_verified")
-        
-        # Step 5: Verify graph effect
-        self.journal.verified(claim, kind="graph", target=entity, observed=postimage)
+
+        # Step 5: Independent graph readback — W22-10 / PUB06 fix.
+        # Must NOT use the intended postimage; call graph.read() independently.
+        actual = self.graph.read(tenant, entity, attribute)
+        if actual.get("value") != corrected_value:
+            err = VerificationFailed(
+                f"Graph readback mismatch for {tenant}/{entity}/{attribute}: "
+                f"expected {corrected_value!r}, got {actual.get('value')!r}"
+            )
+            self.journal.retry(claim, err)
+            return {"status": "failed", "error": str(err)}
+        # Pass the OBSERVED value from independent readback, not the intended postimage.
+        self.journal.verified(claim, kind="graph", target=entity, observed={"value": actual["value"]})
         # Failpoint for pointer_switched (after graph verified)
         if self.failpoint and vector_snapshot:
             self.failpoint("pointer_switched")
@@ -184,21 +194,29 @@ class PublicationWorker:
         entity = payload.get("entity")
         attribute = payload.get("attribute")
         
-        # Get current pointer for rollback target
+         # Get current active pointer — this is what we roll back FROM.
         current = self.journal.pointer(tenant, "vector_faiss")
-        
+
         # Failpoint for vector_rollback_committed
         if self.failpoint:
             self.failpoint("vector_rollback_committed")
-        
-        # Restore previous generation if available
-        before = {"generation_id": current.get("generation_id"), 
-                  "digest": current.get("digest")}
-        
-        # Switch back to previous generation
-        self.journal.switch_back(claim, current_id=current.get("generation_id", ""),
-                                current_digest=current.get("digest", ""),
-                                before=before)
+
+        # REC03 / W22-11: read the vector effect preimage — this is what was
+        # active BEFORE this publication and must be CAS-restored, not deleted.
+        with self.journal.sessions() as _s:
+            _vec = _s.scalar(select(PublicationEffect).where(
+                PublicationEffect.work_id == claim.work_id,
+                PublicationEffect.kind == "vector",
+                PublicationEffect.target == entity))
+        before = dict(_vec.preimage) if _vec and _vec.preimage else {"generation_id": None, "digest": None}
+
+        # CAS from current → prior verified generation (or deactivate if no prior).
+        self.journal.switch_back(
+            claim,
+            current_id=current.get("generation_id") or "",
+            current_digest=current.get("digest") or "",
+            before=before,
+        )
         
         # Read stored graph preimage and restore graph value
         with self.journal.sessions() as s:
@@ -455,61 +473,74 @@ class DurableWorker:
                 db.close()
     
     def execute_work(self, work: PublicationWork) -> Dict[str, Any]:
-        """Execute a publication work.
+        # """Execute a publication work.
         
-        Args:
-            work: PublicationWork to execute
+        # Args:
+        #     work: PublicationWork to execute
             
-        Returns:
-            Execution results
+        # Returns:
+        #     Execution results
+        # """
+        # managed_session = False
+        # if self._db is None:
+        #     db = SessionLocal()
+        #     managed_session = True
+        # else:
+        #     db = self._db
+            
+        # try:
+        #     repo = self._get_repo(db)
+            
+        #     # Create effect records
+        #     effect_id = f"eff_{uuid.uuid4().hex[:12]}"
+        #     effect = PublicationEffect(
+        #         id=effect_id,
+        #         work_id=work.id,
+        #         tenant=work.tenant,
+        #         kind=work.payload.get("event_type", "unknown"),
+        #         target=work.payload.get("proposal_id", "unknown"),
+        #         preimage={},
+        #         postimage={},
+        #         pre_hash="pending",
+        #         post_hash="pending",
+        #         state="prepared",
+        #         claim_epoch=work.epoch,
+        #         verified_at=None,
+        #         created_at=datetime.now(timezone.utc).replace(tzinfo=None)
+        #     )
+            
+        #     effect = repo.create_effect(effect)
+            
+        #     # Update work status
+        #     work.status = "published"
+        #     work.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        #     db.commit()
+            
+        #     logger.info("DurableWorker: Executed work %s (effect=%s)",
+        #               work.id, effect_id)
+            
+        #     return {
+        #         "work_id": work.id,
+        #         "effect_id": effect_id,
+        #         "status": "published"
+        #     }
+            
+        # finally:
+        #     if managed_session:
+        #         db.close()
+        """DISABLED — W22-12 / PUB04: previously marked work 'published' using
+        placeholder hashes without any Neo4j/FAISS proof. That is a phantom receipt.
+
+        The authoritative publication path is:
+            Journal.claim() → PublicationWorker.run_once()
+
+        DurableWorker may only bridge legacy outbox events into Journal jobs
+        via _create_work_for_event(). It must never issue receipts.
         """
-        managed_session = False
-        if self._db is None:
-            db = SessionLocal()
-            managed_session = True
-        else:
-            db = self._db
-            
-        try:
-            repo = self._get_repo(db)
-            
-            # Create effect records
-            effect_id = f"eff_{uuid.uuid4().hex[:12]}"
-            effect = PublicationEffect(
-                id=effect_id,
-                work_id=work.id,
-                tenant=work.tenant,
-                kind=work.payload.get("event_type", "unknown"),
-                target=work.payload.get("proposal_id", "unknown"),
-                preimage={},
-                postimage={},
-                pre_hash="pending",
-                post_hash="pending",
-                state="prepared",
-                claim_epoch=work.epoch,
-                verified_at=None,
-                created_at=datetime.now(timezone.utc).replace(tzinfo=None)
-            )
-            
-            effect = repo.create_effect(effect)
-            
-            # Update work status
-            work.status = "published"
-            work.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
-            db.commit()
-            
-            logger.info("DurableWorker: Executed work %s (effect=%s)",
-                      work.id, effect_id)
-            
-            return {
-                "work_id": work.id,
-                "effect_id": effect_id,
-                "status": "published"
-            }
-            
-        finally:
-            if managed_session:
-                db.close()
+        raise RuntimeError(
+            "DurableWorker.execute_work is disabled (W22-12). "
+            "Use Journal + PublicationWorker for verified publication."
+        )
     
     def process_all(self, limit: int = 100, worker_id: str = "default") -> Dict[str, Any]:
         """Process all pending events.

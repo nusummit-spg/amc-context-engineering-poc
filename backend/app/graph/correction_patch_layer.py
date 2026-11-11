@@ -22,7 +22,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
-
+import warnings
 from app.monitoring.patch_metrics import get_patch_metrics  # GAP 2: Metrics
 
 logger = logging.getLogger("app.graph.correction_patch_layer")
@@ -597,6 +597,13 @@ class CorrectionPatchLayer:
         Returns:
             bool: True if condition is met or operation succeeded, False otherwise.
         """
+        warnings.warn(
+            "promote_to_permanent performs direct Neo4j writes outside the "
+            "Journal/PublicationWorker pipeline and is deprecated (W21-06). "
+            "Use governance.py + Journal instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         target_patch = self.get_patch_by_id(patch_id)
         if not target_patch:
             logger.error("Cannot promote: Patch %s not found", patch_id)
@@ -728,16 +735,29 @@ class CorrectionPatchLayer:
                 pass
 
     def approve_patch(self, patch_id: str, neo4j_session: Any = None) -> bool:
-        """Alias for promote_to_permanent.
+        # """Alias for promote_to_permanent.
 
-        Args:
-            patch_id (str): Unique identifier of the patch.
-            neo4j_session (Any): The neo4j session.
+        # Args:
+        #     patch_id (str): Unique identifier of the patch.
+        #     neo4j_session (Any): The neo4j session.
 
-        Returns:
-            bool: True if condition is met or operation succeeded, False otherwise.
+        # Returns:
+        #     bool: True if condition is met or operation succeeded, False otherwise.
+        # """
+        # return self.promote_to_permanent(patch_id, neo4j_session=neo4j_session)
+        """DISABLED — W21-06 / PUB04: This was an alias for promote_to_permanent
+        which performs direct Neo4j writes outside the Journal/PublicationWorker pipeline.
+
+        All canonical graph writes must go through:
+            Journal.submit() → PublicationWorker.run_once()
+
+        Use POST /governance/approve/{patch_id} to record approval, then
+        POST /governance/promote/{patch_id} to enqueue the v2 publication job.
         """
-        return self.promote_to_permanent(patch_id, neo4j_session=neo4j_session)
+        raise RuntimeError(
+            "CorrectionPatchLayer.approve_patch is disabled (W21-06). "
+            "Use the governance API + Journal pipeline for all canonical writes."
+        )
 
     def get_active_patches(self, entity_id: Optional[str] = None) -> List[CorrectionPatch]:
         """Returns all non-expired, approved patches, optionally filtered by entity_id.

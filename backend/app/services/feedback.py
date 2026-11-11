@@ -17,8 +17,24 @@ import logging
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from feedback_loop import FeedbackLoopConfig, start_feedback_loop
-from app.adapters.feedback_adapters import AMCDatabaseAdapter, AMCEvidenceAdapter
+# from feedback_loop import FeedbackLoopConfig, start_feedback_loop
+# from app.adapters.feedback_adapters import AMCDatabaseAdapter, AMCEvidenceAdapter
+# from app.core.database import SessionLocal
+# from app.schemas.unified_evaluation_records_table import UnifiedEvaluationRecord
+# from app.services.repair_service import process_unified_record_for_repair_sync
+# from app.core.logging import (
+#     log_step_info,
+#     log_step_warning,
+#     log_step_error,
+#     log_step_debug,
+# )
+
+# logger = logging.getLogger("app.services.feedback")
+
+# _config = FeedbackLoopConfig()
+# _db_adapter = AMCDatabaseAdapter(session_factory=SessionLocal)
+# _evidence_adapter = AMCEvidenceAdapter(session_factory=SessionLocal)
+import os
 from app.core.database import SessionLocal
 from app.schemas.unified_evaluation_records_table import UnifiedEvaluationRecord
 from app.services.repair_service import process_unified_record_for_repair_sync
@@ -31,10 +47,34 @@ from app.core.logging import (
 
 logger = logging.getLogger("app.services.feedback")
 
-_config = FeedbackLoopConfig()
-_db_adapter = AMCDatabaseAdapter(session_factory=SessionLocal)
-_evidence_adapter = AMCEvidenceAdapter(session_factory=SessionLocal)
+# W22-05 FIX: Guard optional feedback_loop package so app startup never
+# crashes when the external evaluator is absent.
+# See remediation/wave2_2/07_FEEDBACK_DECISION.md for the decision record.
+_FEEDBACK_LOOP_AVAILABLE = False
+_config = None
+_db_adapter = None
+_evidence_adapter = None
 
+try:
+    from feedback_loop import FeedbackLoopConfig, start_feedback_loop  # type: ignore[import]
+    from app.adapters.feedback_adapters import AMCDatabaseAdapter, AMCEvidenceAdapter
+    _config = FeedbackLoopConfig()
+    _db_adapter = AMCDatabaseAdapter(session_factory=SessionLocal)
+    _evidence_adapter = AMCEvidenceAdapter(session_factory=SessionLocal)
+    _FEEDBACK_LOOP_AVAILABLE = True
+    logger.info("feedback_loop package loaded; evaluation pipeline active")
+except ImportError as _fb_import_err:
+    logger.warning(
+        "feedback_loop package not available (%s). "
+        "Evaluation endpoints will return 503. "
+        "Set FEEDBACK_LOOP_REQUIRED=true to treat absence as a startup failure.",
+        _fb_import_err,
+    )
+    if os.environ.get("FEEDBACK_LOOP_REQUIRED", "").lower() in ("1", "true", "yes"):
+        raise RuntimeError(
+            "FEEDBACK_LOOP_REQUIRED is set but the feedback_loop package is not "
+            "installed. Install it or unset FEEDBACK_LOOP_REQUIRED."
+        ) from _fb_import_err
 
 def trigger_feedback_loop(
     feedback_id: str,
@@ -70,6 +110,15 @@ def trigger_feedback_loop(
         source,
         feedback_id,
     )
+    # W22-05: return None immediately if the evaluator package is absent
+    if not _FEEDBACK_LOOP_AVAILABLE:
+        log_step_warning(
+            logger,
+            "FEEDBACK_LOOP_UNAVAILABLE",
+            "feedback_loop package not installed; skipping evaluation for response %s",
+            response_id,
+        )
+        return None
 
     try:
         # Verify QueryEvidence exists before starting feedback loop
