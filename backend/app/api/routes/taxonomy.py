@@ -69,6 +69,8 @@ async def get_tree(container: Container = Depends(get_container)) -> TaxonomyTre
     Returns:
         TaxonomyTreeResponse: TaxonomyTreeResponse object containing the operation result.
     """
+    from app.api.routes.legacy_guard31 import reject_legacy_in_verified_mode
+    reject_legacy_in_verified_mode(route="/taxonomy")
     counts = await _doc_counts(container)
     tree = container.taxonomy
     return TaxonomyTreeResponse(
@@ -92,6 +94,8 @@ async def node_documents(
     Returns:
         TaxonomyNodeDocsResponse: TaxonomyNodeDocsResponse object containing the operation result.
     """
+    from app.api.routes.legacy_guard31 import reject_legacy_in_verified_mode
+    reject_legacy_in_verified_mode(route="/taxonomy/node/docs")
     if container.taxonomy.find(path) is None and not any(
         n.path.startswith(path) for n in container.taxonomy.flatten()
     ):

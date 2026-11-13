@@ -79,6 +79,8 @@ async def full_graph(
     Returns:
         GraphResponse: GraphResponse object containing the operation result.
     """
+    from app.api.routes.legacy_guard31 import reject_legacy_in_verified_mode
+    reject_legacy_in_verified_mode(route="/graph")
     raw = await container.graph.full_graph(limit=limit)
     return _to_response(raw)
 
@@ -100,6 +102,8 @@ async def neighborhood(
     Returns:
         GraphResponse: GraphResponse object containing the operation result.
     """
+    from app.api.routes.legacy_guard31 import reject_legacy_in_verified_mode
+    reject_legacy_in_verified_mode(route="/graph/neighborhood")
     res = container.resolver.resolve_surface_form(name)
     canonical = res.entity.name if (res and res.entity) else name
     raw = await container.graph.neighborhood(canonical, depth=depth)
@@ -123,6 +127,8 @@ async def traversal_highlight(
     Returns:
         dict: Dictionary containing result data or status.
     """
+    from app.api.routes.legacy_guard31 import reject_legacy_in_verified_mode
+    reject_legacy_in_verified_mode(route="/graph/traversal")
     intent = await container.orchestrator._intent.classify(query)
     entities = []
     for surface in intent.entities_mentioned:

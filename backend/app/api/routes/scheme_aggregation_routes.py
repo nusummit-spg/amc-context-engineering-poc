@@ -25,7 +25,14 @@ from app.models.scheme_aggregation import (
 
 logger = logging.getLogger(__name__)
 
+def _require_verified_aggregation_boundary():
+    """No receipt-bound source provenance for legacy CSV aggregation routes."""
+    from app.api.routes.legacy_guard31 import reject_legacy_in_verified_mode
+    reject_legacy_in_verified_mode(route="/schemes/aggregation")
+
+
 router = APIRouter(
+    dependencies=[Depends(_require_verified_aggregation_boundary)],
     prefix="/schemes/aggregation",
     tags=["Scheme Aggregation"],
     responses={404: {"description": "Not found"}},

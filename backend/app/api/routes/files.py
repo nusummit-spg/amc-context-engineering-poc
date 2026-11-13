@@ -204,6 +204,8 @@ async def download_file(
     """Force download of the requested document (CSV, PDF, etc.) to user's local disk.
     Requires authenticated user (SEC-01).
     """
+    from app.api.routes.legacy_guard31 import reject_legacy_in_verified_mode
+    reject_legacy_in_verified_mode(route="/files/download")
     return await _serve_file_response(document_id=document_id, force_download=True)
 
 
@@ -218,6 +220,8 @@ async def get_file(
     - PDF files default to inline viewing with page anchoring.
     Requires authenticated user (SEC-01).
     """
+    from app.api.routes.legacy_guard31 import reject_legacy_in_verified_mode
+    reject_legacy_in_verified_mode(route="/files")
     return await _serve_file_response(document_id=document_id, force_download=download)
 
 
@@ -246,7 +250,7 @@ async def _serve_file_response(document_id: str, force_download: bool = False):
         filename=file_path.name,
         headers={
             "Content-Disposition": disposition,
-            "Cache-Control": "public, max-age=3600",
+            "Cache-Control": "private, no-store",
             "Access-Control-Expose-Headers": "Content-Disposition",
         },
     )
