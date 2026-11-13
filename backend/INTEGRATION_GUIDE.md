@@ -375,5 +375,5 @@ For detailed information, refer to:
 ---
 
 **Integration Date**: October 26, 2026
-**Status**: Ready for Deployment
+**Status**: Not deployment-ready for Wave 3.1; exact-SHA integrated tests and runtime/UAT evidence are required.
 **Last Updated**: October 26, 2026

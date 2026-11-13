@@ -226,4 +226,4 @@ See [SETUP_GUIDE.md](./SETUP_GUIDE.md) for detailed production configuration.
 
 **Version:** 2.1  
 **Python:** 3.10+  
-**Status:** Production Ready
+**Status:** Integration candidate only — PostgreSQL, Neo4j, FAISS, browser and UAT acceptance pending. See Wave 3.1 operating contract.
