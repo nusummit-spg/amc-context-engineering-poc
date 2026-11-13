@@ -82,3 +82,12 @@ def test_exact_path_and_method_policy():
     assert not allow("GET", "/api/publication/status/123/other")
     assert not allow("GET", "/api/query%2Ftraditional")
     assert not allow("GET", "//api/query/v2")
+
+def test_legacy_startup_policy(monkeypatch):
+    monkeypatch.setenv("AMC_VERIFIED_SERVING_MODE", "off")
+    assert perimeter.legacy_services_allowed() is True
+    monkeypatch.setenv("AMC_VERIFIED_SERVING_MODE", "enforce")
+    assert perimeter.legacy_services_allowed() is False
+    monkeypatch.setenv("AMC_VERIFIED_SERVING_MODE", "enforc")
+    with pytest.raises(RuntimeError):
+        perimeter.legacy_services_allowed()

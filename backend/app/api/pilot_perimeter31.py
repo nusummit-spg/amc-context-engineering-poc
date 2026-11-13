@@ -39,6 +39,13 @@ def is_pilot_route_allowed(method: str, path: str) -> bool:
         return bool(work_id) and "/" not in work_id and len(work_id) <= 128
     return False
 
+def legacy_services_allowed() -> bool:
+    """Allow background and unverified startup mutations only when mode is off."""
+    mode = os.environ.get("AMC_VERIFIED_SERVING_MODE", "off")
+    if mode not in ("off", "enforce"):
+        raise RuntimeError("Invalid AMC_VERIFIED_SERVING_MODE; refusing application startup")
+    return mode == "off"
+
 
 class VerifiedPilotPerimeter31:
     """ASGI middleware, with exact-mode and exact-route enforcement."""
