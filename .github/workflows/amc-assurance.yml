@@ -144,7 +144,7 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-asyncio
           # Collect first to surface all import errors
-          python -m pytest tests/ --collect-only -q 2>&1 | tail -20 || true
+          python -m pytest tests/ --collect-only -q
           # Run Wave 1.9/2.0 contract suites (deterministic, no external deps)
           python -m pytest tests/test_wave19_durable_publication.py \
             tests/test_wave19_contracts.py \
@@ -200,7 +200,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Run fault injection tests
-         run: |
+        run: |
           cd backend
           pip install -r requirements.txt pytest
           if [ ! -d "tests/fault_injection" ]; then
@@ -212,7 +212,8 @@ jobs:
 
       - name: Check SLO metrics
         run: |
-          echo "Checking SLO metrics (placeholder - requires actual metrics collection)"
+          echo "FB05: live 1h/24h telemetry proof not configured; release BLOCKED"
+          exit 1
           # SLO verification requires real observability infrastructure
           # This job should fail if metrics are not properly instrumented
 
@@ -229,7 +230,8 @@ jobs:
       - name: Canary status
         run: |
           echo "GATE_STATUS=NON_RELEASE"
-          echo "Canary deployment requires a real staging environment."
+          echo "GATE05: real canary not configured; release BLOCKED"
+          exit 1
           echo "This job is intentionally NOT_RUN until a deployment target is configured."
           echo "Release remains BLOCKED until actual canary evidence is produced."
 

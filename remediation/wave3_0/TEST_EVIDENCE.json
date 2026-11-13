@@ -1,0 +1,46 @@
+{
+  "scope": "offline packaged reference and release-control modules; NOT full AMC checkout",
+  "reviewed_git_sha": "2c0415c4d23a3338428c8314c869299aa0ab771f",
+  "date": "2026-11-11",
+  "wave": "3.0",
+  "prior_test_session": {
+    "pytest_summary_passed": 450,
+    "additional_subtests": 16,
+    "tests": 466,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "wave28_to_30_test_session": {
+    "pytest_summary_passed": 171,
+    "tests": 171,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "combined_python_pytest_summary_passed": 621,
+  "combined_additional_subtests_passed": 16,
+  "source_patch_files_changed_from_wave29": [
+    "backend/amc_publication/active_authority28.py",
+    "backend/amc_publication/faiss_reader27.py",
+    "backend/amc_publication/vector_bridge28.py"
+  ],
+  "git_branch_created": false,
+  "git_push_performed": false,
+  "full_repo_checkout_present": false,
+  "full_app_pytest_run": false,
+  "live_postgres_neo4j_faiss_run": false,
+  "staging_browser_run": false,
+  "exact_sha_windows_linux_ci_run": false,
+  "live_canary_and_1h_24h_slo_run": false,
+  "uat_approved": false,
+  "release": "BLOCKED",
+  "source_risks": [
+    "stale authority replay",
+    "FAISS read ending after authority suspension",
+    "vector result filtering after rollback",
+    "broken A05 YAML",
+    "masked pytest collection",
+    "no full-source patch rehearsal before branch creation"
+  ]
+}

@@ -19,6 +19,9 @@ from sqlalchemy.orm import sessionmaker
 
 from .models import PublicationWork, PublicationEffect, GenerationPointer, PublicationReceipt, PublicationFence, utcnow
 from .types import Claim, Conflict, LeaseLost, PublicationError, sha256_json
+# W28_ACTIVE_RECEIPT_AUTHORITY: register sidecar schema and atomic helpers.
+from .active_authority28 import (suspend_before_graph, bind_published,
+    suspend_rollback, restore_after_rollback)
 
 
 class Journal:
@@ -32,8 +35,10 @@ class Journal:
             raise ValueError("tenant, key, proposal_id and approved revision required")
         if not isinstance(payload, dict) or not payload.get("entity") or not payload.get("attribute"):
             raise ValueError("publication payload requires graph entity and attribute")
-        if not isinstance(payload.get("full_vector_snapshot"), list):
-            raise ValueError("full_vector_snapshot must be an explicit COMPLETE corpus list")
+        if not isinstance(payload.get("full_vector_snapshot"), list) or not payload["full_vector_snapshot"]:
+            # W25_NONEMPTY_CORPUS: a graph-only publication cannot produce two
+            # verified effects and must not enter the durable queue.
+            raise ValueError("full_vector_snapshot must be a nonempty COMPLETE corpus list")
         digest = sha256_json({"proposal": proposal_id, "revision": revision, "payload": payload})
         with self.sessions() as session:
             existing = session.scalar(select(PublicationWork).where(
@@ -145,6 +150,8 @@ class Journal:
                 if existing.post_hash != sha256_json(post):
                     raise Conflict("effect retry is not identical to first attempt")
                 return dict(existing.preimage)
+            if kind == "graph":
+                suspend_before_graph(s, claim)
             s.add(PublicationEffect(
                 id="eff_" + uuid4().hex[:24], work_id=claim.work_id, tenant=claim.tenant,
                 kind=kind, target=target, preimage=pre, postimage=post,
@@ -169,11 +176,17 @@ class Journal:
         """CAS under a short DB transaction, never blindly overwrite a new generation."""
         with self.sessions.begin() as s:
             self._require(s, claim)
-            row = s.get(GenerationPointer, (claim.tenant, namespace))
+            # W26_POINTER_ROW_LOCK: serialize concurrent switch attempts on PostgreSQL.
+            # A missing row is protected by PK uniqueness; PostgreSQL must be tested.
+            row = s.get(GenerationPointer, (claim.tenant, namespace),
+                        with_for_update=True, populate_existing=True)
             cur = {"generation_id": row.generation_id, "digest": row.artifact_digest, "epoch": row.epoch} if row else {"generation_id": None, "digest": None, "epoch": 0}
             if cur["generation_id"] == new_id and cur["digest"] == digest:
-                # Replay after crash: already switched to our generation.
-                return
+                # Repeated identical snapshot or a one-step replay after a crash.
+                # A later generation cycle (same digest, newer epoch) is not ours.
+                if cur == expected or cur["epoch"] == expected.get("epoch", -100) + 1:
+                    return
+                raise Conflict("active pointer epoch drift on replay; refusing false ownership")
             if cur != expected:
                 raise Conflict("active generation pointer changed since preimage; refusing stale activation")
             if row:
@@ -198,6 +211,8 @@ class Journal:
                                          generation_id=ptr.generation_id,generation_digest=ptr.artifact_digest,
                                          verified=True)
             s.add(receipt)
+            s.flush()
+            bind_published(s, claim, receipt)
             row.status, row.owner, row.lease_until, row.last_error = "published", None, None, None
             return receipt.id
 
@@ -217,11 +232,12 @@ class Journal:
             row = s.get(PublicationWork, job_id)
             if row is None or row.tenant != tenant or row.status not in ("published", "rollback_pending"):
                 raise Conflict("only a verified published job of this tenant can be rolled back")
+            suspend_rollback(s, tenant=tenant, work_id=job_id)
             row.status = "rollback_pending"
             row.last_error = "ROLLBACK_REQUESTED"
             row.attempts = 0
 
-    def switch_back(self, claim: Claim, *, current_id: str, current_digest: str, before: dict):
+    def switch_back(self, claim: Claim, *, current_id: str, current_digest: str, before: dict, vector_target: str | None = None):
         """CAS-restore the pointer to the previous verified generation.
 
         REC03 / W22-11 fix: when a prior generation exists (before["generation_id"]
@@ -231,21 +247,36 @@ class Journal:
         """
         with self.sessions.begin() as s:
             self._require(s, claim)
+            # W25_ATOMIC_ROLLBACK: effect checkpoint and pointer share one SQL commit.
+            if not vector_target:
+                raise Conflict("vector effect target required for atomic rollback")
+            effect = s.scalar(select(PublicationEffect).where(
+                PublicationEffect.work_id == claim.work_id,
+                PublicationEffect.kind == "vector",
+                PublicationEffect.target == vector_target))
+            if not effect or effect.tenant != claim.tenant or effect.state not in ("verified", "compensated"):
+                raise Conflict("verified vector effect required for pointer rollback")
+            if (effect.postimage.get("generation_id"), effect.postimage.get("digest")) != (current_id, current_digest):
+                raise Conflict("rollback target does not match published vector effect")
+            if (effect.preimage.get("generation_id"), effect.preimage.get("digest")) != (before.get("generation_id"), before.get("digest")):
+                raise Conflict("rollback preimage does not match durable effect")
             row = s.get(GenerationPointer, (claim.tenant, "vector_faiss"))
+            if effect.state == "compensated":
+                # Crash replay: the previous switch committed with this effect.
+                current = (row.generation_id, row.artifact_digest) if row else (None, None)
+                if current != (before.get("generation_id"), before.get("digest")):
+                    raise Conflict("compensated rollback pointer diverged")
+                return
             if not row or row.generation_id != current_id or row.artifact_digest != current_digest:
-                raise Conflict(
-                    "active pointer changed since publication; "
-                    "manual rollback reconciliation required"
-                )
+                raise Conflict("active pointer changed since publication; refusing stale rollback")
             if before.get("generation_id") is None:
-                # First-ever generation: deactivate explicitly by removing the row.
                 s.delete(row)
             else:
-                # Restore to the previous verified generation via CAS.
                 row.generation_id = before["generation_id"]
                 row.artifact_digest = before["digest"]
                 row.epoch += 1
                 row.activated_at = utcnow()
+            effect.state = "compensated"
 
     def compensate(self, claim: Claim, kind: str, target: str):
         with self.sessions.begin() as s:
@@ -263,6 +294,8 @@ class Journal:
             effects = s.scalars(select(PublicationEffect).where(PublicationEffect.work_id == claim.work_id)).all()
             if len(effects) != 2 or any(e.state != "compensated" for e in effects):
                 raise Conflict("cannot mark rolled_back without both compensations")
+            # Keep serving suspended until BOTH graph and vector compensated.
+            restore_after_rollback(s, claim)
             row.status, row.owner, row.lease_until = "rolled_back", None, None
 
     def snapshot(self, job_id: str) -> dict | None:

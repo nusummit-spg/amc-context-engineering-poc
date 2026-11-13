@@ -1,0 +1,15 @@
+{
+  "reviewed_sha": "2c0415c4d23a3338428c8314c869299aa0ab771f",
+  "execution_date": "2026-11-11",
+  "scope": "Wave 2.3 offline evidence and assurance module tests",
+  "command": "PYTHONPATH=. python -m unittest discover -s tools/amc_release/tests -t . -v",
+  "tests_passed": 83,
+  "tests_failed": 0,
+  "tests_errored": 0,
+  "browser": "NOT_RUN",
+  "windows_matrix": "NOT_RUN",
+  "github_actions_wave23": "NOT_RUN",
+  "postgres_neo4j_faiss": "NOT_RUN",
+  "uat": "BLOCKED",
+  "note": "Synthetic test fixtures only. Counts do not include the old 109/112 Wave 1.9/2.0 tests."
+}

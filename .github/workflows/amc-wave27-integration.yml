@@ -1,0 +1,72 @@
+name: AMC Wave 2.7 Explicit Integration Qualification
+# No auto-trigger: costly dependency and Windows suites run only when the owner
+# requests them. A successful lightweight check is NOT a UAT approval.
+on:
+  workflow_dispatch:
+    inputs:
+      run_mode:
+        description: 'lightweight (static only) or integration (backend matrix)'
+        type: choice
+        required: true
+        default: lightweight
+        options: [lightweight, integration]
+      full_backend:
+        description: 'Run broad backend pytest suite after integration tests'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  source-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile Wave 2.7 new sources
+        run: |
+          python -m compileall -q backend/amc_publication/serving27.py backend/amc_publication/faiss_reader27.py backend/amc_publication/reconcile27.py tools/amc_release/app_wiring27.py tools/amc_release/preflight27.py
+      - name: Refuse missing integration markers and report non-release status
+        run: |
+          python -m tools.amc_release.preflight27 --repo .
+          echo 'Source review only. Release is BLOCKED until real-service evidence and UAT approval.'
+  integration-matrix:
+    if: ${{ inputs.run_mode == 'integration' }}
+    needs: source-check
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ['3.11']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install AMC backend dependencies (explicit opt-in; expensive)
+        run: python -m pip install -r backend/requirements.txt
+      - name: Install test runner
+        run: python -m pip install 'pytest>=8,<10' 'pytest-asyncio>=0.24'
+      - name: Execute Wave2.7 plus Publication/Quality verification
+        env:
+          PYTHONPATH: backend
+        run: |
+          python -m tools.amc_release.pytest_matrix27 --repo . --report wave27-matrix.xml
+      - name: Optionally execute full backend tests
+        if: ${{ inputs.full_backend }}
+        env:
+          PYTHONPATH: backend
+        run: python -m pytest backend/tests -v --tb=short --junitxml=wave27-full-backend.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wave27-${{ runner.os }}-${{ github.sha }}
+          path: |
+            wave27-matrix.xml
+            wave27-full-backend.xml
+          if-no-files-found: warn
+          retention-days: 14

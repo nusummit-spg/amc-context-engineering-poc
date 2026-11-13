@@ -299,7 +299,11 @@ async def _run_v2_orchestrator(
 
     trad_result = None
     if mode in ("traditional", "both"):
-        hits = await container.orchestrator.traditional_search(query, top_k=request.top_k)
+        # W28_TRADITIONAL_TENANT_SCOPE: traditional RAG is not exempt from tenant authority.
+        hits = await container.orchestrator.traditional_search(
+            query, top_k=request.top_k,
+            user_id=current_user.username if current_user else None,
+            tenant_id=current_user.tenant_id if current_user else None)
         trad_result = TraditionalResult(
             files=[{
                 "name": h.get("source_filename") or h.get("document_title") or h.get("document_id") or "Document",

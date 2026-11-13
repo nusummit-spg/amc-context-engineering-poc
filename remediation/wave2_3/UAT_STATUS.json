@@ -1,0 +1,36 @@
+{
+  "schema": "amc-uat-status-v2.3",
+  "as_of": "2026-11-11",
+  "branch": "amc-dev",
+  "reviewed_sha": "2c0415c4d23a3338428c8314c869299aa0ab771f",
+  "package_status": "LOCAL_IMPLEMENTATION_TESTED",
+  "release_decision": "BLOCK",
+  "github_write_access": false,
+  "branch_created": false,
+  "pr_created": false,
+  "local_evidence_tests_passed": 83,
+  "real_service_tests": "NOT_RUN",
+  "canary": "NOT_RUN",
+  "live_slo_windows": "NOT_RUN",
+  "frontend_browser_uat": "NOT_RUN",
+  "windows_linux_ci": "NOT_RUN",
+  "uat_signoff": "NOT_RUN",
+  "latest_github_workflows": {
+    "AMC Quality V2 Contract Tests": "success",
+    "AMC Publication V2 Contract Tests": "success",
+    "AMC Assurance Pipeline": "failure_no_jobs"
+  },
+  "required_gates": [
+    "GATE01",
+    "GATE05",
+    "GATE06",
+    "GATE07",
+    "FB05",
+    "FB06",
+    "CI07",
+    "E05",
+    "CI08"
+  ],
+  "source_of_truth": "reviewed GitHub SHA; local code package tests and offline evidence",
+  "production_release_authorized": false
+}

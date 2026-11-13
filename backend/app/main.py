@@ -343,6 +343,10 @@ def create_app() -> FastAPI:
 
     app.include_router(feedback_evaluation.router, prefix="/api")
     app.include_router(audit.router, prefix="/api")
+    # W27_PUBLICATION_STATUS_ROUTER: path already includes /api/publication.
+    # JWT/tenant checks are enforced by the Wave 2.6 status route itself.
+    from amc_publication.status_route import router as publication_status_router
+    app.include_router(publication_status_router)
     
     # Phase 4: Serve React frontend (check mf-context-engine/dist first, then frontend/dist)
     mf_engine_dir = Path(__file__).parent.parent.parent / "mf-context-engine" / "dist"

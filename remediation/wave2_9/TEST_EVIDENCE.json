@@ -1,0 +1,41 @@
+{
+  "execution_environment": "offline container (not full GitHub checkout)",
+  "generated_at_utc": "2026-11-11T16:30:53.340443+00:00",
+  "hard_blocks": [
+    "GitHub push permission missing",
+    "Full AMC checkout unavailable to runtime",
+    "Real PostgreSQL+Neo4j+FAISS integration not run",
+    "Staging authenticated browsers not run",
+    "1h and 24h real telemetry and canary not run",
+    "UAT independent approval not obtained"
+  ],
+  "release": "BLOCKED",
+  "results": {
+    "prior_tests": 450,
+    "prior_waves": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "tests": 466
+    },
+    "summary_reported": "590 main tests passed, plus 16 subtests (pytest summary); counted across two runs",
+    "wave28_plus_29": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "tests": 140
+    },
+    "wave28_tests": 65,
+    "wave29_new_tests": 75
+  },
+  "reviewed_git_commit": "2c0415c4d23a3338428c8314c869299aa0ab771f",
+  "source_validation": {
+    "actual_app_source_patch_applied": false,
+    "frontend_js_syntax": true,
+    "live_neo4j_faiss_postgres": false,
+    "python_compilation": true,
+    "windows_job_run": false,
+    "workflow_yaml_syntax": true
+  },
+  "wave": "2.9"
+}

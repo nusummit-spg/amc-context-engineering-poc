@@ -1,0 +1,118 @@
+name: AMC Wave 2.8 — Manual Release-Candidate Qualification
+# Explicit manual trigger only. Avoid spending Actions minutes on every push.
+on:
+  workflow_dispatch:
+    inputs:
+      run_mode:
+        type: choice
+        required: true
+        default: lightweight
+        options: [lightweight, integration]
+      full_backend:
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  source-preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify installed source and exact commit (release remains blocked)
+        run: |
+          python -m tools.amc_release.release_audit28 --repo . > wave28-source-audit.json
+          python -m compileall -q backend/amc_publication/active_authority28.py backend/amc_publication/serving28.py backend/amc_publication/vector_bridge28.py tools/amc_release/active_cutover28.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wave28-source-${{ github.sha }}
+          path: wave28-source-audit.json
+          if-no-files-found: warn
+          retention-days: 14
+  contract-matrix:
+    if: ${{ inputs.run_mode == 'integration' }}
+    needs: source-preflight
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Explicit full backend dependency installation
+        run: |
+          python -m pip install -r backend/requirements.txt
+          python -m pip install 'pytest>=8,<10' 'alembic>=1.13,<2'
+      - name: Run source-integrated Wave 2.8 tests on this exact commit
+        env:
+          PYTHONPATH: backend
+          AMC_VERIFIED_SERVING_MODE: 'off'
+        run: |
+          python -m pytest -q tools/amc_release/tests_wave28 --junitxml=wave28-contracts.xml
+      - name: Run broad backend suite, if explicitly selected
+        if: ${{ inputs.full_backend }}
+        env:
+          PYTHONPATH: backend
+          AMC_VERIFIED_SERVING_MODE: 'off'
+        run: python -m pytest backend/tests -v --tb=short --junitxml=wave28-full-backend.xml
+      - name: Upload test identities and result evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wave28-matrix-${{ runner.os }}-${{ github.sha }}
+          path: |
+            wave28-contracts.xml
+            wave28-full-backend.xml
+          if-no-files-found: warn
+          retention-days: 14
+  migration-postgres:
+    if: ${{ inputs.run_mode == 'integration' }}
+    needs: source-preflight
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: amc_test
+          POSTGRES_PASSWORD: local_test_only
+          POSTGRES_DB: amc_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd='pg_isready -U amc_test -d amc_test'
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install migration tools
+        run: python -m pip install 'alembic>=1.13,<2' 'SQLAlchemy>=2.0,<3' 'psycopg2-binary>=2.9'
+      - name: Alembic revision DAG and complete PostgreSQL migration rehearsal
+        working-directory: backend
+        env:
+          AMC_MIGRATION_DATABASE_URL: postgresql+psycopg2://amc_test:local_test_only@127.0.0.1:5432/amc_test
+        run: |
+          python scripts/alembic_dag_preflight.py
+          alembic upgrade head
+          alembic current
+          python -c "from sqlalchemy import create_engine,text; import os; e=create_engine(os.environ['AMC_MIGRATION_DATABASE_URL']); c=e.connect(); assert c.execute(text(\"SELECT count(*) FROM information_schema.tables WHERE table_name='publication_active_authority_v28'\")).scalar_one()==1; c.close(); e.dispose()"
+  non-release:
+    needs: [source-preflight, contract-matrix, migration-postgres]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explicit non-release decision
+        run: |
+          echo 'This workflow never approves production or UAT.'
+          echo 'Manual staging Neo4j, FAISS, SLO, browser, rollback, reviewer evidence required.'
+          echo 'RELEASE=BLOCKED'

@@ -1,0 +1,6 @@
+{
+  "schema": "amc-uat-evidence-v2.3",
+  "sha": "2c0415c4d23a3338428c8314c869299aa0ab771f",
+  "evidence": [],
+  "note": "Template only. No actual UAT evidence; expected CLI result is BLOCKED. Do not change evidence statuses to PASS without real artifacts."
+}

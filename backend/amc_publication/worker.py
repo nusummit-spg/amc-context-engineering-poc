@@ -40,7 +40,7 @@ class PublicationWorker:
 
     def __init__(self, journal: Journal, graph: GraphPort, 
                  snapshots: ImmutableSnapshotStore, *, simulation_mode: bool = False,
-                 owner: str = "worker_default", failpoint=None):
+                 owner: str = "worker_default", failpoint=None, serving_probe=None):
         """Initialize PublicationWorker.
         
         Args:
@@ -55,15 +55,19 @@ class PublicationWorker:
         self.graph = graph
         self.snapshots = snapshots
         self.simulation_mode = simulation_mode
-        self.owner = owner
+        self.owner = owner if owner != "worker_default" else "worker_" + uuid.uuid4().hex
         self.failpoint = failpoint
+        self.serving_probe = serving_probe
         
-        # Production worker must have verified FAISS binary for snapshots
+        # Fail closed: a populated directory does not prove a FAISS binary
+        # exists, that the graph is Neo4j, or that the SERVING reader reloaded.
         if not simulation_mode:
-            # Verify that at least one generation has been staged and verified
-            # FAISS binary must exist for production workers
-            if not snapshots.root.exists() or not any(snapshots.root.iterdir()):
-                raise ValueError("FAISS binary verification required for production worker")
+            from .faiss_artifacts import FaissGenerationStore
+            from .graph import Neo4jGraphPort
+            if not isinstance(snapshots, FaissGenerationStore) or not isinstance(graph, Neo4jGraphPort):
+                raise ValueError("production worker requires real FAISS and Neo4j adapters")
+            if not callable(serving_probe):
+                raise ValueError("production worker requires serving reader generation probe")
         
         logger.info("PublicationWorker initialized (simulation_mode=%s)", simulation_mode)
 
@@ -106,6 +110,11 @@ class PublicationWorker:
         
         # Step 2: Stage vector corpus (if provided)
         vector_snapshot = payload.get("full_vector_snapshot", [])
+        # W25_FROZEN_VECTOR_PREIMAGE: freeze before any graph or pointer mutation.
+        # On crash replay, Journal.prepare returns the original durable preimage.
+        frozen_before = self.journal.pointer(tenant, "vector_faiss")
+        if not isinstance(vector_snapshot, list) or not vector_snapshot:
+            raise Conflict("complete nonempty corpus is required before graph mutation")
         if vector_snapshot:
             try:
                 generation = self.snapshots.stage(tenant, vector_snapshot)
@@ -114,9 +123,9 @@ class PublicationWorker:
                 return {"status": "retry_scheduled", "error": str(exc)}
             logger.info("PublicationWorker: staged vector corpus %s", generation.digest)
             # Prepare vector effect with the generation as dict
-            self.journal.prepare(claim, kind="vector", target=entity,
-                                pre={"generation_id": None}, 
-                                post={"generation_id": generation.generation_id, 
+            frozen_before = self.journal.prepare(claim, kind="vector", target=entity,
+                                pre=frozen_before,
+                                post={"generation_id": generation.generation_id,
                                       "digest": generation.digest, "count": generation.count})
             # Failpoint for vector_preimage_committed
             if self.failpoint:
@@ -124,8 +133,11 @@ class PublicationWorker:
         
         # Step 3: Prepare graph effect (durable before write)
         postimage = {"value": corrected_value}
-        self.journal.prepare(claim, kind="graph", target=entity, 
-                            pre=preimage, post=postimage)
+        # W26_DURABLE_GRAPH_PREIMAGE: reuse the FIRST prepared preimage.
+        # On replay do not treat an unrelated writer's new value as permission
+        # to overwrite that writer's update.
+        durable_graph_before = self.journal.prepare(
+            claim, kind="graph", target=entity, pre=preimage, post=postimage)
         # Failpoint for graph_written
         if self.failpoint:
             self.failpoint("graph_written")
@@ -134,7 +146,7 @@ class PublicationWorker:
         if not self.simulation_mode:
             try:
                 self.graph.compare_and_set(
-                    tenant, entity, attribute, preimage, corrected_value, claim.fence
+                    tenant, entity, attribute, durable_graph_before, corrected_value, claim.fence
                 )
             except (Conflict, VerificationFailed) as exc:
                 self.journal.retry(claim, exc)
@@ -142,7 +154,7 @@ class PublicationWorker:
         else:
             # In simulation mode, still update in-memory graph for testing
             self.graph.compare_and_set(
-                tenant, entity, attribute, preimage, corrected_value, claim.fence
+                tenant, entity, attribute, durable_graph_before, corrected_value, claim.fence
             )
        # Failpoint for graph_verified
         if self.failpoint:
@@ -166,14 +178,24 @@ class PublicationWorker:
         
         # Step 6: Switch vector pointer (if corpus staged)
         if vector_snapshot:
-            expected = self.journal.pointer(tenant, "vector_faiss")
+            # Never refresh the expected pointer after graph mutation: doing so
+            # would allow a newer publication to be silently overwritten.
+            expected = frozen_before
             self.journal.switch_pointer(
                 claim, namespace="vector_faiss", expected=expected,
                 new_id=generation.digest, digest=generation.digest
             )
-            # Verify vector effect - observed should match what was passed to prepare()
-            observed_vector = {"generation_id": generation.generation_id, 
+            # Verify immutable bytes and active pointer after the CAS.
+            self.snapshots.verify(generation, tenant)
+            switched = self.journal.pointer(tenant, "vector_faiss")
+            if switched["generation_id"] != generation.generation_id or switched["digest"] != generation.digest:
+                raise VerificationFailed("active generation pointer readback mismatch")
+            observed_vector = {"generation_id": generation.generation_id,
                               "digest": generation.digest, "count": generation.count}
+            # W26_READER_BEFORE_VERIFIED: external serving-reader evidence
+            # must precede the durable vector verification checkpoint.
+            if self.serving_probe is not None and self.serving_probe(tenant, generation.generation_id, generation.digest) is not True:
+                raise VerificationFailed("active serving reader has not loaded verified generation")
             self.journal.verified(claim, kind="vector", target=entity, observed=observed_vector)
             # Failpoint for vector_verified
             if self.failpoint:
@@ -210,13 +232,28 @@ class PublicationWorker:
                 PublicationEffect.target == entity))
         before = dict(_vec.preimage) if _vec and _vec.preimage else {"generation_id": None, "digest": None}
 
-        # CAS from current → prior verified generation (or deactivate if no prior).
-        self.journal.switch_back(
-            claim,
-            current_id=current.get("generation_id") or "",
-            current_digest=current.get("digest") or "",
-            before=before,
-        )
+        # A later publication must never be rolled back by this old job.
+        published = dict(_vec.postimage) if _vec else {}
+        if not published.get("generation_id") or not published.get("digest"):
+            raise Conflict("verified published vector effect required for rollback")
+        if before.get("generation_id"):
+            # Verify old bytes before reactivating the prior generation.
+            self.snapshots.verify_by_digest(before["digest"], tenant)
+        if _vec.state == "compensated":
+            # Replay after crash: vector pointer and compensation were already
+            # committed atomically. Continue graph rollback, not vector reversion.
+            if (current.get("generation_id"), current.get("digest")) != (before.get("generation_id"), before.get("digest")):
+                raise Conflict("compensated rollback pointer diverged")
+        else:
+            if (current.get("generation_id"), current.get("digest")) != (published["generation_id"], published["digest"]):
+                raise Conflict("active pointer no longer identifies this publication")
+            self.journal.switch_back(
+                claim,
+                current_id=published["generation_id"],
+                current_digest=published["digest"],
+                before=before,
+                vector_target=entity,
+            )
         
         # Read stored graph preimage and restore graph value
         with self.journal.sessions() as s:
@@ -228,6 +265,9 @@ class PublicationWorker:
                 preimage = effect.preimage
                 # Read current graph value for CAS expected value
                 current_value = self.graph.read(tenant, entity, attribute)
+                # W26_GRAPH_ROLLBACK_CAS: reject unrelated graph updates since publication.
+                if current_value.get("value") not in (effect.postimage.get("value"), preimage.get("value")):
+                    raise Conflict("graph changed after this publication; manual reconciliation required")
                 # Restore graph to preimage value using current value as expected
                 self.graph.compare_and_set(
                     tenant, entity, attribute, 
@@ -235,6 +275,8 @@ class PublicationWorker:
                     preimage.get("value"),  # Restore to preimage
                     claim.fence
                 )
+                if self.graph.read(tenant, entity, attribute).get("value") != preimage.get("value"):
+                    raise VerificationFailed("graph rollback readback did not restore original value")
         
         # Compensate graph effect
         self.journal.compensate(claim, kind="graph", target=entity)

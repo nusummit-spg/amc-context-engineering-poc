@@ -1,0 +1,180 @@
+# Wave 2.6 evidence/contract matrix; never asserts live acceptance from offline tests.
+# Manual invocation avoids consuming large numbers of GitHub Actions minutes.
+name: AMC Release Verification Matrix
+on:
+  workflow_dispatch:
+    inputs:
+      full_backend:
+        description: 'Run costly Windows/Linux backend contract and regression matrix'
+        type: boolean
+        required: true
+        default: false
+  pull_request:
+    branches: [amc-dev]
+    paths:
+      - 'tools/amc_release/**'
+      - 'backend/amc_publication/**'
+      - 'backend/app/api/routes/governance.py'
+      - 'mf-context-engine/tests/feedback_uat.spec.mjs'
+      - 'mf-context-engine/src/services/api.contract.test.js'
+      - 'mf-context-engine/playwright.uat.config.mjs'
+      - '.github/workflows/amc-release-verification.yml'
+permissions:
+  contents: read
+jobs:
+  release-evidence-contract-matrix:
+    name: CI07 ${{ matrix.os }} evidence contracts
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.11']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install lightweight test runner
+        run: python -m pip install 'pytest>=8,<10' 'PyYAML>=6,<7'
+      - name: Run lightweight Wave 2.6 evidence tests with JUnit
+        shell: bash
+        env:
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: |
+          python -c "from pathlib import Path; Path('reports').mkdir(exist_ok=True)"
+          python -m pytest -q tools/amc_release/tests --ignore=tools/amc_release/tests/test_composition.py \
+            --ignore=tools/amc_release/tests/test_wave25_adapter.py \
+            --ignore=tools/amc_release/tests/test_wave25_publication_flow.py \
+            --ignore=tools/amc_release/tests/test_wave25_atomic_recovery.py \
+            --ignore=tools/amc_release/tests/test_wave25_signer.py \
+            --ignore=tools/amc_release/tests/test_wave26_catalog.py \
+            --ignore=tools/amc_release/tests/test_wave26_journal_sql.py \
+            --ignore=tools/amc_release/tests/test_wave26_catalog_builder.py \
+            --junitxml=reports/amc_release_${{ runner.os }}.xml
+          python -m tools.amc_release.cli junit reports/amc_release_${{ runner.os }}.xml --sha ${{ github.sha }} --os ${{ runner.os }} --suite amc_release > reports/amc_release_${{ runner.os }}.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run frontend API contracts on Linux/Windows (no browser fixture)
+        working-directory: mf-context-engine
+        run: node --test src/services/api.contract.test.js
+      - name: Upload platform-specific evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: amc-release-${{ runner.os }}-${{ github.sha }}
+          path: reports/
+          retention-days: 30
+          if-no-files-found: error
+  backend-contract-matrix:
+    name: CI07 Full ${{ matrix.os }} backend contracts (manual opt-in)
+    if: ${{ inputs.full_backend == true }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install AMC application dependencies
+        run: python -m pip install -r backend/requirements.txt
+      - name: Run publication, source catalog, quality, regression and fault contracts
+        shell: bash
+        env:
+          PYTHONPATH: backend
+        run: |
+          python -c "from pathlib import Path; Path('reports').mkdir(exist_ok=True)"
+          python -m pytest -q \
+            tools/amc_release/tests/test_composition.py \
+            tools/amc_release/tests/test_wave25_adapter.py \
+            tools/amc_release/tests/test_wave25_publication_flow.py \
+            tools/amc_release/tests/test_wave25_atomic_recovery.py \
+            tools/amc_release/tests/test_wave25_signer.py \
+            tools/amc_release/tests/test_wave26_catalog.py \
+            tools/amc_release/tests/test_wave26_journal_sql.py \
+            tools/amc_release/tests/test_wave26_patch.py \
+            tools/amc_release/tests/test_wave26_faiss_windows.py \
+            tools/amc_release/tests/test_wave26_catalog_builder.py \
+            tools/amc_release/tests/test_wave26_status_scope.py \
+            backend/tests/test_wave19_contracts.py \
+            backend/tests/test_wave19_durable_publication.py \
+            backend/tests/test_wave19_integrity_feedback_migration.py \
+            backend/tests/test_wave20_audit.py \
+            backend/tests/test_wave20_independent.py \
+            backend/tests/test_wave20_ingestion.py \
+            backend/tests/test_wave20_wave19_contract.py \
+            backend/tests/regression/ backend/tests/fault_injection/ \
+            --junitxml=reports/backend_contracts_${{ runner.os }}.xml
+          python -m tools.amc_release.cli junit reports/backend_contracts_${{ runner.os }}.xml --sha ${{ github.sha }} --os ${{ runner.os }} --suite backend_contracts > reports/backend_contracts_${{ runner.os }}.json
+      - name: Upload full platform contract report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: amc-backend-contracts-${{ runner.os }}-${{ github.sha }}
+          path: reports/
+          retention-days: 30
+          if-no-files-found: error
+  browser-uat-preconditions:
+    name: FB06 Playwright staging UAT (only with explicit fixture)
+    runs-on: ubuntu-latest
+    # If not configured, this job is SKIPPED and UAT evidence remains BLOCKED.
+    if: ${{ vars.AMC_UAT_FEEDBACK_URL != '' && vars.AMC_UAT_LOCKED_FEEDBACK_URL != '' && vars.AMC_UAT_ALLOWED_HOST != '' }}
+    env:
+      AMC_UAT_FEEDBACK_URL: ${{ vars.AMC_UAT_FEEDBACK_URL }}
+      AMC_UAT_LOCKED_FEEDBACK_URL: ${{ vars.AMC_UAT_LOCKED_FEEDBACK_URL }}
+      AMC_UAT_ALLOWED_HOST: ${{ vars.AMC_UAT_ALLOWED_HOST }}
+      AMC_UAT_STORAGE_STATE_B64: ${{ secrets.AMC_UAT_STORAGE_STATE_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mf-context-engine/package-lock.json
+      - name: Install frontend dependencies
+        working-directory: mf-context-engine
+        run: npm ci
+      - name: Prepare ephemeral staging session
+        shell: bash
+        run: |
+          python - <<'PY'
+          import base64, os
+          from pathlib import Path
+          raw = os.environ.get('AMC_UAT_STORAGE_STATE_B64') or ''
+          if not raw:
+              raise SystemExit('AMC_UAT_STORAGE_STATE_B64 required for real browser integration')
+          dest = Path('mf-context-engine/.uat-session.json')
+          dest.write_bytes(base64.b64decode(raw, validate=True))
+          dest.chmod(0o600)
+          PY
+      - name: Install supported browsers
+        working-directory: mf-context-engine
+        run: npx playwright install --with-deps chromium firefox
+      - name: Run browser UAT against staging (no mocks)
+        working-directory: mf-context-engine
+        env:
+          AMC_UAT_STORAGE_STATE: .uat-session.json
+        run: npx playwright test --config=playwright.uat.config.mjs
+      - name: Remove ephemeral authentication session
+        if: always()
+        run: rm -f mf-context-engine/.uat-session.json
+      - name: Upload browser evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: amc-browser-uat-${{ github.sha }}
+          path: |
+            mf-context-engine/reports/
+            mf-context-engine/test-results/
+          retention-days: 7
+          if-no-files-found: warn
