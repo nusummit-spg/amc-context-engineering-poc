@@ -258,6 +258,9 @@ def create_app() -> FastAPI:
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(ValidationMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
+    # Fail-closed for all unreviewed HTTP routes in enforced pilot mode.
+    from app.api.pilot_perimeter31 import VerifiedPilotPerimeter31
+    app.add_middleware(VerifiedPilotPerimeter31)
     app.add_exception_handler(AppError, app_error_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
 
