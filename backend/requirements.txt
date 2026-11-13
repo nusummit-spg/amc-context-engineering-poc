@@ -92,3 +92,6 @@ truststore==0.10.4
 
 fsspec==2026.6.0
 alembic>=1.13
+
+# Verified publication journal (DATABASE_URL=postgresql+psycopg://...)
+psycopg[binary]>=3.2,<4

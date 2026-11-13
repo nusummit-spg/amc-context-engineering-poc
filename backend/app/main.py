@@ -68,9 +68,13 @@ async def lifespan(app: FastAPI):
         log_dir=settings.log_dir,
     )
 
-    # Initialize SQLite database
-    # Creates the tables if they don't exist, and applies any schema migrations
-    init_db()
+    # Verified pilot never creates/auto-migrates production schema on startup.
+    if allow_legacy:
+        init_db()
+    else:
+        from app.core.database import engine
+        from app.core.db_runtime31 import verify_migrated_postgresql
+        verify_migrated_postgresql(engine)
 
     container = deps.init_container()
     # Fast check if Neo4j is available before applying schema/rules

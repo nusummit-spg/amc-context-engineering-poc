@@ -4,56 +4,55 @@
 from pathlib import Path
 
 from sqlalchemy import create_engine, event
+from sqlalchemy.engine import make_url
+from app.core.db_runtime31 import resolve_database_url
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent  # backend/
-DATABASE_URL = f"sqlite:///{BASE_DIR / 'data.db'}"
+DATABASE_URL = resolve_database_url(BASE_DIR)
 
 
 Base = declarative_base()
 
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={
-        "check_same_thread": False,
-        "timeout": 30.0,  # 30-second lock timeout
-    },
-    pool_pre_ping=True,  # Verify connection health before use
-)
+_engine_options = {"pool_pre_ping": True}
+if make_url(DATABASE_URL).get_backend_name() == "sqlite":
+    _engine_options["connect_args"] = {"check_same_thread": False, "timeout": 30.0}
+engine = create_engine(DATABASE_URL, **_engine_options)
 
 
-@event.listens_for(engine, "connect")
-def _enable_sqlite_fk(dbapi_connection, connection_record):
-    """SQLite ignores FOREIGN KEY constraints unless this is set per-connection.
-    Also enables WAL mode for better concurrent access.
+if engine.dialect.name == "sqlite":
+    @event.listens_for(engine, "connect")
+    def _enable_sqlite_fk(dbapi_connection, connection_record):
+        """SQLite ignores FOREIGN KEY constraints unless this is set per-connection.
+        Also enables WAL mode for better concurrent access.
 
-    Args:
-        dbapi_connection: The dbapi connection.
-        connection_record: The connection record.
-    """
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.execute("PRAGMA busy_timeout=30000")  # 30-second busy timeout
-    cursor.close()
-
-
-@event.listens_for(engine, "checkout")
-def _verify_fk_on_checkout(dbapi_connection, connection_record, connection_proxy):
-    """Verify FK enforcement is still active on pooled connections.
-
-    Args:
-        dbapi_connection: The dbapi connection.
-        connection_record: The connection record.
-        connection_proxy: The connection proxy.
-    """
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys")
-    result = cursor.fetchone()
-    if result[0] != 1:
+        Args:
+            dbapi_connection: The dbapi connection.
+            connection_record: The connection record.
+        """
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+        cursor.execute("PRAGMA busy_timeout=30000")  # 30-second busy timeout
+        cursor.close()
+
+
+    @event.listens_for(engine, "checkout")
+    def _verify_fk_on_checkout(dbapi_connection, connection_record, connection_proxy):
+        """Verify FK enforcement is still active on pooled connections.
+
+        Args:
+            dbapi_connection: The dbapi connection.
+            connection_record: The connection record.
+            connection_proxy: The connection proxy.
+        """
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys")
+        result = cursor.fetchone()
+        if result[0] != 1:
+            cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
@@ -78,6 +77,9 @@ def init_db():
     from app import schemas
 
     Base.metadata.create_all(bind=engine)
+    if engine.dialect.name != "sqlite":
+        # SQLite-only ownership/feedback/population scripts must not run on PG.
+        return
     try:
         from scripts.migrate_user_ownership import run_migration
         run_migration(BASE_DIR / "data.db")
