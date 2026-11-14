@@ -1,0 +1,28 @@
+{
+  "date": "2026-11-11",
+  "evidence": {
+    "local_combined_junit_sha256": "2c82a4891828588ec9e859d413125a36e83e466ada66c23a7851162f84d64696",
+    "local_wave24_junit_sha256": "e97dc51a729ae4792793f031d9ecd4212ed3fab25587ffffaeb3b48e09a33c3d",
+    "scope": "cumulative overlay plus historical standalone ZIPs (not current checkout)"
+  },
+  "local_source_file_count": 39,
+  "local_source_manifest_sha256": "4f345532971dc3ef24bee5a31dc9fdf12cf2596b4476dcd33fabe6c0d7f9a558",
+  "reason": "GitHub read only and real staging/live CI UAT evidence missing",
+  "release_gate": "BLOCK",
+  "reviewed_upstream_sha": "2c0415c4d23a3338428c8314c869299aa0ab771f",
+  "status": "LOCAL_TESTED_NOT_UAT_READY",
+  "tests": {
+    "combined_pytest": 246,
+    "full_git_checkout_backend": "NOT_RUN",
+    "github_windows_linux": "NOT_RUN",
+    "historical_wave19_wave20_tests": 112,
+    "live_postgres_neo4j_faiss": "NOT_RUN",
+    "local_python": "3.13.5",
+    "node_api_against_real_repo": "NOT_RUN",
+    "node_js_syntax": "PASS_ONLY",
+    "playwright_browser": "NOT_RUN",
+    "subtests_pytest": 16,
+    "wave24_cumulative_pytest": 134
+  },
+  "upstream_branch": "amc-dev"
+}

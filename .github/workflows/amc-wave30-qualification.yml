@@ -1,0 +1,61 @@
+# Opt-in only: do not consume Actions minutes for routine pushes.
+name: AMC Wave 3.0 Local Branch Qualification
+on:
+  workflow_dispatch:
+    inputs:
+      full_backend:
+        description: 'Run full application tests (costly, requires services)'
+        type: boolean
+        default: false
+        required: true
+jobs:
+  portable-unit:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact SHA checkout
+        shell: python
+        run: |
+          import os, subprocess
+          assert subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip() == os.environ['GITHUB_SHA']
+      - name: Install deterministic test dependencies
+        run: python -m pip install 'pytest>=8,<10' 'pytest-asyncio>=0.24,<2' 'SQLAlchemy>=2,<3' 'alembic>=1.13,<2' 'fastapi>=0.115' 'numpy>=2,<3'
+      - name: Run release integration and race regressions
+        env:
+          PYTHONPATH: backend
+        run: python -m pytest -q tools/amc_release/tests_wave28 tools/amc_release/tests_wave29 tools/amc_release/tests_wave30 --junitxml=wave30-${{ matrix.os }}.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wave30-${{ matrix.os }}
+          path: wave30-${{ matrix.os }}.xml
+          if-no-files-found: error
+  full-backend:
+    if: inputs.full_backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+      - name: Collect full suite (not masked)
+        working-directory: backend
+        run: python -m pytest tests/ --collect-only -q
+      - name: Run full suite (do not claim live acceptance)
+        working-directory: backend
+        run: python -m pytest tests/ -q --junitxml=../wave30-full-backend.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wave30-full-backend
+          path: wave30-full-backend.xml
+          if-no-files-found: error

@@ -421,7 +421,10 @@ def approve_correction(
     patch = patch_layer.get_patch_by_id(patch_id)
     if patch:
         # B01: Transition to APPROVED state only
+        # W31_LOCAL_FIX: Wave 2.5 patch dropped this import; it is still required below.
         from app.graph.correction_patch_layer import PatchStatus
+        # W25_REVIEWER_PERSISTENCE: preserve approver after to_dict().
+        patch.provenance = {**(patch.provenance or {}), "approver_username": current_user.username}
         patch.status = PatchStatus.APPROVED
         patch.approved_at = datetime.now(timezone.utc).isoformat() + "Z"
         patch.approved_by = current_user.username
@@ -575,7 +578,8 @@ def batch_approve_corrections(
                 patch_key = patch_layer._make_key(patch.entity_id, patch.attribute)
                 from app.graph.correction_patch_layer import PatchStatus
                 
-                # Update status to APPROVED
+                # W25_REVIEWER_PERSISTENCE_BATCH: serialize approver identity.
+                patch.provenance = {**(patch.provenance or {}), "approver_username": current_user.username}
                 patch.status = PatchStatus.APPROVED
                 patch.approved_at = datetime.now(timezone.utc).isoformat() + "Z"
                 patch.approved_by = current_user.username
@@ -795,6 +799,14 @@ async def promote_approved_proposals(
         Dict[str, Any]: Dictionary containing result data or status.
     """
     require_approval_role(current_user)
+    # W31_DISABLE_LEGACY_DIRECT_PROMOTE: direct Neo4j promotion has no v2
+    # durable journal or active-receipt binding and must be unreachable.
+    from amc_publication.vector_bridge28 import verified_mode
+    if verified_mode() == 'enforce':
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Legacy direct promotion disabled; use reviewed v2 publication',
+        )
     service = PromotionService(db=db)
     try:
         result = await service.apply_approved_proposals(batch_id=batch_id, proposal_id=proposal_id, db=db)
@@ -871,47 +883,27 @@ async def promote_patch_direct(
                 detail="Four-eyes policy violation: Promoter cannot be the original proposer"
             )
 
-    # PUB01: Enqueue a v2 publication job instead of mutating the graph directly.
-    # The governance endpoint must NOT write to Neo4j; it creates a Journal
-    # work record and returns 202 with the work_id. PublicationWorker will
-    # claim and execute it with verified graph/vector effects.
+    # W25_TRUSTED_APPROVAL_ADAPTER: existing journal + reviewed signed corpus.
+    # No request-time DDL, anonymous tenant, fabricated approval or empty corpus.
     try:
-        from amc_publication.integration import queue_verified_approval
-        from amc_publication.models import Base as PubBase
-        from sqlalchemy import create_engine
-        from sqlalchemy.orm import sessionmaker
-        from app.core.database import DATABASE_URL
-
-        # Use the same database as the app
-        pub_engine = create_engine(DATABASE_URL, connect_args={"timeout": 10})
-        PubBase.metadata.create_all(pub_engine)
-        pub_sessions = sessionmaker(bind=pub_engine, expire_on_commit=False)
-
-        work_id = queue_verified_approval(
-            sessions=pub_sessions,
-            tenant=getattr(patch, 'tenant_id', 'default'),
-            proposal_id=patch_id,
-            entity_id=patch.entity_id,
-            attribute=patch.attribute,
-            corrected_value=str(patch.corrected_value),
-            full_vector_snapshot=[],
-            approved_revision=getattr(patch, 'version', 1),
-        )
-        pub_engine.dispose()
+        from app.core.database import SessionLocal
+        from amc_publication.approval_catalog26 import queue_from_environment_26 as queue_from_environment
+        work_id = queue_from_environment(sessions=SessionLocal, patch=patch, actor=current_user)
     except Exception as exc:
-        logger.error("Failed to enqueue publication job: %s", exc)
+        logger.error("Publication prerequisites failed for %s: %s", patch_id, exc)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to enqueue publication job: {exc}",
-        )
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Verified publication prerequisites unavailable; no job queued",
+        ) from exc
 
     log_governance_audit("PROMOTE_QUEUED", patch_id, current_user.username,
                          {"work_id": work_id})
 
-    # Return 202 Accepted — the worker will verify effects before publishing.
-    raise HTTPException(
+    # W26_ACCEPTED_JSON: 202 is a successful HTTP response, never an exception.
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
         status_code=status.HTTP_202_ACCEPTED,
-        detail={
+        content={
             "message": "Publication intent queued. Worker will verify graph/vector effects.",
             "work_id": work_id,
             "status_url": f"/api/publication/status/{work_id}",

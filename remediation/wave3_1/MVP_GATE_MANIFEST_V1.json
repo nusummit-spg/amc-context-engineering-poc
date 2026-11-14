@@ -1,0 +1,292 @@
+{
+  "schema_version": "amc-wave31-mvp-gate-manifest-v1",
+  "description": "Execution planning manifest, not observed test results or release authorization",
+  "repository": "nusummit-spg/amc-context-engineering-poc",
+  "branch": "feature/amc-wave31-integration",
+  "prepared_from_sha": "75680052d3660645dd9e929b7c61ab234ed06d28",
+  "prepared_on": "2026-11-14",
+  "review_pr": 13,
+  "target_branch": "amc-dev",
+  "release_status": "BLOCKED",
+  "pilot_scope": "read-only authenticated verified publication Q&A with operator CLI publication, no self-service mutation",
+  "required_environment": {
+    "python": "3.11",
+    "services": [
+      "disposable PostgreSQL 16",
+      "disposable Neo4j 5.24",
+      "actual CPU FAISS with synthetic signed corpus"
+    ],
+    "frontend": "Node/npm/Vite local test",
+    "test_data": "synthetic tenants and documents only",
+    "no_github_actions": true
+  },
+  "decision_states": [
+    "PASS",
+    "FAIL",
+    "BLOCKED_DEPENDENCY",
+    "NOT_RUN"
+  ],
+  "important_limitations": [
+    "Original ZIP offline test pass is not an integrated HEAD test",
+    "Actual PostgreSQL/Neo4j/FAISS may not be available in this chat",
+    "Do not mark any gate PASS without observed evidence",
+    "Source-only evidence cannot authorize deployment",
+    "Final release requires independent product/security/engineering sign-off"
+  ],
+  "artifact_index": [
+    "MVP_REMAINING_ACTION_PLAN_V1.md",
+    "MVP_TECHNICAL_DESIGN_SPEC_V1.md",
+    "MVP_AGENT_EXECUTION_INSTRUCTIONS_V1.md",
+    "TEAM_LOCAL_VALIDATION_HANDOFF.md",
+    "MVP_RECOVERY_AND_OPERATING_CONTRACT.md"
+  ],
+  "gates": [
+    {
+      "id": "G0",
+      "priority": "P0",
+      "work_packages": [
+        "WP00"
+      ],
+      "depends_on": [],
+      "title": "Pilot scope and synthetic fixtures",
+      "proof": [
+        "signed read-only pilot scope decision",
+        "two tenant fixture manifest and hashes",
+        "role and expected citation matrix"
+      ],
+      "tests": [
+        "manual scope and fixture review"
+      ],
+      "failure": "No approved product scope or unknown provenance",
+      "observed_status": "NOT_VERIFIED_ON_CURRENT_HEAD",
+      "release_pass": false
+    },
+    {
+      "id": "G1",
+      "priority": "P0",
+      "work_packages": [
+        "WP01"
+      ],
+      "depends_on": [
+        "G0"
+      ],
+      "title": "Exact SHA Python and frontend source qualification",
+      "proof": [
+        "Python 3.11 compile and imports",
+        "backend collection and targeted+full non-e2e JUnit",
+        "frontend npm test and production build",
+        "Windows symlink failure classification"
+      ],
+      "tests": [
+        "python -m tools.amc_release.collect_local_evidence31 --repo . --full-backend --frontend",
+        "python -m tools.amc_release.qualification31 --repo . --out ../mvp-qualification/source-audit.json"
+      ],
+      "failure": "Stale SHA, import/compile error, skipped P0, missing JUnit",
+      "observed_status": "NOT_VERIFIED_ON_CURRENT_HEAD",
+      "release_pass": false
+    },
+    {
+      "id": "G2",
+      "priority": "P0",
+      "work_packages": [
+        "WP02"
+      ],
+      "depends_on": [
+        "G1"
+      ],
+      "title": "Disposable PostgreSQL 001-014 and runtime ORM proof",
+      "proof": [
+        "fresh PG migrations and exact 014",
+        "app engine and migration URL identity",
+        "DDL constraints and second upgrade idempotence",
+        "off-mode SQLite separate regression"
+      ],
+      "tests": [
+        "cd backend && python scripts/alembic_dag_preflight.py",
+        "cd backend && python -m alembic -c alembic.ini upgrade head",
+        "cd backend && python -m alembic -c alembic.ini current"
+      ],
+      "failure": "Wrong DB, schema drift, SQLite enforce mode, missing constraints",
+      "observed_status": "NOT_VERIFIED_ON_CURRENT_HEAD",
+      "release_pass": false
+    },
+    {
+      "id": "G3",
+      "priority": "P0",
+      "work_packages": [
+        "WP03"
+      ],
+      "depends_on": [
+        "G2"
+      ],
+      "title": "True PostgreSQL publication race and crash replay",
+      "proof": [
+        "two concurrent DB sessions first-claim race",
+        "same-work idempotence",
+        "cross-tenant independence",
+        "stale publisher / rollback race",
+        "durable scope and receipt state traces"
+      ],
+      "tests": [
+        "execute test harness against real disposable PostgreSQL not SQLite/mock"
+      ],
+      "failure": "Double owner, stale worker accepted, unowned mutation or unrecoverable held scope",
+      "observed_status": "NOT_VERIFIED_ON_CURRENT_HEAD",
+      "release_pass": false
+    },
+    {
+      "id": "G4",
+      "priority": "P0",
+      "work_packages": [
+        "WP04"
+      ],
+      "depends_on": [
+        "G3"
+      ],
+      "title": "Neo4j graph effect readback and compensation",
+      "proof": [
+        "synthetic graph readback before and after",
+        "durable effect ledger reconciliation",
+        "partial failure restoration or explicit operator block",
+        "enforce-startup no unreviewed writes"
+      ],
+      "tests": [
+        "actual Neo4j worker fault-injection and readback"
+      ],
+      "failure": "Graph drift or cross-tenant effects",
+      "observed_status": "NOT_VERIFIED_ON_CURRENT_HEAD",
+      "release_pass": false
+    },
+    {
+      "id": "G5",
+      "priority": "P0",
+      "work_packages": [
+        "WP05"
+      ],
+      "depends_on": [
+        "G4"
+      ],
+      "title": "Signed FAISS receipt-bound serving and rollback",
+      "proof": [
+        "actual FAISS binary load / signed index digest",
+        "active generation A and B",
+        "tamper/missing/suspended receipt denial",
+        "tenant and stale cache denial",
+        "revocation during SSE"
+      ],
+      "tests": [
+        "real CPU FAISS synthetic signed-index test"
+      ],
+      "failure": "Unsigned or stale content served, citation mismatch",
+      "observed_status": "NOT_VERIFIED_ON_CURRENT_HEAD",
+      "release_pass": false
+    },
+    {
+      "id": "G6",
+      "priority": "P0",
+      "work_packages": [
+        "WP06"
+      ],
+      "depends_on": [
+        "G5"
+      ],
+      "title": "Authenticated v2 HTTP and SSE access control",
+      "proof": [
+        "positive tenant Q&A with authorized citations",
+        "negative auth and cross-tenant request matrix",
+        "legacy raw and mutation routes refused",
+        "SSE no post-revocation leakage",
+        "off-mode separate regression"
+      ],
+      "tests": [
+        "FastAPI real app lifespan + HTTPX/TestClient against disposable services"
+      ],
+      "failure": "Any auth/tenant leak, legacy fallback or stale response",
+      "observed_status": "NOT_VERIFIED_ON_CURRENT_HEAD",
+      "release_pass": false
+    },
+    {
+      "id": "G7",
+      "priority": "P0",
+      "work_packages": [
+        "WP07"
+      ],
+      "depends_on": [
+        "G1",
+        "G6"
+      ],
+      "title": "Browser and frontend pilot UX",
+      "proof": [
+        "frontend build and Node tests",
+        "real browser Q&A auth + citations",
+        "suspended/no-index/error UX",
+        "mobile and keyboard smoke",
+        "no broken disabled file links"
+      ],
+      "tests": [
+        "cd mf-context-engine && npm ci && npm test && npm run build",
+        "real browser smoke against local API"
+      ],
+      "failure": "Critical pilot journey broken or misleading provenance",
+      "observed_status": "NOT_VERIFIED_ON_CURRENT_HEAD",
+      "release_pass": false
+    },
+    {
+      "id": "G8",
+      "priority": "P1",
+      "work_packages": [
+        "WP08"
+      ],
+      "depends_on": [
+        "G6",
+        "G7"
+      ],
+      "title": "Operational recovery, observability and privacy",
+      "proof": [
+        "restart/backup/restore in disposable providers",
+        "rollback and fault drill",
+        "measure actual latency and memory",
+        "secrets redaction/retention checks",
+        "staging canary/SLO only when actual staging exists"
+      ],
+      "tests": [
+        "local failure-injection and restart; staging observation separate"
+      ],
+      "failure": "No recovery path, sensitive artifacts or invented SLO",
+      "observed_status": "NOT_VERIFIED_ON_CURRENT_HEAD",
+      "release_pass": false
+    },
+    {
+      "id": "G9",
+      "priority": "P0",
+      "work_packages": [
+        "WP09"
+      ],
+      "depends_on": [
+        "G0",
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "G5",
+        "G6",
+        "G7",
+        "G8"
+      ],
+      "title": "Independent MVP release and UAT decision",
+      "proof": [
+        "clean final Git SHA",
+        "actual code/binary test evidence and hashes",
+        "independent security/engineering reviewer",
+        "product owner pilot scope acceptance",
+        "staging canary and rollback evidence where required"
+      ],
+      "tests": [
+        "python -m tools.amc_release.mvp_evidence_gate31 --checkout . --evidence-dir ../mvp-qualification --out ../mvp-qualification/mvp-gate.json"
+      ],
+      "failure": "Any missing actual evidence, blocked staging, absent independent sign-off",
+      "observed_status": "NOT_VERIFIED_ON_CURRENT_HEAD",
+      "release_pass": false
+    }
+  ]
+}

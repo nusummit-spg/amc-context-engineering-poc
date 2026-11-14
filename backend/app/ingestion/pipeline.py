@@ -85,6 +85,11 @@ class IngestionPipeline:
         Returns:
             Document: Resulting Document instance.
         """
+        # W29_PIPELINE_EARLY_BLOCK: before parsing OR any Neo4j side effect.
+        from amc_publication.vector_bridge28 import verified_mode
+        from amc_publication.serving27 import ServingDenied
+        if verified_mode() == 'enforce':
+            raise ServingDenied('legacy ingest pipeline not permitted in verified mode; stage in quarantine')
         path = Path(path)
         logger.info("Ingesting %s (corpus_version=%s)", path.name, self._corpus_version)
 

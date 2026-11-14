@@ -1,0 +1,40 @@
+{
+  "combined_errors": 0,
+  "combined_failed": 0,
+  "combined_passed": 305,
+  "combined_pytest_subtests_passed": 16,
+  "combined_skipped": 0,
+  "date": "2026-11-11",
+  "evidence": {
+    "local_combined_junit_sha256": "8c01c543f6e9b49d761c6c54fb0e6ed484b7d17be2ef6743bc21955552288311",
+    "local_release_control_junit_sha256": "d808b28a82be0544a880dc8ef094ef85b004b5fe939a980c5c26e36061b2a255"
+  },
+  "github_permissions": {
+    "pull": true,
+    "push": false
+  },
+  "historical_note": "Original Wave 1.9/2.0 packages are separately extracted; no complete recent GitHub backend integration was executed.",
+  "historical_wave19_20_passed": 112,
+  "not_run": [
+    "Full latest AMC backend regression",
+    "Patching full latest AMC source",
+    "GitHub Actions on a new commit",
+    "Windows execution",
+    "Live PostgreSQL multi-worker",
+    "Real Neo4j CAS and readback",
+    "Real FAISS binaries and serving-reader reload",
+    "Authenticated Chromium/Firefox staging UAT",
+    "Live 30-minute canary/rollback",
+    "Measured real 1h/24h SLO windows",
+    "Immutable external ledger anchor",
+    "Independent two-person UAT signoff"
+  ],
+  "release_gate": "BLOCK",
+  "reviewed_branch": "amc-dev",
+  "reviewed_repo": "nusummit-spg/amc-context-engineering-poc",
+  "reviewed_sha": "2c0415c4d23a3338428c8314c869299aa0ab771f",
+  "source_inspection": "2026-11-11 amc-dev GitHub file source + blob SHA anchor counts checked. No real checkout patch run.",
+  "test_environment": "Python 3.13.5 on Linux; SQLite + in-memory graph + JSON immutable snapshots + synthetic signed inputs.",
+  "wave23_24_25_release_controls_passed": 193,
+  "wave25_new_tests_local": 59
+}

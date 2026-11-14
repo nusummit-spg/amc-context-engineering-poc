@@ -1,0 +1,11 @@
+Gate,Scope,Offline_Status,Live_Status,Required_Evidence,Responsible_Owner
+GATE01,Integration composition,LOCAL_TESTED,NOT_RUN,"Postgres worker fence; Neo4j CAS; FAISS loaded-reader; durable receipt and Feedback",Engineering
+GATE05,Canary and rollback,LOCAL_TESTED,NOT_RUN,"30min staged canary; before/published/after readbacks; recovery receipt",Engineering Ops
+GATE06,Evidence ledger,LOCAL_TESTED,NOT_RUN,"Externally anchored SHA256 chain and raw reports",Security
+GATE07,Go/no-go,LOCAL_TESTED,NOT_RUN,"Two independent reviewers and externally authenticated UAT decision",Engineering Lead and QA
+FB05,SLO metrics windows,LOCAL_TESTED,NOT_RUN,"Real 60m/1440m 5min coverage and approved thresholds",Observability
+FB06,Frontend integration,JS_SYNTAX_CHECK,NOT_RUN,"Node 7 API contracts against repo and Chromium/Firefox staging five scenarios",Frontend QA
+CI07,Windows Linux matrix,WORKFLOW_SOURCE_VALIDATED,NOT_RUN,"Actual full_backend=true matrix on one SHA",CI Owner
+E05,Exact SHA CI,LOCAL_TESTED,NOT_RUN,"4 required workflows same SHA and completed jobs with zero skipped",CI Owner
+CI08,Test count reconciliation,LOCAL_TESTED,NOT_RUN,"4 JUnit artifacts and equal per-suite test identity digests",QA Automation
+A05,Assurance workflow fix,OFFLINE_PATCH_TESTED,PENDING_APPLY,"No jobless runs; no suppressed collection; no fake SLO/canary PASS",CI Owner

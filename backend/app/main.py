@@ -55,6 +55,9 @@ async def lifespan(app: FastAPI):
         Yielded results or items.
     """
     settings = get_settings()
+    # Legacy background graph/FAISS mutation is not receipt-bound.
+    from app.api.pilot_perimeter31 import legacy_services_allowed
+    allow_legacy = legacy_services_allowed()
     setup_logging(
         level=settings.log_level,
         log_format=settings.log_format,
@@ -65,9 +68,13 @@ async def lifespan(app: FastAPI):
         log_dir=settings.log_dir,
     )
 
-    # Initialize SQLite database
-    # Creates the tables if they don't exist, and applies any schema migrations
-    init_db()
+    # Verified pilot never creates/auto-migrates production schema on startup.
+    if allow_legacy:
+        init_db()
+    else:
+        from app.core.database import engine
+        from app.core.db_runtime31 import verify_migrated_postgresql
+        verify_migrated_postgresql(engine)
 
     container = deps.init_container()
     # Fast check if Neo4j is available before applying schema/rules
@@ -80,7 +87,7 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Neo4j not reachable at startup (%s) - running in vector/FAISS fallback mode", exc)
 
-    if neo4j_up:
+    if neo4j_up and allow_legacy:
         try:
             await apply_schema(container.graph)
         except Exception as exc:
@@ -109,22 +116,24 @@ async def lifespan(app: FastAPI):
     # the /docs health check (which never touches the store) reports
     # "healthy" long before the app can actually serve a query at normal
     # speed. rerank=True here forces both models to load in one warmup call.
-    try:
-        store = query._store()
-        store.retrieve("startup warmup", top_k_children=1, rerank=True)
-        logger.info("FAISS store + embedder + reranker warmed up at startup")
-    except Exception as exc:
-        logger.warning("Could not warm up FAISS store at startup: %s", exc)
+    if allow_legacy:
+        try:
+            store = query._store()
+            store.retrieve("startup warmup", top_k_children=1, rerank=True)
+            logger.info("FAISS store + embedder + reranker warmed up at startup")
+        except Exception as exc:
+            logger.warning("Could not warm up FAISS store at startup: %s", exc)
 
     # Pre-warm semantic cache and entity resolver models
-    try:
-        from app.engine import config as engine_config
-        if engine_config.ENABLE_SEMANTIC_CACHE_WARMUP:
-            from app.engine.semantic_cache import get_cache
-            cache = get_cache()
-            logger.info("Semantic cache initialized and warmed up at startup")
-    except Exception as exc:
-        logger.warning("Could not initialize semantic cache at startup: %s", exc)
+    if allow_legacy:
+        try:
+            from app.engine import config as engine_config
+            if engine_config.ENABLE_SEMANTIC_CACHE_WARMUP:
+                from app.engine.semantic_cache import get_cache
+                cache = get_cache()
+                logger.info("Semantic cache initialized and warmed up at startup")
+        except Exception as exc:
+            logger.warning("Could not initialize semantic cache at startup: %s", exc)
 
     # Initialize feedback store schema
     try:
@@ -134,23 +143,25 @@ async def lifespan(app: FastAPI):
 
     # Start autonomous background scheduler
     scheduler = get_scheduler()
-    try:
-        scheduler.start()
-        logger.info("Background TaskScheduler wired into FastAPI lifespan")
-    except Exception as exc:
-        logger.warning("Could not start background scheduler: %s", exc)
+    if allow_legacy:
+        try:
+            scheduler.start()
+            logger.info("Background TaskScheduler wired into FastAPI lifespan")
+        except Exception as exc:
+            logger.warning("Could not start background scheduler: %s", exc)
 
     # Initialize modular packages (amc-feedback-loop & amc-repair-engine)
-    try:
-        from app.core.adapters import get_feedback_loop, get_repair_engine
-        app.state.feedback_loop = get_feedback_loop()
-        app.state.repair_engine = get_repair_engine()
-        logger.info("Modular packages (amc-feedback-loop, amc-repair-engine) wired into app.state")
-    except Exception as exc:
-        logger.warning("Could not initialize modular packages: %s", exc)
+    if allow_legacy:
+        try:
+            from app.core.adapters import get_feedback_loop, get_repair_engine
+            app.state.feedback_loop = get_feedback_loop()
+            app.state.repair_engine = get_repair_engine()
+            logger.info("Modular packages (amc-feedback-loop, amc-repair-engine) wired into app.state")
+        except Exception as exc:
+            logger.warning("Could not initialize modular packages: %s", exc)
 
     # Start passive feedback background tasks
-    if getattr(settings, "passive_feedback_enabled", True):
+    if allow_legacy and getattr(settings, "passive_feedback_enabled", True):
         try:
             from app.feedback.session_manager import start_session_manager
             from app.feedback.timeout_processor import start_timeout_processor
@@ -162,72 +173,81 @@ async def lifespan(app: FastAPI):
 
     # Start Feedback Loop background services (Retry, Batch Evaluation, Governance Scheduler, Lifecycle Manager)
     feedback_tasks = []
-    try:
-        from app.services.feedback_retry import start_retry_service
-        from app.evaluation.batch_consumer import start_batch_consumer
-        from app.services.governance_scheduler import start_governance_scheduler
-        from app.services.lifecycle_manager import start_lifecycle_manager
+    if allow_legacy:
+        try:
+            from app.services.feedback_retry import start_retry_service
+            from app.evaluation.batch_consumer import start_batch_consumer
+            from app.services.governance_scheduler import start_governance_scheduler
+            from app.services.lifecycle_manager import start_lifecycle_manager
 
-        feedback_tasks.append(asyncio.create_task(start_retry_service()))
-        feedback_tasks.append(asyncio.create_task(start_batch_consumer()))
-        feedback_tasks.append(asyncio.create_task(start_governance_scheduler()))
-        feedback_tasks.append(asyncio.create_task(start_lifecycle_manager()))
-        logger.info("Feedback loop background tasks (retry, batch, governance, lifecycle) started")
-    except Exception as exc:
-        logger.warning("Could not start feedback loop background tasks: %s", exc)
+            feedback_tasks.append(asyncio.create_task(start_retry_service()))
+            feedback_tasks.append(asyncio.create_task(start_batch_consumer()))
+            feedback_tasks.append(asyncio.create_task(start_governance_scheduler()))
+            feedback_tasks.append(asyncio.create_task(start_lifecycle_manager()))
+            logger.info("Feedback loop background tasks (retry, batch, governance, lifecycle) started")
+        except Exception as exc:
+            logger.warning("Could not start feedback loop background tasks: %s", exc)
 
-    ingest_queue.bind_pipeline(container.pipeline)
-    ingest_queue.start()
+    if allow_legacy:
+        ingest_queue.bind_pipeline(container.pipeline)
+        ingest_queue.start()
+    else:
+        logger.info("Verified pilot: disabled legacy ingest queue, schedulers and background mutation")
     logger.info("%s started (env=%s)", settings.app_name, settings.environment)
 
     yield
 
     # Stop feedback loop background tasks
-    try:
-        from app.services.feedback_retry import stop_retry_service
-        from app.evaluation.batch_consumer import stop_batch_consumer
-        from app.services.governance_scheduler import stop_governance_scheduler
-        from app.services.lifecycle_manager import stop_lifecycle_manager
-        await stop_retry_service()
-        await stop_batch_consumer()
-        await stop_governance_scheduler()
-        stop_lifecycle_manager()
+    if allow_legacy:
+        try:
+            from app.services.feedback_retry import stop_retry_service
+            from app.evaluation.batch_consumer import stop_batch_consumer
+            from app.services.governance_scheduler import stop_governance_scheduler
+            from app.services.lifecycle_manager import stop_lifecycle_manager
+            await stop_retry_service()
+            await stop_batch_consumer()
+            await stop_governance_scheduler()
+            stop_lifecycle_manager()
 
-        pending_feedback_tasks = [t for t in feedback_tasks if not t.done()]
-        for t in pending_feedback_tasks:
-            t.cancel()
-        if pending_feedback_tasks:
-            await asyncio.gather(*pending_feedback_tasks, return_exceptions=True)
-        logger.info("Feedback loop background tasks stopped")
-    except Exception as exc:
-        logger.warning("Error stopping feedback loop background tasks: %s", exc)
+            pending_feedback_tasks = [t for t in feedback_tasks if not t.done()]
+            for t in pending_feedback_tasks:
+                t.cancel()
+            if pending_feedback_tasks:
+                await asyncio.gather(*pending_feedback_tasks, return_exceptions=True)
+            logger.info("Feedback loop background tasks stopped")
+        except Exception as exc:
+            logger.warning("Error stopping feedback loop background tasks: %s", exc)
 
     # Stop passive feedback background tasks & timers
-    try:
-        from app.feedback.timeout_processor import stop_timeout_processor
-        from app.feedback.session_manager import stop_session_manager
-        from app.feedback.feedback_timer import get_feedback_timer_manager
-        await stop_timeout_processor()
-        await stop_session_manager()
-        await get_feedback_timer_manager().stop_all()
-        logger.info("Passive feedback background tasks and timers stopped")
-    except Exception as exc:
-        logger.warning("Error stopping passive feedback tasks or timers: %s", exc)
+    if allow_legacy:
+        try:
+            from app.feedback.timeout_processor import stop_timeout_processor
+            from app.feedback.session_manager import stop_session_manager
+            from app.feedback.feedback_timer import get_feedback_timer_manager
+            await stop_timeout_processor()
+            await stop_session_manager()
+            await get_feedback_timer_manager().stop_all()
+            logger.info("Passive feedback background tasks and timers stopped")
+        except Exception as exc:
+            logger.warning("Error stopping passive feedback tasks or timers: %s", exc)
 
-    try:
-        if hasattr(app.state, "feedback_loop") and app.state.feedback_loop:
-            await app.state.feedback_loop.close()
-        if hasattr(app.state, "repair_engine") and app.state.repair_engine:
-            await app.state.repair_engine.close()
-    except Exception as exc:
-        logger.warning("Error closing modular package adapters: %s", exc)
+    if allow_legacy:
+        try:
+            if hasattr(app.state, "feedback_loop") and app.state.feedback_loop:
+                await app.state.feedback_loop.close()
+            if hasattr(app.state, "repair_engine") and app.state.repair_engine:
+                await app.state.repair_engine.close()
+        except Exception as exc:
+            logger.warning("Error closing modular package adapters: %s", exc)
 
-    try:
-        scheduler.stop()
-    except Exception as exc:
-        logger.warning("Error stopping scheduler: %s", exc)
+    if allow_legacy:
+        try:
+            scheduler.stop()
+        except Exception as exc:
+            logger.warning("Error stopping scheduler: %s", exc)
 
-    await ingest_queue.stop()
+    if allow_legacy:
+        await ingest_queue.stop()
     await container.graph.close()
 
 
@@ -258,6 +278,9 @@ def create_app() -> FastAPI:
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(ValidationMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
+    # Fail-closed for all unreviewed HTTP routes in enforced pilot mode.
+    from app.api.pilot_perimeter31 import VerifiedPilotPerimeter31
+    app.add_middleware(VerifiedPilotPerimeter31)
     app.add_exception_handler(AppError, app_error_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
 
@@ -343,6 +366,10 @@ def create_app() -> FastAPI:
 
     app.include_router(feedback_evaluation.router, prefix="/api")
     app.include_router(audit.router, prefix="/api")
+    # W27_PUBLICATION_STATUS_ROUTER: path already includes /api/publication.
+    # JWT/tenant checks are enforced by the Wave 2.6 status route itself.
+    from amc_publication.status_route import router as publication_status_router
+    app.include_router(publication_status_router)
     
     # Phase 4: Serve React frontend (check mf-context-engine/dist first, then frontend/dist)
     mf_engine_dir = Path(__file__).parent.parent.parent / "mf-context-engine" / "dist"

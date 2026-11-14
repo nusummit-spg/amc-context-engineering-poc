@@ -603,6 +603,8 @@ async def run_chat(
         ChatResponse: ChatResponse object containing the operation result.
     """
     engine = container.settings.query_engine.lower()
+    from app.api.routes.legacy_guard31 import require_v2_in_verified_mode
+    require_v2_in_verified_mode(engine, route="/chat")
     log_step_info(logger, "RUN_CHAT_DISPATCH", "Incoming /chat request: '%s' (session_id=%s, engine=%s)", request.query, request.session_id, engine)
 
     if engine == "v2":
@@ -1293,6 +1295,8 @@ async def chat_stream(
     Returns:
         StreamingResponse: StreamingResponse object containing the operation result.
     """
+    from app.api.routes.legacy_guard31 import require_v2_in_verified_mode
+    require_v2_in_verified_mode(container.settings.query_engine.lower(), route="/chat/stream")
     if request.session_id and current_user:
         from app.core.database import SessionLocal
         from app.schemas.chat_sessions_table import ChatSession

@@ -78,7 +78,10 @@ class VectorStore:
         self._payloads: dict[int, dict] = {}   # faiss id -> chunk payload
         self._next_id = 0
         self._lock = asyncio.Lock()
-        self.ensure_collection()
+        # W29_NO_LEGACY_HYDRATE: reader embedder cannot load legacy indexes.
+        from amc_publication.vector_bridge28 import verified_mode
+        if verified_mode() != 'enforce':
+            self.ensure_collection()
 
     # ---------- setup / persistence ----------
 
@@ -93,6 +96,10 @@ class VectorStore:
     def ensure_collection(self) -> None:
         """Ensure collection.
         """
+        # W29_RAW_VECTOR_WRITE_GUARD: immutable publication only.
+        from amc_publication.vector_bridge28 import verified_mode
+        if verified_mode() == 'enforce':
+            raise RuntimeError('legacy direct vector mutation forbidden in verified mode')
         try:
             os.makedirs(self._dir, exist_ok=True)
         except Exception as exc:
@@ -191,6 +198,10 @@ class VectorStore:
     def _persist(self) -> None:
         """Persist.
         """
+        # W29_RAW_VECTOR_WRITE_GUARD: immutable publication only.
+        from amc_publication.vector_bridge28 import verified_mode
+        if verified_mode() == 'enforce':
+            raise RuntimeError('legacy direct vector mutation forbidden in verified mode')
         if self._index is None:
             return
         try:
@@ -267,6 +278,10 @@ class VectorStore:
         Returns:
             int: Resulting int instance.
         """
+        # W29_RAW_VECTOR_WRITE_GUARD: immutable publication only.
+        from amc_publication.vector_bridge28 import verified_mode
+        if verified_mode() == 'enforce':
+            raise RuntimeError('legacy direct vector mutation forbidden in verified mode')
         if not chunks:
             return 0
         if self._index is None:
@@ -313,6 +328,10 @@ class VectorStore:
         Returns:
             list[str]: List of resulting items or records.
         """
+        # W29_RAW_VECTOR_WRITE_GUARD: immutable publication only.
+        from amc_publication.vector_bridge28 import verified_mode
+        if verified_mode() == 'enforce':
+            raise RuntimeError('legacy direct vector mutation forbidden in verified mode')
         if not documents:
             return []
         if self._index is None:
@@ -362,6 +381,10 @@ class VectorStore:
         Returns:
             list[str]: List of resulting items or records.
         """
+        # W29_RAW_VECTOR_WRITE_GUARD: immutable publication only.
+        from amc_publication.vector_bridge28 import verified_mode
+        if verified_mode() == 'enforce':
+            raise RuntimeError('legacy direct vector mutation forbidden in verified mode')
         for doc in documents:
             if "metadata" not in doc:
                 doc["metadata"] = {}
@@ -400,6 +423,9 @@ class VectorStore:
         Returns:
             list[dict]: List of resulting items or records.
         """
+        from amc_publication.vector_bridge28 import verified_mode
+        if verified_mode() == 'enforce':
+            raise RuntimeError('legacy FAISS read forbidden in verified serving mode')
         if self._index is None or self._index.ntotal == 0:
             return []
         if isinstance(query, (list, np.ndarray)):
@@ -545,6 +571,9 @@ class VectorStore:
         Returns:
             list[dict]: List of resulting items or records.
         """
+        from amc_publication.vector_bridge28 import verified_mode
+        if verified_mode() == 'enforce':
+            raise RuntimeError('legacy FAISS read forbidden in verified serving mode')
         if self._index is None or self._index.ntotal == 0:
             return []
         if embedding is not None:
@@ -608,6 +637,9 @@ class VectorStore:
         Returns:
             list[dict]: List of resulting items or records.
         """
+        from amc_publication.vector_bridge28 import verified_mode
+        if verified_mode() == 'enforce':
+            raise RuntimeError('legacy FAISS metadata read forbidden in verified mode')
         docs: dict[str, dict] = {}
         for payload in self._payloads.values():
             doc_id = payload.get("document_id")
@@ -656,6 +688,9 @@ class VectorStore:
         Returns:
             list[dict]: List of resulting items or records.
         """
+        from amc_publication.vector_bridge28 import verified_mode
+        if verified_mode() == 'enforce':
+            raise RuntimeError('legacy FAISS metadata read forbidden in verified mode')
         chunks = []
         for p in self._payloads.values():
             if p.get("document_id") != document_id:
@@ -697,6 +732,10 @@ class VectorStore:
         Returns:
             str: Resulting str instance.
         """
+        # W29_RAW_VECTOR_WRITE_GUARD: immutable publication only.
+        from amc_publication.vector_bridge28 import verified_mode
+        if verified_mode() == 'enforce':
+            raise RuntimeError('legacy direct vector mutation forbidden in verified mode')
         clean_attr = str(attribute).replace("_", " ").title()
         doc_text = (
             f"Official Regulatory Erratum and Verified Master Data: "
@@ -735,6 +774,10 @@ class VectorStore:
         Returns:
             bool: True if condition is met or operation succeeded, False otherwise.
         """
+        # W29_RAW_VECTOR_WRITE_GUARD: immutable publication only.
+        from amc_publication.vector_bridge28 import verified_mode
+        if verified_mode() == 'enforce':
+            raise RuntimeError('legacy direct vector mutation forbidden in verified mode')
         target_chunk_id = f"synthetic_patch_{patch_id}"
         async with self._lock:
             found_key = None
@@ -760,6 +803,10 @@ class VectorStore:
         Returns:
             True if deleted, False if not found
         """
+        # W29_RAW_VECTOR_WRITE_GUARD: immutable publication only.
+        from amc_publication.vector_bridge28 import verified_mode
+        if verified_mode() == 'enforce':
+            raise RuntimeError('legacy direct vector mutation forbidden in verified mode')
         async with self._lock:
             found_key = None
             found_fid = None
@@ -1045,6 +1092,12 @@ def get_vector_store(
     Returns:
         UserScopedVectorStore: Resulting UserScopedVectorStore instance.
     """
+    # W28_VERIFIED_READ_CUTOVER: explicit opt-in, never silently fall back.
+    from amc_publication.vector_bridge28 import verified_mode
+    if verified_mode() == 'enforce':
+        from amc_publication.vector_bridge28 import create_verified_vector_store
+        return create_verified_vector_store(base_client=get_base_vector_store(),
+                                            user_id=user_id, tenant_id=tenant_id)
     base = get_base_vector_store()
     return UserScopedVectorStore(base, user_id=user_id, tenant_id=tenant_id)
 

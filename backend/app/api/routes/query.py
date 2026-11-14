@@ -299,7 +299,11 @@ async def _run_v2_orchestrator(
 
     trad_result = None
     if mode in ("traditional", "both"):
-        hits = await container.orchestrator.traditional_search(query, top_k=request.top_k)
+        # W28_TRADITIONAL_TENANT_SCOPE: traditional RAG is not exempt from tenant authority.
+        hits = await container.orchestrator.traditional_search(
+            query, top_k=request.top_k,
+            user_id=current_user.username if current_user else None,
+            tenant_id=current_user.tenant_id if current_user else None)
         trad_result = TraditionalResult(
             files=[{
                 "name": h.get("source_filename") or h.get("document_title") or h.get("document_id") or "Document",
@@ -720,6 +724,8 @@ async def run_query_v2(
     Returns:
         QueryResponse: QueryResponse object containing the operation result.
     """
+    from app.api.routes.legacy_guard31 import require_verified_tenant
+    require_verified_tenant(current_user, route="/query/v2")
     resp = await _run_v2_orchestrator(request, container, current_user=current_user)
     response.headers["X-Serving-Engine"] = resp.serving_engine or "v2"
     return resp
@@ -744,6 +750,8 @@ async def run_traditional(
     Returns:
         QueryResponse: QueryResponse object containing the operation result.
     """
+    from app.api.routes.legacy_guard31 import reject_legacy_in_verified_mode
+    reject_legacy_in_verified_mode(route="/query/traditional")
     log_step_info(logger, "RUN_TRADITIONAL_DISPATCH", "Incoming legacy /traditional request: '%s'", request.query)
     response.headers["Deprecation"] = "true"
     response.headers["Sunset"] = "2026-10-22"
@@ -794,6 +802,8 @@ async def run_contextgraph(
     Returns:
         QueryResponse: QueryResponse object containing the operation result.
     """
+    from app.api.routes.legacy_guard31 import reject_legacy_in_verified_mode
+    reject_legacy_in_verified_mode(route="/query/contextgraph")
     log_step_info(logger, "RUN_CONTEXTGRAPH_DISPATCH", "Incoming legacy /contextgraph request: '%s'", request.query)
     response.headers["Deprecation"] = "true"
     response.headers["Sunset"] = "2026-10-22"
@@ -831,6 +841,7 @@ async def run_query(
     request: QueryRequest,
     response: Response,
     container: Container = Depends(get_container),
+    current_user: OptionalCurrentUser = None,
 ) -> QueryResponse:
     """Production query endpoint with QUERY_ENGINE feature flag routing.
 
@@ -843,10 +854,13 @@ async def run_query(
         QueryResponse: QueryResponse object containing the operation result.
     """
     engine = container.settings.query_engine.lower()
+    from app.api.routes.legacy_guard31 import require_v2_in_verified_mode, require_verified_tenant
+    require_v2_in_verified_mode(engine, route="/query")
+    require_verified_tenant(current_user, route="/query")
     log_step_info(logger, "RUN_QUERY_DISPATCH", "Incoming /query request: '%s' (mode=%s, engine=%s)", request.query, request.mode, engine)
 
     if engine == "v2":
-        resp = await _run_v2_orchestrator(request, container)
+        resp = await _run_v2_orchestrator(request, container, current_user=current_user)
         response.headers["X-Serving-Engine"] = resp.serving_engine or "v2"
         return resp
 
@@ -855,7 +869,7 @@ async def run_query(
         import zlib
         bucket = zlib.crc32(request.query.encode("utf-8")) % 100
         if bucket < canary_pct:
-            resp = await _run_v2_orchestrator(request, container)
+            resp = await _run_v2_orchestrator(request, container, current_user=current_user)
             resp.serving_engine = f"canary-v2 ({canary_pct}%)"
             response.headers["X-Serving-Engine"] = resp.serving_engine
             return resp
@@ -1081,6 +1095,8 @@ async def query_stream(
     Returns:
         StreamingResponse: StreamingResponse object containing the operation result.
     """
+    from app.api.routes.legacy_guard31 import require_verified_tenant
+    require_verified_tenant(current_user, route="/query/stream")
     return StreamingResponse(
         _query_stream_generator(request, container, current_user=current_user),
         media_type="text/event-stream",

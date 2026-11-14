@@ -79,7 +79,10 @@ class FaissGenerationStore(ImmutableSnapshotStore):
                         "payload_hash": sha256_json(payloads), "format": "faiss-idmap2-ip-v1"}
             (stage / "manifest.json").write_bytes(canonical_bytes(manifest))
             for f in stage.iterdir():
-                with f.open("rb") as fh:
+                # W26_FAISS_WINDOWS_PORTABLE: Windows _commit can require a
+                # writable file handle. Files have already been fully written.
+                with f.open("rb+") as fh:
+                    fh.flush()
                     os.fsync(fh.fileno())
             try:
                 os.rename(stage, dest)
@@ -87,9 +90,12 @@ class FaissGenerationStore(ImmutableSnapshotStore):
                 # Another worker has already published content-addressed bytes.
                 self.verify(gen, tenant)
                 return gen
-            fd = os.open(dest.parent, os.O_RDONLY)
-            try: os.fsync(fd)
-            finally: os.close(fd)
+            # Directory fsync is not portable to Windows; file checksums and
+            # readback are still mandatory before any pointer activation.
+            if os.name != "nt":
+                fd = os.open(dest.parent, os.O_RDONLY)
+                try: os.fsync(fd)
+                finally: os.close(fd)
             self.verify(gen, tenant)
             return gen
         finally:

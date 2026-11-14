@@ -77,7 +77,12 @@ class Container:
         self.taxonomy = load_taxonomy()
         self.llm = get_llm_client()
         self.graph = get_graph_client()
+        # W29_SPLIT_INGESTION_AND_READS: verified queries never reuse an ingestion writer.
         self.vector = get_vector_store()
+        from amc_publication.vector_bridge28 import verified_mode
+        from amc_publication.ingestion_boundary29 import DenyDirectVectorMutation29
+        self.ingestion_vector = (DenyDirectVectorMutation29()
+                                 if verified_mode() == 'enforce' else self.vector)
 
         self.resolver = EntityResolver(self.llm, ALIAS_SEED_PATH)
         self.classifier = TaxonomyClassifier(self.llm, self.taxonomy)
@@ -85,7 +90,7 @@ class Container:
         self.relationship_extractor = RelationshipExtractor(self.llm)
 
         self.pipeline = IngestionPipeline(
-            vector_store=self.vector,
+            vector_store=self.ingestion_vector,
             graph_client=self.graph,
             classifier=self.classifier,
             entity_extractor=self.entity_extractor,
@@ -102,6 +107,10 @@ class Container:
             assembler=ContextAssembler(),
             synthesizer=Synthesizer(self.llm),
         )
+
+        # W29_REQUEST_LIFETIME_FENCE: check authority on completed answers/streams.
+        from amc_publication.request_fence29 import VerifiedOrchestratorFence29
+        self.orchestrator = VerifiedOrchestratorFence29(self.orchestrator, self.vector)
 
         from app.compliance.rules_engine import RulesEngine
         from app.compliance.violation_detector import ViolationDetector

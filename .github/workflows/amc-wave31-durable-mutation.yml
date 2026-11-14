@@ -1,0 +1,52 @@
+# Manual-only to conserve GitHub Actions minutes. Not a production release gate.
+name: AMC Wave31 Durable Mutation Qualification
+on:
+  workflow_dispatch:
+    inputs:
+      run_full_backend:
+        description: 'Also collect and run the broad backend suite (expensive)'
+        type: boolean
+        default: false
+jobs:
+  sqlite_scope_and_readbacks:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ['3.11']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install deterministic test prerequisites
+        run: >-
+          python -m pip install "pytest>=8,<10" "pytest-asyncio>=0.24,<2" "SQLAlchemy>=2,<3" "alembic>=1.13,<2" "fastapi>=0.115,<1" "numpy>=2,<3"
+      - name: Require migration and source files
+        shell: python
+        run: |
+          from pathlib import Path
+          needed=['backend/alembic/versions/014_publication_scope_claim_v31.py',
+                  'backend/amc_publication/active_authority28.py',
+                  'tools/amc_release/tests_wave31/test_scope_claim31.py']
+          missing=[p for p in needed if not Path(p).is_file()]
+          assert not missing, f'Missing Wave3.1 files: {missing}'
+      - name: Qualify installed Wave 2.8–3.1 controls on exact checkout
+        run: python -m tools.amc_release.run_wave31_tests --root . --out remediation/wave3_1/actions-evidence.json
+      - name: Upload JUnit and JSON evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave31-${{ matrix.os }}-${{ github.sha }}
+          path: |
+            remediation/wave3_1/*.xml
+            remediation/wave3_1/actions-evidence.json
+          retention-days: 30
+  explicit_release_block:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Do not claim production/UAT acceptance
+        run: |
+          echo 'Offline qualification only; no live database concurrency, Neo4j, FAISS, canary or UAT acceptance was performed.'
+          echo 'Release remains BLOCKED.'

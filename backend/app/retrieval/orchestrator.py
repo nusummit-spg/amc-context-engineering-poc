@@ -9,6 +9,7 @@
 
 import asyncio
 import logging
+import os
 import re
 import time
 from typing import AsyncGenerator, Optional
@@ -354,6 +355,9 @@ class RetrievalOrchestrator:
             context_text (str): The context text.
         """
         applied: list[dict] = []
+        if os.environ.get('AMC_VERIFIED_SERVING_MODE','off') == 'enforce':
+            # Shadow patches have no current durable active receipt authority.
+            return context_text, applied
         if not entity_ids:
             return context_text, applied
 
@@ -709,6 +713,16 @@ class RetrievalOrchestrator:
         Returns:
             OrchestratorResponse: OrchestratorResponse object containing the operation result.
         """
+        # W28_ORCHESTRATOR_AUTHORITY: no cache/patch/graph answer without an active receipt.
+        if os.environ.get('AMC_VERIFIED_SERVING_MODE','off') not in ('off','enforce'):
+            raise ValueError('invalid verified serving mode')
+        if os.environ.get('AMC_VERIFIED_SERVING_MODE','off') == 'enforce':
+            from amc_publication.serving27 import ServingDenied
+            if not isinstance(tenant_id, str) or not tenant_id.strip():
+                raise ServingDenied('authenticated tenant required for AMC serving')
+            if not callable(getattr(self._vector, 'assert_serving_authority', None)):
+                raise ServingDenied('retrieval container uses an unverified vector store')
+            await self._vector.assert_serving_authority(tenant_id)
         t0 = time.perf_counter()
         req_id = str(uuid4())
         metrics = QueryMetrics(request_id=req_id, query=query) if track_metrics else None
@@ -796,6 +810,8 @@ class RetrievalOrchestrator:
 
         # Step 0.75 — Deterministic Pre-LLM Fast-Path Interceptor (Option 2)
         try:
+            if os.environ.get('AMC_VERIFIED_SERVING_MODE','off') == 'enforce':
+                raise RuntimeError('unverified fast-path disabled in authority mode')
             from app.retrieval.fast_path_interceptor import get_fast_path_interceptor
             fast_path = get_fast_path_interceptor(self._repair_client)
             fast_resp = await fast_path.intercept(
@@ -847,7 +863,8 @@ class RetrievalOrchestrator:
         cache = get_semantic_cache()
         cached_entry = None
         try:
-            cached_entry = cache.lookup(effective_query, corpus_version=self._corpus_version, user_id=user_id, tenant_id=tenant_id)
+            cached_entry = (cache.lookup(effective_query, corpus_version=self._corpus_version, user_id=user_id, tenant_id=tenant_id)
+                            if os.environ.get('AMC_VERIFIED_SERVING_MODE','off') != 'enforce' else None)
         except Exception as exc:
             log_step_debug(logger, "CACHE_LOOKUP_NOTICE", "Cache lookup notice: %s", exc)
         t_cache_lookup_ms = (time.perf_counter() - t_cache_start) * 1000
@@ -1598,6 +1615,16 @@ class RetrievalOrchestrator:
         Yields:
             AsyncGenerator[dict, None]: Stream of SSE-shaped event dictionaries.
         """
+        # W28_ORCHESTRATOR_AUTHORITY: no cache/patch/graph answer without an active receipt.
+        if os.environ.get('AMC_VERIFIED_SERVING_MODE','off') not in ('off','enforce'):
+            raise ValueError('invalid verified serving mode')
+        if os.environ.get('AMC_VERIFIED_SERVING_MODE','off') == 'enforce':
+            from amc_publication.serving27 import ServingDenied
+            if not isinstance(tenant_id, str) or not tenant_id.strip():
+                raise ServingDenied('authenticated tenant required for AMC serving')
+            if not callable(getattr(self._vector, 'assert_serving_authority', None)):
+                raise ServingDenied('retrieval container uses an unverified vector store')
+            await self._vector.assert_serving_authority(tenant_id)
         t0 = time.perf_counter()
         req_id = str(uuid4())
         response_id = f"resp_{req_id[:12]}"
@@ -1653,7 +1680,8 @@ class RetrievalOrchestrator:
         cache = get_semantic_cache()
         cached_entry = None
         try:
-            cached_entry = cache.lookup(effective_query, corpus_version=self._corpus_version, user_id=user_id, tenant_id=tenant_id)
+            cached_entry = (cache.lookup(effective_query, corpus_version=self._corpus_version, user_id=user_id, tenant_id=tenant_id)
+                            if os.environ.get('AMC_VERIFIED_SERVING_MODE','off') != 'enforce' else None)
         except Exception as exc:
             logger.debug("Cache lookup notice: %s", exc)
 
@@ -1729,6 +1757,8 @@ class RetrievalOrchestrator:
 
         # ── Step 0.75: Deterministic Pre-LLM Fast-Path Interceptor ────────
         try:
+            if os.environ.get('AMC_VERIFIED_SERVING_MODE','off') == 'enforce':
+                raise RuntimeError('unverified fast-path disabled in authority mode')
             from app.retrieval.fast_path_interceptor import get_fast_path_interceptor
             fast_path = get_fast_path_interceptor(self._repair_client)
             fast_resp = await fast_path.intercept(

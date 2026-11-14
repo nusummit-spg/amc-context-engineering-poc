@@ -1,0 +1,29 @@
+{
+  "schema": "amc-wave26-offline-local-test-evidence-v1",
+  "reviewed_branch": "amc-dev",
+  "reviewed_remote_sha": "2c0415c4d23a3338428c8314c869299aa0ab771f",
+  "code_applied_to_remote": false,
+  "local_tests_on_full_latest_repo": false,
+  "provenance": "local standalone overlay + bundled historical Wave 1.9/2.0 source",
+  "python": "3.13.5",
+  "os": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "release_control_tests_passed": 236,
+  "historical_reference_tests_passed": 112,
+  "combined_pytest_cases": 348,
+  "combined_failed": 0,
+  "combined_errors": 0,
+  "combined_skipped": 0,
+  "pytest_subtests": 16,
+  "junit_sha256": "86d54de04146fa9980a8ea1c7d6a4c24aed652635930c26801846788254d4095",
+  "not_run": [
+    "full AMC application regression in a checked-out amc-dev branch",
+    "GitHub Actions on new SHA",
+    "PostgreSQL concurrent worker tests",
+    "Neo4j actual graph mutation",
+    "FAISS real index on Windows and Linux",
+    "browser against authenticated live staging",
+    "24-hour SLO and canary",
+    "independent signed UAT"
+  ],
+  "verdict": "BLOCK"
+}

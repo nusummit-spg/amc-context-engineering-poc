@@ -1,0 +1,44 @@
+{
+  "wave": "2.8",
+  "date": "2026-11-11",
+  "reviewed_repo": "nusummit-spg/amc-context-engineering-poc",
+  "reviewed_sha": "2c0415c4d23a3338428c8314c869299aa0ab771f",
+  "scope": "bundled historical reference package, patched journal fixture and fake reader, not actual GitHub full checkout",
+  "python": "3.13.5",
+  "local_test_suites": [
+    {
+      "group": "wave28_new",
+      "xml": "NEW_WAVE28_TESTS.xml",
+      "junit_testcases_including_subtests": 65,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "45cccbb4f0363cf36b3aa1663682efe39643d68624c5e15ca71dac5739b10c77"
+    },
+    {
+      "group": "historical_and_prior",
+      "xml": "PRIOR_WAVES_TESTS.xml",
+      "junit_testcases_including_subtests": 466,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "8efdc5c725c6f04b792b6ac4f275f1795c4bcd8d696436b4f5ef52bf3e464abc"
+    }
+  ],
+  "primary_pytest_tests_passed": 515,
+  "additional_pytest_subtests_passed": 16,
+  "junit_total_test_cases_including_subtests": 531,
+  "failure_count": 0,
+  "python_compilation": "PASS",
+  "workflow_yaml_syntax": "PASS",
+  "frontend_js_syntax": "PASS",
+  "isolated_sqlite_migration": "PASS",
+  "real_postgresql": "NOT_RUN",
+  "real_neo4j": "NOT_RUN",
+  "real_faiss_binary": "NOT_RUN",
+  "exact_git_commit_ci": "NOT_RUN",
+  "source_patches_applied_to_repo": false,
+  "browser_uat": "NOT_RUN",
+  "release": "BLOCK",
+  "uat": "BLOCK"
+}

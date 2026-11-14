@@ -25,6 +25,8 @@ async def list_documents(container: Container = Depends(get_container)):
     Returns:
         List of documents.
     """
+    from app.api.routes.legacy_guard31 import reject_legacy_in_verified_mode
+    reject_legacy_in_verified_mode(route="/docs")
     try:
         docs = await container.vector.list_documents()
         return [
@@ -54,6 +56,8 @@ async def get_document(document_id: str, container: Container = Depends(get_cont
     Returns:
         The requested document.
     """
+    from app.api.routes.legacy_guard31 import reject_legacy_in_verified_mode
+    reject_legacy_in_verified_mode(route="/docs/{document_id}")
     docs = await container.vector.list_documents()
     match = next((d for d in docs if d["document_id"] == document_id), None)
     if match is None:

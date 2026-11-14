@@ -36,6 +36,11 @@ async def ingest_file(
 ) -> IngestJobResponse:
     """Create or process ingest file. Requires authenticated admin/compliance_officer."""
     _require_ingest_permission(current_user)
+    # W29_INGEST_HTTP_GUARD: reject before writing upload files or queueing jobs.
+    from amc_publication.vector_bridge28 import verified_mode
+    if verified_mode() == 'enforce':
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail='Legacy ingestion disabled; use reviewed quarantine and publication')
     upload_dir = Path(container.settings.upload_dir)
     upload_dir.mkdir(parents=True, exist_ok=True)
     safe_name = Path(file.filename or "upload").name
@@ -59,6 +64,10 @@ async def ingest_batch(
 ) -> IngestJobResponse:
     """Ingest every supported file in the configured corpus directory."""
     _require_ingest_permission(current_user)
+    from amc_publication.vector_bridge28 import verified_mode
+    if verified_mode() == 'enforce':
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail='Legacy batch ingest disabled; use reviewed corpus publication')
     corpus_dir = Path(container.settings.corpus_dir)
     if not corpus_dir.exists():
         raise NotFoundError(f"Corpus directory not found: {corpus_dir}")

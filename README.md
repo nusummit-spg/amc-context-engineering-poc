@@ -2,9 +2,11 @@
 
 > Enterprise-grade RAG and Graph Knowledge Platform for Asset Management Companies (AMCs) and SEBI Compliance
 
-[![Status](https://img.shields.io/badge/status-production--ready-green)]() [![Version](https://img.shields.io/badge/version-2.1-blue)]()
+[![Status](https://img.shields.io/badge/status-MVP--qualification--pending-yellow)]() [![Version](https://img.shields.io/badge/version-2.1-blue)]()
 
 ---
+
+**Release qualification notice (Wave 3.1):** The feature branch is an engineering integration candidate, not an accepted MVP or production release. PostgreSQL/Neo4j/FAISS, authenticated end-to-end flows, staging canary and independent UAT are outstanding. See [MVP Recovery and Operating Contract](remediation/wave3_1/MVP_RECOVERY_AND_OPERATING_CONTRACT.md) and draft [PR #13](https://github.com/nusummit-spg/amc-context-engineering-poc/pull/13). Verified pilot mode is intentionally read-only with unreviewed mutation paths disabled.
 
 ## 🚀 Quick Start
 
@@ -271,7 +273,7 @@ cp backend/data.db backend/data.db.backup
 
 ## 🔐 Security & Compliance
 
-This platform is **production-ready** with comprehensive security hardening:
+This platform has undergone extensive legacy-source hardening; **Wave 3.1 is not yet production-qualified**:
 
 ### Security Features
 - ✅ **Authentication & Authorization**: JWT-based with token revocation system
@@ -322,4 +324,4 @@ Proprietary - NuSummit Technologies Pvt Ltd
 
 **Version**: 2.1  
 **Last Updated**: October 22, 2026  
-**Status**: Production Ready ✅ (100% security hardened)
+**Status**: Wave 3.1 engineering candidate — integrated runtime/UAT evidence outstanding

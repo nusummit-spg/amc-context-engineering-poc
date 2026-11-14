@@ -1,0 +1,19 @@
+Task,Priority,Implementation_State,External_Acceptance,Required_Evidence
+W25-A01,P0,LOCAL_TESTED,PENDING_REAL_REPO,Persisted approval to Journal work with idempotency
+W25-A02,P0,LOCAL_TESTED,PENDING_STEWARD,Complete tenant corpus source attestation and external digest
+W25-A03,P0,PATCH_PREPARED,PENDING_REDIS,Single and batch approver survives Redis serialization
+W25-A04,P0,PATCH_PREPARED,PENDING_BRANCH,Exact Git blob and source-aware patch; latest source compiles
+W25-A05,P0,PATCH_PREPARED,PENDING_FAISS_NEO4J,Immutable pointer preimage and generation CAS with reader probe
+W25-A06,P0,LOCAL_SQLITE_TESTED,PENDING_POSTGRES,Atomic pointer and vector compensation replay after crash
+W25-A07,P0,LOCAL_TESTED,PENDING_REAL_REPO,Empty full corpus cannot enter publication queue
+W25-A08,P1,LOCAL_TESTED,PENDING_STEWARD,External-key signed corpus with independent completeness review
+W25-A09,P1,LOCAL_TESTED,PENDING_BRANCH,Non-overwriting cumulative installer and pinned workflow upgrade
+W25-A10,P0,NOT_DONE,PENDING_TENANT_MAPPING,Trusted tenant ID stored at patch creation and verified
+W25-A11,P0,NOT_DONE,PENDING_APPROVAL_RUNTIME,Real approval to publication integration on FastAPI and Redis
+W25-A12,P0,NOT_DONE,PENDING_SERVING_READER,Actual FAISS binary activation and loaded-reader parity
+W25-A13,P0,NOT_DONE,PENDING_POSTGRES_NEO4J,Two worker stale lease crash restart rollback
+W25-A14,P0,NOT_DONE,PENDING_STAGING,Real 30-minute canary and rollback proof
+W25-A15,P0,NOT_DONE,PENDING_TELEMETRY,Measured 1-hour and 24-hour SLOs
+W25-A16,P0,NOT_DONE,PENDING_BROWSER,Authenticated Chromium Firefox and frontend API tests
+W25-A17,P0,NOT_DONE,PENDING_GITHUB,Exact-SHA cross-platform CI and test inventory reconciliation
+W25-A18,P0,NOT_DONE,PENDING_REVIEW,Anchored ledger and independent UAT decision
