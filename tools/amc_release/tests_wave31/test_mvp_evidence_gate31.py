@@ -61,3 +61,13 @@ def test_empty_or_future_provenance_blocks(tmp_path):
     _write(e,"backend_integration",sha,
            observed_at=(datetime.now(timezone.utc)+timedelta(days=2)).isoformat())
     assert gate.assess(d,e)["decision"]=="BLOCKED"
+
+
+def test_non_object_json_is_reported_invalid_not_crash(tmp_path):
+    d,e=_checkout(tmp_path)
+    sha=gate.current_sha(d)
+    _fill(e,sha)
+    (e/"backend_integration.json").write_text("[]",encoding="utf-8")
+    a=gate.assess(d,e)
+    assert a["decision"]=="BLOCKED"
+    assert "backend_integration:not_a_json_object" in a["invalid"]

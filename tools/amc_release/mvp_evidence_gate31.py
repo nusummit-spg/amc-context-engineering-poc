@@ -54,6 +54,9 @@ def assess(checkout: Path, evidence_dir: Path) -> dict:
             continue
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                out["invalid"].append(gate + ":not_a_json_object")
+                continue
             valid = (data.get("gate") == gate
                      and data.get("commit_sha") == sha
                      and data.get("status") == "PASS"
