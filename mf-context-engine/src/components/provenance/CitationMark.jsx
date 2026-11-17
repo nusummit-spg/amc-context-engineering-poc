@@ -1,6 +1,7 @@
 import React from "react";
 import { FileText, ExternalLink, Download } from "lucide-react";
 import Tooltip from "./Tooltip";
+import { PILOT_SOURCE_DISABLED_TEXT, isPilotMode, pilotSafeSourceUrl } from "../../utils/pilotSources";
 import "./CitationMark.css";
 
 export default function CitationMark({ citation, marker }) {
@@ -27,6 +28,9 @@ export default function CitationMark({ citation, marker }) {
       sourceUrl = `/api/files/${encodeURIComponent(docTitle)}?download=true`;
     }
   }
+  // Read-only pilot: no dead links to the denied raw document routes.
+  const pilot = isPilotMode();
+  sourceUrl = pilotSafeSourceUrl(sourceUrl, pilot);
 
   const tooltipContent = (
     <div>
@@ -68,7 +72,9 @@ export default function CitationMark({ citation, marker }) {
             </a>
           )
         ) : (
-          <span>(Document unlinked)</span>
+          <span title={pilot ? PILOT_SOURCE_DISABLED_TEXT : undefined}>
+            {pilot ? "(Source view disabled in pilot)" : "(Document unlinked)"}
+          </span>
         )}
       </div>
     </div>

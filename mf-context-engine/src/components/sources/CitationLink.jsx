@@ -1,5 +1,6 @@
 import React from "react";
 import { Download, ExternalLink } from "lucide-react";
+import { PILOT_SOURCE_DISABLED_TEXT, isPilotMode, pilotSafeSourceUrl } from "../../utils/pilotSources";
 
 /**
  * Renders a source citation entry as a clickable PDF link or CSV download link.
@@ -13,13 +14,22 @@ export default function CitationLink({ index, title, url, page }) {
   if (!effectiveUrl && isCsv) {
     effectiveUrl = `/api/files/${encodeURIComponent(displayTitle)}?download=true`;
   }
+  // Read-only pilot: raw document routes are denied, so show provenance without a dead link.
+  const pilot = isPilotMode();
+  effectiveUrl = pilotSafeSourceUrl(effectiveUrl, pilot);
 
   if (!effectiveUrl) {
     return (
-      <div className="cg-citation-item cg-citation--unavailable" title="Source document unavailable on disk">
+      <div
+        className="cg-citation-item cg-citation--unavailable"
+        title={pilot ? PILOT_SOURCE_DISABLED_TEXT : "Source document unavailable on disk"}
+      >
         <span className="cg-citation-num">[{index}]</span>
         <span className="cg-citation-title">{displayTitle}</span>
-        <span className="cg-citation-unavailable-badge">(source unavailable)</span>
+        {page && <span className="cg-citation-page-tag">p.{page}</span>}
+        <span className="cg-citation-unavailable-badge">
+          {pilot ? "(source view disabled in pilot)" : "(source unavailable)"}
+        </span>
       </div>
     );
   }

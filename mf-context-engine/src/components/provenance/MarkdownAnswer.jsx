@@ -2,6 +2,7 @@ import React from "react";
 import { Download, FileSpreadsheet } from "lucide-react";
 import CitationMark from "./CitationMark";
 import MetricMark from "./MetricMark";
+import { PILOT_SOURCE_DISABLED_TEXT, isPilotMode, pilotSafeSourceUrl } from "../../utils/pilotSources";
 import "./MarkdownAnswer.css";
 
 /**
@@ -14,7 +15,19 @@ export function CsvDownloadPill({ filename, url, children }) {
     .replace(/^[(\s]+|[)\s.,:;]+$/g, "");
 
   const baseFilename = cleanName.split("/").pop() || cleanName;
-  const targetUrl = url || `/api/files/${encodeURIComponent(cleanName)}?download=true`;
+  const pilot = isPilotMode();
+  const targetUrl = pilotSafeSourceUrl(
+    url || `/api/files/${encodeURIComponent(cleanName)}?download=true`, pilot);
+
+  if (!targetUrl) {
+    // Read-only pilot: raw document routes are denied; show the name without a dead download link.
+    return (
+      <span className="mf-csv-download-pill" aria-disabled="true" title={PILOT_SOURCE_DISABLED_TEXT}>
+        <FileSpreadsheet className="mf-csv-pill-icon" size={13} strokeWidth={2} />
+        <span className="mf-csv-pill-text">{children || cleanName}</span>
+      </span>
+    );
+  }
 
   return (
     <a
@@ -257,6 +270,16 @@ export default function MarkdownAnswer({ text = "", citations = [], metrics = []
             <CsvDownloadPill key={`${keyPrefix}-link-csv-${pIdx++}`} filename={linkText} url={linkUrl}>
               {linkText}
             </CsvDownloadPill>
+          );
+        } else if (!pilotSafeSourceUrl(linkUrl)) {
+          elements.push(
+            <span
+              key={`${keyPrefix}-link-${pIdx++}`}
+              className="mf-prose-link"
+              title={PILOT_SOURCE_DISABLED_TEXT}
+            >
+              {linkText}
+            </span>
           );
         } else {
           elements.push(

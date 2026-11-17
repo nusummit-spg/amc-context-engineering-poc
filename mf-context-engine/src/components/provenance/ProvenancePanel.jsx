@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Pin, ChevronUp, ChevronDown, ExternalLink, Download } from "lucide-react";
 import "./ProvenancePanel.css";
+import { PILOT_SOURCE_DISABLED_TEXT, isPilotMode, pilotSafeSourceUrl } from "../../utils/pilotSources";
 
 export default function ProvenancePanel({ citations = [], flat = false }) {
   const [panelOpen, setPanelOpen] = useState(true);
@@ -8,6 +9,9 @@ export default function ProvenancePanel({ citations = [], flat = false }) {
   if (!Array.isArray(citations) || citations.length === 0) {
     return null;
   }
+
+  // Read-only pilot: raw document routes are denied, so rows render without links.
+  const pilot = isPilotMode();
 
   // Normalize citations to consistent shape
   const normalizedSources = citations.map((item, idx) => {
@@ -19,9 +23,9 @@ export default function ProvenancePanel({ citations = [], flat = false }) {
         pageNumber: null,
         pageLabel: isCsv ? "CSV Data" : "—",
         isCsv,
-        sourceUrl: isCsv
+        sourceUrl: pilotSafeSourceUrl(isCsv
           ? `/api/files/${encodeURIComponent(item)}?download=true`
-          : (item.toLowerCase().endsWith(".pdf") ? `/api/files/${encodeURIComponent(item)}` : null),
+          : (item.toLowerCase().endsWith(".pdf") ? `/api/files/${encodeURIComponent(item)}` : null), pilot),
       };
     }
 
@@ -46,7 +50,7 @@ export default function ProvenancePanel({ citations = [], flat = false }) {
       pageNumber: pageNum,
       pageLabel,
       isCsv,
-      sourceUrl,
+      sourceUrl: pilotSafeSourceUrl(sourceUrl, pilot),
     };
   });
 
@@ -89,7 +93,7 @@ export default function ProvenancePanel({ citations = [], flat = false }) {
                         </a>
                       )
                     ) : (
-                      <b>{row.docName}</b>
+                      <b title={pilot ? PILOT_SOURCE_DISABLED_TEXT : undefined}>{row.docName}</b>
                     )}
                   </td>
                   <td className="mf-cell-page">
