@@ -136,7 +136,9 @@ def test_assurance_tenant_isolation(env):
 
 def test_assurance_queue_incomplete(env):
     env[2].submit(tenant="T", key="queued", proposal_id="p", revision=1,
-                  payload={"entity":"E", "attribute":"display_name", "corrected_value":"X", "full_vector_snapshot":[]})
+                  payload={"entity":"E", "attribute":"display_name", "corrected_value":"X",
+                          # Wave 3.1: an empty snapshot is rejected at submit; use a nonempty one.
+                          "full_vector_snapshot":[{"chunk_id":"c1", "tenant_id":"T", "text":"known fact"}]})
     snapshot = DurableAssuranceReader(env[1]).snapshot("T")
     assert snapshot.operational_readiness == "INCOMPLETE"
 

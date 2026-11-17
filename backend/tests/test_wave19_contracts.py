@@ -34,8 +34,10 @@ def test_admission_requires_independent_approval(journal):
 
 def test_approved_admission_is_idempotent(journal):
     p = approved()
-    a = queue_verified_approval(journal, p, [])
-    assert a == queue_verified_approval(journal, p, [])
+    # Wave 3.1: journal.submit rejects an empty snapshot; a COMPLETE corpus is nonempty.
+    snapshot = [{"chunk_id": "c1", "tenant_id": "tenant-1", "text": "known fact"}]
+    a = queue_verified_approval(journal, p, snapshot)
+    assert a == queue_verified_approval(journal, p, snapshot)
     assert durable_metrics(journal.sessions, "tenant-1")["jobs"] == {"queued": 1}
 
 

@@ -81,6 +81,14 @@ def test_rejects_missing_complete_snapshot(env):
     with pytest.raises(ValueError): submit(env, p=data)
 
 
+def test_rejects_empty_complete_snapshot(env):
+    """Wave 3.1: an empty list is not a COMPLETE corpus snapshot."""
+    data = payload()
+    data["full_vector_snapshot"] = []
+    with pytest.raises(ValueError, match="nonempty COMPLETE corpus list"):
+        submit(env, p=data)
+
+
 def test_rejects_cross_tenant_corpus_before_publication(env):
     job = submit(env, p=payload(contents=[{"chunk_id": "x", "tenant_id": "another", "text": "oops"}]))
     result = TestWorker(env[1], env[2], env[3]).run_once()
@@ -214,5 +222,6 @@ def test_conflicting_generation_pointer_fails_closed(env):
 
 
 def test_production_worker_refuses_unverified_json_snapshot(env):
-    with pytest.raises(ValueError, match="FAISS binary"):
+    # Wave 3.1 worker wording: refuses a non-FAISS snapshot store and a non-Neo4j graph port.
+    with pytest.raises(ValueError, match="real FAISS and Neo4j adapters"):
         PublicationWorker(env[1], env[2], env[3])

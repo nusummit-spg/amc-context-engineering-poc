@@ -108,7 +108,19 @@ def test_migration_012_matches_sqlalchemy_models(tmp_path):
         mod.upgrade()
         metadata = Base.metadata
         inspector = inspect(conn)
+        # Wave 3.1: Base.metadata also carries tables owned by later migrations
+        # (013/014). This test only executes 012, so it checks the 012-owned tables.
+        # The later-owned set is read from those migration files, not hardcoded.
+        import re
+        later_migration_tables = set()
+        for later in sorted(mig.parent.glob("01[3-9]_*.py")):
+            later_migration_tables |= set(
+                re.findall(r"create_table\(\s*['\"]([a-z0-9_]+)['\"]", later.read_text(encoding="utf-8")))
+        assert later_migration_tables, "expected later migrations to create tables"
         for t in metadata.tables:
+            if t in later_migration_tables:
+                assert t not in inspector.get_table_names(), t
+                continue
             assert t in inspector.get_table_names(), t
             actual = {c["name"] for c in inspector.get_columns(t)}
             expected = set(metadata.tables[t].columns.keys())
