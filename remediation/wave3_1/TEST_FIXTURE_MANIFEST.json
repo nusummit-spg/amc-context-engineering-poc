@@ -1,0 +1,124 @@
+{
+  "contains_secrets": false,
+  "fault_hooks": [
+    "after_scope_claim",
+    "after_graph_write",
+    "before_receipt_commit",
+    "after_receipt_commit_before_reader_reload",
+    "during_sse_response",
+    "during_rollback"
+  ],
+  "fixture_set_sha256": "c34ba45b9fc33e1bd4ec9b387ca3464f70253912291ffcc413608c0cfbf01bc3",
+  "fixture_version": "amc-wave31-fixtures-v1",
+  "generations": {
+    "A": "initial ACTIVE",
+    "B": "staged then ACTIVE; changes TER and exit-load facts",
+    "C": "tampered variants, see tamper_cases"
+  },
+  "license": "Invented test data created for this repository; no third-party source text.",
+  "shared_document_ids": [
+    "DOC-001",
+    "DOC-002",
+    "DOC-003"
+  ],
+  "synthetic": true,
+  "tamper_cases": [
+    {
+      "id": "gen_c_tampered_bytes",
+      "mutation": "flip one byte of the index file after signing"
+    },
+    {
+      "id": "gen_c_missing_index",
+      "mutation": "delete the index file but keep the manifest"
+    },
+    {
+      "id": "gen_c_invalid_signature",
+      "mutation": "sign the manifest with a different disposable key"
+    },
+    {
+      "id": "gen_c_wrong_tenant",
+      "mutation": "bind the manifest to tenant_beta but publish for tenant_alpha"
+    },
+    {
+      "id": "gen_c_digest_mismatch",
+      "mutation": "alter the manifest digest field only"
+    },
+    {
+      "id": "gen_c_duplicate_chunk_id",
+      "mutation": "repeat one chunk_id inside the snapshot"
+    }
+  ],
+  "tenants": {
+    "tenant_alpha": {
+      "corpus_sha256": {
+        "A": "00125af0cde13f6649a253d14acdc7441b4e792d0eaa7c905634b5c264cc5ddd",
+        "B": "7ab261493a63a3478b0ecf56c8788e7210a4710b788029293b2e64baace3de29"
+      },
+      "documents": [
+        "DOC-001",
+        "DOC-002",
+        "DOC-003",
+        "DOC-A04"
+      ],
+      "expected_citations": {
+        "alpha_exit_load": {
+          "A": "tenant_alpha:DOC-003:A:c0",
+          "B": "tenant_alpha:DOC-003:B:c0"
+        },
+        "alpha_ter": {
+          "A": "tenant_alpha:DOC-001:A:c0",
+          "B": "tenant_alpha:DOC-001:B:c0"
+        }
+      },
+      "graph_sha256": {
+        "A": "3a16463325947588bc0591b64aca9ebbeded61f7f4cc47530ed8e7ff80eb37d7",
+        "B": "3b57acf492a1a612573dae06f91d81c9d0bb483e7f63b8910cc7327df2fd4472"
+      },
+      "probes_sha256": "0ec3e64cec76b2b93fcd15ac26f8e1cc0a27c9b9275341bd42cab6cb0152888c"
+    },
+    "tenant_beta": {
+      "corpus_sha256": {
+        "A": "a2af7a290b3c4806aed66aa6981f6edf1cdafab923021a23bdfe131f0f1d0081",
+        "B": "1f50768d225a3b5cc2bf2d189eb884f631258554d8d37ea1dda78b8be0e1f423"
+      },
+      "documents": [
+        "DOC-001",
+        "DOC-002",
+        "DOC-003",
+        "DOC-B04"
+      ],
+      "expected_citations": {
+        "beta_min_lumpsum": {
+          "A": "tenant_beta:DOC-002:A:c0",
+          "B": "tenant_beta:DOC-002:B:c0"
+        },
+        "beta_ter": {
+          "A": "tenant_beta:DOC-001:A:c0",
+          "B": "tenant_beta:DOC-001:B:c0"
+        }
+      },
+      "graph_sha256": {
+        "A": "a5faf238571b4121da0ba8900cc98d3e60d5dc57de04403eb494212c2b49da7a",
+        "B": "ad33f9ae282d2485b98cbe21872fb3c49381c9f1a02c56fffb8e209863d728e6"
+      },
+      "probes_sha256": "fb4cac3b6692362317b9e116dadce18362c1db23c9cb6b2fac4163e5be8e6b53"
+    }
+  },
+  "users": [
+    {
+      "role": "user",
+      "tenant": "tenant_alpha",
+      "username": "alpha_analyst"
+    },
+    {
+      "role": "user",
+      "tenant": "tenant_beta",
+      "username": "beta_analyst"
+    },
+    {
+      "role": "admin",
+      "tenant": "tenant_alpha",
+      "username": "alpha_operator"
+    }
+  ]
+}
