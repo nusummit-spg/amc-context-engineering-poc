@@ -17,6 +17,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
+# The integration branch and the team feature branch carry the same Wave 3.1 lineage.
+ALLOWED_BRANCHES = frozenset({"feature/amc-wave31-integration",
+                              "amc-dev-wave31-integration"})
+
+
 def utcnow() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -91,8 +96,9 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("Working tree must be clean. Commit fixes before exact-SHA testing")
     if len(sha) != 40 or any(c not in "0123456789abcdef" for c in sha):
         parser.error("Invalid Git commit SHA")
-    if branch != "feature/amc-wave31-integration":
-        parser.error("Switch to feature/amc-wave31-integration before qualification")
+    if branch not in ALLOWED_BRANCHES:
+        parser.error("Switch to one of " + ", ".join(sorted(ALLOWED_BRANCHES))
+                     + " before qualification")
 
     output = (args.out_dir or repo.parent / f"amc-wave31-evidence-{sha[:12]}").resolve()
     if output == repo or repo in output.parents:
