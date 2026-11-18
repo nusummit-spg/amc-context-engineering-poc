@@ -24,7 +24,6 @@ DB_ONLY_TABLES = {"alembic_version", "active_versions", "outbox_events", "public
 # fixing drift without updating this list.
 KNOWN_DRIFT = {
     "audit_metadata": "compliance audit model differs from the legacy 001 table",
-    "response_feedback": "feedback columns added after 001; feedback routes are denied in the pilot",
     "chat_sessions": "DB-only legacy columns metadata_json/status (status has a server default)",
     "graph_mutations": "success: model NOT NULL, DB nullable with server default",
     "query_evidence": "archived/has_feedback: model NOT NULL, DB nullable with server default",
@@ -32,6 +31,8 @@ KNOWN_DRIFT = {
 }
 # Tables the pilot path touches. For these, a model column missing in the DB is a hard failure.
 PILOT_TABLES = {"auth_users", "revoked_tokens", "invitation_tokens", "chat_sessions", "query_evidence",
+                "response_feedback",       # the query path selects it on every request
+
                 "publication_work_v2", "publication_effect_v2", "publication_receipt_v2",
                 "publication_pointer_v2", "publication_fence_v2", "feedback_publication_link_v2",
                 "publication_active_authority_v28", "publication_authority_preimage_v28",

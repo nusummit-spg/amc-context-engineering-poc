@@ -9,12 +9,14 @@ comparing the models with a real migrated PostgreSQL database):
   * six model tables had no migration: compliance_rules, feedback_issues,
     feedback_issue_category_counts, fund_schemes, revoked_tokens, violations
     (revoked_tokens backs JWT revocation);
-  * chat_sessions lacked ended_at and audit_id, which every chat session insert/select uses.
+  * chat_sessions lacked ended_at and audit_id, which every chat session insert/select uses;
+  * response_feedback lacked 8 columns the query path selects on EVERY request (the
+    pending-feedback check failed with UndefinedColumn on a 014-only database).
 
-Scope: additive only. Nothing is dropped or renamed. The compliance ``audit_metadata`` and
-``response_feedback`` tables still differ from their models; those features are denied by the
-pilot perimeter and are listed as known drift in tests/live31/test_pg_migration31.py.
-Use downgrade on a disposable database only.
+Scope: additive only. Nothing is dropped or renamed. The compliance ``audit_metadata`` table
+still differs from its model (a different feature, denied by the pilot perimeter) and a few
+nullability differences remain; they are pinned as known drift in
+tests/live31/test_pg_migration31.py. Use downgrade on a disposable database only.
 """
 from alembic import op
 import sqlalchemy as sa
@@ -191,9 +193,52 @@ def upgrade():
     with op.batch_alter_table('chat_sessions') as batch:
         batch.alter_column('updated_at', existing_type=sa.String(length=40), nullable=False)
 
+    # response_feedback: the query path runs a pending-feedback check on EVERY request and selects
+    # these columns; on a database migrated only to 014 it failed with UndefinedColumn each time.
+    with op.batch_alter_table('response_feedback') as batch:
+        batch.add_column(sa.Column('completeness_score', sa.Integer(), nullable=True))
+        batch.add_column(sa.Column('automated_category', sa.String(length=60), nullable=True))
+        batch.add_column(sa.Column('automated_confidence', sa.Float(), nullable=True))
+        batch.add_column(sa.Column('client_timestamp', sa.String(length=40), nullable=True))
+        batch.add_column(sa.Column('audit_id', sa.String(length=64), nullable=True))
+        batch.add_column(sa.Column('violation_id', sa.String(length=64), nullable=True))
+        batch.add_column(sa.Column('issue_id', sa.String(length=64), nullable=True))
+        batch.add_column(sa.Column('match_type', sa.String(length=20), nullable=True))
+        batch.create_index('ix_response_feedback_audit_id', ['audit_id'], unique=False)
+        batch.create_index('ix_response_feedback_issue_id', ['issue_id'], unique=False)
+        batch.create_foreign_key('fk_response_feedback_issue_id', 'feedback_issues', ['issue_id'], ['issue_id'],
+                                 ondelete='SET NULL')
+        batch.create_foreign_key('fk_response_feedback_audit_id', 'audit_metadata', ['audit_id'], ['audit_id'])
+        batch.create_foreign_key('fk_response_feedback_violation_id', 'violations', ['violation_id'], ['violation_id'])
+        batch.create_check_constraint('ck_feedback_relevance_score',
+                                      'answer_relevance_score IS NULL OR (answer_relevance_score BETWEEN 1 AND 5)')
+        batch.create_check_constraint('ck_feedback_source_score',
+                                      'source_quality_score IS NULL OR (source_quality_score BETWEEN 1 AND 5)')
+        batch.create_check_constraint('ck_feedback_completeness_score',
+                                      'completeness_score IS NULL OR (completeness_score BETWEEN 1 AND 5)')
+        batch.create_check_constraint('ck_feedback_automated_confidence',
+                                      'automated_confidence IS NULL OR (automated_confidence BETWEEN 0.0 AND 1.0)')
+    op.execute("UPDATE response_feedback SET updated_at = created_at WHERE updated_at IS NULL")
+    with op.batch_alter_table('response_feedback') as batch:
+        batch.alter_column('updated_at', existing_type=sa.String(length=40), nullable=False)
+
 
 def downgrade():
     # Disposable test databases ONLY; never downgrade a database that serves a release.
+    with op.batch_alter_table('response_feedback') as batch:
+        batch.alter_column('updated_at', existing_type=sa.String(length=40), nullable=True)
+        batch.drop_constraint('ck_feedback_automated_confidence', type_='check')
+        batch.drop_constraint('ck_feedback_completeness_score', type_='check')
+        batch.drop_constraint('ck_feedback_source_score', type_='check')
+        batch.drop_constraint('ck_feedback_relevance_score', type_='check')
+        batch.drop_constraint('fk_response_feedback_violation_id', type_='foreignkey')
+        batch.drop_constraint('fk_response_feedback_audit_id', type_='foreignkey')
+        batch.drop_constraint('fk_response_feedback_issue_id', type_='foreignkey')
+        batch.drop_index('ix_response_feedback_issue_id')
+        batch.drop_index('ix_response_feedback_audit_id')
+        for col in ('match_type', 'issue_id', 'violation_id', 'audit_id', 'client_timestamp',
+                    'automated_confidence', 'automated_category', 'completeness_score'):
+            batch.drop_column(col)
     with op.batch_alter_table('chat_sessions') as batch:
         batch.alter_column('updated_at', existing_type=sa.String(length=40), nullable=True)
         batch.drop_constraint('fk_chat_sessions_audit_id', type_='foreignkey')
