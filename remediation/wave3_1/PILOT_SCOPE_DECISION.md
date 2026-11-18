@@ -37,10 +37,14 @@ taxonomy browser, scheme aggregation, admin endpoints, user-management screens, 
 legacy query engines (`traditional`, `contextgraph`, canary, shadow), automatic graph repair,
 multi-tenant SaaS operation, and any 24/7 availability or SLO commitment.
 
-**Known UI consequence.** The current frontend calls routes the pilot denies, for example the chat
+**Known UI consequence.** The stock frontend calls routes the pilot denies, for example the chat
 session list (`GET /api/sessions`) and chat titles (`POST /api/chat/title`). See
 [FRONTEND_PILOT_COMPATIBILITY.md](FRONTEND_PILOT_COMPATIBILITY.md) (44 denied call sites against 7
-allowed). Whether the chat screen degrades cleanly has **not been verified in a browser**.
+allowed). A browser walkthrough of the real pilot stack found that, without handling, the UI also offered
+every denied page and one of them (Compliance Scorecard) showed built-in sample figures as if they were live.
+The pilot build (`VITE_AMC_PILOT_MODE=true`) therefore shows Chat only, refuses the denied calls itself and
+derives chat titles locally; chat history then lives in the browser only. The walkthrough was one manual
+session in one browser engine, not an automated cross-browser test.
 
 ## 4. Test contract (synthetic only)
 
