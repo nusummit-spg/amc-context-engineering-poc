@@ -155,7 +155,12 @@ async def _run_v2_chat(
 
     trad_result = None
     if request.mode in ("traditional", "both"):
-        hits = await container.orchestrator.traditional_search(query)
+        # W31_CHAT_TRADITIONAL_TENANT: the second retrieval must carry the authenticated identity,
+        # exactly as /query does. Without it the verified fence denies it and /chat returned a 500.
+        hits = await container.orchestrator.traditional_search(
+            query,
+            user_id=current_user.username if current_user else None,
+            tenant_id=current_user.tenant_id if current_user else None)
         from app.models.api import TraditionalResult
         trad_result = TraditionalResult(
             files=[{

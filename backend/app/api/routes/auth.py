@@ -156,6 +156,11 @@ async def logout(
     except Exception as exc:
         db.rollback()
         logger.warning("Could not revoke token: %s", exc)
+        import os
+        if os.environ.get("AMC_VERIFIED_SERVING_MODE", "off") == "enforce":
+            # W31: never tell the client it is logged out when the token is still valid server-side.
+            from fastapi import HTTPException
+            raise HTTPException(status_code=503, detail="Logout could not be completed; the session is still active")
         return {"ok": True, "message": "Logged out (server-side revocation failed)"}
     finally:
         db.close()

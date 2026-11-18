@@ -160,6 +160,15 @@ class AuthService:
         if payload is None:
             return None, "invalid_token"
         
+        # W31_REVOCATION_FAIL_CLOSED: in verified (enforce) mode a token that cannot be checked
+        # against the revocation table must be refused, and a token with no jti can never be
+        # revoked at all. Off mode keeps the historic behavior.
+        import os
+        enforce = os.environ.get("AMC_VERIFIED_SERVING_MODE", "off") == "enforce"
+        if enforce and not payload.jti:
+            logger.warning("Rejected a session token without a jti in verified mode (cannot be revoked)")
+            return None, "invalid_token"
+
         # Check if token is revoked
         if payload.jti:
             try:
@@ -175,7 +184,10 @@ class AuthService:
                     return None, "revoked_token"
             except Exception as exc:
                 logger.warning("Error checking token revocation: %s", exc)
-        
+                if enforce:
+                    # Fail closed: an unverifiable token is not an accepted token.
+                    return None, "invalid_token"
+
         record = self._repository.get_by_username(payload.username)
         if record is None:
             return None, "invalid_token"
