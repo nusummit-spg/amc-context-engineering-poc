@@ -210,7 +210,7 @@ def test_hard_kill_during_a_stream_then_restart_serves_correctly_with_state_inta
 def test_postgres_outage_denies_cleanly_and_the_app_recovers_without_a_restart(app, svc):
     token = app.login()
     assert _query(app.server, token).status_code == 200
-    svc("-KillPostgres")
+    svc("-Action", "KillPostgres")
     try:
         assert _wait_port(55432, up=False, timeout=60), "postgres did not stop"
         started = time.perf_counter()
@@ -242,7 +242,7 @@ def test_postgres_outage_denies_cleanly_and_the_app_recovers_without_a_restart(a
 
 def test_neo4j_outage_never_serves_stale_or_foreign_data_and_publication_recovers(app, svc):
     token = app.login()
-    svc("-KillNeo4j")
+    svc("-Action", "KillNeo4j")
     try:
         assert _wait_port(57687, up=False, timeout=60), "neo4j did not stop"
         r = _query(app.server, token)
