@@ -21,7 +21,7 @@ from .models import PublicationWork, PublicationEffect, GenerationPointer, Publi
 from .types import Claim, Conflict, LeaseLost, PublicationError, sha256_json
 # W28_ACTIVE_RECEIPT_AUTHORITY: register sidecar schema and atomic helpers.
 from .active_authority28 import (suspend_before_graph, bind_published,
-    suspend_rollback, restore_after_rollback)
+    suspend_rollback, restore_after_rollback, _claim_scope)
 
 
 class Journal:
@@ -133,6 +133,19 @@ class Journal:
                 return None
             return {"pre": row.preimage, "post": row.postimage, "state": row.state,
                     "pre_hash": row.pre_hash, "post_hash": row.post_hash}
+
+    def acquire_scope(self, claim: Claim, namespace: str = "vector_faiss"):
+        """Take the durable one-writer scope BEFORE reading any pointer or graph preimage.
+
+        Preimages read before the scope is held can be stale: another publication may complete in
+        between, and a stale graph preimage makes the compare-and-set conflict on every retry,
+        leaving the tenant suspended with serving denied. Holding the scope first means every
+        preimage the worker reads is the true current state. Re-entrant for the same work, so a
+        crash and replay simply re-acquires it. Raises Conflict if another work holds the scope.
+        """
+        with self.sessions.begin() as s:
+            self._require(s, claim)
+            _claim_scope(s, claim.tenant, namespace, claim.work_id)
 
     def prepare(self, claim: Claim, *, kind: str, target: str, pre: dict, post: dict):
         """Durable before any side effect. Replays must use the original preimage.

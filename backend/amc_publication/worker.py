@@ -100,21 +100,12 @@ class PublicationWorker:
         attribute = payload.get("attribute")
         corrected_value = payload.get("corrected_value")
         
-        # Step 1: Get preimage from graph
-        pre_result = self.graph.read(tenant, entity, attribute)
-        preimage = {"value": pre_result["value"]}
-        
-        # Failpoint for graph_preimage_committed
-        if self.failpoint:
-            self.failpoint("graph_preimage_committed")
-        
-        # Step 2: Stage vector corpus (if provided)
         vector_snapshot = payload.get("full_vector_snapshot", [])
-        # W25_FROZEN_VECTOR_PREIMAGE: freeze before any graph or pointer mutation.
-        # On crash replay, Journal.prepare returns the original durable preimage.
-        frozen_before = self.journal.pointer(tenant, "vector_faiss")
         if not isinstance(vector_snapshot, list) or not vector_snapshot:
             raise Conflict("complete nonempty corpus is required before graph mutation")
+
+        # Step 1: Stage the vector corpus. Content-addressed and free of authority side effects,
+        # so it is safe (and slow) work to do BEFORE the scope is held.
         if vector_snapshot:
             try:
                 generation = self.snapshots.stage(tenant, vector_snapshot)
@@ -122,6 +113,26 @@ class PublicationWorker:
                 self.journal.retry(claim, exc)
                 return {"status": "retry_scheduled", "error": str(exc)}
             logger.info("PublicationWorker: staged vector corpus %s", generation.digest)
+
+        # W31_SCOPE_BEFORE_PREIMAGE: take the durable one-writer scope BEFORE reading any
+        # preimage. A preimage read earlier can be stale if another publication completes in
+        # between, which wedged the tenant (graph CAS conflicts forever, serving stays denied).
+        if self.failpoint:
+            self.failpoint("before_scope_acquired")
+        self.journal.acquire_scope(claim)
+
+        # Step 2: Read the graph preimage and freeze the vector preimage, now under the scope.
+        pre_result = self.graph.read(tenant, entity, attribute)
+        preimage = {"value": pre_result["value"]}
+
+        # Failpoint for graph_preimage_committed
+        if self.failpoint:
+            self.failpoint("graph_preimage_committed")
+
+        # W25_FROZEN_VECTOR_PREIMAGE: freeze before any graph or pointer mutation.
+        # On crash replay, Journal.prepare returns the original durable preimage.
+        frozen_before = self.journal.pointer(tenant, "vector_faiss")
+        if vector_snapshot:
             # Prepare vector effect with the generation as dict
             frozen_before = self.journal.prepare(claim, kind="vector", target=entity,
                                 pre=frozen_before,
