@@ -191,6 +191,8 @@ def test_hard_kill_during_a_stream_then_restart_serves_correctly_with_state_inta
     app.server.kill()                          # no shutdown hooks run
     t.join(30)
     app.stub.server.stream_delay = 0.0
+    with pytest.raises(httpx.HTTPError):       # the server itself must really be gone, not just its launcher
+        httpx.get(app.server.base + "/health", timeout=3)
     assert pg_state(app.pg.sessions, ALPHA) == before, "a killed reader must not change durable publication state"
     restarted = hs.AppServer(database_url=app.pg.url, faiss_root=app.tmp / "faiss", llm_url=app.stub.url,
                              log_path=app.tmp / "app2.log")
@@ -359,12 +361,8 @@ def test_measure_latency_throughput_and_memory(app):
     [t.join(240) for t in threads]
     wall = time.perf_counter() - wall
     ok = [s for s, code in conc if code == 200]
-    rss = None
-    try:
-        import psutil
-        rss = round(psutil.Process(app.server.proc.pid).memory_info().rss / 1e6, 1)
-    except Exception:                          # noqa: BLE001
-        pass
+    rss = app.server.rss_mb()                  # launcher + real server (the launcher alone is ~17 MB)
+    assert rss > 100, f"implausible server memory reading {rss} MB: the real server was not measured"
     result = {
         "measured_on": "single Windows dev machine, Python 3.11, local PostgreSQL/Neo4j, stubbed LLM and hash embedder",
         "note": "Numbers describe THIS run only. LLM latency is a stub, so end-to-end latency with a real provider will differ.",

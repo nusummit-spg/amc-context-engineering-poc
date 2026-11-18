@@ -66,21 +66,49 @@ class AppServer:
         self.stop()
         raise RuntimeError("app did not become healthy:\n" + self.log_tail(40))
 
+    def _tree(self):
+        """The launcher AND the real server. On Windows the venv's python.exe is a small launcher that
+        starts the interpreter as a CHILD, so acting on proc.pid alone leaves the server running."""
+        import psutil
+        try:
+            root = psutil.Process(self.proc.pid)
+            return [root] + root.children(recursive=True)
+        except psutil.NoSuchProcess:
+            return []
+
     def stop(self):
         if self.proc and self.proc.poll() is None:
-            self.proc.terminate()
+            procs = self._tree()
+            for p in procs:
+                try:
+                    p.terminate()
+                except Exception:        # noqa: BLE001
+                    pass
             try:
                 self.proc.wait(20)
             except subprocess.TimeoutExpired:
-                self.proc.kill()
+                pass
+            for p in procs:
+                try:
+                    p.kill()
+                except Exception:        # noqa: BLE001
+                    pass
         if getattr(self, "_log", None):
             self._log.close()
 
     def kill(self):
-        """Hard kill: simulates the process dying with no shutdown hooks."""
+        """Hard kill of the whole tree: simulates the process dying with no shutdown hooks."""
         if self.proc and self.proc.poll() is None:
-            self.proc.kill()
+            for p in self._tree():
+                try:
+                    p.kill()
+                except Exception:        # noqa: BLE001
+                    pass
             self.proc.wait(20)
+
+    def rss_mb(self) -> float:
+        """Resident memory of the launcher plus the real server."""
+        return round(sum(p.memory_info().rss for p in self._tree()) / 1e6, 1)
 
     def log_tail(self, n: int = 60) -> str:
         try:
