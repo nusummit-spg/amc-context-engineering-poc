@@ -49,7 +49,8 @@ def live_pg_admin_url():
 
 
 def _admin(url: str):
-    return create_engine(url, isolation_level="AUTOCOMMIT")
+    # pre-ping: the outage drills stop PostgreSQL mid-test and teardown must reconnect, not reuse a dead socket
+    return create_engine(url, isolation_level="AUTOCOMMIT", pool_pre_ping=True)
 
 
 @pytest.fixture(scope="session")

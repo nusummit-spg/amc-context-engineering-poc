@@ -18,6 +18,12 @@ Base = declarative_base()
 _engine_options = {"pool_pre_ping": True}
 if make_url(DATABASE_URL).get_backend_name() == "sqlite":
     _engine_options["connect_args"] = {"check_same_thread": False, "timeout": 30.0}
+else:
+    # W31_BOUNDED_DB_OUTAGE: measured on a real PostgreSQL outage, a request took 130 s to fail
+    # because every database touch waited for the OS to give up on the connect. Bound both the
+    # connect and the wait for a pooled connection so an outage is a fast, controlled denial.
+    _engine_options["connect_args"] = {"connect_timeout": 3}
+    _engine_options["pool_timeout"] = 10
 engine = create_engine(DATABASE_URL, **_engine_options)
 
 
