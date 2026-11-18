@@ -111,10 +111,11 @@ def pg_state(sessions, tenant: str) -> dict:
 def serving_allowed(stack, tenant: str) -> bool:
     """True only if the real resolver would serve this tenant right now."""
     from amc_publication.serving27 import ServingDenied
+    from amc_publication.types import VerificationFailed
     try:
         stack.retriever.resolver.resolve_for_serving(tenant)
         return True
-    except ServingDenied:
+    except (ServingDenied, VerificationFailed):     # tampered bytes raise VerificationFailed: still a refusal
         return False
 
 
