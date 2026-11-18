@@ -9,7 +9,7 @@
 - Installed an ASGI verified-pilot default-deny perimeter; only authenticated pilot query/chat, login, health, publication status and static asset paths are permitted in enforce mode.
 - In enforce mode, disabled background Neo4j seed/schema writes, legacy FAISS/cache warmups, scheduler, ingestion queue and feedback/recovery background processes. Off-mode startup stays unchanged.
 - Removed hardcoded SQLite runtime choice. Runtime now accepts a DATABASE_URL environment variable. The existing SQLite fallback remains for legacy development.
-- Verified mode requires an explicit postgresql+psycopg:// URL and a DB already migrated to exact Alembic revision 014. Startup does not auto-create/migrate verified-mode production schemas.
+- Verified mode requires an explicit postgresql+psycopg:// URL and a DB already migrated to exact Alembic revision 015 (015 aligns the app tables with the models; 014 alone is not enough). Startup does not auto-create/migrate verified-mode production schemas.
 - Added local unit tests for mode fencing and a fail-closed release-evidence completeness checker.
 
 ## Required pilot configuration (illustrative, NOT a production deployment recipe)
@@ -18,7 +18,7 @@
 - DATABASE_URL=postgresql+psycopg://USER:SECRET@HOST/DB (pass through secret manager; never commit credentials)
 - AMC_VERIFIED_FAISS_ROOT points to a signed, operator-published immutable active corpus
 - Tenant-scoped authenticated users, working Neo4j and approved model provider configuration
-- Alembic 001→014 applied to the *same* PostgreSQL database before app startup
+- Alembic 001→015 applied to the *same* PostgreSQL database before app startup
 
 ## Local qualification commands
 1. python -m compileall -q backend

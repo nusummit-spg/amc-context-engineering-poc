@@ -46,8 +46,13 @@ class FakeDB:
     def all(self):return [self.version]
 
 def test_old_schema_blocks():
-    with pytest.raises(RuntimeError,match="revision 014"):
+    with pytest.raises(RuntimeError,match="revision 015"):
         verify_migrated_postgresql(FakeDB("013_active_receipt_authority_v28"))
 
+def test_previous_head_014_now_blocks():
+    """Wave 3.1 WP02: 014 lacks the app tables/columns the models need, so it is not enough."""
+    with pytest.raises(RuntimeError,match="revision 015"):
+        verify_migrated_postgresql(FakeDB("014_publication_scope_claim_v31"))
+
 def test_exact_schema_passes():
-    verify_migrated_postgresql(FakeDB("014_publication_scope_claim_v31"))
+    verify_migrated_postgresql(FakeDB("015_app_schema_alignment_v31"))

@@ -37,15 +37,17 @@ Record the application commit SHA, flag values and migration revision with the r
 
 ## 3. Start sequence
 
-1. Start the disposable providers: `docker compose -p amc31-qa -f ops/validation/compose.wave31.local.yml up -d`
-   with `AMC_TEST_PG_PASSWORD` and `AMC_TEST_NEO4J_PASSWORD` set in the shell (the file refuses to start without them).
+1. Start the disposable providers without Docker: `ops/validation/local_services31.ps1 -Action Start`
+   (embedded PostgreSQL and a portable Neo4j on `127.0.0.1`, see that script for setup). The Docker Compose file
+   `ops/validation/compose.wave31.local.yml` remains only as an alternative for machines that have Docker.
 2. From `backend/`, run `python scripts/alembic_dag_preflight.py`, then `python -m alembic -c alembic.ini upgrade head`
-   and `… current`. The revision must be `014_publication_scope_claim_v31`. Never downgrade a database that is not disposable.
+   and `… current`. The revision must be `015_app_schema_alignment_v31` (014 alone leaves chat and token revocation
+   without their tables and columns). Never downgrade a database that is not disposable.
 3. Publish the synthetic corpus through the operator path (see §1, item 1) and confirm an ACTIVE receipt,
    the graph readback and the signed FAISS generation. Do not edit SQL rows by hand to force a state.
 4. Start the app in enforce mode, then smoke-test as an authenticated tenant user (not just `/health`).
 
-Startup in enforce mode refuses to run unless the engine is PostgreSQL at exactly revision 014, creates no
+Startup in enforce mode refuses to run unless the engine is PostgreSQL at exactly revision 015, creates no
 schema, and starts no scheduler, ingest queue, FAISS or cache warm-up, or feedback worker.
 
 ## 4. Rollback and recovery (design contract, unrehearsed)
