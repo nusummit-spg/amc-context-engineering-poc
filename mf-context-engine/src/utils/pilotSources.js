@@ -41,6 +41,40 @@ export function isRawSourceUrl(url) {
 }
 
 /**
+ * The API calls the verified pilot perimeter admits (backend/app/api/pilot_perimeter31.py).
+ * Everything else is answered 503 by the backend, so in pilot mode the client refuses those calls
+ * itself, quietly and before any network request. This must equal the backend allowlist; a Python
+ * test compares the two so they cannot drift apart.
+ */
+export const PILOT_ALLOWED_API = [
+  "POST /api/auth/login", "POST /api/auth/logout", "GET /api/auth/me",
+  "POST /api/query", "POST /api/query/v2", "POST /api/query/stream",
+  "POST /api/chat", "POST /api/chat/query", "POST /api/chat/v2", "POST /api/chat/stream",
+  "GET /api/health",
+];
+export const PILOT_ALLOWED_API_PREFIXES = ["GET /api/publication/status/"];
+
+export class PilotDisabledError extends Error {
+  constructor(method, path) {
+    super(`${method} ${path} is not available in the read-only pilot`);
+    this.name = "PilotDisabledError";
+    this.pilotDisabled = true;
+  }
+}
+
+/** True when the pilot perimeter would admit this call. `path` is the full path, e.g. /api/query. */
+export function isPilotApiAllowed(method, path) {
+  const clean = String(path || "").split("?")[0].split("#")[0];
+  const key = `${String(method || "GET").toUpperCase()} ${clean}`;
+  return PILOT_ALLOWED_API.includes(key) || PILOT_ALLOWED_API_PREFIXES.some((p) => key.startsWith(p));
+}
+
+/** Navigation and features the pilot hides because their backend routes are denied. */
+export function pilotHidesFeature(pilot = isPilotMode()) {
+  return pilot === true;
+}
+
+/**
  * Returns the URL to render, or null when the pilot would only produce a dead link.
  * Outside pilot mode the URL is returned unchanged.
  */

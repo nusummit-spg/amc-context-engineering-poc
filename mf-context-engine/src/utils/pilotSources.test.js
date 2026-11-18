@@ -1,10 +1,39 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  PILOT_ALLOWED_API,
+  PilotDisabledError,
+  isPilotApiAllowed,
   isPilotMode,
   isRawSourceUrl,
   pilotSafeSourceUrl,
 } from "./pilotSources.js";
+
+test("the pilot API allowlist admits the Q&A journey and nothing else", () => {
+  for (const [method, path] of [
+    ["POST", "/api/auth/login"], ["POST", "/api/auth/logout"], ["GET", "/api/auth/me"],
+    ["POST", "/api/query"], ["POST", "/api/query/stream"], ["POST", "/api/chat"], ["POST", "/api/chat/stream"],
+    ["GET", "/api/health"], ["GET", "/api/publication/status/pub_123"], ["post", "/api/query?x=1"],
+  ]) {
+    assert.equal(isPilotApiAllowed(method, path), true, `${method} ${path}`);
+  }
+  for (const [method, path] of [
+    ["GET", "/api/sessions"], ["POST", "/api/chat/title"], ["GET", "/api/admin/users"], ["GET", "/api/graph"],
+    ["GET", "/api/feedback/pending-notice"], ["POST", "/api/feedback"], ["GET", "/api/compliance/scorecard"],
+    ["GET", "/api/query"], ["DELETE", "/api/query"], ["GET", "/api/files/x.pdf"], ["POST", "/api/auth/login/x"],
+    ["GET", "/api/publication/status"], ["", ""], [undefined, undefined],
+  ]) {
+    assert.equal(isPilotApiAllowed(method, path), false, `${method} ${path}`);
+  }
+  assert.ok(PILOT_ALLOWED_API.length >= 10);
+});
+
+test("PilotDisabledError is recognisable and carries the denied call", () => {
+  const err = new PilotDisabledError("GET", "/api/sessions");
+  assert.equal(err.pilotDisabled, true);
+  assert.equal(err.name, "PilotDisabledError");
+  assert.match(err.message, /GET \/api\/sessions/);
+});
 
 test("isPilotMode is off unless the build flag is exactly true", () => {
   assert.equal(isPilotMode({}), false);

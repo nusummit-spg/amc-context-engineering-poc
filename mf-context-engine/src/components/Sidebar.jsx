@@ -30,6 +30,7 @@ import { useToast } from "./widgets/Toast";
 import { ROLE_PERMISSIONS } from "../data/rbac";
 import { formatSidebarSessions } from "../utils/chatSessionUtils";
 import { FEATURES } from "../config/features";
+import { isPilotMode } from "../utils/pilotSources";
 
 const WORKSPACE_TABS = [
   { label: "Chat", icon: MessageCircle, key: "chat" },
@@ -83,7 +84,12 @@ export default function Sidebar() {
   const canCompare = perms.can_access_compare_tab ?? true;
   const canAnalytics = perms.can_access_analytics_tab ?? true;
 
+  // Read-only verified pilot: every page below Chat calls a route the backend perimeter denies, and some
+  // of them fall back to sample data that would be shown as if it were real. Show Chat only.
+  const pilot = isPilotMode();
+
   const workspaceTabs = WORKSPACE_TABS.filter((t) => {
+    if (pilot) return t.key === "chat";
     if (!t.permKey) return true;
     const fallback = t.key === "admin" ? false : true;
     return perms[t.permKey] ?? fallback;
@@ -275,7 +281,7 @@ export default function Sidebar() {
             })}
 
             {/* Phase 3: "My Feedback" Personal View (Visible to all authenticated users) */}
-            {FEATURES.MY_FEEDBACK_PAGE_ENABLED && (
+            {FEATURES.MY_FEEDBACK_PAGE_ENABLED && !pilot && (
               <button
                 type="button"
                 className={`cg-nav-item ${activePage === "my_feedback" ? "active" : ""}`}
@@ -288,7 +294,7 @@ export default function Sidebar() {
             )}
 
             {/* "Feedback & Triage" Top-Level Navigation Item (Admin Only) */}
-            {canAdmin && (
+            {canAdmin && !pilot && (
               <button
                 type="button"
                 className={`cg-nav-item ${isFeedbackTriageActive ? "active" : ""}`}
@@ -303,7 +309,8 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* ── 3b. Compliance Pages Section ── */}
+      {/* ── 3b. Compliance Pages Section (hidden in the read-only pilot) ── */}
+      {!pilot && (
       <div className="cg-nav-section">
         <button
           type="button"
@@ -342,6 +349,7 @@ export default function Sidebar() {
           </nav>
         )}
       </div>
+      )}
 
       {/* ── 4. Chat History / Sessions Section ── */}
       <div className="cg-sessions-section">
@@ -466,6 +474,7 @@ export default function Sidebar() {
 
             <div className="cg-popover-divider" />
 
+            {!pilot && (
             <button
               type="button"
               className="cg-popover-item"
@@ -476,6 +485,7 @@ export default function Sidebar() {
               <span className="cg-popover-item-icon"><Zap size={16} strokeWidth={1.75} /></span>
               <span>{isCacheClearing ? "Flushing Cache..." : "Clear Intent Cache"}</span>
             </button>
+            )}
 
             <button
               type="button"

@@ -11,13 +11,13 @@ UI has been exercised in a real browser against a real enforce-mode backend.
 
 | Method | Path | Call sites |
 |---|---|---|
-| GET | `/api/auth/me` | mf-context-engine/src/services/api.js:130 |
-| POST | `/api/auth/login` | mf-context-engine/src/services/api.js:110 |
-| POST | `/api/auth/logout` | mf-context-engine/src/services/api.js:119 |
-| POST | `/api/chat` | mf-context-engine/src/services/api.js:417 |
-| POST | `/api/chat/stream` | mf-context-engine/src/services/api.js:888 |
-| POST | `/api/query` | mf-context-engine/src/services/api.js:396 |
-| POST | `/api/query/stream` | mf-context-engine/src/services/api.js:796 |
+| GET | `/api/auth/me` | mf-context-engine/src/services/api.js:138 |
+| POST | `/api/auth/login` | mf-context-engine/src/services/api.js:118 |
+| POST | `/api/auth/logout` | mf-context-engine/src/services/api.js:127 |
+| POST | `/api/chat` | mf-context-engine/src/services/api.js:427 |
+| POST | `/api/chat/stream` | mf-context-engine/src/services/api.js:902 |
+| POST | `/api/query` | mf-context-engine/src/services/api.js:406 |
+| POST | `/api/query/stream` | mf-context-engine/src/services/api.js:810 |
 
 ## Denied by the pilot perimeter (503)
 
@@ -26,50 +26,60 @@ handle the denial quietly; a polling loop against a denied route is a defect.
 
 | Method | Path | Call sites |
 |---|---|---|
-| DELETE | `/api/admin/users/x` | mf-context-engine/src/services/api.js:537 |
-| DELETE | `/api/sessions/x` | mf-context-engine/src/services/api.js:612 |
-| GET | `/api/admin/audit` | mf-context-engine/src/services/api.js:547 |
-| GET | `/api/admin/ingestion/compliance-report` | mf-context-engine/src/services/api.js:588 |
-| GET | `/api/admin/ingestion/proposed-edges` | mf-context-engine/src/services/api.js:571 |
-| GET | `/api/admin/ingestion/tasks` | mf-context-engine/src/services/api.js:567 |
-| GET | `/api/admin/intent-cache/stats` | mf-context-engine/src/services/api.js:504 |
-| GET | `/api/admin/rbac` | mf-context-engine/src/services/api.js:543 |
-| GET | `/api/admin/users` | mf-context-engine/src/services/api.js:519 |
+| DELETE | `/api/admin/users/x` | mf-context-engine/src/services/api.js:551 |
+| DELETE | `/api/sessions/x` | mf-context-engine/src/services/api.js:626 |
+| GET | `/api/admin/audit` | mf-context-engine/src/services/api.js:561 |
+| GET | `/api/admin/ingestion/compliance-report` | mf-context-engine/src/services/api.js:602 |
+| GET | `/api/admin/ingestion/proposed-edges` | mf-context-engine/src/services/api.js:585 |
+| GET | `/api/admin/ingestion/tasks` | mf-context-engine/src/services/api.js:581 |
+| GET | `/api/admin/intent-cache/stats` | mf-context-engine/src/services/api.js:518 |
+| GET | `/api/admin/rbac` | mf-context-engine/src/services/api.js:557 |
+| GET | `/api/admin/users` | mf-context-engine/src/services/api.js:533 |
 | GET | `/api/audit-schema/fund-schemes` | mf-context-engine/src/views/pages/FundsPage.jsx:45 |
 | GET | `/api/compliance/scorecard` | mf-context-engine/src/views/pages/ScorecardPage.jsx:21 |
-| GET | `/api/feedback` | mf-context-engine/src/services/api.js:628 |
-| GET | `/api/feedback/issues` | mf-context-engine/src/services/api.js:1047 |
-| GET | `/api/feedback/issues/x` | mf-context-engine/src/services/api.js:1056 |
-| GET | `/api/feedback/mine` | mf-context-engine/src/services/api.js:1034 |
-| GET | `/api/feedback/pending-notice` | mf-context-engine/src/services/api.js:998 |
-| GET | `/api/feedback/status` | mf-context-engine/src/services/api.js:1015 |
-| GET | `/api/feedback/telemetry` | mf-context-engine/src/services/api.js:1051 |
-| GET | `/api/governance/correction/x` | mf-context-engine/src/services/api.js:934 |
-| GET | `/api/governance/pending-corrections` | mf-context-engine/src/services/api.js:930 |
-| GET | `/api/graph` | mf-context-engine/src/services/api.js:593 |
-| GET | `/api/query/health/stream-test` | mf-context-engine/src/services/api.js:641 |
-| GET | `/api/sessions` | mf-context-engine/src/services/api.js:597 |
-| GET | `/api/sessions/x` | mf-context-engine/src/services/api.js:601 |
-| POST | `/api/admin/ingestion/edges/x/confirm` | mf-context-engine/src/services/api.js:575 |
-| POST | `/api/admin/ingestion/edges/x/reject` | mf-context-engine/src/services/api.js:582 |
-| POST | `/api/admin/ingestion/run` | mf-context-engine/src/services/api.js:552 |
-| POST | `/api/admin/ingestion/staleness` | mf-context-engine/src/services/api.js:556 |
-| POST | `/api/admin/ingestion/upload` | mf-context-engine/src/services/api.js:560 |
-| POST | `/api/admin/intent-cache/clear` | mf-context-engine/src/services/api.js:500 |
-| POST | `/api/admin/intent-cache/invalidate-domain` | mf-context-engine/src/services/api.js:508 |
-| POST | `/api/admin/users` | mf-context-engine/src/services/api.js:530 |
-| POST | `/api/admin/users/sync` | mf-context-engine/src/services/api.js:526 |
-| POST | `/api/chat/title` | mf-context-engine/src/services/api.js:471 |
+| GET | `/api/feedback` | mf-context-engine/src/services/api.js:642 |
+| GET | `/api/feedback/issues` | mf-context-engine/src/services/api.js:1061 |
+| GET | `/api/feedback/issues/x` | mf-context-engine/src/services/api.js:1070 |
+| GET | `/api/feedback/mine` | mf-context-engine/src/services/api.js:1048 |
+| GET | `/api/feedback/pending-notice` | mf-context-engine/src/services/api.js:1012 |
+| GET | `/api/feedback/status` | mf-context-engine/src/services/api.js:1029 |
+| GET | `/api/feedback/telemetry` | mf-context-engine/src/services/api.js:1065 |
+| GET | `/api/governance/correction/x` | mf-context-engine/src/services/api.js:948 |
+| GET | `/api/governance/pending-corrections` | mf-context-engine/src/services/api.js:944 |
+| GET | `/api/graph` | mf-context-engine/src/services/api.js:607 |
+| GET | `/api/query/health/stream-test` | mf-context-engine/src/services/api.js:655 |
+| GET | `/api/sessions` | mf-context-engine/src/services/api.js:611 |
+| GET | `/api/sessions/x` | mf-context-engine/src/services/api.js:615 |
+| POST | `/api/admin/ingestion/edges/x/confirm` | mf-context-engine/src/services/api.js:589 |
+| POST | `/api/admin/ingestion/edges/x/reject` | mf-context-engine/src/services/api.js:596 |
+| POST | `/api/admin/ingestion/run` | mf-context-engine/src/services/api.js:566 |
+| POST | `/api/admin/ingestion/staleness` | mf-context-engine/src/services/api.js:570 |
+| POST | `/api/admin/ingestion/upload` | mf-context-engine/src/services/api.js:574 |
+| POST | `/api/admin/intent-cache/clear` | mf-context-engine/src/services/api.js:514 |
+| POST | `/api/admin/intent-cache/invalidate-domain` | mf-context-engine/src/services/api.js:522 |
+| POST | `/api/admin/users` | mf-context-engine/src/services/api.js:544 |
+| POST | `/api/admin/users/sync` | mf-context-engine/src/services/api.js:540 |
+| POST | `/api/chat/title` | mf-context-engine/src/services/api.js:485 |
 | POST | `/api/compliance/violations/x/resolve` | mf-context-engine/src/views/pages/RemediationPage.jsx:46 |
-| POST | `/api/feedback` | mf-context-engine/src/services/api.js:620 |
-| POST | `/api/feedback/follow-up-detection` | mf-context-engine/src/services/api.js:978 |
-| POST | `/api/feedback/issues/x/repair` | mf-context-engine/src/services/api.js:1071 |
-| POST | `/api/feedback/issues/x/status` | mf-context-engine/src/services/api.js:1060 |
-| POST | `/api/governance/approve/x` | mf-context-engine/src/services/api.js:938 |
-| POST | `/api/governance/batch-approve` | mf-context-engine/src/services/api.js:952 |
-| POST | `/api/governance/reject/x` | mf-context-engine/src/services/api.js:945 |
-| POST | `/api/governance/run-batch` | mf-context-engine/src/services/api.js:959 |
-| POST | `/api/sessions/x` | mf-context-engine/src/services/api.js:605 |
+| POST | `/api/feedback` | mf-context-engine/src/services/api.js:634 |
+| POST | `/api/feedback/follow-up-detection` | mf-context-engine/src/services/api.js:992 |
+| POST | `/api/feedback/issues/x/repair` | mf-context-engine/src/services/api.js:1085 |
+| POST | `/api/feedback/issues/x/status` | mf-context-engine/src/services/api.js:1074 |
+| POST | `/api/governance/approve/x` | mf-context-engine/src/services/api.js:952 |
+| POST | `/api/governance/batch-approve` | mf-context-engine/src/services/api.js:966 |
+| POST | `/api/governance/reject/x` | mf-context-engine/src/services/api.js:959 |
+| POST | `/api/governance/run-batch` | mf-context-engine/src/services/api.js:973 |
+| POST | `/api/sessions/x` | mf-context-engine/src/services/api.js:619 |
+
+## What the pilot build does about the denied calls
+
+With `VITE_AMC_PILOT_MODE=true` the API client (`services/api.js`) refuses every call outside the
+allowlist in `utils/pilotSources.js` before any network request, so the denied calls above produce no
+503 round trips and no console errors. The sidebar shows Chat only: Compare, Analytics, Admin, My
+Feedback, Feedback triage and every Compliance Module page are hidden, because those pages call denied
+routes and, when a call fails, some of them fall back to built-in sample figures that would be shown
+as if they were real. A Python test (`test_pilot_allowlist_parity31.py`) keeps the JS allowlist equal
+to the backend perimeter.
 
 ## Source-document links
 

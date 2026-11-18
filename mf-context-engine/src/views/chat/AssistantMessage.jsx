@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Share2, FileSearch, MessageSquareText, Copy, Check } from "lucide-react";
 import MarkdownAnswer from "../../components/provenance/MarkdownAnswer";
+import { isPilotMode } from "../../utils/pilotSources";
 
 export default function AssistantMessage({
   r,
@@ -20,6 +21,9 @@ export default function AssistantMessage({
   onOpenFeedback,
 }) {
   const [copied, setCopied] = useState(false);
+  // Read-only pilot: feedback capture posts to a denied route and the pilot has no graph context to
+  // show, so neither action is offered (a button that cannot work is worse than no button).
+  const pilot = isPilotMode();
 
   if (!r) return null;
 
@@ -67,6 +71,7 @@ export default function AssistantMessage({
       </div>
 
       <div className="cg-msg-actions">
+        {!pilot && (
         <button
           type="button"
           className="cg-msg-action-btn"
@@ -76,6 +81,7 @@ export default function AssistantMessage({
           <Share2 size={13} strokeWidth={1.75} />
           Ontology View
         </button>
+        )}
         <button
           type="button"
           className="cg-msg-action-btn"
@@ -85,7 +91,7 @@ export default function AssistantMessage({
           <FileSearch size={13} strokeWidth={1.75} />
           Evidence{sourceCount > 0 ? ` (${sourceCount})` : ""}
         </button>
-        {showFeedback && (
+        {showFeedback && !pilot && (
           <button
             type="button"
             className="cg-msg-action-btn"

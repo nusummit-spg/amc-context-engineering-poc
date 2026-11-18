@@ -119,6 +119,14 @@ def render(result: dict | None = None) -> str:
     for (method, path), where in sorted(_group(result["denied"]).items()):
         out.append(f"| {method} | `{path}` | {', '.join(where)} |")
     out += [
+        "", "## What the pilot build does about the denied calls", "",
+        "With `VITE_AMC_PILOT_MODE=true` the API client (`services/api.js`) refuses every call outside the",
+        "allowlist in `utils/pilotSources.js` before any network request, so the denied calls above produce no",
+        "503 round trips and no console errors. The sidebar shows Chat only: Compare, Analytics, Admin, My",
+        "Feedback, Feedback triage and every Compliance Module page are hidden, because those pages call denied",
+        "routes and, when a call fails, some of them fall back to built-in sample figures that would be shown",
+        "as if they were real. A Python test (`test_pilot_allowlist_parity31.py`) keeps the JS allowlist equal",
+        "to the backend perimeter.",
         "", "## Source-document links", "",
         "Citation components link to `/api/files/...`, which the pilot denies on purpose. With the build flag",
         "`VITE_AMC_PILOT_MODE=true` they render non-clickable provenance instead (see",

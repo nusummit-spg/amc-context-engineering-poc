@@ -2,6 +2,8 @@
  * API Service Client for NuSummit ContextGraph Engine Backend
  */
 
+import { PilotDisabledError, isPilotApiAllowed, isPilotMode } from "../utils/pilotSources.js";
+
 export const API_BASE = "/api";
 
 export function getAuthHeaders() {
@@ -36,6 +38,12 @@ async function request(endpoint, options = {}) {
   const url = endpoint.startsWith("http")
     ? endpoint
     : `${API_BASE}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+  // Read-only pilot: the backend perimeter answers 503 for anything outside its allowlist, so do not
+  // send those calls at all. Callers already handle failures; this just removes the noise and the
+  // wasted round trips (and stops pages from showing fallback data for a request that never worked).
+  if (isPilotMode() && !isPilotApiAllowed(options.method || "GET", url)) {
+    throw new PilotDisabledError(options.method || "GET", url);
+  }
   const authHeaders = getAuthHeaders();
   const headers = {
     "Content-Type": "application/json",
@@ -146,7 +154,8 @@ export function adaptTraditionalResponse(traditionalData, latencyMs = 0) {
 
   const docs = files.map((f, i) => {
     const docName = f.name || f.document_id || f.document_title || "Document";
-    const pageNum = f.page_number !== undefined ? f.page_number : (f.page !== undefined ? f.page : 1);
+    // Pilot: never invent a page number the source does not have.
+    const pageNum = f.page_number !== undefined ? f.page_number : (f.page !== undefined ? f.page : (isPilotMode() ? null : 1));
     let url = f.url || f.source_url || null;
     if (!url && docName.toLowerCase().endsWith(".pdf")) {
       url = `/api/files/${encodeURIComponent(docName)}#page=${pageNum}`;
@@ -236,7 +245,8 @@ export function adaptHybridResponse(hybridData, latencyMs = 0) {
   const sources = hybridData.sources || [];
   const docs = sources.map((s, i) => {
     const docName = s.document_title || s.document_id || s.name || `Source Document [${i + 1}]`;
-    const pageNum = s.page_number !== undefined ? s.page_number : (s.page !== undefined ? s.page : 1);
+    // Pilot: never invent a page number the source does not have.
+    const pageNum = s.page_number !== undefined ? s.page_number : (s.page !== undefined ? s.page : (isPilotMode() ? null : 1));
     let url = s.url || s.source_url || null;
     if (!url && docName.toLowerCase().endsWith(".pdf")) {
       url = `/api/files/${encodeURIComponent(docName)}#page=${pageNum}`;
@@ -461,6 +471,10 @@ export function extractClientTopicTitle(query = "") {
 export async function generateChatTitle({ query, session_id }) {
   if (!query || typeof query !== "string" || !query.trim()) {
     return "New Conversation";
+  }
+  // Read-only pilot: /api/chat/title is denied by the backend perimeter; derive the title locally.
+  if (isPilotMode()) {
+    return query.trim().replace(/\s+/g, " ").split(" ").slice(0, 6).join(" ");
   }
 
   try {
