@@ -25,8 +25,8 @@ def test_all_passing_modules_produce_pass_records(tmp_path):
     repo = _repo(tmp_path)
     j = _junit(tmp_path / "j.xml", [("test_pg_migration31", "a", ""), ("test_pg_migration31", "b", "")])
     r = me.build(j, repo, tmp_path / "out")
-    assert r["written"] == ["alembic_postgresql_014"]
-    rec = json.loads((tmp_path / "out" / "alembic_postgresql_014.json").read_text())
+    assert r["written"] == ["alembic_postgresql_015"]
+    rec = json.loads((tmp_path / "out" / "alembic_postgresql_015.json").read_text())
     assert rec["status"] == "PASS" and rec["commit_sha"] == r["commit_sha"] and len(rec["commit_sha"]) == 40
     assert "not staging" in rec["environment"]["scope"]
 
@@ -52,7 +52,20 @@ def test_a_pinned_expected_failure_does_not_block_a_gate(tmp_path):
         ("test_pg_migration31", "a", ""),
         ("test_pg_migration31", "sqlite", "<skipped type='pytest.xfail' message='PRE-EXISTING'/>"),
     ])
-    assert me.build(j, repo, tmp_path / "out")["written"] == ["alembic_postgresql_014"]
+    assert me.build(j, repo, tmp_path / "out")["written"] == ["alembic_postgresql_015"]
+    rec = json.loads((tmp_path / "out" / "alembic_postgresql_015.json").read_text())
+    # the denominator keeps the expected failure; it is neither a pass nor a hidden skip
+    assert rec["test_counts"] == {"tests": 2, "passed": 1, "xfailed": 1, "failed": 0, "skipped": 0}
+    assert rec["known_expected_failures"] == [{"test": "sqlite", "reason": "PRE-EXISTING"}]
+    assert "1 expected failure(s) pinned" in " ".join(rec["evidence_refs"])
+
+
+def test_a_gate_without_expected_failures_reports_none(tmp_path):
+    repo = _repo(tmp_path)
+    j = _junit(tmp_path / "j.xml", [("test_faiss_serving_live31", "a", ""), ("test_faiss_serving_live31", "b", "")])
+    me.build(j, repo, tmp_path / "out")
+    rec = json.loads((tmp_path / "out" / "faiss_receipt_rollback.json").read_text())
+    assert rec["test_counts"]["xfailed"] == 0 and rec["known_expected_failures"] == []
 
 
 def test_gates_that_junit_cannot_prove_are_never_written():

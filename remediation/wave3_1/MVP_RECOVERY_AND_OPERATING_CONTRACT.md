@@ -4,7 +4,7 @@
 **Target:** feature/amc-wave31-integration -> amc-dev; draft PR #13.
 
 ## Completed source development
-- Integrated publication Wave 3.1, migrations 013/014, durable receipt and rollback.
+- Integrated publication Wave 3.1, migrations 013/014/015, durable receipt and rollback.
 - Sealed unreceipted legacy query/chat/graph/doc/file/taxonomy/aggregation serving routes.
 - Installed an ASGI verified-pilot default-deny perimeter; only authenticated pilot query/chat, login, health, publication status and static asset paths are permitted in enforce mode.
 - In enforce mode, disabled background Neo4j seed/schema writes, legacy FAISS/cache warmups, scheduler, ingestion queue and feedback/recovery background processes. Off-mode startup stays unchanged.
@@ -32,7 +32,7 @@
 From a CLEAN checkout with evidence outside the repository:
 python -m tools.amc_release.mvp_evidence_gate31 --checkout . --evidence-dir ../mvp-qualification --out ../mvp-qualification/mvp-gate.json
 
-Evidence requires source SHA-bound reports for backend integration, auth negative routes, PostgreSQL migration 014, first-publisher concurrency, Neo4j readback, FAISS rollback, frontend/browser, staging smoke and canary/rollback/SLO; plus a non-skipped passing integrated-junit.xml.
+Evidence requires source SHA-bound reports for backend integration, auth negative routes, PostgreSQL migration 015, first-publisher concurrency, Neo4j readback, FAISS rollback, frontend/browser, staging smoke and canary/rollback/SLO; plus a non-skipped passing integrated-junit.xml.
 Even when evidence is structurally complete, the result is EVIDENCE_PRESENT_REQUIRES_INDEPENDENT_REVIEW, not automatic release approval.
 
 ## Remaining P0 blockers

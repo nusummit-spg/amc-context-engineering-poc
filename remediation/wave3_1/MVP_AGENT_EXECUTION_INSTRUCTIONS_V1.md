@@ -88,7 +88,7 @@ The password placeholder above **must be replaced locally in process memory**, n
 `& $py -m alembic -c alembic.ini current`  
 `Pop-Location`
 
-Require `014_publication_scope_claim_v31`, inspect status/PK/FK/unique scope claim constraints with SQLAlchemy inspector/read-only SQL, rerun upgrade and test duplicate insert denial. **Never downgrade non-disposable database.** Recreate disposable database for failing migration rather than manually inventing schema.
+Require `015_app_schema_alignment_v31` (014 is the scope-claim migration it builds on), inspect status/PK/FK/unique scope claim constraints with SQLAlchemy inspector/read-only SQL, rerun upgrade and test duplicate insert denial. **Never downgrade non-disposable database.** Recreate disposable database for failing migration rather than manually inventing schema.
 
 **Use actual independent SQL connections** and two publisher processes to test first-claim race, losing writer denial, idempotent same-work replay and crash/retry. Mock-only tests do not count. Supply worker fault injections, observed SQL effects and pending terminal reconciliation result.
 

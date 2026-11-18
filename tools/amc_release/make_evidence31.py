@@ -21,7 +21,7 @@ from tools.amc_release.mvp_evidence_gate31 import current_sha
 
 # gate -> test modules whose results are the evidence for it
 GATE_MODULES = {
-    "alembic_postgresql_014": ("test_pg_migration31",),
+    "alembic_postgresql_015": ("test_pg_migration31",),
     "postgresql_first_publisher_race": ("test_publication_live31",),
     "neo4j_readback_compensation": ("test_publication_live31", "test_ops_drills_live31"),
     "faiss_receipt_rollback": ("test_faiss_serving_live31",),
@@ -37,7 +37,8 @@ def _cases(junit: Path) -> list[dict]:
                     "failed": tc.find("failure") is not None or tc.find("error") is not None,
                     "skipped": tc.find("skipped") is not None,
                     "xfail": (tc.find("skipped") is not None and
-                              "xfail" in (tc.find("skipped").get("type", "") + tc.find("skipped").get("message", "")).lower())})
+                              "xfail" in (tc.find("skipped").get("type", "") + tc.find("skipped").get("message", "")).lower()),
+                    "reason": (tc.find("skipped").get("message", "") if tc.find("skipped") is not None else "")})
     return out
 
 
@@ -59,12 +60,19 @@ def build(junit: Path, checkout: Path, out_dir: Path) -> dict:
         elif skipped:
             result["not_written"][gate] = f"{len(skipped)} skipped (blocked): {skipped[:3]}"
         else:
+            # The acceptance denominator keeps EVERY collected case. A pinned expected failure is not a
+            # pass and not a hidden skip: it is counted and named, with its reason, so a reviewer sees it.
+            xfailed = [c for c in mine if c["xfail"]]
+            passed = len(mine) - len(xfailed)
+            known = [{"test": c["name"], "reason": c["reason"][:300]} for c in xfailed]
+            counts = f"{len(mine)} tests: {passed} passed, {len(xfailed)} expected failure(s) pinned, 0 failed, 0 skipped"
             record = {"gate": gate, "commit_sha": sha, "status": "PASS", "observed_at": now,
-                      "evidence_refs": [f"junit sha256 {digest}", "modules: " + ", ".join(modules),
-                                        f"{len(mine)} tests, 0 failed, 0 skipped"],
+                      "evidence_refs": [f"junit sha256 {digest}", "modules: " + ", ".join(modules), counts],
                       "environment": {"scope": "LOCAL DISPOSABLE services only (not staging, not UAT)",
                                       "os": platform.platform(), "python": sys.version.split()[0]},
-                      "test_counts": {"tests": len(mine), "failed": 0, "skipped": 0},
+                      "test_counts": {"tests": len(mine), "passed": passed, "xfailed": len(xfailed),
+                                      "failed": 0, "skipped": 0},
+                      "known_expected_failures": known,
                       "operator_reviewer": "not reviewed independently"}
             (out_dir / f"{gate}.json").write_text(json.dumps(record, indent=2), encoding="utf-8")
             result["written"].append(gate)

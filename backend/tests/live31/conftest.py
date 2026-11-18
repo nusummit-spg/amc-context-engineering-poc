@@ -22,7 +22,7 @@ from sqlalchemy.orm import sessionmaker
 
 BACKEND = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BACKEND))
-from tests.live31 import support  # noqa: E402
+from tests.live31 import guard, support  # noqa: E402
 
 
 def _blocked(reason: str):
@@ -41,6 +41,10 @@ def live_pg_admin_url():
     url = make_url(raw)
     if url.drivername != "postgresql+psycopg":
         _blocked("AMC_LIVE_PG_URL must use the postgresql+psycopg driver")
+    try:                                   # a configured but NON-LOCAL target must FAIL loudly, never skip or run
+        guard.assert_local_targets(pg_url=raw)
+    except guard.LiveTargetRefused as exc:
+        pytest.fail(str(exc), pytrace=False)
     eng = create_engine(raw, isolation_level="AUTOCOMMIT")
     with eng.connect() as c:           # configured but unreachable must FAIL, not skip
         c.execute(text("select 1"))
@@ -108,6 +112,10 @@ def live_neo4j_driver():
     uri, user, pw = (os.environ.get(k) for k in ("NEO4J_URI", "NEO4J_USER", "NEO4J_PASSWORD"))
     if not (uri and user and pw):
         _blocked("NEO4J_URI/NEO4J_USER/NEO4J_PASSWORD not set (a real disposable Neo4j is required)")
+    try:
+        guard.assert_local_targets(neo4j_uri=uri)
+    except guard.LiveTargetRefused as exc:
+        pytest.fail(str(exc), pytrace=False)
     from neo4j import GraphDatabase
     driver = GraphDatabase.driver(uri, auth=(user, pw))
     driver.verify_connectivity()       # configured but unreachable must FAIL, not skip

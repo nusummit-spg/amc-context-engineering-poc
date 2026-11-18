@@ -10,7 +10,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 REQUIRED_GATES = (
-    "backend_integration", "authenticated_negative_routes", "alembic_postgresql_014",
+    "backend_integration", "authenticated_negative_routes", "alembic_postgresql_015",
     "postgresql_first_publisher_race", "neo4j_readback_compensation",
     "faiss_receipt_rollback", "frontend_build_browser",
     "staging_smoke", "canary_rollback_slo",

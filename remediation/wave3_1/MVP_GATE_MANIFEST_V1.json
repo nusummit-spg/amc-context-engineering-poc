@@ -94,9 +94,9 @@
       "depends_on": [
         "G1"
       ],
-      "title": "Disposable PostgreSQL 001-014 and runtime ORM proof",
+      "title": "Disposable PostgreSQL 001-015 and runtime ORM proof",
       "proof": [
-        "fresh PG migrations and exact 014",
+        "fresh PG migrations and exact 015",
         "app engine and migration URL identity",
         "DDL constraints and second upgrade idempotence",
         "off-mode SQLite separate regression"

@@ -80,7 +80,7 @@ Pop-Location
 
 ### Runtime checks for the local agent
 
-1. **Database**: prove the application's SQLAlchemy engine and Alembic use the same PostgreSQL database and have applied exact revision `014_publication_scope_claim_v31`; no SQLite fallback when enforced. Run two concurrent first-publishers for the same tenant/namespace, assert one winner, and test crash/replay without duplicate scope ownership.
+1. **Database**: prove the application's SQLAlchemy engine and Alembic use the same PostgreSQL database and have applied exact revision `015_app_schema_alignment_v31`; no SQLite fallback when enforced. Run two concurrent first-publishers for the same tenant/namespace, assert one winner, and test crash/replay without duplicate scope ownership.
 2. **Neo4j**: synthetic test-only graph mutation → readback → failure injection → compensation. Verify no graph changes occur from legacy startup paths in enforced mode.
 3. **FAISS**: use a newly created small synthetic corpus and signed publication receipt; prove invalid/missing receipt, tenant mismatch and rollback revocation refuse answers. `AMC_VERIFIED_FAISS_ROOT` must point to that disposable material. Do not repurpose real AMC indexes.
 4. **HTTP and SSE**: test authenticated user/tenant isolation, valid verified v2 Q&A + citations, and denial of `/api/query/traditional`, legacy/canary fallbacks, `/api/admin/ingestion/*`, `/api/graph`, `/api/files`, `/api/docs`, `/api/taxonomy`, aggregation and unreviewed mutation routes. Test `off` mode separately for backward compatibility. Verify no SSE answer chunk leaks after authority revocation.

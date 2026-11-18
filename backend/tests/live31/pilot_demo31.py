@@ -46,6 +46,8 @@ def main():
     state = args.state_dir
     state.mkdir(parents=True, exist_ok=True)
     admin_url = os.environ["AMC_LIVE_PG_URL"]
+    from tests.live31 import guard
+    guard.assert_local_targets(pg_url=admin_url, neo4j_uri=os.environ["NEO4J_URI"])
     name = "amc_demo_" + uuid.uuid4().hex[:6]
     admin = create_engine(admin_url, isolation_level="AUTOCOMMIT")
     with admin.connect() as c:

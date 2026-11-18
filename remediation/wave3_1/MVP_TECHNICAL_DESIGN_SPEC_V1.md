@@ -71,7 +71,7 @@ Explicitly untrusted: user-supplied tenant in payload, model output, legacy cach
 ### 2.3 Startup lifecycle
 
 - `app.core.db_runtime31.resolve_database_url` selects explicit `DATABASE_URL`; requires `postgresql+psycopg` driver under enforce; **SQLite fallback allowed only off-mode**. Any invalid mode fails at startup.
-- Before creating schema or serving, verify application SQLAlchemy engine points to the same disposable DB as Alembic. Under enforce mode, `verify_migrated_postgresql` insists exact version `014_publication_scope_claim_v31`. **No `Base.metadata.create_all` or SQLite-only migration scripts against verified PostgreSQL.**
+- Before creating schema or serving, verify application SQLAlchemy engine points to the same disposable DB as Alembic. Under enforce mode, `verify_migrated_postgresql` insists exact head `015_app_schema_alignment_v31` (014 added the scope claim; 015 aligns the app tables with the models, see ADR31-09). **No `Base.metadata.create_all` or SQLite-only migration scripts against verified PostgreSQL.**
 - `main.lifespan` disables unreceipted graph schema/rules seed, legacy FAISS warming, semantic-cache warmup, ingestion queue, background feedback/retry/lifecycle workers and scheduler under enforce.
 - **Known validation risk:** Constructing `Container`, creating driver clients or initializing global modules may cause imports or side effects even before HTTP route entry. Add a boot-time mutation/IO spy or external PG/Neo4j audit to prove no unintended writes, and ensure service readiness is not falsely healthy when no active signed receipt exists.
 - On shutdown, close only actually-started resources; ensure no orphan threads or tasks. Test process termination at each phase and startup recovery.
@@ -90,7 +90,7 @@ Explicitly untrusted: user-supplied tenant in payload, model output, legacy cach
 | FAISS generation manifest | `amc_publication` signing/catalog modules | Immutable index bytes, tenant, digest, generation, receipt match |
 | Neo4j graph | Scoped graph client + change effects | Only mutation authorized by durable work; readback before receipt activation |
 
-**Migration checks (real PG):** Walk 001→014; test constraints, unique/foreign keys, duplicate inserts, enum/status check constraints, ALTER idempotence where applicable, heads count, exact revision, and failed upgrade rollback on a fresh copy. Inspect table/column naming mismatches between SQLAlchemy models, migrations and actual queries. Run migration preflight before starting the backend. Never use `create_all` to hide an omitted migration.
+**Migration checks (real PG):** Walk 001→015; test constraints, unique/foreign keys, duplicate inserts, enum/status check constraints, ALTER idempotence where applicable, heads count, exact revision, and failed upgrade rollback on a fresh copy. Inspect table/column naming mismatches between SQLAlchemy models, migrations and actual queries. Run migration preflight before starting the backend. Never use `create_all` to hide an omitted migration.
 
 ### 3.2 Mutation state machine (target / verify existing implementation)
 
@@ -211,6 +211,7 @@ Per gate: `gate`, exact 40-character `commit_sha`, `status=PASS/FAIL/BLOCKED`, r
 | ADR31-06 | No schema mutation at verified app startup | Migration must be controlled and auditable | Operational migration process designed |
 | ADR31-07 | Local-only tests until infrastructure exists | No spend and no current CI capacity | Disposable staging provisioned |
 | ADR31-08 | Source evidence never equals UAT | Prevent optimistic release assertions | Never; permanent principle |
+| ADR31-09 | The required migration head is `015_app_schema_alignment_v31` | A database migrated only to 014 lacks tables and columns the models use (chat sessions, token revocation, feedback), found on real PostgreSQL | A later migration supersedes it; update `db_runtime31.py`, the gate id and these documents together |
 
 ## 10. Implementation file map and review checklist
 

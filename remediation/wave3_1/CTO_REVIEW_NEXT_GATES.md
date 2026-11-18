@@ -51,7 +51,7 @@ Run with **Python 3.11** for the canonical Linux/Windows qualification. Do not s
 
 ## 4. Infrastructure and application acceptance still required
 
-1. Rehearse full Alembic 001→014 DAG and upgrade on a **fresh disposable PostgreSQL** DB; separately rehearse SQLite. Check schema, FK constraints, enum checks, unique scope-claim semantics and rollback behavior. Never downgrade the production database.
+1. Rehearse full Alembic 001→015 DAG and upgrade on a **fresh disposable PostgreSQL** DB; separately rehearse SQLite. Check schema, FK constraints, enum checks, unique scope-claim semantics and rollback behavior. Never downgrade the production database.
 2. With real PostgreSQL isolation, race two first-publisher workers on the same tenant/namespace; verify one owner and no premature graph mutation. Crash and resume with the exact work/receipt.
 3. Execute real Neo4j mutation/readback/CAS/compensation tests. Inject partial failure between graph and FAISS and independently inspect durable receipts/effects.
 4. Load actual FAISS binaries, verify active signed generation and tenant-specific search, deny stale or substituted receipt, and prove rollback revokes result delivery.

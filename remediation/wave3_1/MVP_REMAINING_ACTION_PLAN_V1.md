@@ -16,10 +16,10 @@ The proposed first releasable product is a **controlled, single-deployment, auth
 
 | Area | Seen in repository | Evidence category | Gap |
 |---|---|---|---|
-| Wave 3.1 cumulative code | Integration commit `83ee6cac`, migrations 013/014, publication and receipt modules | Present/source reviewed | Whole-repo runtime unverified |
+| Wave 3.1 cumulative code | Integration commit `83ee6cac`, migrations 013/014 (and 015, added during local validation), publication and receipt modules | Present/source reviewed | Whole-repo runtime unverified |
 | Legacy bypass mitigation | `31f11da7` guarded query/chat/graph/docs/files/taxonomy/aggregation | Source-reviewed only | Authenticated HTTP negative/positive E2E |
 | Verified pilot perimeter | `24356a2d` plus `36f0bf56` startup restrictions | Isolated tests/source review | Full ASGI lifespan and background-process proof |
-| PostgreSQL runtime selection | `f271c8f5` requiring psycopg and migration 014 in enforced mode | Isolated tests/source review | Actual PostgreSQL migration/engine/ORM compatibility |
+| PostgreSQL runtime selection | `f271c8f5` requiring psycopg and the exact migration head (015) in enforced mode | Isolated tests/source review | Actual PostgreSQL migration/engine/ORM compatibility |
 | Documentation/evidence automation | `2d6bfb41` plus `75680052` collector and local Compose | Repo verified | Collector / Compose full execution unverified |
 | Offline original release archive | 669 main tests and 16 subtests previously reported passed | **Reference-only**, not current HEAD | Exact HEAD regression, Windows/Linux |
 | GitHub CI on current feature SHA | No current-SHA checks at review | Not executed | Optional; local testing prioritized |
@@ -33,7 +33,7 @@ Priority legend: **P0** = indispensable release safety/function; **P1** = first-
 |---|---|---|---|---|---|
 | WP00 | P0 | Freeze pilot scope, account/tenant test contract, synthetic fixture inventory; confirm latest SHA | none | S | G0 |
 | WP01 | P0 | Make Python 3.11 requirements resolvable; full import/compile/pytest collection; classify symlink issues; Node install/build | WP00 | M/L | G1 |
-| WP02 | P0 | Disposable PostgreSQL migration DAG 001→014, engine and Alembic URL identity, SQLAlchemy ORM/schema mapping, idempotent upgrade | WP01 | M | G2 |
+| WP02 | P0 | Disposable PostgreSQL migration DAG 001→015, engine and Alembic URL identity, SQLAlchemy ORM/schema mapping, idempotent upgrade | WP01 | M | G2 |
 | WP03 | P0 | Same-tenant first-publication two-writer race, scope uniqueness, rollback-after-failure, crash/replay, first-active receipt, stale worker fencing | WP02 | L | G3 |
 | WP04 | P0 | Neo4j synthetic graph preimage/readback/CAS, partial failure recovery and transaction/effect reconciliation | WP02–03 | L | G4 |
 | WP05 | P0 | Real FAISS binary and signed corpus; tenant binding, active receipt checks before/after retrieval, rollback and stale generation denial | WP02–04 | L | G5 |
@@ -65,7 +65,7 @@ Priority legend: **P0** = indispensable release safety/function; **P1** = first-
 
 **Tasks:** Start *disposable* PostgreSQL 16 via `ops/validation/compose.wave31.local.yml`. In the same Python process check `DATABASE_URL`, `engine.url`, `AMC_MIGRATION_DATABASE_URL`; assert they target the exact same disposable database (never print credentials). Run `backend/scripts/alembic_dag_preflight.py` and `python -m alembic -c alembic.ini upgrade head` from `backend/`, read `alembic_version`, inspect all scope/authority/receipt FK/PK/check/unique constraints. Test a second upgrade with no changes. Check SQLite off-mode regression separately. Inspect ORM model schema vs migrations; fix actual drift. Never modify shared DB.
 
-**Definition of done:** PostgreSQL 001→014 upgrade and rerun succeed, application sees same database, authority+scope+work+receipt tables verify, no hidden `create_all` override in verified mode. Capture redacted DDL evidence and revision result.
+**Definition of done:** PostgreSQL 001→015 upgrade and rerun succeed, application sees same database, authority+scope+work+receipt tables verify, no hidden `create_all` override in verified mode. Capture redacted DDL evidence and revision result.
 
 ### WP03 — Durable publication correctness
 
@@ -115,7 +115,7 @@ Priority legend: **P0** = indispensable release safety/function; **P1** = first-
 |---|---|---|
 | G0 | Accepted scope / fixture matrix | Undefined pilot features or unsourced data |
 | G1 | Python 3.11, full collection, targeted regressions, Node build, exact-SHA JUnit | Import error, hidden skip, stale SHA |
-| G2 | Fresh PG 001→014, checked constraints, matching runtime URL | SQLite in enforce, unverified revision |
+| G2 | Fresh PG 001→015, checked constraints, matching runtime URL | SQLite in enforce, unverified revision |
 | G3 | Two true PG transactions race, crash replay, idempotence | Double owner, stale writer accepted |
 | G4 | Neo4j observed readback, effects and compensation | Partial graph leak, cross-tenant mutation |
 | G5 | Real FAISS + signed generation & receipt revocation | Unsigned index, stale result/citation |
@@ -128,7 +128,7 @@ Priority legend: **P0** = indispensable release safety/function; **P1** = first-
 
 | Risk ID | Severity | Decision / containment |
 |---|---|---|
-| R1 App vs Alembic DB divergence | P0 | Fail startup unless same PG URL/014 is demonstrated; inspect runtime engine; see `backend/app/core/db_runtime31.py` |
+| R1 App vs Alembic DB divergence | P0 | Fail startup unless same PG URL at the exact head (015) is demonstrated; inspect runtime engine; see `backend/app/core/db_runtime31.py` |
 | R2 New publisher vs existing authority race | P0 | Unique (`tenant`, `namespace`) scope claim and true multi-session PG test |
 | R3 Stale graph/vector after rollback | P0 | Request-lifetime fence; signed generation; before/after authority test |
 | R4 Legacy endpoints or background mutation | P0 | Verified perimeter and startup containment, attack-path test |
