@@ -61,7 +61,7 @@ class PublicationScopeClaim31(Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     claim_epoch: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     updated_at: Mapped[datetime] = mapped_column(nullable=False, default=utcnow)
-    __table_args__ = (CheckConstraint("status IN ('HELD','RELEASED')", name='ck_publication_scope_claim_v31'),)
+    __table_args__ = (CheckConstraint("status IN ('HELD','RELEASED')", name='ck_publication_scope_claim_v31_status'),)
 
 
 def _claim_scope(s: Session, tenant: str, namespace: str, work_id: str, *, rollback: bool = False):
