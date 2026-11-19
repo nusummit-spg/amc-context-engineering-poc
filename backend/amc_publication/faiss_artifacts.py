@@ -23,9 +23,38 @@ from .types import Generation, VerificationFailed, canonical_bytes, sha256_json
 
 
 class FaissGenerationStore(ImmutableSnapshotStore):
-    def __init__(self, root: str | Path, embedder: Any):
+    def __init__(self, root: str | Path, embedder: Any, *, signer: Any = None, verifier: Any = None):
+        """signer: publisher-side GenerationSigner (private key). verifier: serving-side GenerationVerifier
+        (public keys only). With a verifier, EVERY verify() also requires a valid Ed25519 signature."""
         super().__init__(root)
         self.embedder = embedder
+        self.signer = signer
+        self.verifier = verifier
+
+    def _write_signature(self, directory: Path, tenant: str, gen: Generation) -> None:
+        from .signing31 import SIGNATURE_FILE
+        manifest = (Path(directory) / "manifest.json").read_bytes()
+        doc = self.signer.sign_manifest(manifest, tenant=tenant, generation_id=gen.generation_id)
+        (Path(directory) / SIGNATURE_FILE).write_bytes(canonical_bytes(doc))
+
+    def _signature_ok(self, directory: Path, tenant: str, gen: Generation) -> bool:
+        from .signing31 import SIGNATURE_FILE
+        if self.verifier is None:
+            return (Path(directory) / SIGNATURE_FILE).is_file()
+        try:
+            self.verifier.verify_directory(directory, tenant=tenant, generation_id=gen.generation_id)
+            return True
+        except VerificationFailed:
+            return False
+
+    def _reuse_existing(self, gen: Generation, tenant: str, dest: Path) -> Generation:
+        """Content-addressed bytes already exist. Verify them FIRST, never sign unverified content; then
+        add a signature if this publisher can and the generation does not carry an acceptable one."""
+        self._verify_content(gen, tenant)
+        if self.signer is not None and not self._signature_ok(dest, tenant, gen):
+            self._write_signature(dest, tenant, gen)
+        self.verify(gen, tenant)
+        return gen
 
     @staticmethod
     def _imports():
@@ -44,8 +73,7 @@ class FaissGenerationStore(ImmutableSnapshotStore):
         gen = Generation(digest, digest, len(ordered))
         dest = self._path(digest)
         if dest.exists():
-            self.verify(gen, tenant)
-            return gen
+            return self._reuse_existing(gen, tenant, dest)
         dest.parent.mkdir(parents=True, exist_ok=True)
         stage = Path(mkdtemp(prefix="faiss-stage-", dir=dest.parent))
         try:
@@ -78,6 +106,8 @@ class FaissGenerationStore(ImmutableSnapshotStore):
                         "tenant": tenant, "dimension": dimension, "index_hash": binary_hash,
                         "payload_hash": sha256_json(payloads), "format": "faiss-idmap2-ip-v1"}
             (stage / "manifest.json").write_bytes(canonical_bytes(manifest))
+            if self.signer is not None:
+                self._write_signature(stage, tenant, gen)      # signs the manifest that binds index + payload hashes
             for f in stage.iterdir():
                 # W26_FAISS_WINDOWS_PORTABLE: Windows _commit can require a
                 # writable file handle. Files have already been fully written.
@@ -88,8 +118,7 @@ class FaissGenerationStore(ImmutableSnapshotStore):
                 os.rename(stage, dest)
             except FileExistsError:
                 # Another worker has already published content-addressed bytes.
-                self.verify(gen, tenant)
-                return gen
+                return self._reuse_existing(gen, tenant, dest)
             # Directory fsync is not portable to Windows; file checksums and
             # readback are still mandatory before any pointer activation.
             if os.name != "nt":
@@ -102,6 +131,14 @@ class FaissGenerationStore(ImmutableSnapshotStore):
             if stage.exists(): shutil.rmtree(stage)
 
     def verify(self, generation: Generation, tenant: str) -> list[dict]:
+        """Content checks (bytes, hashes, IDs, tenant) and, when a verifier is configured, the signature."""
+        docs = self._verify_content(generation, tenant)
+        if self.verifier is not None:
+            self.verifier.verify_directory(self._path(generation.digest), tenant=tenant,
+                                           generation_id=generation.generation_id)
+        return docs
+
+    def _verify_content(self, generation: Generation, tenant: str) -> list[dict]:
         faiss, np = self._imports()
         import hashlib
         path = self._path(generation.digest)

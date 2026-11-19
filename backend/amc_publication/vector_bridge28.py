@@ -118,7 +118,15 @@ def create_verified_vector_store(*,base_client,user_id=None,tenant_id=None):
     """Use from get_vector_store() ONLY with AMC_VERIFIED_SERVING_MODE=enforce."""
     root=os.getenv('AMC_VERIFIED_FAISS_ROOT')
     if not root:raise ServingDenied('AMC_VERIFIED_FAISS_ROOT is required')
+    # W31_SIGNED_GENERATIONS: serving requires a signature from a trusted publisher key, not just matching digests.
+    from .signing31 import verifier_from_env, PUBLIC_KEYS_ENV
+    try:
+        verifier=verifier_from_env()
+    except ValueError as exc:
+        raise ServingDenied(f'{PUBLIC_KEYS_ENV} is unusable: {exc}') from exc
+    if verifier is None:
+        raise ServingDenied(f'signed generations are required: set {PUBLIC_KEYS_ENV}')
     from app.core.database import SessionLocal
-    retriever=VerifiedFaissRetriever(SessionLocal,root)
+    retriever=VerifiedFaissRetriever(SessionLocal,root,verifier=verifier)
     retriever.resolver=ActiveReceiptResolver(SessionLocal,retriever.store,serving_loader=retriever._load)
     return VerifiedVectorBridge(embedder=base_client,retriever=retriever,user_id=user_id,tenant_id=tenant_id)

@@ -20,8 +20,11 @@ Never put a password, key or token in this file, in Git, in logs, or in a PR com
    tenant can be served. Do not treat a 200 as "ready".
 4. **SLO thresholds are undefined** (Q5) and no staging environment is confirmed (Q6). The measured numbers in the
    validation summary describe one machine with a stubbed LLM.
-5. **The index generation is digest-bound, not signed.** SHA-256 over the manifest, payload map and index bytes is
-   bound to the PostgreSQL receipt. There is no asymmetric signature on the index itself.
+5. **Key custody and enrollment are organizational controls the code cannot enforce.** Generations are signed with
+   Ed25519 and approvals carry two Ed25519 signatures, but nothing in software proves that a key is held by the one
+   named person or that approvers read the corpus (they sign its hash). Someone must own: who may hold the publisher
+   key, who enrolls approver public keys into the trust store, how keys are rotated and revoked, and how a lost key is
+   handled. There is no rotation tooling beyond adding a key and listing the old one as revoked.
 
 ## 2. Configuration to freeze before a pilot run
 
@@ -35,6 +38,9 @@ Never put a password, key or token in this file, in Git, in logs, or in a PR com
 | `AUTH_SECRET_KEY` | long random value | Never the development default |
 | `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` | the disposable instance | Local test password only |
 | `AMC_PUBLICATION_GRAPH_ATTRIBUTES` | explicit comma list, e.g. `ter,exit_load` | The operator CLI's graph allowlist |
+| `AMC_VERIFIED_FAISS_PUBLIC_KEYS` | JSON `{"keys":{key_id: base64 public key},"revoked":[...]}` | **Serving host and CLI.** Public keys only; the app refuses to start without it |
+| `AMC_PUBLICATION_SIGNING_KEY_FILE` | JSON `{"key_id","private_key"}` (base64 raw 32-byte seed) | **Publisher host only.** Never on a serving host, never in Git or logs |
+| `AMC_PUBLICATION_APPROVER_KEYS` | JSON trust store of approver public keys and roles | Operator host; public keys only |
 | `AMC_PUBLICATION_EMBEDDER` | `package.module:factory` | Must be the SAME embedder the app queries with |
 | `VITE_AMC_PILOT_MODE` | `true` at frontend build time | Hides denied features, refuses denied calls, shows citations as provenance |
 
@@ -49,13 +55,25 @@ Record the application commit SHA, flag values and migration revision with the r
    `python -m alembic -c alembic.ini upgrade head` and `… current`. The revision must be
    `015_app_schema_alignment_v31` (014 alone leaves chat and token revocation without their tables and columns).
    Never downgrade a database that is not disposable.
-3. **Publish (operator, offline):**
-   `python -m amc_publication.operator_cli submit --tenant T --entity E --attribute A --value V --corpus corpus.json
-   --proposal-id P --revision 1 --proposer <person> --reviewer <different person> --attest-independent-approval`
-   then `python -m amc_publication.operator_cli run-once`. Confirm with
-   `python -m amc_publication.operator_cli status --tenant T`: authority ACTIVE and no "attention" lines. The CLI
-   refuses a non-PostgreSQL URL, a database that is not at the exact revision, a missing attestation, identical
-   proposer and reviewer, and any corpus row whose tenant differs. Do not edit SQL rows by hand.
+3. **Approve, then publish (offline).**
+   *Approvers* (two different people, each on their own machine, each with their OWN key file) use
+   `python -m amc_publication.approvals31`: one runs `subject --tenant T --entity E --attribute A --value V
+   --proposal-id P --revision 1 --corpus corpus.json --out approval.json`; the proposer runs
+   `sign --record approval.json --corpus corpus.json --key-file <own key> --role proposer`, passes the file on, and the
+   reviewer runs the same with `--role reviewer`. `sign` refuses if the corpus shown does not match the hash in the
+   record. A record expires (default 3 days, never more than 14).
+   *Operator:* `python -m amc_publication.operator_cli submit --tenant T --entity E --attribute A --value V
+   --corpus corpus.json --proposal-id P --revision 1 --approval approval.json`, then `... run-once`. Confirm with
+   `... status --tenant T`: authority ACTIVE and no "attention" lines.
+   The CLI refuses unless two DIFFERENT trusted approvers signed, with different keys, for exactly this tenant,
+   entity, attribute, value, proposal, revision and corpus hash, inside the validity window and with no revoked key;
+   the signed record is stored with the work and the worker verifies it again before any effect. `run-once` also
+   refuses to publish unless a trusted signing key is configured, and signs every generation. It refuses a
+   non-PostgreSQL URL, a database not at the exact revision, and any corpus row whose tenant differs.
+   Do not edit SQL rows by hand.
+   *Key setup* (once): `python -c "from amc_publication import signing31 as s; print(s.generate_keypair())"` prints a
+   private seed and a public key for the publisher; approvers use `approvals31.generate_approver_keypair()`. Give the
+   private halves only to their holders; put every PUBLIC key in the trust files above.
 4. **Start the app** in enforce mode, then smoke-test as an authenticated tenant user (not just `/health`).
 
 Startup in enforce mode refuses to run unless the engine is PostgreSQL at exactly revision 015, creates no

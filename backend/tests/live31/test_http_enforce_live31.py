@@ -59,7 +59,8 @@ def web(live_pg_admin_url, live_template_db, live_neo4j_driver, tmp_path_factory
     hs.seed_user(engine, username="empty_analyst", password=pw["empty_analyst"], tenant=EMPTY)
     hs.seed_user(engine, username="inactive_user", password=pw["inactive_user"], tenant=ALPHA, status="Inactive")
     stub = LlmStub().start()
-    server = hs.AppServer(database_url=url, faiss_root=tmp / "faiss", llm_url=stub.url, log_path=tmp / "app.log")
+    server = hs.AppServer(database_url=url, faiss_root=tmp / "faiss", llm_url=stub.url, log_path=tmp / "app.log",
+                          public_keys_file=stack.keys.public_keys_file)
     server.start()
     ns = SimpleNamespace(server=server, stub=stub, stack=stack, engine=engine, url=url, passwords=pw,
                          works=works, driver=live_neo4j_driver, tmp=tmp, admin_url=live_pg_admin_url, db=name)
@@ -511,6 +512,29 @@ def test_stub_provider_outage_is_a_clean_error_not_a_stale_or_foreign_answer(web
         web.stub.server.fail_next = 0
     assert "Traceback" not in r.text
     assert "Beta" not in r.text and "0.35" not in r.text
+
+
+def test_a_tampered_generation_signature_denies_queries_over_http_and_restores_cleanly(web, client, tokens):
+    """Over real HTTP: break the signature on the generation being served, the query is refused, restore it, it serves."""
+    import base64
+    from tests.live31.support import pg_state as state
+    digest = state(web.stack.sessions, ALPHA)["authority"]["digest"]
+    path = web.stack.store._path(digest) / "signature.json"
+    original = path.read_bytes()
+    doc = json.loads(original)
+    raw = bytearray(base64.b64decode(doc["signature"]))
+    raw[0] ^= 0x01
+    doc["signature"] = base64.b64encode(bytes(raw)).decode()
+    path.write_text(json.dumps(doc))
+    try:
+        r = _ask(client, tokens["alpha_analyst"])
+        assert r.status_code >= 400, "served an answer from a generation whose signature does not verify"
+        assert "0.21" not in r.text and "SYNTHETIC" not in r.text and "Traceback" not in r.text
+        stream_status, _ctype, events = _stream(client, tokens["alpha_analyst"])
+        assert not any("0.21" in e["data"] for e in events)
+    finally:
+        path.write_bytes(original)
+    assert _ask(client, tokens["alpha_analyst"]).status_code == 200
 
 
 # ===================================================================== hygiene (runs last in this module)

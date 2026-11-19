@@ -28,7 +28,7 @@ class AppServer:
     """The real FastAPI app under uvicorn, in AMC_VERIFIED_SERVING_MODE=enforce by default."""
 
     def __init__(self, *, database_url: str, faiss_root: Path, llm_url: str, log_path: Path,
-                 mode: str = "enforce", extra_env: dict | None = None):
+                 mode: str = "enforce", extra_env: dict | None = None, public_keys_file: Path | None = None):
         self.port = free_port()
         self.base = f"http://127.0.0.1:{self.port}"
         self.log_path = log_path
@@ -44,6 +44,10 @@ class AppServer:
             "PYTHONPATH": f"{BACKEND}{os.pathsep}{BACKEND.parent}", "PYTHONDONTWRITEBYTECODE": "1",
             "PYTHONIOENCODING": "utf-8",
         })
+        if public_keys_file is not None:      # the trusted PUBLIC keys; a serving host never gets a signing key
+            env["AMC_VERIFIED_FAISS_PUBLIC_KEYS"] = str(public_keys_file)
+        else:
+            env.pop("AMC_VERIFIED_FAISS_PUBLIC_KEYS", None)
         env.update(extra_env or {})
         self.env = env
         self.proc: subprocess.Popen | None = None

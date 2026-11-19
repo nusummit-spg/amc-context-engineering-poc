@@ -17,9 +17,10 @@ from .serving27 import VerifiedGenerationResolver, ServingDenied
 
 
 class VerifiedFaissRetriever:
-    def __init__(self, sessions, root: str | Path):
-        # No embedding model is required for read-only index load.
-        self.store = FaissGenerationStore(root, embedder=None)
+    def __init__(self, sessions, root: str | Path, *, verifier=None):
+        # No embedding model is required for read-only index load. With a verifier (public keys only) every
+        # load and every request-time verification also requires a valid Ed25519 generation signature.
+        self.store = FaissGenerationStore(root, embedder=None, verifier=verifier)
         self.sessions = sessions
         self._loaded: dict[str, tuple[str, str, object, list[dict]]] = {}
         self.resolver = VerifiedGenerationResolver(sessions, self.store, serving_loader=self._load)

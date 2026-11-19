@@ -71,9 +71,10 @@ def app(live_pg, live_neo4j_driver, tmp_path):
     hs.seed_user(live_pg.engine, username="alpha_analyst", password=pw, tenant=ALPHA)
     stub = LlmStub().start()
     server = hs.AppServer(database_url=live_pg.url, faiss_root=tmp_path / "faiss", llm_url=stub.url,
-                          log_path=tmp_path / "app.log")
+                          log_path=tmp_path / "app.log", public_keys_file=stack.keys.public_keys_file)
     server.start()
     ns = type("App", (), {})()
+    ns.keys = stack.keys
     ns.server, ns.stub, ns.stack, ns.pg, ns.pw, ns.tmp, ns.entity, ns.attr = server, stub, stack, live_pg, pw, tmp_path, entity, attr
     ns.driver = live_neo4j_driver
 
@@ -117,7 +118,8 @@ def test_enforce_startup_creates_no_schema_no_rows_and_no_graph_writes(live_pg, 
     graph_before = _graph_shape(live_neo4j_driver)
     stub = LlmStub().start()
     server = hs.AppServer(database_url=live_pg.url, faiss_root=tmp_path / "faiss", llm_url=stub.url,
-                          log_path=tmp_path / "app.log")
+                          log_path=tmp_path / "app.log",
+                          public_keys_file=support.make_keys(tmp_path / "keys").public_keys_file)
     try:
         server.start()
         time.sleep(20)                         # long enough for any scheduler or warm-up to fire
@@ -142,6 +144,8 @@ def test_enforce_startup_creates_no_schema_no_rows_and_no_graph_writes(live_pg, 
     ("sqlite_url", "postgresql+psycopg"),
     ("db_at_014", "revision 015"),
     ("unmigrated", "revision 015"),
+    ("no_public_keys", "AMC_VERIFIED_FAISS_PUBLIC_KEYS"),
+    ("unreadable_public_keys", "cannot use AMC_VERIFIED_FAISS_PUBLIC_KEYS"),
 ])
 def test_the_app_refuses_to_start_on_unsafe_configuration(live_pg, live_neo4j_driver, tmp_path, case, expected):
     stub = LlmStub().start()
@@ -154,8 +158,14 @@ def test_the_app_refuses_to_start_on_unsafe_configuration(live_pg, live_neo4j_dr
         support.alembic_cmd(live_pg.url, "downgrade", "014_publication_scope_claim_v31")
     elif case == "unmigrated":
         support.alembic_cmd(live_pg.url, "downgrade", "base")
+    keys_file = support.make_keys(tmp_path / "keys").public_keys_file
+    if case == "no_public_keys":
+        keys_file = None                       # a migrated, correctly configured host with no trusted publisher key
+    elif case == "unreadable_public_keys":
+        keys_file = tmp_path / "garbage.json"
+        keys_file.write_text("this is not json")
     server = hs.AppServer(database_url=url, faiss_root=tmp_path / "faiss", llm_url=stub.url,
-                          log_path=tmp_path / "app.log", mode=mode)
+                          log_path=tmp_path / "app.log", mode=mode, public_keys_file=keys_file)
     try:
         with pytest.raises(RuntimeError) as exc:
             server.start(timeout=120)
@@ -195,7 +205,7 @@ def test_hard_kill_during_a_stream_then_restart_serves_correctly_with_state_inta
         httpx.get(app.server.base + "/health", timeout=3)
     assert pg_state(app.pg.sessions, ALPHA) == before, "a killed reader must not change durable publication state"
     restarted = hs.AppServer(database_url=app.pg.url, faiss_root=app.tmp / "faiss", llm_url=app.stub.url,
-                             log_path=app.tmp / "app2.log")
+                             log_path=app.tmp / "app2.log", public_keys_file=app.keys.public_keys_file)
     try:
         restarted.start()
         with restarted.client() as c:
@@ -310,7 +320,7 @@ def test_backup_and_restore_into_a_disposable_database_still_serves(app):
         tables_a, rows_a = _counts(app.pg.engine)
         tables_b, rows_b = _counts(engine)
         assert (tables_a, rows_a) == (tables_b, rows_b)
-        restored_stack = support.make_stack(sessions, app.driver, app.tmp / "faiss")
+        restored_stack = support.make_stack(sessions, app.driver, app.tmp / "faiss", keys=app.keys)
         assert serving_allowed(restored_stack, ALPHA), "the restored database + existing index must serve"
         engine.dispose()
     finally:

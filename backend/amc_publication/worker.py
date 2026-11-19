@@ -40,7 +40,7 @@ class PublicationWorker:
 
     def __init__(self, journal: Journal, graph: GraphPort, 
                  snapshots: ImmutableSnapshotStore, *, simulation_mode: bool = False,
-                 owner: str = "worker_default", failpoint=None, serving_probe=None):
+                 owner: str = "worker_default", failpoint=None, serving_probe=None, approval_verifier=None):
         """Initialize PublicationWorker.
         
         Args:
@@ -58,7 +58,10 @@ class PublicationWorker:
         self.owner = owner if owner != "worker_default" else "worker_" + uuid.uuid4().hex
         self.failpoint = failpoint
         self.serving_probe = serving_probe
-        
+        # W31_APPROVAL_EVIDENCE: when set (the operator CLI always sets it) a publication whose payload does not
+        # carry valid two-person approval evidence is refused before any effect is prepared.
+        self.approval_verifier = approval_verifier
+
         # Fail closed: a populated directory does not prove a FAISS binary
         # exists, that the graph is Neo4j, or that the SERVING reader reloaded.
         if not simulation_mode:
@@ -68,6 +71,10 @@ class PublicationWorker:
                 raise ValueError("production worker requires real FAISS and Neo4j adapters")
             if not callable(serving_probe):
                 raise ValueError("production worker requires serving reader generation probe")
+            # W31_SIGNED_GENERATIONS: the publisher must sign what it publishes and must itself refuse
+            # anything unsigned or signed by an untrusted key.
+            if getattr(snapshots, "signer", None) is None or getattr(snapshots, "verifier", None) is None:
+                raise ValueError("production worker requires signed generations: a signing key and trusted public keys")
         
         logger.info("PublicationWorker initialized (simulation_mode=%s)", simulation_mode)
 
@@ -103,6 +110,12 @@ class PublicationWorker:
         vector_snapshot = payload.get("full_vector_snapshot", [])
         if not isinstance(vector_snapshot, list) or not vector_snapshot:
             raise Conflict("complete nonempty corpus is required before graph mutation")
+        if self.approval_verifier is not None:
+            try:
+                self.approval_verifier.verify_payload(payload)
+            except ValueError as exc:                    # ApprovalRefused subclasses ValueError
+                self.journal.retry(claim, Conflict(f"approval evidence refused: {exc}"))
+                return {"status": "failed", "error": f"approval evidence refused: {exc}"}
 
         # Step 1: Stage the vector corpus. Content-addressed and free of authority side effects,
         # so it is safe (and slow) work to do BEFORE the scope is held.

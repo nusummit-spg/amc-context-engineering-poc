@@ -206,11 +206,12 @@ Per gate: `gate`, exact 40-character `commit_sha`, `status=PASS/FAIL/BLOCKED`, r
 | ADR31-01 | Controlled read-only verified Q&A pilot | Reduces ingress and mutation attack surface, smallest useful demonstration | Product owner requires interactive ingestion |
 | ADR31-02 | PostgreSQL authoritative journal | Cross-worker row locks/unique constraints required | Only after alternative is proven transactionally equivalent |
 | ADR31-03 | Neo4j + filesystem as external effects | Cannot share SQL transaction; durable effects/compensation mandatory | Different graph/index engine chosen |
-| ADR31-04 | Signed immutable FAISS snapshots | Prevent silent index substitution and stale cache exposure | Another immutable vector backend proven |
+| ADR31-04 | Signed immutable FAISS snapshots (implemented: Ed25519 over tenant, generation id and manifest SHA-256; publisher holds the private key, serving hosts only public keys; key id plus revocation list; the app refuses to start without trusted public keys) | Prevent silent index substitution and stale cache exposure | Another immutable vector backend proven. Key custody and rotation remain organizational |
 | ADR31-05 | Exact route allowlist in enforce | Avoid legacy or unreviewed endpoint bypass | Each new route requires review, auth and tests |
 | ADR31-06 | No schema mutation at verified app startup | Migration must be controlled and auditable | Operational migration process designed |
 | ADR31-07 | Local-only tests until infrastructure exists | No spend and no current CI capacity | Disposable staging provisioned |
 | ADR31-08 | Source evidence never equals UAT | Prevent optimistic release assertions | Never; permanent principle |
+| ADR31-10 | Publication needs verifiable two-person approval evidence (per-approver Ed25519 signatures over tenant, entity, attribute, value, proposal, revision and corpus hash; trust store of approver public keys; max 14 days; operator CLI verifies at submit and the worker re-verifies before any effect) | Replaces self-attested proposer/reviewer names | A workflow or identity system issues approvals. It proves key holders signed, not that humans reviewed; the CLI is the only enforcement point |
 | ADR31-09 | The required migration head is `015_app_schema_alignment_v31` | A database migrated only to 014 lacks tables and columns the models use (chat sessions, token revocation, feedback), found on real PostgreSQL | A later migration supersedes it; update `db_runtime31.py`, the gate id and these documents together |
 
 ## 10. Implementation file map and review checklist

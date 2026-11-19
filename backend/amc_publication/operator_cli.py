@@ -3,19 +3,26 @@
 The pilot has NO HTTP publication endpoint; an operator publishes, replays and rolls back from here.
 It builds the PRODUCTION worker (real FAISS generation store, real Neo4j graph port, real serving
 probe) against the PostgreSQL named by DATABASE_URL, after proving the database is at the exact
-migration revision. It never edits state by hand, never force-releases a claim and never accepts
-an approval it cannot attribute to two different people.
+migration revision. It never edits state by hand and never force-releases a claim.
+
+Two controls are VERIFIED, not attested:
+  * Approval: `submit` needs an approval record signed by two different approvers, each with their own
+    Ed25519 key, over this exact change and corpus (see approvals31.py). The signed record is stored with the work
+    and the worker re-verifies it before any effect. The operator host holds only the approvers' PUBLIC keys.
+  * Generations: every FAISS generation the worker publishes is signed with the publisher key and verified with
+    the trusted public keys before it can be activated or served (see signing31.py).
 
     python -m amc_publication.operator_cli submit  --tenant T --entity E --attribute A --value V \\
-        --corpus corpus.json --proposal-id P --revision 1 --proposer alice --reviewer bob \\
-        --attest-independent-approval
+        --corpus corpus.json --proposal-id P --revision 1 --approval approval.json
     python -m amc_publication.operator_cli run-once
     python -m amc_publication.operator_cli rollback --tenant T --work-id W
     python -m amc_publication.operator_cli status   --tenant T
 
-Environment: DATABASE_URL (postgresql+psycopg), AMC_VERIFIED_FAISS_ROOT, NEO4J_URI/NEO4J_USER/NEO4J_PASSWORD,
-AMC_PUBLICATION_GRAPH_ATTRIBUTES (comma list, explicit allowlist), AMC_PUBLICATION_EMBEDDER
-("package.module:factory", default app.vector.client:get_base_vector_store).
+Environment: DATABASE_URL (postgresql+psycopg); for submit AMC_PUBLICATION_APPROVER_KEYS (approver public keys);
+for run-once AMC_VERIFIED_FAISS_ROOT, NEO4J_URI/NEO4J_USER/NEO4J_PASSWORD, AMC_PUBLICATION_GRAPH_ATTRIBUTES
+(explicit allowlist), AMC_PUBLICATION_SIGNING_KEY_FILE (publisher private key), AMC_VERIFIED_FAISS_PUBLIC_KEYS,
+AMC_PUBLICATION_APPROVER_KEYS, AMC_PUBLICATION_EMBEDDER ("package.module:factory", default
+app.vector.client:get_base_vector_store).
 Exit codes: 0 success, 2 refused or failed (a JSON object with the reason is printed either way).
 """
 from __future__ import annotations
@@ -65,7 +72,26 @@ def _embedder():
     return obj() if callable(obj) else obj
 
 
+def _journal(engine):
+    """Submit and rollback only need the journal: no Neo4j, no keys."""
+    from sqlalchemy.orm import sessionmaker
+    from .journal import Journal
+    return Journal(sessionmaker(bind=engine))
+
+
+def _approver_verifier():
+    from .approvals31 import TRUST_ENV, approver_verifier_from_env
+    try:
+        verifier = approver_verifier_from_env()
+    except ValueError as exc:
+        raise CliRefused(str(exc)) from exc
+    if verifier is None:
+        raise CliRefused(f"{TRUST_ENV} is required: approvals are verified against the approvers' public keys")
+    return verifier
+
+
 def _build(engine):
+    """The production worker: signed generations, verified approvals, real Neo4j, real serving probe."""
     from sqlalchemy.orm import sessionmaker
     from neo4j import GraphDatabase
     from .journal import Journal
@@ -74,52 +100,70 @@ def _build(engine):
     from .serving28 import ActiveReceiptResolver
     from .graph import Neo4jGraphPort
     from .worker import PublicationWorker
+    from .signing31 import PUBLIC_KEYS_ENV, SIGNING_KEY_ENV, signer_from_env, verifier_from_env
+    try:
+        signer, verifier = signer_from_env(), verifier_from_env()
+    except ValueError as exc:
+        raise CliRefused(str(exc)) from exc
+    if signer is None:
+        raise CliRefused(f"{SIGNING_KEY_ENV} is required: published generations must be signed")
+    if verifier is None:
+        raise CliRefused(f"{PUBLIC_KEYS_ENV} is required: generations are verified against trusted public keys")
+    if not verifier.trusts(signer.key_id, signer.public_key_b64):
+        raise CliRefused(f"the signing key {signer.key_id!r} is not trusted by {PUBLIC_KEYS_ENV} (unknown or revoked)")
+    approvals = _approver_verifier()
     sessions = sessionmaker(bind=engine)
     root = _env("AMC_VERIFIED_FAISS_ROOT")
     attrs = {a.strip() for a in _env("AMC_PUBLICATION_GRAPH_ATTRIBUTES").split(",") if a.strip()}
     driver = GraphDatabase.driver(_env("NEO4J_URI"), auth=(_env("NEO4J_USER"), _env("NEO4J_PASSWORD")))
     driver.verify_connectivity()
-    store = FaissGenerationStore(root, _embedder())
-    reader = VerifiedFaissRetriever(sessions, root)
+    store = FaissGenerationStore(root, _embedder(), signer=signer, verifier=verifier)
+    reader = VerifiedFaissRetriever(sessions, root, verifier=verifier)
     reader.resolver = ActiveReceiptResolver(sessions, reader.store, serving_loader=reader._load)
     graph = Neo4jGraphPort(driver, label="Entity", allowed_attributes=attrs)
-    journal = Journal(sessions)
-    worker = PublicationWorker(journal, graph, store, serving_probe=reader.probe_activation)
-    return sessions, journal, worker, driver
+    worker = PublicationWorker(Journal(sessions), graph, store, serving_probe=reader.probe_activation,
+                               approval_verifier=approvals)
+    return sessions, worker, driver
 
 
 def cmd_submit(args) -> dict:
+    from .approvals31 import ApprovalRefused, make_subject
     from .integration import ApprovedProposal, queue_verified_approval
     from .types import Conflict
-    if not args.attest_independent_approval:
-        raise CliRefused("--attest-independent-approval is required: a proposer and a different reviewer "
-                         "must have approved this change")
-    if not args.proposer or not args.reviewer or args.proposer == args.reviewer:
-        raise CliRefused("independent human proposer and reviewer IDs are mandatory and must differ")
     with open(args.corpus, encoding="utf-8") as fh:
         corpus = json.load(fh)
     if not isinstance(corpus, list) or not corpus:
         raise CliRefused("--corpus must be a nonempty JSON list (a COMPLETE corpus snapshot)")
     if any(not isinstance(r, dict) or r.get("tenant_id") != args.tenant for r in corpus):
         raise CliRefused("every corpus row must carry tenant_id == --tenant")
-    engine = _engine()
-    _sessions, journal, _worker, driver = _build(engine)
     try:
-        proposal = ApprovedProposal(proposal_id=args.proposal_id, tenant=args.tenant, revision=args.revision,
-                                    proposer_id=args.proposer, reviewer_id=args.reviewer, status="APPROVED",
-                                    entity_id=args.entity, attribute=args.attribute, proposed_value=args.value)
-        try:
-            work_id = queue_verified_approval(journal, proposal, corpus)
-        except Conflict as exc:
-            raise CliRefused(str(exc)) from exc
-    finally:
-        driver.close()
-    return {"ok": True, "work_id": work_id, "next": "run-once"}
+        with open(args.approval, encoding="utf-8") as fh:
+            record = json.load(fh)
+    except (OSError, ValueError) as exc:
+        raise CliRefused(f"--approval {args.approval!r} is missing or not valid JSON") from exc
+    verifier = _approver_verifier()
+    try:
+        expected = make_subject(tenant=args.tenant, entity=args.entity, attribute=args.attribute, value=args.value,
+                                proposal_id=args.proposal_id, revision=args.revision, corpus=corpus)
+        approved = verifier.verify(record, expected_subject=expected)
+    except ApprovalRefused as exc:
+        raise CliRefused(f"approval refused: {exc}") from exc
+    engine = _engine()
+    journal = _journal(engine)
+    proposal = ApprovedProposal(proposal_id=args.proposal_id, tenant=args.tenant, revision=args.revision,
+                                proposer_id=approved.proposer, reviewer_id=approved.reviewer, status="APPROVED",
+                                entity_id=args.entity, attribute=args.attribute, proposed_value=args.value)
+    try:
+        work_id = queue_verified_approval(journal, proposal, corpus, approval_evidence=record)
+    except Conflict as exc:
+        raise CliRefused(str(exc)) from exc
+    return {"ok": True, "work_id": work_id, "proposer": approved.proposer, "reviewer": approved.reviewer,
+            "approval_sha256": approved.evidence_sha256, "next": "run-once"}
 
 
 def cmd_run_once(_args) -> dict:
     engine = _engine()
-    _sessions, _journal, worker, driver = _build(engine)
+    _sessions, worker, driver = _build(engine)
     try:
         result = worker.run_once()
     finally:
@@ -130,14 +174,11 @@ def cmd_run_once(_args) -> dict:
 def cmd_rollback(args) -> dict:
     from .types import Conflict
     engine = _engine()
-    _sessions, journal, _worker, driver = _build(engine)
+    journal = _journal(engine)
     try:
-        try:
-            journal.request_rollback(args.work_id, args.tenant)
-        except Conflict as exc:
-            raise CliRefused(str(exc)) from exc
-    finally:
-        driver.close()
+        journal.request_rollback(args.work_id, args.tenant)
+    except Conflict as exc:
+        raise CliRefused(str(exc)) from exc
     return {"ok": True, "serving": "suspended until the rollback completes", "next": "run-once"}
 
 
@@ -173,10 +214,9 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="amc_publication.operator_cli", description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("submit", help="queue an approved publication")
-    for flag in ("tenant", "entity", "attribute", "value", "corpus", "proposal-id", "proposer", "reviewer"):
+    for flag in ("tenant", "entity", "attribute", "value", "corpus", "proposal-id", "approval"):
         p.add_argument("--" + flag, required=True)
     p.add_argument("--revision", type=int, default=1)
-    p.add_argument("--attest-independent-approval", action="store_true")
     sub.add_parser("run-once", help="claim and process one queued job (publish, replay or rollback)")
     r = sub.add_parser("rollback", help="request rollback of a published work, then run-once")
     r.add_argument("--tenant", required=True)

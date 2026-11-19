@@ -67,7 +67,7 @@ Defined and hash-pinned in [TEST_FIXTURE_MANIFEST.json](TEST_FIXTURE_MANIFEST.js
 | Q1 | Is read-only Q&A enough for the first MVP, or is user ingestion required? | Read-only is enough | Smallest attack surface; ingestion would make this a different, larger release |
 | Q2 | Citations: metadata only, or a receipt-bound document viewer? | **Metadata only** (non-clickable provenance) | Raw file routes stay denied; implemented behind `VITE_AMC_PILOT_MODE=true` |
 | Q3 | One tenant or true multi-tenant? | One pilot tenant; isolation still tested with two | The design requires proving isolation, not operating many tenants |
-| Q4 | Who may publish, revoke, recover, sign? | **Unassigned** | Needs a named owner before any pilot |
+| Q4 | Who may publish, revoke, recover, sign? | **Unassigned** | Needs a named owner before any pilot, plus named holders of the publisher signing key and of two approver keys, and an enrollment/rotation/revocation owner |
 | Q5 | Performance and SLO thresholds? | **Undefined** | Define only after measuring on the intended host |
 | Q6 | Is an isolated staging environment available? | **Unknown / assumed no** | Without it, acceptance stays blocked |
 

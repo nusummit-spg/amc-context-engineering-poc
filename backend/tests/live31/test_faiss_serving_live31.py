@@ -117,7 +117,8 @@ async def test_flipped_index_byte_is_refused_even_with_a_warm_cache(live_stack):
     assert not serving_allowed(live_stack, ALPHA)
 
 
-@pytest.mark.parametrize("filename", ["index.faiss", "manifest.json", "payloads.json", "snapshot.json"])
+@pytest.mark.parametrize("filename", ["index.faiss", "manifest.json", "payloads.json", "snapshot.json",
+                                      "signature.json"])
 async def test_a_missing_generation_file_is_refused(live_stack, filename):
     _publish(live_stack, ALPHA, "A")
     await _warm(live_stack, ALPHA)
@@ -149,6 +150,85 @@ async def test_an_edited_payload_text_is_refused(live_stack):
     ppath.write_text(json.dumps(payloads))
     with pytest.raises(DENIED):
         await _bridge(live_stack, ALPHA).search("expense ratio", top_k=2)
+
+
+# ------------------------------------------------------------------ the generation SIGNATURE (review P0)
+
+
+async def test_every_published_generation_carries_a_valid_publisher_signature(live_stack):
+    _publish(live_stack, ALPHA, "A")
+    d = _gen_dir(live_stack, ALPHA)
+    sig = json.loads((d / "signature.json").read_text())
+    assert sig["alg"] == "ed25519" and sig["key_id"] == "pub-live31"
+    live_stack.keys.verifier.verify_directory(d, tenant=ALPHA, generation_id=d.name)
+
+
+async def test_a_flipped_signature_byte_is_refused_even_with_a_warm_cache(live_stack):
+    import base64
+    _publish(live_stack, ALPHA, "A")
+    await _warm(live_stack, ALPHA)
+    path = _gen_dir(live_stack, ALPHA) / "signature.json"
+    sig = json.loads(path.read_text())
+    raw = bytearray(base64.b64decode(sig["signature"]))
+    raw[3] ^= 0x01
+    sig["signature"] = base64.b64encode(bytes(raw)).decode()
+    path.write_text(json.dumps(sig))
+    with pytest.raises(DENIED):
+        await _bridge(live_stack, ALPHA).search("expense ratio", top_k=2)
+    assert not serving_allowed(live_stack, ALPHA)
+
+
+async def test_a_signature_transplanted_from_another_generation_is_refused(live_stack):
+    _publish(live_stack, ALPHA, "A")
+    dir_a = _gen_dir(live_stack, ALPHA)
+    _publish(live_stack, ALPHA, "B")
+    dir_b = _gen_dir(live_stack, ALPHA)
+    assert dir_a != dir_b
+    (dir_b / "signature.json").write_bytes((dir_a / "signature.json").read_bytes())
+    with pytest.raises(DENIED):
+        await _bridge(live_stack, ALPHA).search("expense ratio", top_k=2)
+
+
+async def test_a_generation_re_signed_by_an_unknown_publisher_is_refused(live_stack):
+    """An attacker who can write the generation directory cannot make it trusted with a key of their own."""
+    from tests.live31.support import make_keys
+    _publish(live_stack, ALPHA, "A")
+    d = _gen_dir(live_stack, ALPHA)
+    attacker = make_keys(live_stack.root.parent / "attacker")
+    manifest = (d / "manifest.json").read_bytes()
+    doc = attacker.signer.sign_manifest(manifest, tenant=ALPHA, generation_id=d.name)
+    (d / "signature.json").write_text(json.dumps(doc))
+    with pytest.raises(DENIED):
+        await _bridge(live_stack, ALPHA).search("expense ratio", top_k=2)
+
+
+async def test_revoking_the_publisher_key_stops_serving_that_generation(live_stack):
+    from amc_publication.signing31 import GenerationVerifier
+    _publish(live_stack, ALPHA, "A")
+    await _warm(live_stack, ALPHA)
+    pub = json.loads(live_stack.keys.public_keys_file.read_text())["keys"]["pub-live31"]
+    live_stack.retriever.store.verifier = GenerationVerifier({"pub-live31": pub}, revoked=["pub-live31"])
+    with pytest.raises(DENIED):
+        await _bridge(live_stack, ALPHA).search("expense ratio", top_k=2)
+
+
+def test_the_worker_will_not_publish_when_its_own_signature_is_not_trusted(live_stack):
+    """Signer and verifier from different keyrings: staging must fail verification and publish nothing."""
+    from amc_publication.faiss_artifacts import FaissGenerationStore
+    from amc_publication.types import VerificationFailed
+    from amc_publication.worker import PublicationWorker
+    from tests.live31.support import make_keys
+    other = make_keys(live_stack.root.parent / "other")
+    entity, attr, _ = support.graph_target(ALPHA, "A")
+    seed_graph(live_stack.driver, ALPHA, entity, attr, "legacy")
+    live_stack.store = FaissGenerationStore(live_stack.root, HashEmbedder(), signer=other.signer,
+                                            verifier=live_stack.keys.verifier)     # signs with a key nobody trusts
+    live_stack.submit(ALPHA, "A")
+    with pytest.raises(VerificationFailed):
+        live_stack.worker().run_once()
+    st = pg_state(live_stack.sessions, ALPHA)
+    assert st["receipts"] == [] and st["authority"] is None
+    assert support.read_graph(live_stack.driver, ALPHA, entity, attr) == "legacy", "no graph write may precede verification"
 
 
 def test_a_snapshot_with_a_duplicate_chunk_id_cannot_be_staged(live_stack):

@@ -68,7 +68,7 @@ def main():
     hs.seed_user(engine, username="beta_analyst", password=creds["beta_analyst"], tenant=support.BETA)
     stub = LlmStub().start()
     server = hs.AppServer(database_url=url, faiss_root=state / "faiss", llm_url=stub.url, log_path=state / "app.log",
-                          extra_env={"VITE_AMC_PILOT_MODE": "true"})
+                          extra_env={"VITE_AMC_PILOT_MODE": "true"}, public_keys_file=stack.keys.public_keys_file)
     server.start()
     (state / "demo.json").write_text(json.dumps({"url": server.base, "database": name, "users": creds,
                                                   "tenants": {"alpha_analyst": support.ALPHA, "beta_analyst": support.BETA}}))

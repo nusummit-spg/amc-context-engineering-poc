@@ -24,7 +24,7 @@ States use the design vocabulary: `PASS_RUNTIME_LOCAL` = real disposable local s
 | G2 PostgreSQL | **PASS_RUNTIME_LOCAL** | 17 tests + 1 pinned expected failure (`test_pg_migration31.py`) | Linux and a non-embedded PostgreSQL; the Alembic chain does not run on SQLite (pre-existing) |
 | G3 First publisher | **PASS_RUNTIME_LOCAL** | 29 tests: 8-round two-worker race, stale lease/fence, crash at 6 failpoints, rollback | Independent review of the ordering fix in §3; multi-machine workers |
 | G4 Neo4j | **PASS_RUNTIME_LOCAL** | CAS, fence, readback, compensation, tenant isolation, outage and recovery | Neo4j under load and cluster behaviour |
-| G5 FAISS | **PASS_RUNTIME_LOCAL (digest-bound, not signed)** | 37 tests on a real index: tamper, missing files, stale cache, revocation, tenant | An asymmetric signature on the index does not exist; real-model embeddings |
+| G5 FAISS | **PASS_RUNTIME_LOCAL (Ed25519-signed generations)** | Real-index tests: tamper, missing files, stale cache, revocation, tenant, bad/untrusted/revoked signature, startup refusal without public keys | Key custody and rotation process; real-model embeddings |
 | G6 Auth, API, SSE | **PASS_RUNTIME_LOCAL** | 114 tests over real HTTP/SSE/WebSocket against the real app | Real LLM provider; cross-site cookie/CSRF testing in a real deployment |
 | G7 Frontend | **PARTIAL** | 35 node tests, both builds, one manual browser walkthrough | No automated browser test, one browser engine, no stored screenshots, accessibility only spot-checked |
 | G8 Operations | **PARTIAL** | 10 drills + 8 operator-CLI tests (restart, hard kill, PostgreSQL/Neo4j outage, backup/restore, measurements) | No staging canary, no SLO window, no named operator, no readiness probe |
@@ -38,7 +38,7 @@ States use the design vocabulary: `PASS_RUNTIME_LOCAL` = real disposable local s
 
 | Suite | Result |
 |---|---|
-| Live suite `backend/tests/live31` (real PostgreSQL + Neo4j + FAISS + real app) | **215 passed, 1 expected failure, 0 failed, 0 skipped** in 11 min 47 s |
+| Live suite `backend/tests/live31` (real PostgreSQL + Neo4j + FAISS + real app) | **261 passed, 1 expected failure, 0 failed, 0 skipped** after the P0 review fixes. This is two runs, not one: the full run gave 259 passed, 1 expected failure, 2 failed. One failure was a stale test (restored-database check built without verification keys, fixed); the other was a 180 s CLI subprocess timeout on a run that took 15 h 39 min wall clock (the machine was evidently suspended or starved). Both passed on re-run. No single clean full run exists for this commit. |
 | ... migration/schema/startup guard | 17 passed, 1 xfail |
 | ... publication race, crash, rollback | 29 passed |
 | ... verified FAISS serving | 37 passed |
@@ -103,8 +103,10 @@ These describe this run only. No threshold was set from them, and an SLO needs a
 ## 6. Open findings (recorded, not fixed)
 
 1. **Backend fills `page = 1`** when a chunk has no page, so the Evidence panel shows "p. 1" for sources without pages.
-2. **The index generation is digest-bound, not signed.** SHA-256 over the manifest, payload map and index bytes, bound to the
-   PostgreSQL receipt; there is no asymmetric signature.
+2. **Signing and approval keys are organizationally controlled.** Generations are now Ed25519-signed and approvals carry two
+   Ed25519 signatures (review fixes P0-1/P0-2). Software proves that holders of trusted keys signed; it cannot prove who holds a
+   key, that approvers read the corpus, or that a key was not shared. Enrollment, custody, rotation and lost-key procedures are
+   unowned; the operator CLI is the only enforcement point for approvals (the worker re-verifies the stored record).
 3. **A permanently failed publication that holds the scope has no reconciliation procedure.** Serving stays denied by design;
    `operator_cli status` says operator review is required; no force-release exists, deliberately.
 4. **Tampered artifacts raise `VerificationFailed`** (not `ServingDenied`) out of the serving path. Nothing is served, but callers

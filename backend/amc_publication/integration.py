@@ -24,7 +24,7 @@ class ApprovedProposal:
 
 
 def queue_verified_approval(journal: Journal, proposal: ApprovedProposal,
-                            complete_corpus_snapshot: list[dict]) -> str:
+                            complete_corpus_snapshot: list[dict], *, approval_evidence: dict | None = None) -> str:
     if proposal.status.upper() != "APPROVED":
         raise Conflict("publication requires an explicitly APPROVED persisted proposal")
     if not proposal.proposer_id or not proposal.reviewer_id or proposal.proposer_id == proposal.reviewer_id:
@@ -35,11 +35,16 @@ def queue_verified_approval(journal: Journal, proposal: ApprovedProposal,
         raise Conflict("tenant-scoped target identity is required")
     if not isinstance(complete_corpus_snapshot, list):
         raise Conflict("complete snapshot must come from the trusted corpus catalog")
+    payload = {"entity": proposal.entity_id,
+               "attribute": proposal.attribute,
+               "corrected_value": proposal.proposed_value,
+               "full_vector_snapshot": complete_corpus_snapshot}
+    if approval_evidence is not None:
+        # W31_APPROVAL_EVIDENCE: the signed two-person record travels with the work, durably, so the worker can
+        # re-verify it at execution time and an auditor can read it later.
+        payload["approval"] = approval_evidence
     # The store validates each row and its tenant again before staging.
     return journal.submit(tenant=proposal.tenant,
                           key=f"{proposal.proposal_id}:r{proposal.revision}",
                           proposal_id=proposal.proposal_id, revision=proposal.revision,
-                          payload={"entity":proposal.entity_id,
-                                   "attribute": proposal.attribute,
-                                   "corrected_value": proposal.proposed_value,
-                                   "full_vector_snapshot": complete_corpus_snapshot})
+                          payload=payload)

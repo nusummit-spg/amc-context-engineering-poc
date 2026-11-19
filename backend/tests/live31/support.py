@@ -192,11 +192,54 @@ def alembic_cmd(url: str, action: str, revision: str = "head") -> None:
                 os.environ[k] = v
 
 
-def make_stack(sessions, driver, root: Path, *, lease_seconds: int = 60) -> Stack:
+@dataclass
+class KeyMaterial:
+    """Throwaway keys for one test: a publisher key (signs generations) and three approver keys."""
+    signer: object
+    verifier: object
+    signing_key_file: Path
+    public_keys_file: Path
+    approvers: dict
+    approver_trust_file: Path
+
+    def approval(self, subject: dict, *, proposer: str = "alice", reviewer: str = "bob", **kw) -> dict:
+        from amc_publication import approvals31 as ap
+        record = ap.new_record(subject, **kw)
+        return self.approvers[reviewer].sign(self.approvers[proposer].sign(record, "proposer"), "reviewer")
+
+    def env(self) -> dict:
+        return {"AMC_PUBLICATION_SIGNING_KEY_FILE": str(self.signing_key_file),
+                "AMC_VERIFIED_FAISS_PUBLIC_KEYS": str(self.public_keys_file),
+                "AMC_PUBLICATION_APPROVER_KEYS": str(self.approver_trust_file)}
+
+
+def make_keys(directory: Path) -> KeyMaterial:
+    import json
+    from amc_publication import approvals31 as ap
+    from amc_publication import signing31 as sg
+    directory.mkdir(parents=True, exist_ok=True)
+    priv, pub = sg.generate_keypair()
+    signer, verifier = sg.GenerationSigner("pub-live31", priv), sg.GenerationVerifier({"pub-live31": pub})
+    signing_file, public_file, trust_file = directory / "signing.json", directory / "public_keys.json", directory / "approvers.json"
+    signing_file.write_text(json.dumps({"key_id": "pub-live31", "private_key": priv}))
+    public_file.write_text(json.dumps({"keys": {"pub-live31": pub}, "revoked": []}))
+    approvers, trust = {}, {"approvers": {}, "revoked": []}
+    for name in ("alice", "bob", "carol"):
+        a_priv, a_pub = ap.generate_approver_keypair()
+        approvers[name] = ap.ApproverSigner(name, f"{name}-live31", a_priv)
+        trust["approvers"][name] = {"roles": ["proposer", "reviewer"], "keys": {f"{name}-live31": a_pub}}
+    trust_file.write_text(json.dumps(trust))
+    return KeyMaterial(signer, verifier, signing_file, public_file, approvers, trust_file)
+
+
+def make_stack(sessions, driver, root: Path, *, lease_seconds: int = 60, keys: KeyMaterial | None = None) -> Stack:
     root.mkdir(parents=True, exist_ok=True)
+    keys = keys or make_keys(root.parent / ("keys_" + root.name))
     journal = Journal(sessions, lease_seconds=lease_seconds)
-    store = FaissGenerationStore(root, HashEmbedder())
-    retriever = VerifiedFaissRetriever(sessions, root)
+    store = FaissGenerationStore(root, HashEmbedder(), signer=keys.signer, verifier=keys.verifier)
+    retriever = VerifiedFaissRetriever(sessions, root, verifier=keys.verifier)
     retriever.resolver = ActiveReceiptResolver(sessions, retriever.store, serving_loader=retriever._load)
     graph = Neo4jGraphPort(driver, label="Entity", allowed_attributes=GRAPH_ATTRS)
-    return Stack(sessions, journal, store, retriever, graph, driver, root)
+    stack = Stack(sessions, journal, store, retriever, graph, driver, root)
+    stack.keys = keys
+    return stack

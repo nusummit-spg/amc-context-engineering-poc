@@ -75,6 +75,14 @@ async def lifespan(app: FastAPI):
         from app.core.database import engine
         from app.core.db_runtime31 import verify_migrated_postgresql
         verify_migrated_postgresql(engine)
+        # W31_SIGNED_GENERATIONS: refuse to start rather than discover at the first query that no trusted
+        # publisher key is configured. Public keys only: a serving host never holds a signing key.
+        from amc_publication.signing31 import PUBLIC_KEYS_ENV, verifier_from_env
+        try:
+            if verifier_from_env() is None:
+                raise RuntimeError(f"Verified AMC requires {PUBLIC_KEYS_ENV} (trusted public keys for signed generations)")
+        except ValueError as exc:
+            raise RuntimeError(f"Verified AMC cannot use {PUBLIC_KEYS_ENV}: {exc}") from exc
 
     container = deps.init_container()
     # Fast check if Neo4j is available before applying schema/rules
