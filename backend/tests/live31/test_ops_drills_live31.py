@@ -142,8 +142,8 @@ def test_enforce_startup_creates_no_schema_no_rows_and_no_graph_writes(live_pg, 
 @pytest.mark.parametrize("case,expected", [
     ("bad_mode", "Invalid AMC_VERIFIED_SERVING_MODE"),
     ("sqlite_url", "postgresql+psycopg"),
-    ("db_at_014", "revision 015"),
-    ("unmigrated", "revision 015"),
+    ("db_at_014", "revision 017"),
+    ("unmigrated", "revision 017"),
     ("no_public_keys", "AMC_VERIFIED_FAISS_PUBLIC_KEYS"),
     ("unreadable_public_keys", "cannot use AMC_VERIFIED_FAISS_PUBLIC_KEYS"),
 ])

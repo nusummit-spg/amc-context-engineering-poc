@@ -263,7 +263,7 @@ def test_the_cli_refuses_a_non_postgres_database(ops, env_extra, drop, reason):
 
 def test_the_cli_refuses_a_database_left_at_014(ops):
     support.alembic_cmd(ops.pg.url, "downgrade", "014_publication_scope_claim_v31")
-    assert "revision 015" in _cli(ops, "status", "--tenant", ALPHA, expect=2)["refused"]
+    assert "revision 017" in _cli(ops, "status", "--tenant", ALPHA, expect=2)["refused"]
 
 
 def test_status_is_read_only(ops):

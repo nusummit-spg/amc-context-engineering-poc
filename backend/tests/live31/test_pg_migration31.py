@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 
 from tests.live31 import support
 
-HEAD = "015_app_schema_alignment_v31"
+HEAD = "017_query_evidence_feedback_v40"
 BACKEND = Path(__file__).resolve().parents[2]
 
 # Tables that exist only in migrations (legacy, no ORM model) - not a defect.
@@ -204,7 +204,7 @@ def test_startup_guard_passes_on_the_migrated_database(live_pg):
 def test_startup_guard_blocks_a_database_left_at_014(live_pg):
     from app.core.db_runtime31 import verify_migrated_postgresql
     support.alembic_cmd(live_pg.url, "downgrade", "014_publication_scope_claim_v31")
-    with pytest.raises(RuntimeError, match="revision 015"):
+    with pytest.raises(RuntimeError, match="revision 017"):
         verify_migrated_postgresql(live_pg.engine)
 
 

@@ -30,6 +30,8 @@ def is_pilot_route_allowed(method: str, path: str) -> bool:
         return True
     if (method, path) in _ALLOWED:
         return True
+    if _w40_route_allowed(method, path):
+        return True
     if method != "GET":
         return False
     if any(path.startswith(prefix) for prefix in _STATIC_READ_PREFIXES):
@@ -38,6 +40,21 @@ def is_pilot_route_allowed(method: str, path: str) -> bool:
         work_id = path[len(_PUBLICATION_STATUS_PREFIX):]
         return bool(work_id) and "/" not in work_id and len(work_id) <= 128
     return False
+
+def _w40_route_allowed(method: str, path: str) -> bool:
+    """Wave 4.0 reviewed additions (TDS-40 §5.4), each behind its ADR and flag; NOT in _ALLOWED so the
+    frontend parity list changes only when the UI for them ships.
+
+    ADR40-04  GET  /api/ready        always (body is {ready: bool}; detail only for reviewer/admin roles)
+    ADR40-03  POST /api/feedback/v40 only with AMC_PILOT_FEEDBACK=on
+    """
+    if (method, path) == ("GET", "/api/ready"):
+        return True
+    if (method, path) == ("POST", "/api/feedback/v40"):
+        from amc_publication.evidence40 import feedback_enabled
+        return feedback_enabled()
+    return False
+
 
 def legacy_services_allowed() -> bool:
     """Allow background and unverified startup mutations only when mode is off."""

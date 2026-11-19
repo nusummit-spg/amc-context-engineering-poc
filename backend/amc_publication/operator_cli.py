@@ -323,9 +323,25 @@ def cmd_fin_status(args) -> dict:
     return out
 
 
+def cmd_feedback_export(args) -> dict:
+    """Read-only offline triage pack: pilot feedback joined with its query evidence (TDS-40 E7)."""
+    from sqlalchemy.orm import sessionmaker
+    from .evidence40 import export_feedback
+    sessions = sessionmaker(bind=_engine())
+    with sessions() as s:
+        rows = export_feedback(s, args.tenant)
+    with open(args.out, "w", encoding="utf-8") as fh:
+        json.dump(rows, fh, indent=2, default=str)
+    return {"ok": True, "tenant": args.tenant, "items": len(rows), "out": args.out,
+            "next": "SME triage: confirmed defects become gold-set cases or approved publications; nothing is applied automatically"}
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="amc_publication.operator_cli", description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="cmd", required=True)
+    fe = sub.add_parser("feedback-export", help="read-only export of pilot feedback with its evidence")
+    fe.add_argument("--tenant", required=True)
+    fe.add_argument("--out", required=True)
     fs = sub.add_parser("fin-stage", help="stage, reconcile and sign a structured dataset version (no activation)")
     fs.add_argument("--tenant", required=True)
     fs.add_argument("--chunks-dir", required=True)
@@ -352,7 +368,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     handler = {"submit": cmd_submit, "run-once": cmd_run_once, "rollback": cmd_rollback, "status": cmd_status,
                "fin-stage": cmd_fin_stage, "fin-subject": cmd_fin_subject, "fin-activate": cmd_fin_activate,
-               "fin-status": cmd_fin_status}[args.cmd]
+               "fin-status": cmd_fin_status, "feedback-export": cmd_feedback_export}[args.cmd]
     try:
         result = handler(args)
     except CliRefused as exc:

@@ -11,7 +11,8 @@ from sqlalchemy.engine import make_url
 
 # 015 aligns the app tables with the models; 014 alone leaves chat and token revocation without
 # the tables/columns they use (see alembic/versions/015_app_schema_alignment_v31.py).
-_EXPECTED_REVISION = "015_app_schema_alignment_v31"
+# Wave 4.0: 016 adds the fin plane and 017 query evidence + pilot feedback; the head moves with them (ADR31-09).
+_EXPECTED_REVISION = "017_query_evidence_feedback_v40"
 
 def resolve_database_url(base_dir: Path) -> str:
     """Verified serving requires explicit psycopg-backed PostgreSQL."""
@@ -32,4 +33,4 @@ def verify_migrated_postgresql(engine) -> None:
         versions = connection.execute(
             text("SELECT version_num FROM alembic_version")).scalars().all()
     if versions != [_EXPECTED_REVISION]:
-        raise RuntimeError("Verified AMC database is not at exact Alembic revision 015")
+        raise RuntimeError("Verified AMC database is not at exact Alembic revision 017")

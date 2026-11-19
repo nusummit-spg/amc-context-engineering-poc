@@ -24,9 +24,29 @@ class VerifiedOrchestratorFence29:
     MAX_FRAMES=4096
     MAX_BYTES=4*1024*1024
 
-    def __init__(self, delegate, reader):
+    def __init__(self, delegate, reader, *, evidence_sessions=None):
         self._delegate=delegate
         self._reader=reader
+        self._evidence_sessions=evidence_sessions
+
+    async def _record(self, *, channel, tenant, kwargs, args, key, synthesis, trace):
+        """W40 (TDS-40 E9): append-only evidence, written after the final check and BEFORE release.
+        Any failure raises ServingDenied, so an answer is never released without its audit row."""
+        from .evidence40 import evidence_enabled, evidence_row, record
+        if not evidence_enabled():
+            return
+        try:
+            sessions=self._evidence_sessions
+            if sessions is None:
+                from sqlalchemy.orm import sessionmaker
+                from app.core.database import engine
+                sessions=self._evidence_sessions=sessionmaker(bind=engine)
+            question=kwargs.get('query', args[0] if args else '')
+            row=evidence_row(tenant=tenant, user_id=kwargs.get('user_id'), channel=channel, generation_key=key,
+                             question=question if isinstance(question,str) else '', synthesis=synthesis, trace=trace)
+            await asyncio.to_thread(record, sessions, row)
+        except Exception as ex:
+            raise ServingDenied('query evidence could not be recorded; answer withheld') from ex
 
     async def _pin(self, tenant_id):
         if not isinstance(tenant_id,str) or not tenant_id.strip():
@@ -49,6 +69,8 @@ class VerifiedOrchestratorFence29:
         before=await self._pin(tenant)
         response=await self._delegate.answer(*args, **kwargs)
         await self._check(tenant, before)
+        await self._record(channel='answer', tenant=tenant, kwargs=kwargs, args=args, key=before,
+                           synthesis=getattr(response,'synthesis',None), trace=getattr(response,'trace',None))
         return response
 
     async def traditional_search(self, *args, **kwargs):
@@ -80,6 +102,10 @@ class VerifiedOrchestratorFence29:
                 raise ServingDenied('verified response exceeds buffered stream limits')
             frames.append(json.loads(packed))
         await self._check(tenant,before)
+        complete=[f for f in frames if f.get('type')=='complete']
+        if complete:
+            await self._record(channel='stream', tenant=tenant, kwargs=kwargs, args=args, key=before,
+                               synthesis=complete[-1].get('answer') or {}, trace=complete[-1].get('trace') or {})
         for frame in frames:
             # A concurrent rollback aborts subsequent SSE frames, rather than
             # continuing to emit stale sourced answers. Check is not a lock.

@@ -54,11 +54,16 @@ def _mini(tmp: Path, name: str, nav: str) -> Path:
     return d
 
 
-def test_migration_016_matches_fin_models(live_pg):
+def test_migrations_016_017_match_models_and_evidence_is_append_only(live_pg):
+    from amc_publication.evidence40 import EVIDENCE_TABLES
     with live_pg.engine.connect() as c:
-        assert c.execute(text("select version_num from alembic_version")).scalar() >= "016"
+        assert c.execute(text("select version_num from alembic_version")).scalar() == "017_query_evidence_feedback_v40"
+        for table in ("query_evidence_v40", "pilot_feedback_v40"):
+            for priv in ("UPDATE", "DELETE", "TRUNCATE"):
+                assert c.execute(text("select has_table_privilege('public', :t, :p)"),
+                                 {"t": table, "p": priv}).scalar() is False, (table, priv)
     insp = inspect(live_pg.engine)
-    for table in fin.FIN_TABLES:
+    for table in fin.FIN_TABLES + EVIDENCE_TABLES:
         migrated = {col["name"]: col for col in insp.get_columns(table.name)}
         assert set(migrated) == set(table.columns.keys()), table.name
         for col in table.columns:

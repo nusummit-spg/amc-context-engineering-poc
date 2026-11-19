@@ -385,6 +385,9 @@ def create_app() -> FastAPI:
     # JWT/tenant checks are enforced by the Wave 2.6 status route itself.
     from amc_publication.status_route import router as publication_status_router
     app.include_router(publication_status_router)
+    # W40: readiness (ADR40-04) and append-only pilot feedback (ADR40-03, flag-gated inside the route).
+    from app.api.routes.pilot40 import router as pilot40_router
+    app.include_router(pilot40_router)
     
     # Phase 4: Serve React frontend (check mf-context-engine/dist first, then frontend/dist)
     mf_engine_dir = Path(__file__).parent.parent.parent / "mf-context-engine" / "dist"
