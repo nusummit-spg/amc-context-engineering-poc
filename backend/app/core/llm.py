@@ -154,6 +154,8 @@ class LLMClient:
             max_tokens (Optional[int]): Collection or list of max tokens.
             fast (bool): The fast.
         """
+        from app.core.provider_policy40 import outbound
+        prompt, system = outbound(self._provider, prompt, system)     # W40: residency + PII (no-op when off)
         last_exc: Optional[Exception] = None
         for attempt, delay in enumerate([0.0] + _BACKOFF_DELAYS):
             if delay:
@@ -264,6 +266,8 @@ class LLMClient:
         Returns:
             str: Resulting str instance.
         """
+        from app.core.provider_policy40 import outbound
+        prompt, system = outbound(provider, prompt, system)     # W40: residency + PII (no-op when off)
         if provider == "groq":
             return await self._call_groq(prompt, system, max_tokens, fast, structured_schema)
         elif provider == "openai":

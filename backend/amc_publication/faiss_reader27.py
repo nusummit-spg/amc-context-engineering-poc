@@ -23,6 +23,7 @@ class VerifiedFaissRetriever:
         self.store = FaissGenerationStore(root, embedder=None, verifier=verifier)
         self.sessions = sessions
         self._loaded: dict[str, tuple[str, str, object, list[dict]]] = {}
+        self._embedders: dict[str, tuple[str, object]] = {}
         self.resolver = VerifiedGenerationResolver(sessions, self.store, serving_loader=self._load)
 
     def _load(self, tenant: str, generation_id: str, digest: str) -> bool:
@@ -50,7 +51,15 @@ class VerifiedFaissRetriever:
         if hashlib.sha256(path.read_bytes()).hexdigest() != expected_hash:
             raise ServingDenied('FAISS bytes changed during serving load')
         self._loaded[tenant] = (generation_id, digest, index, docs)
+        self._embedders[tenant] = (generation_id, manifest.get('embedder'))
         return True
+
+    def embedder_identity_for(self, tenant: str, generation_id: str | None = None):
+        """W40: identity of the embedder that built the loaded generation (from its signed manifest), or None."""
+        loaded = self._embedders.get(tenant)
+        if not loaded or (generation_id is not None and loaded[0] != generation_id):
+            return None
+        return loaded[1]
 
     def probe_activation(self, tenant: str, generation_id: str, digest: str) -> bool:
         """Used by worker before receipt; NEVER authorizes answer serving."""

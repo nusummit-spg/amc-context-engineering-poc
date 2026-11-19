@@ -61,6 +61,10 @@ async def lifespan(app: FastAPI):
     # W40: a malformed feature flag refuses startup instead of silently disabling a control.
     from app.retrieval.structured_path40 import validate_flags
     validate_flags()
+    from amc_publication.embedder_identity40 import binding_enabled
+    binding_enabled()                                   # raises on a malformed AMC_EMBEDDER_BINDING
+    from app.core.provider_policy40 import assert_provider_policy
+    assert_provider_policy(settings)                    # enforce + AMC_PROVIDER_POLICY=on: residency or refuse
     setup_logging(
         level=settings.log_level,
         log_format=settings.log_format,

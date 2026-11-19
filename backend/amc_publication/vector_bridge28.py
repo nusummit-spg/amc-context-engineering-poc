@@ -67,6 +67,15 @@ class VerifiedVectorBridge:
         # max limit 100; requesting larger candidates is deliberate: user/tenant
         # and metadata filters must never be applied AFTER truncation.
         results=await asyncio.to_thread(self._retriever.search,tenant,list(embedding),limit=100)
+        # W40 (ADR40-06): the query embedder must be the one that built the served generation.
+        from .embedder_identity40 import binding_enabled, embedder_identity, same_embedder
+        if binding_enabled():
+            identity_for = getattr(self._retriever, 'embedder_identity_for', None)
+            built_with = identity_for(tenant) if callable(identity_for) else None
+            if built_with is None:
+                raise ServingDenied('served generation does not record its embedder; republish it')
+            if not same_embedder(built_with, embedder_identity(self._embedder)):
+                raise ServingDenied('query embedder differs from the embedder that built the served generation')
         hits=[]
         seen=set()
         for h in results:

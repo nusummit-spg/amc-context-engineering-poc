@@ -230,6 +230,11 @@ class VectorStore:
 
     # ---------- embedding ----------
 
+    @property
+    def embedder_identity(self) -> dict:
+        """W40 (ADR40-06): recorded in signed FAISS generations and compared at serving time."""
+        return {"id": "fastembed.TextEmbedding", "model": str(get_settings().embedding_model)}
+
     def embed(self, texts: list[str]) -> list[list[float]]:
         """Embed.
 

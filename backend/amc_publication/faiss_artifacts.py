@@ -102,9 +102,12 @@ class FaissGenerationStore(ImmutableSnapshotStore):
             # Index checksum validates physical binary, not merely JSON metadata.
             import hashlib
             binary_hash = hashlib.sha256(index_path.read_bytes()).hexdigest()
+            from .embedder_identity40 import embedder_identity
             manifest = {"generation_id": digest, "digest": digest, "count": len(ordered),
                         "tenant": tenant, "dimension": dimension, "index_hash": binary_hash,
-                        "payload_hash": sha256_json(payloads), "format": "faiss-idmap2-ip-v1"}
+                        "payload_hash": sha256_json(payloads), "format": "faiss-idmap2-ip-v1",
+                        # W40 (ADR40-06): signed with the manifest; serving refuses a different query embedder.
+                        "embedder": embedder_identity(self.embedder, dimension=dimension)}
             (stage / "manifest.json").write_bytes(canonical_bytes(manifest))
             if self.signer is not None:
                 self._write_signature(stage, tenant, gen)      # signs the manifest that binds index + payload hashes
