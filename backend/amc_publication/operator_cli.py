@@ -18,6 +18,14 @@ Two controls are VERIFIED, not attested:
     python -m amc_publication.operator_cli rollback --tenant T --work-id W
     python -m amc_publication.operator_cli status   --tenant T
 
+Structured fund data (Wave 4.0, fin40):
+    python -m amc_publication.operator_cli fin-stage    --tenant T --chunks-dir data/source_docs/chunks
+    python -m amc_publication.operator_cli fin-subject  --tenant T --dataset-version V --proposal-id P \\
+        --corpus-out fin_manifest.json --record-out fin_approval.json
+    (two approvers sign fin_approval.json with amc_publication.approvals31 sign --corpus fin_manifest.json)
+    python -m amc_publication.operator_cli fin-activate --tenant T --dataset-version V --approval fin_approval.json
+    python -m amc_publication.operator_cli fin-status   --tenant T
+
 Environment: DATABASE_URL (postgresql+psycopg); for submit AMC_PUBLICATION_APPROVER_KEYS (approver public keys);
 for run-once AMC_VERIFIED_FAISS_ROOT, NEO4J_URI/NEO4J_USER/NEO4J_PASSWORD, AMC_PUBLICATION_GRAPH_ATTRIBUTES
 (explicit allowlist), AMC_PUBLICATION_SIGNING_KEY_FILE (publisher private key), AMC_VERIFIED_FAISS_PUBLIC_KEYS,
@@ -210,9 +218,127 @@ def cmd_status(args) -> dict:
     return out
 
 
+# ------------------------------------------------------------------ Wave 4.0: structured (fin) dataset plane
+
+def _fin_keys():
+    from .signing31 import PUBLIC_KEYS_ENV, signer_from_env, verifier_from_env
+    try:
+        return signer_from_env(), verifier_from_env()
+    except ValueError as exc:
+        raise CliRefused(str(exc)) from exc
+
+
+def cmd_fin_stage(args) -> dict:
+    """Stage, reconcile and sign one dataset version. Never activates."""
+    from sqlalchemy.orm import sessionmaker
+    from .fin40 import stage_dataset
+    from .signing31 import SIGNING_KEY_ENV
+    from .types import Conflict
+    signer, verifier = _fin_keys()
+    if signer is None:
+        raise CliRefused(f"{SIGNING_KEY_ENV} is required: staged datasets must be signed")
+    if verifier is not None and not verifier.trusts(signer.key_id, signer.public_key_b64):
+        raise CliRefused(f"the signing key {signer.key_id!r} is not trusted (unknown or revoked)")
+    sessions = sessionmaker(bind=_engine(), expire_on_commit=False)
+    try:
+        with sessions.begin() as s:
+            report = stage_dataset(s, tenant=args.tenant, chunks_dir=args.chunks_dir, signer=signer)
+    except Conflict as exc:
+        raise CliRefused(f"staging refused: {exc}") from exc
+    return {"ok": True, **report.as_dict(), "next": "fin-subject, then two approvers sign, then fin-activate"}
+
+
+def cmd_fin_subject(args) -> dict:
+    """Write what approvers must review (manifest as the 'corpus') and an unsigned approval record."""
+    from datetime import timedelta
+    from sqlalchemy.orm import sessionmaker
+    from .approvals31 import new_record
+    from .fin40 import FinDatasetVersion, activation_subject
+    sessions = sessionmaker(bind=_engine())
+    with sessions() as s:
+        ds = s.get(FinDatasetVersion, args.dataset_version)
+        if ds is None or ds.tenant != args.tenant:
+            raise CliRefused("dataset version does not exist for this tenant")
+        manifest = ds.manifest
+    corpus = [{"chunk_id": f"fin:{args.dataset_version}", "manifest": manifest}]
+    subject = activation_subject(tenant=args.tenant, dataset_version=args.dataset_version, manifest=manifest,
+                                 proposal_id=args.proposal_id, revision=args.revision)
+    record = new_record(subject, valid_for=timedelta(days=args.valid_days))
+    with open(args.corpus_out, "w", encoding="utf-8") as fh:
+        json.dump(corpus, fh, indent=2)
+    with open(args.record_out, "w", encoding="utf-8") as fh:
+        json.dump(record, fh, indent=2)
+    return {"ok": True, "corpus": args.corpus_out, "record": args.record_out, "counts": manifest.get("counts"),
+            "next": "each approver: python -m amc_publication.approvals31 sign --record ... --corpus ... "
+                    "--key-file <own key> --role proposer|reviewer"}
+
+
+def cmd_fin_activate(args) -> dict:
+    """Activate (or roll back to) one dataset version in one SQL transaction, with two-person approval."""
+    from sqlalchemy.orm import sessionmaker
+    from .approvals31 import ApprovalRefused
+    from .fin40 import activate_dataset
+    from .types import Conflict, VerificationFailed
+    _signer, verifier = _fin_keys()
+    if verifier is None:
+        raise CliRefused("AMC_VERIFIED_FAISS_PUBLIC_KEYS is required: datasets are verified before activation")
+    try:
+        with open(args.approval, encoding="utf-8") as fh:
+            record = json.load(fh)
+    except (OSError, ValueError) as exc:
+        raise CliRefused(f"--approval {args.approval!r} is missing or not valid JSON") from exc
+    approvals = _approver_verifier()
+    sessions = sessionmaker(bind=_engine(), expire_on_commit=False)
+    try:
+        with sessions.begin() as s:
+            receipt = activate_dataset(s, tenant=args.tenant, dataset_version=args.dataset_version,
+                                       approval_record=record, approval_verifier=approvals,
+                                       generation_verifier=verifier)
+    except (Conflict, VerificationFailed, ApprovalRefused) as exc:
+        raise CliRefused(f"activation refused: {exc}") from exc
+    return {"ok": True, "receipt": receipt.id, "dataset_version": receipt.dataset_version,
+            "previous_dataset_version": receipt.previous_dataset_version, "proposer": receipt.proposer,
+            "reviewer": receipt.reviewer}
+
+
+def cmd_fin_status(args) -> dict:
+    """Read-only."""
+    from sqlalchemy import select
+    from sqlalchemy.orm import sessionmaker
+    from .active_authority28 import PublicationScopeClaim31
+    from .fin40 import DOMAIN, NAMESPACE, FinActiveDataset, FinDatasetVersion
+    sessions = sessionmaker(bind=_engine())
+    with sessions() as s:
+        p = s.get(FinActiveDataset, (args.tenant, DOMAIN))
+        c = s.get(PublicationScopeClaim31, (args.tenant, NAMESPACE))
+        versions = {d.dataset_version: {"status": d.status, "valid": d.valid_rows, "rejected": d.rejected_rows,
+                                        "created_at": d.created_at}
+                    for d in s.scalars(select(FinDatasetVersion).where(FinDatasetVersion.tenant == args.tenant))}
+    out = {"ok": True, "tenant": args.tenant, "versions": versions,
+           "active": None if p is None else {"dataset_version": p.dataset_version, "receipt": p.receipt_id,
+                                             "epoch": p.epoch},
+           "claim": None if c is None else {"owner": c.owner_work_id, "status": c.status}}
+    out["attention"] = ([f"fin scope claim HELD by {c.owner_work_id}: {REVIEW_REQUIRED}"]
+                        if c is not None and c.status == "HELD" else [])
+    return out
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="amc_publication.operator_cli", description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="cmd", required=True)
+    fs = sub.add_parser("fin-stage", help="stage, reconcile and sign a structured dataset version (no activation)")
+    fs.add_argument("--tenant", required=True)
+    fs.add_argument("--chunks-dir", required=True)
+    fj = sub.add_parser("fin-subject", help="write the manifest and an unsigned approval record for approvers")
+    for flag in ("tenant", "dataset-version", "proposal-id", "corpus-out", "record-out"):
+        fj.add_argument("--" + flag, required=True)
+    fj.add_argument("--revision", type=int, default=1)
+    fj.add_argument("--valid-days", type=int, default=3)
+    fa = sub.add_parser("fin-activate", help="activate or roll back to a dataset version (two-person approval)")
+    for flag in ("tenant", "dataset-version", "approval"):
+        fa.add_argument("--" + flag, required=True)
+    ft = sub.add_parser("fin-status", help="read-only structured dataset state for a tenant")
+    ft.add_argument("--tenant", required=True)
     p = sub.add_parser("submit", help="queue an approved publication")
     for flag in ("tenant", "entity", "attribute", "value", "corpus", "proposal-id", "approval"):
         p.add_argument("--" + flag, required=True)
@@ -224,7 +350,9 @@ def main(argv=None) -> int:
     s = sub.add_parser("status", help="read-only durable state for a tenant")
     s.add_argument("--tenant", required=True)
     args = parser.parse_args(argv)
-    handler = {"submit": cmd_submit, "run-once": cmd_run_once, "rollback": cmd_rollback, "status": cmd_status}[args.cmd]
+    handler = {"submit": cmd_submit, "run-once": cmd_run_once, "rollback": cmd_rollback, "status": cmd_status,
+               "fin-stage": cmd_fin_stage, "fin-subject": cmd_fin_subject, "fin-activate": cmd_fin_activate,
+               "fin-status": cmd_fin_status}[args.cmd]
     try:
         result = handler(args)
     except CliRefused as exc:

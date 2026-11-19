@@ -126,6 +126,18 @@ class GenerationVerifier:
             raise VerificationFailed("generation is not signed") from exc
         except (OSError, ValueError) as exc:
             raise VerificationFailed("generation signature is unreadable") from exc
+        try:
+            manifest = (Path(directory) / "manifest.json").read_bytes()
+        except OSError as exc:
+            raise VerificationFailed("generation manifest is missing") from exc
+        self.verify_manifest_bytes(manifest, doc, tenant=tenant, generation_id=generation_id)
+
+    def verify_manifest_bytes(self, manifest: bytes, doc, *, tenant: str, generation_id: str) -> None:
+        """Raise VerificationFailed unless `doc` (a signature.json object) validly signs `manifest`.
+
+        Wave 4.0: also used for structured-dataset manifests held in PostgreSQL (amc_publication.fin40),
+        so both planes share one signature format, key set and revocation list.
+        """
         if not isinstance(doc, dict):
             raise VerificationFailed("generation signature is malformed")
         if doc.get("v") != VERSION or doc.get("alg") != ALG:
@@ -138,10 +150,8 @@ class GenerationVerifier:
         public = self._keys.get(key_id)
         if public is None:
             raise VerificationFailed("generation was signed with an unknown key")
-        try:
-            manifest = (Path(directory) / "manifest.json").read_bytes()
-        except OSError as exc:
-            raise VerificationFailed("generation manifest is missing") from exc
+        if not isinstance(manifest, (bytes, bytearray)):
+            raise VerificationFailed("generation manifest is missing")
         if hashlib.sha256(manifest).hexdigest() != claimed:
             raise VerificationFailed("generation manifest changed after it was signed")
         try:

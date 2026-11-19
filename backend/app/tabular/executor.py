@@ -117,17 +117,20 @@ class QueryExecutor:
 
         # F01, G02: Check metric policy before execution with proper operation mapping
         # G02: Map PlanIntent to precise MetricOperation enum
+        # Keyed by value: PlanIntent has no MAX/MIN/AVERAGE members, and referencing them raised
+        # AttributeError on EVERY execution (all G05 golden tests failed before Wave 4.0).
         operation_map = {
-            PlanIntent.EXACT_LOOKUP: "EXACT_LOOKUP",
-            PlanIntent.RANKING: "RANK",
-            PlanIntent.AGGREGATION: "SUM",  # Default aggregation is SUM
-            PlanIntent.DISTRIBUTION: "DISTRIBUTION",
-            PlanIntent.COUNT: "COUNT",
-            PlanIntent.MAX: "MAX",
-            PlanIntent.MIN: "MIN",
-            PlanIntent.AVERAGE: "AVG",
+            "EXACT_LOOKUP": "EXACT_LOOKUP",
+            "RANKING": "RANK",
+            "AGGREGATION": "SUM",  # Default aggregation is SUM
+            "DISTRIBUTION": "DISTRIBUTION",
+            "COUNT": "COUNT",
+            "MAX": "MAX",
+            "MIN": "MIN",
+            "AVERAGE": "AVG",
         }
-        operation = operation_map.get(plan.intent, "EXACT_LOOKUP")
+        intent_value = plan.intent.value if hasattr(plan.intent, "value") else str(plan.intent)
+        operation = operation_map.get(intent_value, "EXACT_LOOKUP")
         
         policy_check, policy_msg = policy_service.validate_metric_operation(
             plan.metric_id,
