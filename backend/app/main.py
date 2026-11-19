@@ -58,6 +58,9 @@ async def lifespan(app: FastAPI):
     # Legacy background graph/FAISS mutation is not receipt-bound.
     from app.api.pilot_perimeter31 import legacy_services_allowed
     allow_legacy = legacy_services_allowed()
+    # W40: a malformed feature flag refuses startup instead of silently disabling a control.
+    from app.retrieval.structured_path40 import validate_flags
+    validate_flags()
     setup_logging(
         level=settings.log_level,
         log_format=settings.log_format,

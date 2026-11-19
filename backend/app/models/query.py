@@ -240,6 +240,11 @@ class SynthesisOutput(BaseModel):
     )
     has_gaps:        bool           = False
     gap_description: Optional[str] = None
+    # Wave 4.0 (TDS-40 E3) additive response contract; None for legacy answers.
+    answer_kind:       Optional[str]  = Field(default=None, description="STRUCTURED | DOCUMENT | MIXED | ABSTAIN | CLARIFY")
+    structured_result: Optional[dict] = None
+    abstention:        Optional[dict] = None
+    clarification:     Optional[dict] = None
 
     @model_validator(mode="after")
     def valid_confidence_level(self) -> "SynthesisOutput":

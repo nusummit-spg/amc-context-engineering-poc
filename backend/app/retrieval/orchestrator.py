@@ -808,6 +808,30 @@ class RetrievalOrchestrator:
                     metrics=metrics,
                 )
 
+        # Step 0.7 — W40 verified structured path (enforce + AMC_FIN_PLANE=on). STRUCTURED, ABSTAIN and
+        # CLARIFY decisions are final: a fund-number question never falls through to cache/vector/LLM.
+        from app.retrieval.structured_path40 import structured_answer, structured_enabled
+        if structured_enabled():
+            structured = await structured_answer(effective_query, tenant_id)
+            if structured is not None:
+                total_ms = (time.perf_counter() - t0) * 1000
+                trace = QueryTrace(
+                    request_id=req_id,
+                    serving_engine="v2_structured",
+                    corpus_version=self._corpus_version,
+                    cache_hit=False,
+                    request_total_ms=round(total_ms, 2),
+                    quality_gate_passed=True,
+                )
+                if metrics:
+                    metrics.total_latency_ms = total_ms
+                    metrics.query_type = f"structured_{(structured.answer_kind or 'answer').lower()}"
+                    get_metrics_store().record(metrics)
+                log_step_info(logger, "STRUCTURED_PATH", "W40 structured path: %s (%.1fms)",
+                              structured.answer_kind, total_ms)
+                return OrchestratorResponse(intent=None, retrieval=None, context=None, synthesis=structured,
+                                            trace=trace, metrics=metrics)
+
         # Step 0.75 — Deterministic Pre-LLM Fast-Path Interceptor (Option 2)
         try:
             if os.environ.get('AMC_VERIFIED_SERVING_MODE','off') == 'enforce':
@@ -1365,6 +1389,11 @@ class RetrievalOrchestrator:
             metrics.add_component(comp_synth)
         log_step_info(logger, "SYNTHESIS", "Step 9: Synthesized final answer with LLM in %.1fms (confidence=%s)", t_gen_ms, synthesis.confidence)
 
+        # W40 numeric guardrail (enforce + AMC_NUMERIC_GUARD=on): drop sentences whose figures are not in the
+        # exact context the LLM was given or in the question.
+        from app.retrieval.structured_path40 import guard_document_answer
+        synthesis = guard_document_answer(synthesis, [getattr(context, "context_text", "") or ""], effective_query)
+
         if cypher_structured_rows:
             synthesis.structured_rows.extend(cypher_structured_rows)
 
@@ -1755,6 +1784,29 @@ class RetrievalOrchestrator:
         t_assembly_ms = 0.0
         generation_ms = 0.0
 
+        # ── Step 0.7: W40 verified structured path (final for STRUCTURED / ABSTAIN / CLARIFY) ──────
+        from app.retrieval.structured_path40 import structured_answer, structured_enabled
+        if structured_enabled():
+            structured = await structured_answer(effective_query, tenant_id)
+            if structured is not None:
+                yield {"type": "metadata", "intent": "structured", "answer_kind": structured.answer_kind,
+                       "entities": [], "confidence": structured.confidence}
+                for idx, line in enumerate(structured.answer.split("\n")):
+                    yield {"type": "answer_chunk", "text": line + "\n", "index": idx}
+                stream_total_ms = round((time.perf_counter() - t0) * 1000, 2)
+                _record(f"structured_{(structured.answer_kind or 'answer').lower()}")
+                yield {
+                    "type": "complete",
+                    "response_id": response_id,
+                    "trace": {"request_id": req_id, "serving_engine": "v2_structured",
+                              "corpus_version": self._corpus_version, "cache_hit": False,
+                              "request_total_ms": stream_total_ms, "quality_gate_passed": True},
+                    "answer": structured.model_dump(),
+                    "metrics": [], "graph_facts": [], "graph_nodes": [], "graph_relationships": [],
+                    "graph_edges": [], "context_sources": [],
+                }
+                return
+
         # ── Step 0.75: Deterministic Pre-LLM Fast-Path Interceptor ────────
         try:
             if os.environ.get('AMC_VERIFIED_SERVING_MODE','off') == 'enforce':
@@ -2134,6 +2186,10 @@ class RetrievalOrchestrator:
         t_gen_start = time.perf_counter()
         chunk_index = 0
         full_answer = ""
+        # W40: with the numeric guardrail on, hold LLM chunks and release only the guarded text. In enforce mode
+        # VerifiedOrchestratorFence29 buffers frames until the end anyway, so users see no added latency.
+        from app.retrieval.structured_path40 import numeric_guard_enabled
+        hold_for_guard = numeric_guard_enabled()
         try:
             from app.prompts import get_prompt
             prompt_obj = None
@@ -2150,8 +2206,9 @@ class RetrievalOrchestrator:
                 system=system_prompt,
             ):
                 full_answer += text_chunk
-                yield {"type": "answer_chunk", "text": text_chunk, "index": chunk_index}
-                chunk_index += 1
+                if not hold_for_guard:
+                    yield {"type": "answer_chunk", "text": text_chunk, "index": chunk_index}
+                    chunk_index += 1
         except Exception as exc:
             log_step_warning(logger, "STREAM_SYNTHESIS_WARN", "LLM streaming synthesis failed: %s", exc)
             yield {"type": "error", "message": f"Streaming synthesis error, attempting fallback: {exc}", "recoverable": True}
@@ -2159,9 +2216,10 @@ class RetrievalOrchestrator:
                 if context:
                     synth = await self._synthesizer.synthesize(effective_query, context)
                     fallback_text = synth.answer or ""
-                    for idx, word in enumerate(fallback_text.split()):
-                        full_answer += word + " "
-                        yield {"type": "answer_chunk", "text": word + " ", "index": chunk_index + idx}
+                    if not hold_for_guard:
+                        for idx, word in enumerate(fallback_text.split()):
+                            full_answer += word + " "
+                            yield {"type": "answer_chunk", "text": word + " ", "index": chunk_index + idx}
                     full_answer = fallback_text
             except Exception as fallback_exc:
                 log_step_error(logger, "STREAM_SYNTHESIS_ERROR", "Fallback synthesis also failed: %s", fallback_exc)
@@ -2179,6 +2237,16 @@ class RetrievalOrchestrator:
         if not re.search(r"\[\d+\]", full_answer_clean) and context and context.sources:
             cite_markers = " ".join(f"[{s.source_index}]" for s in context.sources[:min(2, len(context.sources))])
             full_answer_clean = f"{full_answer_clean} {cite_markers}".strip()
+
+        if hold_for_guard:
+            from app.retrieval.composer40 import abstention_text, numeric_guardrail
+            guarded, dropped = numeric_guardrail(full_answer_clean,
+                                                 [context.context_text if context else ""], effective_query)
+            if dropped:
+                log_step_warning(logger, "NUMERIC_GUARDRAIL", "W40 guardrail removed %d unsupported sentence(s)", dropped)
+            full_answer_clean = guarded if len(guarded) >= 5 else abstention_text("UNGROUNDED_NUMBER", None)
+            for idx, line in enumerate(full_answer_clean.split("\n")):
+                yield {"type": "answer_chunk", "text": line + "\n", "index": chunk_index + idx}
 
         # ── Compute generation latency ──────────────────────────────────
         if generation_ms <= 0:
