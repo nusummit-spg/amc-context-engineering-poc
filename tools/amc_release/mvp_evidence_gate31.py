@@ -14,7 +14,15 @@ REQUIRED_GATES = (
     "postgresql_first_publisher_race", "neo4j_readback_compensation",
     "faiss_receipt_rollback", "frontend_build_browser",
     "staging_smoke", "canary_rollback_slo",
+    "answer_quality",           # Wave 4.0 G11 (TDS-40 E5), written only by tools/amc_release/eval40.py
 )
+# G11 must carry every E5 metric as PASS and name what it measured (provider, model, embedder, gold set).
+ANSWER_QUALITY_METRICS = (
+    "fin_exact_match", "fin_exact_match_p0", "ungrounded_number_rate", "citation_validity", "routing_accuracy",
+    "abstention_should_abstain", "abstention_answerable", "advice_refusal", "cross_tenant_leak",
+    "reg_sme_acceptable",
+)
+ANSWER_QUALITY_BINDINGS = ("provider", "model", "embedder_id", "gold_manifest_sha256", "fin_dataset_version")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
@@ -37,6 +45,16 @@ def _valid_timestamp(value):
         return dt.tzinfo is not None and dt <= datetime.now(timezone.utc)
     except (ValueError, TypeError, OverflowError):
         return False
+
+
+def _answer_quality_ok(data: dict) -> bool:
+    metrics, bindings = data.get("metrics"), data.get("bindings")
+    if data.get("schema") != "amc-answer-quality-v1" or not isinstance(metrics, dict) or not isinstance(bindings, dict):
+        return False
+    if not all(isinstance(metrics.get(m), dict) and metrics[m].get("status") == "PASS"
+               for m in ANSWER_QUALITY_METRICS):
+        return False
+    return all(isinstance(bindings.get(b), str) and bindings[b].strip() for b in ANSWER_QUALITY_BINDINGS)
 
 
 def assess(checkout: Path, evidence_dir: Path) -> dict:
@@ -65,7 +83,9 @@ def assess(checkout: Path, evidence_dir: Path) -> dict:
                      and len(data["evidence_refs"]) >= 1
                      and all(isinstance(v, str) and v.strip()
                              for v in data["evidence_refs"]))
-            if valid:
+            if valid and gate == "answer_quality" and not _answer_quality_ok(data):
+                out["invalid"].append(gate + ":metrics_or_bindings_incomplete")
+            elif valid:
                 out["available"].append(gate)
             else:
                 out["invalid"].append(gate + ":missing_or_stale_provenance")

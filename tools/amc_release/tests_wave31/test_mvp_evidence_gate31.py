@@ -20,8 +20,13 @@ def _write(e,key,sha,**override):
     data.update(override)
     (e/(key+".json")).write_text(json.dumps(data),encoding="utf-8")
 
+def _aq(sha):
+    return {"schema":"amc-answer-quality-v1",
+            "metrics":{m:{"status":"PASS","value":1} for m in gate.ANSWER_QUALITY_METRICS},
+            "bindings":{b:"x" for b in gate.ANSWER_QUALITY_BINDINGS}}
+
 def _fill(e,sha):
-    for g in gate.REQUIRED_GATES:_write(e,g,sha)
+    for g in gate.REQUIRED_GATES:_write(e,g,sha,**(_aq(sha) if g=="answer_quality" else {}))
     ET.ElementTree(ET.fromstring('<testsuite><testcase name="ok"/></testsuite>')).write(
         e/"integrated-junit.xml")
 
@@ -71,3 +76,20 @@ def test_non_object_json_is_reported_invalid_not_crash(tmp_path):
     a=gate.assess(d,e)
     assert a["decision"]=="BLOCKED"
     assert "backend_integration:not_a_json_object" in a["invalid"]
+
+def test_answer_quality_needs_every_metric_passing_and_its_bindings(tmp_path):
+    d,e=_checkout(tmp_path)
+    sha=gate.current_sha(d)
+    _fill(e,sha)
+    assert gate.assess(d,e)["decision"]=="EVIDENCE_PRESENT_REQUIRES_INDEPENDENT_REVIEW"
+    bad=_aq(sha); bad["metrics"]["cross_tenant_leak"]["status"]="FAIL"
+    _write(e,"answer_quality",sha,**bad)
+    assert "answer_quality:metrics_or_bindings_incomplete" in gate.assess(d,e)["invalid"]
+    bad=_aq(sha); del bad["metrics"]["reg_sme_acceptable"]
+    _write(e,"answer_quality",sha,**bad)
+    assert gate.assess(d,e)["decision"]=="BLOCKED"
+    bad=_aq(sha); bad["bindings"]["model"]=" "
+    _write(e,"answer_quality",sha,**bad)
+    assert gate.assess(d,e)["decision"]=="BLOCKED"
+    _write(e,"answer_quality",sha)                      # a generic PASS record is not enough for G11
+    assert gate.assess(d,e)["decision"]=="BLOCKED"

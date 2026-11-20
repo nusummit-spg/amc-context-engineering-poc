@@ -2,4 +2,4 @@
 
 Without AMC_LIVE_PG_URL these tests SKIP as LIVE31_BLOCKED; that is a blocked gate, never a pass.
 """
-from tests.live31.conftest import live_pg, live_pg_admin_url, live_template_db  # noqa: F401
+from tests.live31.conftest import live_neo4j_driver, live_pg, live_pg_admin_url, live_template_db  # noqa: F401

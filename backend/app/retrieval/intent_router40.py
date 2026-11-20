@@ -135,7 +135,10 @@ def parse_date(q: str) -> date | None:
 
 
 def _limit(q: str) -> int:
-    m = re.search(r"\btop\s+(\d{1,3})\b", q) or re.search(r"\b(\d{1,3})\s+(largest|biggest|leading|top)\b", q)
+    m = (re.search(r"\btop\s+(\d{1,3})\b", q) or re.search(r"\b(\d{1,3})\s+(largest|biggest|leading|top)\b", q)
+         # "which 10 funds ...", "list 8 schemes", "the 20 AMCs" (E5 GS-FIN: the count was silently ignored)
+         or re.search(r"\b(?:which|list|show|name|the|give me)\s+(?:the\s+)?(\d{1,3})\s+(?:amcs?|schemes?|funds?|"
+                      r"fund houses?|categories|asset management companies)\b", q))
     return max(1, min(MAX_LIMIT, int(m.group(1)))) if m else DEFAULT_LIMIT
 
 
@@ -149,7 +152,8 @@ def match_amc(q: str, amcs: list[str]) -> tuple[str | None, list[str]]:
     as a phrase ("union amc", "old bridge", "bank of india"), so "banking schemes" never becomes an AMC filter.
     """
     nq = " " + norm_text(q) + " "
-    tokens = set(nq.split())
+    words = nq.split()
+    tokens = set(words)
     hits = []
     for name in amcs:
         raw = norm_text(name).split()
@@ -162,9 +166,27 @@ def match_amc(q: str, amcs: list[str]) -> tuple[str | None, list[str]]:
             if f" {phrase} " not in nq and not any(f" {key} {w} " in nq for w in ("amc", "mutual", "asset", "fund house")):
                 continue
         hits.append(name)
+    if len(hits) > 1:
+        # "Kotak Mahindra Asset Management" must not also select "Mahindra Manulife": drop a candidate whose words
+        # only occur inside a longer run of another candidate's name written out in the question (E5 GS-FIN).
+        spans = {name: _name_span(words, norm_text(name).split()) for name in hits}
+        hits = [h for h in hits if not any(o != h and spans[h] < spans[o] for o in hits)]
     if len(hits) == 1:
         return hits[0], []
     return None, hits
+
+
+def _name_span(words: list[str], name: list[str]) -> frozenset:
+    """Question positions covered by the longest contiguous run of the name's own words, in the name's order."""
+    best: frozenset = frozenset()
+    for i in range(len(words)):
+        for k in range(len(name)):
+            j = 0
+            while i + j < len(words) and k + j < len(name) and words[i + j] == name[k + j]:
+                j += 1
+            if j > len(best):
+                best = frozenset(range(i, i + j))
+    return best
 
 
 def _scheme_text(q: str) -> str | None:

@@ -76,6 +76,13 @@ def norm_text(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", (text or "").lower()).strip()
 
 
+_NAME_STOP = {"fund", "plan", "scheme", "the", "option"}
+
+
+def _name_words(text: str) -> frozenset:
+    return frozenset(t for t in norm_text(text).split() if t not in _NAME_STOP)
+
+
 def _dec(micro) -> str:
     return format(micro_to_decimal(int(micro)), "f")
 
@@ -154,11 +161,15 @@ def _nav_lookup(s: Session, pin: FinPin, plan: FinPlan) -> FinResult:
     if plan.scheme_code:
         candidates = list(s.scalars(q.where(FinPlanOption.scheme_code == plan.scheme_code.strip())))
     elif plan.scheme_text:
-        tokens = [t for t in norm_text(plan.scheme_text).split() if t not in ("fund", "plan", "scheme", "the")]
+        # Whole words, not substrings: "it" must not match inside "capital", nor "cap" inside "midcap" (E5 GS-FIN).
+        tokens = _name_words(plan.scheme_text)
         if not tokens:
             raise FinQueryError("AMBIGUOUS_QUERY", "Which scheme do you mean?")
-        candidates = [p for p in s.scalars(q)
-                      if all(t in norm_text(p.plan_option_name + " " + p.scheme_name) for t in tokens)]
+        candidates = [p for p in s.scalars(q) if tokens <= _name_words(p.plan_option_name + " " + p.scheme_name)]
+        # The exact full plan/option name is not ambiguous even when a longer name also contains all its words.
+        exact = [p for p in candidates if _name_words(p.plan_option_name) == tokens]
+        if len(exact) == 1:
+            candidates = exact
     else:
         raise FinQueryError("AMBIGUOUS_QUERY", "Which scheme (name or AMFI scheme code) do you mean?")
     if not candidates:

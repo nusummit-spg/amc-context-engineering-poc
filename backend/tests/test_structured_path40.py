@@ -87,6 +87,15 @@ def test_two_amcs_in_question_clarifies():
     assert route("top schemes by aum for hdfc and sbi", CAT).kind == "CLARIFY"
 
 
+def test_e5_regressions_count_words_and_overlapping_amc_names():
+    """Found by the E5 harness on GS-FIN: 'which 10 funds' returned 5 rows; 'Kotak Mahindra ...' clarified."""
+    assert route("Which 10 funds have the largest AAUM?", CAT).plan.limit == 10
+    assert route("List the 8 schemes with the largest AAUM", CAT).plan.limit == 8
+    assert route("Top 3 schemes of Kotak Mahindra Asset Management Company Limited. by AAUM", CAT).plan.amc_text == AMCS[6]
+    assert match_amc("how many schemes does mahindra manulife have", AMCS)[0] == AMCS[7]
+    assert match_amc("compare kotak and mahindra manulife", AMCS)[0] is None      # both really named: ask
+
+
 # -------------------------------------------------------------------------------------------------- composer
 
 def test_indian_number_format():

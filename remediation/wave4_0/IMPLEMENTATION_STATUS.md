@@ -1,7 +1,7 @@
 # AMC Wave 4.0 — Implementation Status (against TDS-40 v1)
 
 **Status: ENGINEERING CANDIDATE. Not release-ready, not UAT-accepted.** Branch `amc-dev-wave31-integration`,
-commits `33375b3`, `7efbfcf`, `8fe6596`, `267ed04` (on top of `bf9adb7`). Nothing pushed, merged or deployed.
+commits `33375b3`, `7efbfcf`, `8fe6596`, `267ed04`, plus the E5 commit (on top of `bf9adb7`). Nothing pushed, merged or deployed.
 The design documents (TDS-40, GP-40, task tracker) are on branch `docs/wave40-enhancement-plan`.
 
 Architecture is unchanged: the FastAPI monolith, React, PostgreSQL, Neo4j, signed FAISS, publication journal,
@@ -18,10 +18,29 @@ With every flag off, Wave 3.1 behaviour is unchanged (tested).
 | **E6** Residency + embedder binding | Provider/region allowlist and fallback refusal at startup; provider re-check and PII scrub on every outbound call; embedder identity signed into FAISS manifests and compared before hits are released | `app/core/provider_policy40.py`, `llm.py` (4 lines), `amc_publication/embedder_identity40.py`, `faiss_artifacts.py`, `faiss_reader27.py`, `vector_bridge28.py`, `vector/client.py` |
 | **E7** Pilot feedback | `POST /api/feedback/v40`, append-only, bound to the caller's own evidence; PII-scrubbed comment; offline export | `amc_publication/evidence40.py`, `app/api/routes/pilot40.py`, `operator_cli feedback-export`, Alembic `017` |
 | **E9** Evidence + readiness | Append-only `query_evidence_v40` written in the fence after the final authority check and before release; the answer is withheld if the row cannot be written; `GET /api/ready` | `request_fence29.py`, `evidence40.py`, `pilot40.py`, `pilot_perimeter31.py` |
+| **E5** Gold sets + harness (partial) | GS-FIN 200 and GS-ADV 50 **generated** by SQL over the approved snapshot (not the serving code, not an LLM), deterministic and hash-pinned; GS-REG / GS-MIX are DRAFT templates awaiting authors. `eval40` drives the live HTTP API as a pilot user, records request ids, and scores all 8 E5 metrics with its own number extractor, which is stricter than the guardrail: numbers that appear only in the question count as ungrounded. Citations are checked against the signed FAISS payloads; G11 `answer_quality` was added to `mvp_evidence_gate31`. The evidence record is written only on a full PASS from a clean checkout with the provider, model and embedder declared. No LLM judge. | `tools/amc_release/gold40.py`, `eval40.py`, `mvp_evidence_gate31.py`, `remediation/wave4_0/gold/` |
 | E10 (partial) | Fixed `tabular/executor.py` AttributeError raised on every call (`PlanIntent.MAX`) | `app/tabular/executor.py` |
 
 Required migration head is now **`017_query_evidence_feedback_v40`** (`db_runtime31`, its message and the pinned
 tests moved together, per ADR31-09).
+
+### 1.1 Defects the E5 harness found on its first run (fixed, with regression tests)
+
+The first in-process run over GS-FIN scored `fin_exact_match` 0.9528, below the 0.99 bar. P0 cases were at 1.0. Ten
+cases failed, from three causes:
+
+1. **"Which 10 funds have the largest AAUM?" returned 5 rows.** The router read a count only after "top" or before
+   "largest". It now also reads "which/list/show/the N funds|schemes|AMCs|categories".
+2. **"Kotak Mahindra Asset Management …" asked "which AMC?"** It also matched "Mahindra Manulife". A candidate is
+   now dropped when its words occur only inside a longer run of another candidate's name in the question.
+   "Kotak and Mahindra Manulife" still asks.
+3. **NAV by full scheme name asked "which plan?".** The resolver compared words as substrings: "it" matched inside
+   "capital", "cap" inside "midcap". It now compares whole words and prefers the one plan/option whose full name is
+   exactly the requested name.
+
+After the fixes, both in process and over live HTTP, every gated metric is at 1.0 or 0. The exception is
+`abstention_answerable` at 0.9955 (threshold 0.90): one prompt-injection question was refused, which the gold set
+allows.
 
 ## 2. Deviations from TDS-40 (deliberate; update the spec)
 
@@ -39,6 +58,9 @@ tests moved together, per ADR31-09).
 5. **Additional flags** beyond TDS-40 §5.1: `AMC_NUMERIC_GUARD`, `AMC_PROVIDER_POLICY`, `AMC_EMBEDDER_BINDING`.
 6. **AAUM periods are stored as date ranges** (`2026-01-01..2026-03-31`), not as `YYYYQn`. This avoids the
    calendar-vs-financial-year ambiguity, which the router resolves explicitly or by asking.
+7. **E5 gate counting:** `fin_exact_match_p0` (100%) is a separate metric. `abstention_correctness` is split into
+   `abstention_should_abstain` (≥95%) and `abstention_answerable` (≥90%). Cross-tenant probes may be answered from
+   the caller's own documents or declined: only leakage fails.
 
 ## 3. Pilot configuration (illustrative)
 
@@ -64,6 +86,9 @@ version, with a fresh approval.
 | New unit tests: `test_fin_plane40` (33), `test_structured_path40` (41), `test_provider_policy40` (21), `test_evidence_feedback40` (10) | 105 passed (SQLite with FK enforcement) |
 | Live PostgreSQL 16 + Neo4j 5.24: `tests/live40` + live31 migration, FAISS serving, HTTP/SSE enforce matrix | **179 passed, 1 pinned xfail, 0 failed** |
 | Wave 2.8–3.1 tool runner (`run_wave31_tests`, at `8fe6596`) | 272 cases: 268 passed, 3 failed, 1 skipped. The 3 failures are the known Windows symlink-privilege tests (`WinError 1314`), the same as the Wave 3.1 baseline |
+| **E5 in process:** `tools/amc_release/tests_wave40` (16 tests), including all 250 frozen GS-FIN + GS-ADV cases through the real router, executor and composer on the real dataset | 16 passed; every gated metric met |
+| **E5 live HTTP:** `tests/live40/test_eval40_live.py` against real app, PostgreSQL 16, Neo4j 5.24, signed FAISS, signed + approved dataset; stub LLM and query embedder | 1 passed. 250 cases, all HTTP 200: fin exact match 1.0 (P0 1.0), routing 1.0, ungrounded numbers 0, citation validity 1.0, advice refusal 1.0, cross-tenant leaks 0. 250/250 evidence rows found by request id. Decision BLOCKED (GS-REG, GS-MIX, real model) |
+| Release-tool suites `tests_wave31` + `tests_wave40` | all passed (the evidence-gate tests now include G11) |
 | Real-data check | 16,245/16,245 rows reconciled, 0 rejected, 1,434 float artefacts rounded and counted; top-5 AMC AAUM equal to an independent `csv` + `Decimal` computation; PostgreSQL and SQLite results identical for all 6 intents |
 
 **Pre-existing failures (identical on `bf9adb7`, not caused by this work):** 6 tests:
@@ -84,8 +109,14 @@ Rerun with full output before treating `signing31` as green.
 ## 5. Not done (remaining TDS-40 scope)
 
 - **E4** Regulatory corpus currency (in-force metadata, supersession lineage, migration 019, offline candidate job).
-- **E5** Gold sets (GS-FIN 200 / GS-REG 120 / GS-MIX 30 / GS-ADV 50), `eval40` harness and the `answer_quality`
-  evidence gate. All answer quality is **unmeasured with a real model and embedder**; tests use stubs and mocks.
+- **E5 remaining:**
+  - **GS-REG:** 120 cases authored by a Compliance SME; 3 templates are in place.
+  - **GS-MIX:** 30 cases, which needs MIXED answers first (E3).
+  - **Prompt injection inside documents:** not covered; needs a signed fixture corpus.
+  - **SME rating round:** `sme-sheet`, then two raters and the kappa calculation.
+  - **A run on the chosen provider and embedder (D3).** This is what actually measures answer quality. **Document-answer
+    quality is still unmeasured:** with the grounded stub LLM, document grounding passes by construction.
+  - **The 60-case smoke subset in CI** on every merge.
 - **E6 provider adapter:** no in-region provider adapter was written. That waits on decision D3. The policy works
   with any provider name in `llm.py`.
 - **E8** Evidence viewer, and **E11** frontend: answer cards for `answer_kind`, feedback UI, readiness display,

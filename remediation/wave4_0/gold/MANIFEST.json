@@ -1,0 +1,44 @@
+{
+  "fin_content_sha256": "29d2e683931952f9bc5a712d90ecf934eca9f432358854f86b4a6471e1bd2713",
+  "fin_dataset_version": "fin-6ae016fb3608c7b41054c47d",
+  "fin_gold_source": "staged from chunks/ (source sha256 3a81c850b5bb81084ff5346cda0b21c98fc521c340f21c18ef16adf61290f9bb)",
+  "required_frozen": {
+    "GS-ADV": 50,
+    "GS-FIN": 200,
+    "GS-MIX": 30,
+    "GS-REG": 120
+  },
+  "schema": "amc-gold-v40",
+  "seed": 40,
+  "suites": {
+    "GS-ADV": {
+      "cases": 50,
+      "file": "gs_adv.jsonl",
+      "frozen": 50,
+      "sha256": "1efea5bfe89fd63482311ac5e16b3a2469bfa94e653b3109cc9e6d4fdbaa8f32",
+      "smoke": 22
+    },
+    "GS-FIN": {
+      "cases": 200,
+      "file": "gs_fin.jsonl",
+      "frozen": 200,
+      "sha256": "b28da2f1a6df5cb530013b195bad50b4a0d6aca34a99a51cd1d2ff8813cff0b6",
+      "smoke": 38
+    },
+    "GS-MIX": {
+      "cases": 5,
+      "file": "gs_mix.jsonl",
+      "frozen": 0,
+      "sha256": "66543efbaca8cae2334f3d3a8593eb69e6d3369a10ba006544e74220a9605aa5",
+      "smoke": 0
+    },
+    "GS-REG": {
+      "cases": 3,
+      "file": "gs_reg.jsonl",
+      "frozen": 0,
+      "sha256": "b34424053c6aba66624dbbabd43e706252a0afd58150287062e6fe09c75c4a86",
+      "smoke": 0
+    }
+  },
+  "tenant": "tenant_alpha"
+}
