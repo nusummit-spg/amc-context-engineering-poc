@@ -782,6 +782,19 @@ def _format_sse(event_type: str, data: dict) -> str:
     return f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
 
 
+def _w40_answer_fields(answer) -> dict:
+    """Wave 4.0 typed-answer fields (TDS-40 E3/E11) carried through to the client unchanged.
+
+    The pilot UI renders STRUCTURED / ABSTAIN / CLARIFY answers from these verified fields; without them it can only
+    show the markdown. A structured answer's compliance_note is its metric disclosure, so it replaces the label.
+    """
+    if not isinstance(answer, dict) or not answer.get("answer_kind"):
+        return {}
+    keep = ("answer_kind", "structured_result", "abstention", "clarification", "has_gaps", "gap_description",
+            "provenance", "compliance_note")
+    return {k: answer[k] for k in keep if answer.get(k) is not None}
+
+
 async def _chat_stream_generator(
     request: "ChatRequest",
     container: Container,
@@ -1000,6 +1013,7 @@ async def _chat_stream_generator(
                             "citations": complete_citations,
                             "structured_rows": complete_answer.get("structured_rows", []) if complete_answer else [],
                             "metrics": metrics_from_stream,
+                            **_w40_answer_fields(complete_answer),
                         },
                         "metrics": metrics_from_stream,
                         "sources": complete_sources if complete_sources else stream_sources,

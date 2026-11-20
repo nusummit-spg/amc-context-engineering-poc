@@ -190,6 +190,33 @@ def test_perimeter_admits_w40_routes_only_as_designed(monkeypatch):
     assert not is_pilot_route_allowed("GET", "/api/feedback/v40")
     assert not is_pilot_route_allowed("POST", "/api/feedback")              # legacy feedback stays denied
     assert not is_pilot_route_allowed("POST", "/api/feedback/v40/../admin")
+    assert is_pilot_route_allowed("GET", "/api/suggestions/v40")
+    assert not is_pilot_route_allowed("POST", "/api/suggestions/v40")
+    assert not is_pilot_route_allowed("GET", "/api/suggestions/v40/x")
+
+
+def test_suggestions_come_from_the_verified_dataset_or_are_empty(monkeypatch):
+    from types import SimpleNamespace as NS
+    from amc_publication import structured_serving40 as serving
+    from app.api.routes import pilot40
+    monkeypatch.setenv("AMC_VERIFIED_SERVING_MODE", "enforce")
+    monkeypatch.setenv("AMC_FIN_PLANE", "off")
+    assert pilot40.suggested_prompts("tenant_alpha") == []                 # plane off: nothing to suggest
+    monkeypatch.setenv("AMC_FIN_PLANE", "on")
+    top = NS(rows=[[1, "SBI Funds Management Limited"], [2, "HDFC AMC"]], as_of={"aaum_period": "January - March 2026"})
+    seen = []
+    monkeypatch.setattr(serving, "get_structured_executor",
+                        lambda: NS(execute=lambda tenant, plan: seen.append((tenant, plan.intent)) or top))
+    prompts = pilot40.suggested_prompts("tenant_alpha")
+    assert seen == [("tenant_alpha", "TOP_AMC_AAUM")]                      # the caller's own tenant only
+    assert prompts[0] == "Top 5 AMCs by AAUM for January - March 2026"
+    assert "Top 5 schemes of SBI Funds Management Limited by AAUM" in prompts
+    assert "How many schemes does HDFC AMC have?" in prompts
+
+    def down(*_a, **_k):
+        raise RuntimeError("verifier unavailable")
+    monkeypatch.setattr(serving, "get_structured_executor", lambda: NS(execute=down))
+    assert pilot40.suggested_prompts("tenant_alpha") == []                 # failure: no suggestions, no error
 
 
 def test_readiness_reports_not_ready_with_reasons(monkeypatch):

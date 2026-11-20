@@ -1,7 +1,7 @@
 # AMC Wave 4.0 — Implementation Status (against TDS-40 v1)
 
 **Status: ENGINEERING CANDIDATE. Not release-ready, not UAT-accepted.** Branch `amc-dev-wave31-integration`,
-commits `33375b3`, `7efbfcf`, `8fe6596`, `267ed04`, plus the E5 commit (on top of `bf9adb7`). Nothing pushed, merged or deployed.
+commits `33375b3`, `7efbfcf`, `8fe6596`, `267ed04`, plus the E5 and E11 commits (on top of `bf9adb7`). Nothing pushed, merged or deployed.
 The design documents (TDS-40, GP-40, task tracker) are on branch `docs/wave40-enhancement-plan`.
 
 Architecture is unchanged: the FastAPI monolith, React, PostgreSQL, Neo4j, signed FAISS, publication journal,
@@ -19,6 +19,7 @@ With every flag off, Wave 3.1 behaviour is unchanged (tested).
 | **E7** Pilot feedback | `POST /api/feedback/v40`, append-only, bound to the caller's own evidence; PII-scrubbed comment; offline export | `amc_publication/evidence40.py`, `app/api/routes/pilot40.py`, `operator_cli feedback-export`, Alembic `017` |
 | **E9** Evidence + readiness | Append-only `query_evidence_v40` written in the fence after the final authority check and before release; the answer is withheld if the row cannot be written; `GET /api/ready` | `request_fence29.py`, `evidence40.py`, `pilot40.py`, `pilot_perimeter31.py` |
 | **E5** Gold sets + harness (partial) | GS-FIN 200 and GS-ADV 50 **generated** by SQL over the approved snapshot (not the serving code, not an LLM), deterministic and hash-pinned; GS-REG / GS-MIX are DRAFT templates awaiting authors. `eval40` drives the live HTTP API as a pilot user, records request ids, and scores all 8 E5 metrics with its own number extractor, which is stricter than the guardrail: numbers that appear only in the question count as ungrounded. Citations are checked against the signed FAISS payloads; G11 `answer_quality` was added to `mvp_evidence_gate31`. The evidence record is written only on a full PASS from a clean checkout with the provider, model and embedder declared. No LLM judge. | `tools/amc_release/gold40.py`, `eval40.py`, `mvp_evidence_gate31.py`, `remediation/wave4_0/gold/` |
+| **E11** Pilot UI (partial) | Typed answer cards: **STRUCTURED** (verified table with units in headers, Indian grouping, half-even rounding, as-of badge "AAUM Q4 FY26" / "NAV 29-Jun-2026", filter chips, exclusions, disclosure, "How was this computed?" drawer); **ABSTAIN** (typed message, suggestion chips); **CLARIFY** (option chips that fill the question box). Feedback thumbs + reason picker (build flag `VITE_AMC_PILOT_FEEDBACK`, hidden on a server 404). Readiness pill. Starter prompts from the tenant's own verified dataset (`GET /api/suggestions/v40`, ADR40-05). Stopped / interrupted streams are marked incomplete or withdrawn. Table semantics, ARIA labels and keyboard focus for the new parts. Playwright suite on 3 engines | `mf-context-engine/src/components/answer40/`, `src/utils/answer40.js`, `ChatTab.jsx`, `AssistantMessage.jsx`, `api.js`, `pilotSources.js`, `app/api/routes/chat.py`, `pilot40.py`, `pilot_perimeter31.py`, `tests/pilot40.spec.mjs` |
 | E10 (partial) | Fixed `tabular/executor.py` AttributeError raised on every call (`PlanIntent.MAX`) | `app/tabular/executor.py` |
 
 Required migration head is now **`017_query_evidence_feedback_v40`** (`db_runtime31`, its message and the pinned
@@ -41,6 +42,22 @@ cases failed, from three causes:
 After the fixes, both in process and over live HTTP, every gated metric is at 1.0 or 0. The exception is
 `abstention_answerable` at 0.9955 (threshold 0.90): one prompt-injection question was refused, which the gold set
 allows.
+
+### 1.2 Defects found while building E11 (fixed)
+
+1. **The chat stream dropped every Wave 4.0 field.** `/api/chat/stream`, which the pilot UI uses, rebuilt the
+   final answer for its `hybrid` frame and kept only text, citations and metrics. The UI could therefore only show
+   markdown. `_w40_answer_fields` now passes `answer_kind`, `structured_result`, `abstention`, `clarification`,
+   gaps and provenance through unchanged.
+2. **Stop left the turn "loading" forever.** The stream client swallowed the abort, so the stopped-answer branch
+   never ran. The turn is now settled after the stream returns. It is shown as stopped (partial text kept,
+   marked incomplete) or interrupted (withdrawn, no partial text).
+3. **A dropped connection re-sent the question.** The client's reconnect created a new request and appended its
+   text to the partial answer. It also fell back to the non-streaming path. Neither happens once any part of an
+   answer has arrived; the turn is shown as interrupted.
+4. **Picking "Calendar Q1 2026" asked the same question again.** The clarification options repeated the
+   ambiguous "Q1 2026". Each option now names an exact month range ("January to March 2026 (calendar Q1
+   2026)"), which the parser reads first.
 
 ## 2. Deviations from TDS-40 (deliberate; update the spec)
 
@@ -88,6 +105,8 @@ version, with a fresh approval.
 | Wave 2.8–3.1 tool runner (`run_wave31_tests`, at `8fe6596`) | 272 cases: 268 passed, 3 failed, 1 skipped. The 3 failures are the known Windows symlink-privilege tests (`WinError 1314`), the same as the Wave 3.1 baseline |
 | **E5 in process:** `tools/amc_release/tests_wave40` (16 tests), including all 250 frozen GS-FIN + GS-ADV cases through the real router, executor and composer on the real dataset | 16 passed; every gated metric met |
 | **E5 live HTTP:** `tests/live40/test_eval40_live.py` against real app, PostgreSQL 16, Neo4j 5.24, signed FAISS, signed + approved dataset; stub LLM and query embedder | 1 passed. 250 cases, all HTTP 200: fin exact match 1.0 (P0 1.0), routing 1.0, ungrounded numbers 0, citation validity 1.0, advice refusal 1.0, cross-tenant leaks 0. 250/250 evidence rows found by request id. Decision BLOCKED (GS-REG, GS-MIX, real model) |
+| **E11 browser:** `tests/pilot40.spec.mjs` (9 tests) against `tests/live40/pilot_demo40.py`: real app in enforce mode, PostgreSQL, Neo4j, signed FAISS, signed and approved dataset, built pilot UI; stub LLM. One test replaces the stream response to simulate a dropped connection | **Chromium 9/9, WebKit 9/9 passed. Firefox not run:** Windows refused to execute Playwright's Firefox ("Permission denied", likely Smart App Control or endpoint policy) |
+| E11 frontend unit tests (`npm test`) and Python parity tests (`PILOT_W40_API` = backend `W40_ROUTES`) | 42 passed; parity and perimeter tests passed |
 | Release-tool suites `tests_wave31` + `tests_wave40` | all passed (the evidence-gate tests now include G11) |
 | Real-data check | 16,245/16,245 rows reconciled, 0 rejected, 1,434 float artefacts rounded and counted; top-5 AMC AAUM equal to an independent `csv` + `Decimal` computation; PostgreSQL and SQLite results identical for all 6 intents |
 
@@ -119,9 +138,16 @@ Rerun with full output before treating `signing31` as green.
   - **The 60-case smoke subset in CI** on every merge.
 - **E6 provider adapter:** no in-region provider adapter was written. That waits on decision D3. The policy works
   with any provider name in `llm.py`.
-- **E8** Evidence viewer, and **E11** frontend: answer cards for `answer_kind`, feedback UI, readiness display,
-  the pilot allowlist entries for the new routes, Playwright on 3 engines. **The current pilot UI does not yet render
-  the new response fields specially:** it shows the markdown answer.
+- **E8:** the evidence viewer.
+- **E11 remaining:**
+  - **DOCUMENT provenance cards** (reference number, date, clause, in-force badge, superseded warning). These need
+    E4 metadata.
+  - **MIXED answers:** not produced by the backend yet.
+  - **A Firefox run:** allow Playwright's Firefox on this machine, or run it on CI.
+  - **A full WCAG 2.1 AA audit:** an axe or screen-reader pass. Only the new components got semantic markup.
+  - **Hashing the screenshots and traces into release evidence:** they are kept under
+    `mf-context-engine/reports/pilot40-artifacts`.
+  - **UC1–UC6 depth:** the suite covers one representative case per use case.
 - **E10** Remaining: green default suite, facade modules, repo hygiene, SQLite Alembic chain, dependency split,
   Linux qualification run.
 - **E12** Staging, pen test, CSCRF/DPDP records, canary/rollback rehearsal.

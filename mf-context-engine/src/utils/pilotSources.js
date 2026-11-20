@@ -53,6 +53,11 @@ export const PILOT_ALLOWED_API = [
   "GET /api/health",
 ];
 export const PILOT_ALLOWED_API_PREFIXES = ["GET /api/publication/status/"];
+/**
+ * Wave 4.0 reviewed routes (backend W40_ROUTES in pilot_perimeter31.py; a Python test keeps them equal).
+ * POST /api/feedback/v40 is also gated by AMC_PILOT_FEEDBACK on the server: when off it is denied there.
+ */
+export const PILOT_W40_API = ["GET /api/ready", "GET /api/suggestions/v40", "POST /api/feedback/v40"];
 
 export class PilotDisabledError extends Error {
   constructor(method, path) {
@@ -66,7 +71,8 @@ export class PilotDisabledError extends Error {
 export function isPilotApiAllowed(method, path) {
   const clean = String(path || "").split("?")[0].split("#")[0];
   const key = `${String(method || "GET").toUpperCase()} ${clean}`;
-  return PILOT_ALLOWED_API.includes(key) || PILOT_ALLOWED_API_PREFIXES.some((p) => key.startsWith(p));
+  return PILOT_ALLOWED_API.includes(key) || PILOT_W40_API.includes(key)
+    || PILOT_ALLOWED_API_PREFIXES.some((p) => key.startsWith(p));
 }
 
 /** Navigation and features the pilot hides because their backend routes are denied. */

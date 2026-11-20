@@ -398,6 +398,15 @@ export function adaptHybridResponse(hybridData, latencyMs = 0) {
     total_time: totalTime,
     telemetry_breakdown: tb,
     pending_feedback_notice: hybridData.pending_feedback_notice || gh.pending_feedback_notice || null,
+    // Wave 4.0 (TDS-40 E3/E11): typed answers. Absent on older responses, which are DOCUMENT answers.
+    answer_kind: (typeof synthesis === "object" && synthesis.answer_kind) || hybridData.answer_kind || null,
+    structured_result: (typeof synthesis === "object" && synthesis.structured_result) || null,
+    abstention: (typeof synthesis === "object" && synthesis.abstention) || null,
+    clarification: (typeof synthesis === "object" && synthesis.clarification) || null,
+    has_gaps: Boolean(typeof synthesis === "object" && synthesis.has_gaps),
+    gap_description: (typeof synthesis === "object" && synthesis.gap_description) || null,
+    request_id: hybridData.trace?.request_id || hybridData.request_id || null,
+    incomplete: hybridData.incomplete || null,
   };
 }
 
@@ -629,6 +638,47 @@ export async function deleteSession(sessionId) {
 }
 
 
+// ── Wave 4.0 pilot endpoints (TDS-40 E7/E9/E11) ─────────────────────────────
+/** Rate one of your own answers. Rejects with err.status (404 = feedback off on the server, 409 = already rated). */
+export async function submitFeedback40({ request_id, rating, reason, comment = null }) {
+  if (isPilotMode() && !isPilotApiAllowed("POST", `${API_BASE}/feedback/v40`)) {
+    throw new PilotDisabledError("POST", `${API_BASE}/feedback/v40`);
+  }
+  const res = await fetch(`${API_BASE}/feedback/v40`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+    body: JSON.stringify({ request_id, rating, reason, comment }),
+  });
+  if (!res.ok) {
+    const err = new Error(`Feedback failed (${res.status})`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/** Readiness. 503 is a normal answer here ({ready:false}); a network failure also reads as not ready. */
+export async function fetchReadiness() {
+  try {
+    const res = await fetch(`${API_BASE}/ready`, { method: "GET", headers: getAuthHeaders() });
+    const body = await res.json().catch(() => ({}));
+    return { ready: res.ok && body.ready === true, checks: body.checks || null };
+  } catch {
+    return { ready: false, checks: null };
+  }
+}
+
+/** Starter prompts built by the server from the caller's own verified dataset ([] when unavailable). */
+export async function fetchSuggestions40() {
+  try {
+    const body = await request("/suggestions/v40", { method: "GET" });
+    return Array.isArray(body?.prompts) ? body.prompts.filter((p) => typeof p === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+
 // ── Feedback Endpoints ─────────────────────────────────────────────────────
 export async function submitFeedback(payload) {
   return await request("/feedback", {
@@ -835,6 +885,12 @@ export async function sendQueryStream({
         onError?.({ type: "error", message: err.message, status: err.status, recoverable: false });
         return;
       }
+      // Never re-send once part of an answer has arrived: a retry is a NEW request, and its text would be
+      // appended to the partial one. The caller shows the turn as interrupted instead (TDS-40 E11.4).
+      if (metrics.chunkCount > 0) {
+        onError?.({ type: "error", message: err.message, recoverable: false, interrupted: true });
+        return;
+      }
       if (attempt >= BACKOFF_DELAYS.length) {
         // All retries exhausted
         onError?.({ type: "error", message: err.message, recoverable: false });
@@ -927,6 +983,11 @@ export async function sendChatStream({
       if (signal?.aborted || err.name === "AbortError") return;
       if (err.status && err.status >= 400 && err.status < 500) {
         onError?.({ type: "error", message: err.message, status: err.status, recoverable: false });
+        return;
+      }
+      // Never re-send once part of an answer has arrived (see sendQueryStream).
+      if (metrics.chunkCount > 0) {
+        onError?.({ type: "error", message: err.message, recoverable: false, interrupted: true });
         return;
       }
       if (attempt >= BACKOFF_DELAYS.length) {

@@ -28,3 +28,14 @@ def test_every_js_allowed_call_is_really_admitted_by_the_backend():
     for entry in _js_list("PILOT_ALLOWED_API"):
         method, path = entry.split(" ", 1)
         assert perimeter.is_pilot_route_allowed(method, path), entry
+
+
+def test_js_wave40_routes_equal_the_backend_w40_routes(monkeypatch):
+    """TDS-40 E11: the UI's reviewed Wave 4.0 calls are exactly the perimeter's W40_ROUTES."""
+    assert set(_js_list("PILOT_W40_API")) == {f"{m} {p}" for m, p in perimeter.W40_ROUTES}
+    monkeypatch.setenv("AMC_VERIFIED_SERVING_MODE", "enforce")
+    monkeypatch.setenv("AMC_PILOT_FEEDBACK", "on")
+    for method, path in perimeter.W40_ROUTES:
+        assert perimeter.is_pilot_route_allowed(method, path), (method, path)
+    monkeypatch.setenv("AMC_PILOT_FEEDBACK", "off")
+    assert not perimeter.is_pilot_route_allowed("POST", "/api/feedback/v40")

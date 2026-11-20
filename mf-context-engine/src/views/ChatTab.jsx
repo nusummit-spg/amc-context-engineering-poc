@@ -10,7 +10,10 @@ import UserMessage from "./chat/UserMessage";
 import EvidenceModal from "./chat/EvidenceModal";
 import OntologyModal from "./chat/OntologyModal";
 import FeedbackModal from "./chat/FeedbackModal";
-import { sendChatStream, adaptHybridResponse } from "../services/api";
+import ReadinessPill from "../components/answer40/ReadinessPill";
+import { sendChatStream, adaptHybridResponse, fetchSuggestions40 } from "../services/api";
+import { clarifiedQuery } from "../utils/answer40";
+import { isPilotMode } from "../utils/pilotSources";
 
 const CANDIDATE_STARTER_PROMPTS = [
   "What are the key ESG initiatives wrt climate change adaptation and what are the benefits that we can see?",
@@ -49,6 +52,16 @@ export default function ChatTab() {
   const pushToast = useToast();
 
   const [starterPrompts, setStarterPrompts] = useState(() => getRandomStarterPrompts(3));
+  // Pilot (TDS-40 E11.3): suggest only what the tenant's own verified data can answer, never the generic list.
+  const pilot = isPilotMode();
+  const [pilotPrompts, setPilotPrompts] = useState([]);
+  useEffect(() => {
+    if (!pilot) return undefined;
+    let alive = true;
+    fetchSuggestions40().then((p) => { if (alive) setPilotPrompts(p.slice(0, 4)); });
+    return () => { alive = false; };
+  }, [pilot]);
+  const shownStarters = pilot ? pilotPrompts : starterPrompts;
   const prevSessionIdRef = useRef(chatSessionId);
 
   // ── Streaming state ──────────────────────────────────────────────────────
@@ -134,6 +147,27 @@ export default function ChatTab() {
     let accumulatedAnswer = "";
     let accumulatedMeta = null;
     let finalResponseId = null;
+    let settled = false;          // a final frame or a terminal error has been committed for this turn
+
+    // A turn that never reached its final frame is not an answer (TDS-40 E11.4): show it as stopped (the user
+    // pressed Stop: partial text kept, marked incomplete) or interrupted (withdrawn: no partial text shown).
+    const commitIncomplete = (state) => {
+      settled = true;
+      const adapted = adaptHybridResponse({
+        answer: state === "stopped" ? accumulatedAnswer : "",
+        sources: [],
+        response_id: finalResponseId || `resp_${turnIndex}_${sid}`,
+        incomplete: state,
+      });
+      setChatHistory(sid, (h) => {
+        const next = [...h];
+        next[next.length - 1] = {
+          role: "assistant", loading: false, turn_index: turnIndex, hybrid: adapted,
+          content: state === "stopped" ? accumulatedAnswer : "", timestamp: Date.now(),
+        };
+        return next;
+      });
+    };
 
     try {
       await sendChatStream({
@@ -166,7 +200,11 @@ export default function ChatTab() {
         onError: (error) => {
           if (error.recoverable) {
             pushToast(`Streaming issue: ${error.message}`);
+          } else if (error.interrupted || accumulatedAnswer) {
+            commitIncomplete("interrupted");
+            setIsStreaming(false);
           } else {
+            settled = true;
             // Non-recoverable: replace loading placeholder with error message
             setChatHistory(sid, (h) => {
               const next = [...h];
@@ -186,12 +224,17 @@ export default function ChatTab() {
         },
 
         onComplete: (data) => {
+          settled = true;
           finalResponseId = data.response_id;
+          // Wave 4.0: a typed final answer (answer_kind) is taken from the final frame as a whole, because the
+          // card renders its verified fields; older frames keep the streamed text as before.
+          const typed = data.answer && typeof data.answer === "object" && data.answer.answer_kind;
           const rawHybrid = data.hybrid || {
-            answer: accumulatedAnswer,
+            answer: typed ? { ...data.answer, answer: data.answer.answer || accumulatedAnswer } : accumulatedAnswer,
             sources: progressiveSources,
             response_id: data.response_id,
             ...(accumulatedMeta || {}),
+            trace: data.trace || accumulatedMeta?.trace,
           };
           const adapted = adaptHybridResponse(rawHybrid, rawHybrid?.latency_ms);
 
@@ -215,29 +258,20 @@ export default function ChatTab() {
           setProgressiveSources([]);
         },
       });
+      // The client returns quietly on Stop and when the server closes without a final frame: settle the turn.
+      if (!settled) {
+        commitIncomplete(controller.signal.aborted ? "stopped" : "interrupted");
+        setIsStreaming(false);
+        setStreamingAnswer("");
+        setProgressiveSources([]);
+      }
     } catch (err) {
       if (err.name === "AbortError") {
-        // User clicked Stop — commit whatever was streamed so far
-        const rawHybrid = {
-          answer: accumulatedAnswer + " [stopped]",
-          sources: progressiveSources,
-          response_id: finalResponseId || `resp_${turnIndex}_${sid}`,
-          ...(accumulatedMeta || {}),
-        };
-        const adapted = adaptHybridResponse(rawHybrid);
-        setChatHistory(sid, (h) => {
-          const next = [...h];
-          const idx = next.length - 1;
-          next[idx] = {
-            role: "assistant",
-            loading: false,
-            turn_index: turnIndex,
-            hybrid: adapted,
-            content: accumulatedAnswer + " [stopped]",
-            timestamp: Date.now(),
-          };
-          return next;
-        });
+        // User clicked Stop: keep what was streamed, marked incomplete (no "[stopped]" text appended to it)
+        commitIncomplete("stopped");
+      } else if (accumulatedAnswer) {
+        // Part of an answer had arrived: never re-ask behind the user's back; show the turn as withdrawn
+        commitIncomplete("interrupted");
       } else {
         // Stream failed entirely — fall back to synchronous path
         pushToast(`Streaming failed, falling back to sync mode: ${err.message}`);
@@ -273,7 +307,7 @@ export default function ChatTab() {
               and follow-up questions keep the context of this conversation.
             </div>
             <div className="cg-chat-starters">
-              {starterPrompts.map((p) => (
+              {shownStarters.map((p) => (
                 <button
                   key={p}
                   type="button"
@@ -348,6 +382,10 @@ export default function ChatTab() {
                     onOpenEvidence={setEvidenceData}
                     onOpenOntology={setOntologyData}
                     onOpenFeedback={setFeedbackData}
+                    onPickPrompt={(text, opts) => {
+                      setChatQuery(opts?.clarifies ? clarifiedQuery(opts.clarifies, text) : text);
+                      inputRef.current?.focus();
+                    }}
                   />
                 )}
               </>
@@ -401,6 +439,7 @@ export default function ChatTab() {
           </button>
         </div>
         <div className="cg-chat-input-hint">
+          {pilot && <><ReadinessPill /> · </>}
           <kbd>Enter</kbd> to send · <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line · answers cite their sources
         </div>
       </div>

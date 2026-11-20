@@ -41,19 +41,24 @@ def is_pilot_route_allowed(method: str, path: str) -> bool:
         return bool(work_id) and "/" not in work_id and len(work_id) <= 128
     return False
 
-def _w40_route_allowed(method: str, path: str) -> bool:
-    """Wave 4.0 reviewed additions (TDS-40 §5.4), each behind its ADR and flag; NOT in _ALLOWED so the
-    frontend parity list changes only when the UI for them ships.
+# Wave 4.0 reviewed additions (TDS-40 §5.4). Kept apart from _ALLOWED; the frontend mirrors this tuple as
+# PILOT_W40_API and a parity test keeps the two equal.
+W40_ROUTES = (("GET", "/api/ready"), ("GET", "/api/suggestions/v40"), ("POST", "/api/feedback/v40"))
 
-    ADR40-04  GET  /api/ready        always (body is {ready: bool}; detail only for reviewer/admin roles)
-    ADR40-03  POST /api/feedback/v40 only with AMC_PILOT_FEEDBACK=on
+
+def _w40_route_allowed(method: str, path: str) -> bool:
+    """Each behind its ADR and, where it writes, its flag.
+
+    ADR40-04  GET  /api/ready           always (body is {ready: bool}; detail only for reviewer/admin roles)
+    ADR40-05  GET  /api/suggestions/v40 always (authenticated; prompts from the caller's own verified dataset)
+    ADR40-03  POST /api/feedback/v40    only with AMC_PILOT_FEEDBACK=on
     """
-    if (method, path) == ("GET", "/api/ready"):
-        return True
+    if (method, path) not in W40_ROUTES:
+        return False
     if (method, path) == ("POST", "/api/feedback/v40"):
         from amc_publication.evidence40 import feedback_enabled
         return feedback_enabled()
-    return False
+    return True
 
 
 def legacy_services_allowed() -> bool:

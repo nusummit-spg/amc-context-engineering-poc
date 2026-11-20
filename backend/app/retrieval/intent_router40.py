@@ -107,11 +107,15 @@ def parse_period(q: str) -> tuple[date | None, RoutePlan | None]:
         quarter, year = int(m.group(1) or m.group(4)), int(m.group(2) or m.group(3))
         cal = date(year, 3 * (quarter - 1) + 1, 1)
         fy = _fy_quarter_start(quarter, year)
-        fmt = lambda d: f"{d.strftime('%B')} {d.year} quarter"   # noqa: E731
+        def span(start: date) -> str:     # "January to March 2026": an exact range the parser reads first
+            end = date(start.year + (start.month + 2 > 12), (start.month + 1) % 12 + 1, 1)
+            return f"{start.strftime('%B')} to {end.strftime('%B')} {end.year}"
+        # Each option names an unambiguous period, so a client can append the chosen option to the question
+        # and the month range (parsed before any quarter) settles it (TDS-40 E11 clarify chips).
         return None, RoutePlan(KIND_CLARIFY, code="AMBIGUOUS_QUERY",
                                message=f"Q{quarter} {year} can mean a calendar or an Indian financial-year quarter. Which one?",
-                               options=[f"Calendar Q{quarter} {year} (starting {fmt(cal)})",
-                                        f"FY{str(year)[2:]} Q{quarter} (starting {fmt(fy)})"],
+                               options=[f"{span(cal)} (calendar Q{quarter} {year})",
+                                        f"{span(fy)} (Q{quarter} FY{str(year)[2:]})"],
                                reasons=["bare quarter is ambiguous"])
     return None, None
 

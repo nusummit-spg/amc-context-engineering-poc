@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Share2, FileSearch, MessageSquareText, Copy, Check } from "lucide-react";
 import MarkdownAnswer from "../../components/provenance/MarkdownAnswer";
+import AnswerCard40, { IncompleteBanner } from "../../components/answer40/AnswerCard40";
+import FeedbackBar40 from "../../components/answer40/FeedbackBar40";
+import { answerKindOf, isPilotFeedbackEnabled } from "../../utils/answer40";
 import { isPilotMode } from "../../utils/pilotSources";
 
 export default function AssistantMessage({
@@ -19,6 +22,7 @@ export default function AssistantMessage({
   onOpenEvidence,
   onOpenOntology,
   onOpenFeedback,
+  onPickPrompt,
 }) {
   const [copied, setCopied] = useState(false);
   // Read-only pilot: feedback capture posts to a denied route and the pilot has no graph context to
@@ -62,13 +66,24 @@ export default function AssistantMessage({
         )}
       </div>
 
-      <div className="cg-answer">
-        <MarkdownAnswer
-          text={answerText}
-          citations={r.citations || r.docs || []}
-          metrics={r.metrics || []}
-        />
+      <IncompleteBanner state={r.incomplete} />
+      <div className="cg-answer" data-answer-kind={answerKindOf(r)}>
+        {answerKindOf(r) === "DOCUMENT" ? (
+          <MarkdownAnswer
+            text={answerText}
+            citations={r.citations || r.docs || []}
+            metrics={r.metrics || []}
+          />
+        ) : (
+          <AnswerCard40 r={r} query={query} onPickPrompt={onPickPrompt} />
+        )}
+        {r.has_gaps && r.gap_description && (
+          <p className="a40-note" role="note" data-testid="answer-gaps">{r.gap_description}</p>
+        )}
       </div>
+      {pilot && isPilotFeedbackEnabled() && !r.incomplete && answerKindOf(r) !== "CLARIFY" && (
+        <FeedbackBar40 key={r.request_id} requestId={r.request_id} />
+      )}
 
       <div className="cg-msg-actions">
         {!pilot && (

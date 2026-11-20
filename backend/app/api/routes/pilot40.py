@@ -1,6 +1,8 @@
 """Wave 4.0 pilot routes (TDS-40 E7, E9).
 
 POST /api/feedback/v40  (ADR40-03, AMC_PILOT_FEEDBACK=on) append-only rating of one of the caller's OWN answers.
+GET  /api/suggestions/v40 (ADR40-05) starter prompts built from the caller's own verified fund dataset (TDS-40
+                         E11.3), so the pilot never suggests questions the corpus cannot answer.
 GET  /api/ready         (ADR40-04) readiness, distinct from /health liveness. Everyone gets {ready: bool};
                          admin/reviewer roles also get the per-check detail. Ready means: database at the exact
                          migration head, trusted public keys loaded, provider policy satisfied, Neo4j reachable,
@@ -130,3 +132,33 @@ async def ready(current_user: OptionalCurrentUser = None):
     if current_user is not None and (getattr(current_user, "role", "") or "").lower() in DETAIL_ROLES:
         body["checks"] = checks
     return JSONResponse(status_code=200 if ok else 503, content=body)
+
+
+def suggested_prompts(tenant: str) -> list[str]:
+    """Questions the active, signature-verified dataset of `tenant` can answer. [] when the plane is off or down."""
+    from app.retrieval.structured_path40 import structured_enabled
+    if not structured_enabled():
+        return []
+    try:
+        from amc_publication.fin_query40 import FinPlan
+        from amc_publication.structured_serving40 import get_structured_executor
+        top = get_structured_executor().execute(tenant, FinPlan("TOP_AMC_AAUM", limit=2))
+    except Exception:            # noqa: BLE001  suggestions are optional; never fail the page for them
+        return []
+    names = [row[1] for row in top.rows]
+    period = top.as_of.get("aaum_period", "")
+    prompts = [f"Top 5 AMCs by AAUM for {period}" if period else "Top 5 AMCs by AAUM"]
+    if names:
+        prompts.append(f"Top 5 schemes of {names[0]} by AAUM")
+    prompts.append("AAUM share by category")
+    if len(names) > 1:
+        prompts.append(f"How many schemes does {names[1]} have?")
+    prompts.append("Give me a dataset summary")
+    return prompts
+
+
+@router.get("/api/suggestions/v40")
+async def suggestions(current_user: CurrentUser):
+    if not current_user.tenant_id:
+        raise HTTPException(status_code=403, detail="tenant identity required")
+    return {"prompts": await asyncio.to_thread(suggested_prompts, current_user.tenant_id)}
