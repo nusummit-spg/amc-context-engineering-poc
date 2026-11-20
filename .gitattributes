@@ -1,0 +1,3 @@
+# Hash-pinned gold sets (TDS-40 E5): byte-exact on every platform, or MANIFEST.json hashes stop matching.
+remediation/wave4_0/gold/*.jsonl -text
+remediation/wave4_0/gold/MANIFEST.json -text
