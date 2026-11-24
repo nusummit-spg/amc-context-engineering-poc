@@ -87,6 +87,7 @@ test.describe('verified pilot, tenant_alpha analyst', () => {
     const card = (await ask(page, 'Should I buy SBI Nifty 50 ETF?')).getByTestId('answer-abstain');
     await expect(card).toHaveAttribute('data-code', 'OUT_OF_SCOPE_ADVICE');
     await expect(card.locator('table')).toHaveCount(0);
+    await expect(page.locator('.cg-msg-assistant').last().locator('.cg-msg-confidence')).toHaveCount(0);
   });
 
   test('UC4 ambiguous quarter asks, the chosen option fills the box, and the follow-up is answered', async ({ page }) => {
@@ -113,6 +114,15 @@ test.describe('verified pilot, tenant_alpha analyst', () => {
     const bar = page.getByTestId('feedback-bar').last();
     await bar.getByRole('button', { name: 'No' }).click();
     await bar.getByLabel('What was wrong?').selectOption('INCOMPLETE');
+    const comment = bar.getByLabel('Comment (optional)');           // the whole placeholder fits
+    expect(await comment.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    expect(await comment.evaluate((el) => {
+      const c = document.createElement('canvas').getContext('2d');
+      const s = getComputedStyle(el);
+      c.font = `${s.fontSize} ${s.fontFamily}`;
+      const pad = parseFloat(s.paddingLeft) + parseFloat(s.paddingRight);
+      return c.measureText(el.placeholder).width <= el.clientWidth - pad;
+    })).toBe(true);
     const posted = page.waitForResponse((r) => r.url().endsWith('/api/feedback/v40') && r.request().method() === 'POST');
     await bar.getByRole('button', { name: 'Send' }).click();
     expect((await posted).status()).toBe(202);
@@ -139,6 +149,8 @@ test.describe('verified pilot, tenant_alpha analyst', () => {
     await page.locator('.cg-chatgpt-query-input').press('Enter');
     await expect(page.getByTestId('answer-interrupted')).toBeVisible({ timeout: 30000 });
     await expect(page.locator('.cg-answer').last()).not.toContainText('Partial text');
+    await expect(page.locator('.cg-answer').last()).toHaveText('');
+    await expect(page.locator('.cg-msg-assistant').last().locator('.cg-msg-confidence')).toHaveCount(0);
     await expect(page.getByTestId('feedback-bar')).toHaveCount(0);
   });
 });

@@ -71,7 +71,7 @@
   font: inherit; font-size: 12px; padding: 4px 8px; border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-ink-800);
 }
-.a40-feedback-form input { min-width: 220px; }
+.a40-feedback-form input { min-width: 280px; flex: 1 1 280px; }
 .a40-feedback-error { width: 100%; margin: 0; color: var(--color-danger-text); }
 
 .a40-ready {

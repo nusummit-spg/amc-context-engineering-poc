@@ -3,7 +3,7 @@ import { Share2, FileSearch, MessageSquareText, Copy, Check } from "lucide-react
 import MarkdownAnswer from "../../components/provenance/MarkdownAnswer";
 import AnswerCard40, { IncompleteBanner } from "../../components/answer40/AnswerCard40";
 import FeedbackBar40 from "../../components/answer40/FeedbackBar40";
-import { answerKindOf, isPilotFeedbackEnabled } from "../../utils/answer40";
+import { answerKindOf, confidenceLabelFor, isPilotFeedbackEnabled } from "../../utils/answer40";
 import { isPilotMode } from "../../utils/pilotSources";
 
 export default function AssistantMessage({
@@ -37,7 +37,9 @@ export default function AssistantMessage({
       ? r.citations
       : (r.provenance && r.provenance.length > 0 ? r.provenance : r.docs || [])
   ).length;
-  const isLowConfidence = /moderate|low/i.test(r.confidence_label || "");
+  const confidenceLabel = confidenceLabelFor(r);
+  const isLowConfidence = /moderate|low/i.test(confidenceLabel || "");
+  const showBody = !r.incomplete || answerText.trim() !== "";
 
   const handleCopy = async () => {
     try {
@@ -54,9 +56,9 @@ export default function AssistantMessage({
       <div className="cg-msg-assistant-head">
         <span className="cg-msg-assistant-mark" aria-hidden="true">CG</span>
         <span className="cg-msg-assistant-name">ContextGraph</span>
-        {r.confidence_label && (
+        {confidenceLabel && (
           <span className={`cg-msg-confidence ${isLowConfidence ? "cg-msg-confidence--low" : ""}`}>
-            {r.confidence_label}
+            {confidenceLabel}
           </span>
         )}
         {timestamp && (
@@ -68,7 +70,7 @@ export default function AssistantMessage({
 
       <IncompleteBanner state={r.incomplete} />
       <div className="cg-answer" data-answer-kind={answerKindOf(r)}>
-        {answerKindOf(r) === "DOCUMENT" ? (
+        {!showBody ? null : answerKindOf(r) === "DOCUMENT" ? (
           <MarkdownAnswer
             text={answerText}
             citations={r.citations || r.docs || []}

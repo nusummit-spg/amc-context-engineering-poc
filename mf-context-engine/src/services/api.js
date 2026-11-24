@@ -3,6 +3,7 @@
  */
 
 import { PilotDisabledError, isPilotApiAllowed, isPilotMode } from "../utils/pilotSources.js";
+import { incompleteAnswerText } from "../utils/answer40.js";
 
 export const API_BASE = "/api";
 
@@ -231,8 +232,10 @@ export function adaptHybridResponse(hybridData, latencyMs = 0) {
   if (!hybridData) return null;
 
   const synthesis = hybridData.answer || {};
-  const answerText =
-    typeof synthesis === "string"
+  // A stopped / withdrawn turn keeps only what was streamed (or nothing): never the "No answer" fallback.
+  const answerText = hybridData.incomplete
+    ? incompleteAnswerText(hybridData.incomplete, typeof synthesis === "string" ? synthesis : synthesis.answer)
+    : typeof synthesis === "string"
       ? synthesis
       : (synthesis.answer || hybridData.content || "No answer synthesized.");
 

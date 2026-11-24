@@ -163,6 +163,21 @@ export function isPilotFeedbackEnabled(env = import.meta.env) {
   return String(env?.VITE_AMC_PILOT_FEEDBACK ?? "").toLowerCase() === "true";
 }
 
+/**
+ * The confidence label to show in the message header, or null. A refusal, a clarification question and an
+ * incomplete (stopped / withdrawn) turn are not graded answers, so a "High confidence" label on them misleads.
+ */
+export function confidenceLabelFor(r) {
+  if (!r || r.incomplete) return null;
+  if (["ABSTAIN", "CLARIFY"].includes(answerKindOf(r))) return null;
+  return r.confidence_label || null;
+}
+
+/** Text kept for a turn that never reached its final frame: the partial text if stopped, nothing if withdrawn. */
+export function incompleteAnswerText(state, partial) {
+  return state === "stopped" ? String(partial || "") : "";
+}
+
 /** Streamed answers that did not reach their final frame are not answers. */
 export const INCOMPLETE_TEXT = {
   stopped: "You stopped this answer. What is shown is incomplete and was not verified as a whole.",

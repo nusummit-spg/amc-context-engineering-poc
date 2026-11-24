@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  answerKindOf, asOfBadge, cellText, clarifiedQuery, columnHeader, computationFacts, exclusionNotes, filterChips,
+  answerKindOf, asOfBadge, confidenceLabelFor, incompleteAnswerText, cellText, clarifiedQuery, columnHeader, computationFacts, exclusionNotes, filterChips,
   formatInr, fyQuarter, isPilotFeedbackEnabled, shortDate, summaryLine,
 } from "./answer40.js";
 import { PILOT_W40_API, isPilotApiAllowed } from "./pilotSources.js";
@@ -76,4 +76,21 @@ test("the Wave 4.0 routes are admitted by the client allowlist and nothing near 
   assert.equal(isPilotApiAllowed("GET", "/api/feedback/v40"), false);
   assert.equal(isPilotApiAllowed("POST", "/api/ready"), false);
   assert.equal(isPilotApiAllowed("POST", "/api/feedback"), false);
+});
+
+test("confidence label is not shown on refusals, clarifications or incomplete turns", () => {
+  const label = "High confidence";
+  assert.equal(confidenceLabelFor({ answer_kind: "STRUCTURED", confidence_label: label }), label);
+  assert.equal(confidenceLabelFor({ confidence_label: label }), label);                 // legacy document answer
+  assert.equal(confidenceLabelFor({ answer_kind: "ABSTAIN", confidence_label: label }), null);
+  assert.equal(confidenceLabelFor({ answer_kind: "CLARIFY", confidence_label: label }), null);
+  assert.equal(confidenceLabelFor({ incomplete: "interrupted", confidence_label: label }), null);
+  assert.equal(confidenceLabelFor({ incomplete: "stopped", confidence_label: label }), null);
+  assert.equal(confidenceLabelFor(null), null);
+});
+
+test("an incomplete turn keeps only the streamed text when stopped and nothing when withdrawn", () => {
+  assert.equal(incompleteAnswerText("stopped", "Partial"), "Partial");
+  assert.equal(incompleteAnswerText("stopped", undefined), "");
+  assert.equal(incompleteAnswerText("interrupted", "Partial"), "");
 });
