@@ -135,8 +135,11 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
-          pip install -r requirements.txt
-          pip install pytest pytest-asyncio
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -e ../packages/amc-repair-engine
+          python -m pip install pytest pytest-asyncio
+          python -c "import sys, amc_repair; print(sys.executable)
 
       - name: Run tests
         run: |
