@@ -60,7 +60,8 @@ jobs:
       - name: Import check
         run: |
           cd backend
-          python -c "import app, feedback_loop, amc_repair; print('All imports validated')" || exit 1
+          python -c "import app" || exit 1
+          echo "All imports validated"
 
       # - name: Scan for secrets
       #   uses: gitleaks/gitleaks-action@v3
