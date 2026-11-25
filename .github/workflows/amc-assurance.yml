@@ -60,8 +60,7 @@ jobs:
       - name: Import check
         run: |
           cd backend
-          python -c "import app" || exit 1
-          echo "All imports validated"
+          python -c "import app, feedback_loop, amc_repair; print('All imports validated')" || exit 1
 
       # - name: Scan for secrets
       #   uses: gitleaks/gitleaks-action@v3
@@ -141,7 +140,7 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install -e ../packages/amc-repair-engine
           python -m pip install pytest pytest-asyncio
-          python -c "import sys, amc_repair; print(sys.executable)"
+          python -c "import sys, amc_repair, feedback_loop; print('All packages imported successfully')"
 
       - name: Run tests
         run: |
