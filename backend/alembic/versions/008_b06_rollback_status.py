@@ -17,29 +17,48 @@ branch_labels = None
 depends_on = None
 
 
-def upgrade() -> None:
-    """Add rolled_back status to repair_proposals status constraint."""
+# def upgrade() -> None:
+#     """Add rolled_back status to repair_proposals status constraint."""
     
-    # Drop old constraint
-    op.drop_constraint('ck_proposal_status', 'repair_proposals', type_='check')
+#     # Drop old constraint
+#     op.drop_constraint('ck_proposal_status', 'repair_proposals', type_='check')
     
-    # Create new constraint with rolled_back
-    op.create_check_constraint(
-        'ck_proposal_status',
-        'repair_proposals',
-        "status IN ('pending', 'approved', 'rejected', 'applied', 'rolled_back')"
-    )
+#     # Create new constraint with rolled_back
+#     op.create_check_constraint(
+#         'ck_proposal_status',
+#         'repair_proposals',
+#         "status IN ('pending', 'approved', 'rejected', 'applied', 'rolled_back')"
+#     )
 
+def upgrade():
+    def upgrade() -> None:
+    """Add rolled_back status to repair_proposals status constraint."""
+    with op.batch_alter_table("repair_proposals") as batch_op:
+        batch_op.drop_constraint("ck_proposal_status", type_="check")
+        batch_op.create_check_constraint(
+            "ck_proposal_status",
+            "status IN ('pending', 'approved', 'rejected', 'applied', 'rolled_back')",
+        )
+
+
+# def downgrade() -> None:
+#     """Remove rolled_back status from constraint."""
+    
+#     # Drop new constraint
+#     op.drop_constraint('ck_proposal_status', 'repair_proposals', type_='check')
+    
+#     # Restore old constraint
+#     op.create_check_constraint(
+#         'ck_proposal_status',
+#         'repair_proposals',
+#         "status IN ('pending', 'approved', 'rejected', 'applied')"
+#     )
 
 def downgrade() -> None:
     """Remove rolled_back status from constraint."""
-    
-    # Drop new constraint
-    op.drop_constraint('ck_proposal_status', 'repair_proposals', type_='check')
-    
-    # Restore old constraint
-    op.create_check_constraint(
-        'ck_proposal_status',
-        'repair_proposals',
-        "status IN ('pending', 'approved', 'rejected', 'applied')"
-    )
+    with op.batch_alter_table("repair_proposals") as batch_op:
+        batch_op.drop_constraint("ck_proposal_status", type_="check")
+        batch_op.create_check_constraint(
+            "ck_proposal_status",
+            "status IN ('pending', 'approved', 'rejected', 'applied')",
+        )
