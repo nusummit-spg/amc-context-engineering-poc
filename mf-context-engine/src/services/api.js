@@ -19,19 +19,64 @@ export function getAuthHeaders() {
         if (session?.authedUsername) {
           headers["X-User-ID"] = session.authedUsername;
         }
+        // Include role from session (always set after login)
+        if (session?.userRole) {
+          headers["X-User-Role"] = normalizeRole(session.userRole);
+        }
       }
     } catch {}
 
-    if (!headers["X-User-ID"]) {
+    // Fallback: try to get role from active user storage (for backward compatibility)
+    if (!headers["X-User-ID"] || !headers["X-User-Role"]) {
       try {
         const activeUser = sessionStorage.getItem("ns_cg_active_user_v1") || localStorage.getItem("ns_cg_active_user_v1");
         if (activeUser) {
-          headers["X-User-ID"] = JSON.parse(activeUser);
+          const parsedUser = JSON.parse(activeUser);
+          if (typeof parsedUser === "string") {
+            // Old format: just a string username
+            if (!headers["X-User-ID"]) {
+              headers["X-User-ID"] = parsedUser;
+            }
+          } else if (parsedUser?.username) {
+            // New format: object with username and role
+            if (!headers["X-User-ID"]) {
+              headers["X-User-ID"] = parsedUser.username;
+            }
+            if (!headers["X-User-Role"] && parsedUser.role) {
+              headers["X-User-Role"] = normalizeRole(parsedUser.role);
+            }
+          }
         }
       } catch {}
     }
   }
   return headers;
+}
+
+/**
+ * Normalize user role string to valid Role enum value
+ * Converts display names like "Compliance & Regulatory Officer" to "compliance_officer"
+ */
+function normalizeRole(role) {
+  if (!role) return null;
+  const normalized = role.toLowerCase().trim().replace(/[&/\s]+/g, "_");
+  
+  const roleMap = {
+    "compliance_officer": "compliance_officer",
+    "compliance_regulatory_officer": "compliance_officer",
+    "compliance_and_regulatory_officer": "compliance_officer",
+    "reviewer": "reviewer",
+    "resolver": "resolver",
+    "viewer": "viewer",
+    "admin": "admin",
+    // Additional roles from users.json - mapped to appropriate base roles
+    "fund_manager_portfolio_manager": "reviewer",
+    "esg_sustainability_analyst": "reviewer",
+    "sales_distribution_manager": "reviewer",
+    "retail_investor_public_client": "viewer",
+  };
+  
+  return roleMap[normalized] || null;
 }
 
 async function request(endpoint, options = {}) {

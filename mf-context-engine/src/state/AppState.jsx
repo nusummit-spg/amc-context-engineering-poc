@@ -168,7 +168,7 @@ export function AppStateProvider({ children }) {
   const authToken = authSession?.token || null;
 
   const clearAuthSession = useCallback(() => {
-    const sessionData = { isAuthenticated: false, authedUsername: null, token: null, expiresAt: null, rememberMe: false };
+    const sessionData = { isAuthenticated: false, authedUsername: null, token: null, expiresAt: null, rememberMe: false, userRole: null };
     setAuthSessionState(sessionData);
     setChatSessionsState({});
     const freshId = uuid();
@@ -179,6 +179,9 @@ export function AppStateProvider({ children }) {
     try {
       sessionStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
       localStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
+      // Also clear active user to force re-selection on next login
+      sessionStorage.removeItem(STORAGE_KEYS.ACTIVE_USER);
+      localStorage.removeItem(STORAGE_KEYS.ACTIVE_USER);
       // NOTE: User-specific chat sessions remain persistently stored in localStorage
       // under getUserChatSessionsKey(username) and in the backend. They are NOT deleted on logout.
     } catch {}
@@ -220,6 +223,11 @@ export function AppStateProvider({ children }) {
     safeStorageSet(STORAGE_KEYS.ACTIVE_USER, username);
   }, []);
 
+  const setActiveUserWithRole = useCallback((username, role) => {
+    setActiveUsernameState(username);
+    safeStorageSet(STORAGE_KEYS.ACTIVE_USER, { username, role });
+  }, []);
+
   const login = useCallback(
     async (inputUserId, inputPassword, rememberMe = false) => {
       const cleanUserId = (inputUserId || "").trim();
@@ -242,6 +250,7 @@ export function AppStateProvider({ children }) {
           token: response.token,
           expiresAt: response.expires_at,
           rememberMe: Boolean(rememberMe),
+          userRole: backendUser.role,
         };
         setAuthSessionState(sessionData);
 
@@ -260,7 +269,7 @@ export function AppStateProvider({ children }) {
           }
         } catch {}
 
-        setActiveUsername(backendUser.username);
+        setActiveUserWithRole(backendUser.username, backendUser.role);
 
         // Load the authenticated user's persistent chat sessions from localStorage
         const userSavedSessions = loadUserChatSessions(backendUser.username);
