@@ -294,3 +294,71 @@ def check_user_quota(user_id: str, tier: str = "free") -> tuple[bool, str]:
         timestamps.append(now)
         _user_quotas[user_id] = timestamps
         return True, ""
+
+class SlidingWindowRateLimiter:
+    """Sliding window rate limiter for client IP addresses."""
+
+    def __init__(self, default_limit: int = 120, default_window_seconds: int = 60):
+        self.default_limit = default_limit
+        self.default_window_seconds = default_window_seconds
+        self._requests: Dict[str, List[float]] = defaultdict(list)
+        self._lock = threading.Lock()
+
+    def is_allowed(self, client_ip: str) -> tuple[bool, int]:
+        """Check if request is allowed and return remaining quota.
+        
+        Args:
+            client_ip: Client IP address
+            
+        Returns:
+            tuple[bool, int]: (allowed, remaining_requests)
+        """
+        now = time.time()
+        with self._lock:
+            timestamps = [t for t in self._requests[client_ip] if now - t < self.default_window_seconds]
+            if len(timestamps) >= self.default_limit:
+                self._requests[client_ip] = timestamps
+                return False, 0
+            timestamps.append(now)
+            self._requests[client_ip] = timestamps
+            remaining = self.default_limit - len(timestamps)
+            return True, remaining
+
+
+class UserQuotaTracker:
+    """Track and enforce user quotas based on tiers."""
+
+    def __init__(self):
+        self._user_quotas: Dict[str, List[float]] = defaultdict(list)
+        self._lock = threading.Lock()
+
+    def check_quota(self, user_id: str, tier: str = "free") -> tuple[bool, str]:
+        """Check if user has quota remaining.
+        
+        Args:
+            user_id: User identifier
+            tier: User tier (free, premium, etc.)
+            
+        Returns:
+            tuple[bool, str]: (is_allowed, error_message)
+        """
+        now = time.time()
+        tier_limits = {
+            "free": 10,
+            "standard": 100,
+            "premium": 500,
+            "pro": 2000,
+            "enterprise": 10000,
+            "admin": 100000,
+        }
+        tier_limit = tier_limits.get((tier or "free").lower(), 10)
+        window = 3600  # 1 hour window
+
+        with self._lock:
+            timestamps = [t for t in self._user_quotas[user_id] if now - t < window]
+            if len(timestamps) >= tier_limit:
+                self._user_quotas[user_id] = timestamps
+                return False, f"Hourly query limit of {tier_limit} queries exceeded for tier '{tier}'. Please upgrade or wait for quota reset."
+            timestamps.append(now)
+            self._user_quotas[user_id] = timestamps
+            return True, ""

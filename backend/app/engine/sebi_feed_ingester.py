@@ -328,3 +328,21 @@ if __name__ == "__main__":
     ingester = SEBIFeedIngester()
     report = ingester.run_daily_sebi_poll()
     print(report)
+
+def detect_supersession_from_title(title: str) -> Optional[Dict[str, str]]:
+    """Parse title for supersession keywords.
+
+    This is a module-level wrapper for the method in SEBIFeedIngester.
+
+    Examples:
+      - "Circular 123 (Superseded by Circular 456)"
+      - "Amendment to Master Circular XYZ"
+
+    Returns:
+        dict with {old: ..., new: ...} if supersession detected, else None
+
+    Args:
+        title (str): The title.
+    """
+    ingester = SEBIFeedIngester()
+    return ingester.detect_supersession_from_title(title)

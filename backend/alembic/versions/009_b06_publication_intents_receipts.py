@@ -87,8 +87,8 @@ def downgrade() -> None:
     op.drop_index('idx_receipt_source_hash', table_name='publication_receipts')
     op.drop_index('idx_receipt_intent', table_name='publication_receipts')
     
-    # Drop foreign key constraint on publication_receipts
-    op.drop_constraint('fk_receipt_intent', 'publication_receipts', type_='foreignkey')
+    # # Drop foreign key constraint on publication_receipts
+    # op.drop_constraint('fk_receipt_intent', 'publication_receipts', type_='foreignkey')
     
     # Drop publication_receipts table
     op.drop_table('publication_receipts')

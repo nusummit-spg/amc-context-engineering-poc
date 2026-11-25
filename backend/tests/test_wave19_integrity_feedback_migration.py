@@ -4,10 +4,19 @@ import sys
 import importlib.util
 from hashlib import sha256
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# Handle local alembic directory shadowing the external package
+_backend_dir = Path(__file__).resolve().parents[1]
+for i in reversed(range(len(sys.path))):
+    p = Path(sys.path[i])
+    if p.name == "alembic" and p.parent == _backend_dir:
+        sys.path.pop(i)
+
+sys.path.insert(0, str(_backend_dir))
 import pytest
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
+
+# Import alembic after path cleanup
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
 

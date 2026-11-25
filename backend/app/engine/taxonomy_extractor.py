@@ -30,6 +30,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -46,6 +47,14 @@ logger = logging.getLogger(__name__)
 # ──────────────────────────────────────────────────────────────────────────
 # STEP 6A: Route & Extract (Tabular vs. Text)
 # ──────────────────────────────────────────────────────────────────────────
+
+class ExtractionStrategy(str, Enum):
+    """Extraction strategy type."""
+    TABULAR_NAV = "tabular_nav"
+    TABULAR_SID = "tabular_sid"
+    NER_CIRCULAR = "ner_circular"
+    KEYWORD = "keyword"
+
 
 @dataclass
 class ExtractionResult:

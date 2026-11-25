@@ -447,3 +447,19 @@ if __name__ == "__main__":
     count = ledger.backfill_existing_documents()
     print(f"Backfilled {count} documents")
     print(f"Status distribution: {ledger.count_by_status()}")
+
+def init_ledger(db_path: Optional[str] = None) -> ProvenanceLedger:
+    """Initialize a new provenance ledger instance, optionally using an in-memory database.
+    
+    Args:
+        db_path: Optional path to SQLite DB. If ":memory:", uses in-memory DB.
+        
+    Returns:
+        ProvenanceLedger: New ledger instance
+    """
+    global _ledger
+    if db_path == ":memory:":
+        # For in-memory testing, create a new instance without caching
+        return ProvenanceLedger(db_path=Path(":memory:"))
+    _ledger = ProvenanceLedger()
+    return _ledger
