@@ -30,8 +30,7 @@ depends_on = None
 #         "status IN ('pending', 'approved', 'rejected', 'applied', 'rolled_back')"
 #     )
 
-def upgrade():
-    def upgrade() -> None:
+def upgrade() -> None:
     """Add rolled_back status to repair_proposals status constraint."""
     with op.batch_alter_table("repair_proposals") as batch_op:
         batch_op.drop_constraint("ck_proposal_status", type_="check")
@@ -39,7 +38,6 @@ def upgrade():
             "ck_proposal_status",
             "status IN ('pending', 'approved', 'rejected', 'applied', 'rolled_back')",
         )
-
 
 # def downgrade() -> None:
 #     """Remove rolled_back status from constraint."""
