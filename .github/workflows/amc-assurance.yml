@@ -48,10 +48,15 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Audit dependencies
+        env:
+          HUMAN_FEEDBACK_TOKEN: ${{ secrets.HUMAN_FEEDBACK_TOKEN }}
         run: |
           cd backend
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt --dry-run
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          git config --global url."https://x-access-token:${HUMAN_FEEDBACK_TOKEN}@github.com/".insteadOf "https://github.com/"
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt --dry-run
           echo "Dependencies validated"
 
       - name: Compile
@@ -80,10 +85,15 @@ jobs:
           rm -f gitleaks
 
       - name: Audit requirements
+        env:
+          HUMAN_FEEDBACK_TOKEN: ${{ secrets.HUMAN_FEEDBACK_TOKEN }}
         run: |
           cd backend
+          test -n "$HUMAN_FEEDBACK_TOKEN" || { echo "HUMAN_FEEDBACK_TOKEN is not set"; exit 1; }
           python -m pip install --upgrade pip
-          pip install pip-audit
+          python -m pip install pip-audit
+          git config --global url."https://x-access-token:${HUMAN_FEEDBACK_TOKEN}@github.com/".insteadOf "https://github.com/"
+          trap 'git config --global --unset-all url."https://x-access-token:${HUMAN_FEEDBACK_TOKEN}@github.com/".insteadOf || true' EXIT
           pip-audit -r requirements.txt
 
    # A02: Migration rehearsal
@@ -220,9 +230,15 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Run fault injection tests
+        env:
+          HUMAN_FEEDBACK_TOKEN: ${{ secrets.HUMAN_FEEDBACK_TOKEN }}
         run: |
           cd backend
-          pip install -r requirements.txt pytest
+          test -n "$HUMAN_FEEDBACK_TOKEN" || { echo "HUMAN_FEEDBACK_TOKEN is not set"; exit 1; }
+          git config --global url."https://x-access-token:${HUMAN_FEEDBACK_TOKEN}@github.com/".insteadOf "https://github.com/"
+          trap 'git config --global --unset-all url."https://x-access-token:${HUMAN_FEEDBACK_TOKEN}@github.com/".insteadOf || true' EXIT
+
+          python -m pip install -r requirements.txt pytest
           if [ ! -d "tests/fault_injection" ]; then
             echo "ERROR: tests/fault_injection directory not found"
             exit 1
