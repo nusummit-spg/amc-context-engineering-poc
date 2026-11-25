@@ -136,36 +136,20 @@ jobs:
         run: |
           cd backend
           python -m venv .venv
-          source .venv/bin/activate
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-          python -m pip install -e ../packages/amc-repair-engine
-          python -m pip install pytest pytest-asyncio
-          python -c "import sys, amc_repair, feedback_loop; print('All packages imported successfully')"
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install -r requirements.txt
+          .venv/bin/python -m pip install -e ../packages/amc-repair-engine
+          .venv/bin/python -c "import sys, amc_repair, feedback_loop; print('All packages imported successfully')"
 
       - name: Run tests
         run: |
-
           cd backend
           if [ -d "tests" ]; then
-            if [ ! -d ".venv" ]; then
-              python -m venv .venv
-              .venv/bin/python -m pip install --upgrade pip
-              .venv/bin/pip install -r requirements.txt
-              # Collect first to surface all import errors
-              python -m pytest tests/ --collect-only -q
-              # Run Wave 1.9/2.0 contract suites (deterministic, no external deps)
-              python -m pytest tests/test_wave19_durable_publication.py \
-                tests/test_wave19_contracts.py \
-                tests/test_wave19_integrity_feedback_migration.py \
-                tests/test_wave20_audit.py \
-                tests/test_wave20_independent.py \
-                tests/test_wave20_ingestion.py \
-                tests/test_wave20_wave19_contract.py \
-                tests/regression/ \
-                tests/fault_injection/ \
-            fi
-            .venv/bin/pytest tests/ -v --tb=short -x
+              # # Collect first to surface all import errors
+              # python -m pytest tests/pytest tests/ -v --tb=short -x
+            # Collect first to surface all import errors using the job venv.
+            .venv/bin/python -m pytest tests/ --collect-only -q
+            .venv/bin/python -m pytest tests/ -v --tb=short -x
           else
             echo "No tests directory; skipping"
             exit 0
