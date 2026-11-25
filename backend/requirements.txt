@@ -88,7 +88,7 @@ feedback_loop@git+https://github.com/nusummit-spg/human-feedback-loop@v0.1.7
 # --- Phase 2: Modular Packages ──────────────────────────────────
 # Install from local packages during development
 # -e ../packages/amc-feedback-loop
--e ../packages/amc-repair-engine
+#-e ../packages/amc-repair-engine
 
 fsspec==2026.6.0
 alembic>=1.13
