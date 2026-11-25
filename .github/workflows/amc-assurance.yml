@@ -133,12 +133,14 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
+        env:
+          HUMAN_FEEDBACK_TOKEN: ${{ secrets.HUMAN_FEEDBACK_TOKEN }}
         run: |
           cd backend
           python -m venv .venv
           .venv/bin/python -m pip install --upgrade pip
+          git config --global url."https://x-access-token:${HUMAN_FEEDBACK_TOKEN}@github.com/".insteadOf "https://github.com/"
           .venv/bin/python -m pip install -r requirements.txt
-          .venv/bin/python -m pip install "git+https://github.com/nusummit-spg/human-feedback-loop@v0.1.7" 
           .venv/bin/python -m pip install -e ../packages/amc-repair-engine
           .venv/bin/python -c "import sys, amc_repair, feedback_loop; print('All packages imported successfully')"
 
