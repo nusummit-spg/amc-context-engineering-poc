@@ -44,7 +44,7 @@ spacy>=3.8.16                    # NER Layer A (blank pipeline)
 easyocr>=1.7                 # PDF image OCR (index-time only)
 pillow>=10.0
 python-dotenv>=1.0
-numpy>=2.0.2
+numpy>=1.26.4
 pandas>=2.2
 scikit-learn==1.4.2
 rapidfuzz>=3.0
