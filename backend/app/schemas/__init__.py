@@ -15,3 +15,5 @@ from app.schemas.violations_table import Violation
 from app.schemas.repair_proposals import RepairProposal
 from app.schemas.graph_mutations_table import GraphMutation
 from app.schemas.revoked_token import RevokedToken
+from app.schemas.reindex_jobs_table import ReindexJob
+from app.schemas.outbox_events_table import OutboxEvent

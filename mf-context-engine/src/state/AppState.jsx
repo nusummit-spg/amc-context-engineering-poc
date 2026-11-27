@@ -1453,6 +1453,7 @@ export function AppStateProvider({ children }) {
   // ── Initial Backend Sync ───────────────────────────────────────────────────
   useEffect(() => {
     async function loadBackendData() {
+      if (!isAuthenticated || !authToken) return;
       try {
         const u = await fetchUsers();
         if (u && u.users && u.users.length > 0) {
@@ -1488,7 +1489,7 @@ export function AppStateProvider({ children }) {
       } catch {}
     }
     loadBackendData();
-  }, [setUsers, setActiveUsername]);
+  }, [isAuthenticated, authToken, authedUsername, setUsers, setActiveUsername]);
 
   const value = {
     // Auth & Gate

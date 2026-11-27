@@ -101,6 +101,13 @@ def init_db():
         logging.getLogger("app.core.database").warning("Failed to run feedback issues migration: %s", e)
 
     try:
+        from scripts.migrate_sqlite_schema import run_migration as run_sqlite_schema_migration
+        run_sqlite_schema_migration(BASE_DIR / "data.db")
+    except Exception as e:
+        import logging
+        logging.getLogger("app.core.database").warning("Failed to run sqlite schema alignment migration: %s", e)
+
+    try:
         from app.db.migrate_data import populate_data_db
         populate_data_db()
     except Exception as e:

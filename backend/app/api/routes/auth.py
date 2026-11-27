@@ -80,7 +80,7 @@ async def login(
     # Apply rate limiting before authentication
     await limit_login_requests(request, payload.username, max_attempts=5, window_seconds=900)
     
-    result: AuthResult = (payload.auth_service.authenticateusername, payload.password, payload.remember_me)
+    result: AuthResult = auth_service.authenticate(payload.username, payload.password, payload.remember_me)
 
     if not result.success:
         # Same generic message + same status code whether the username

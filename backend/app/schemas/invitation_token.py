@@ -19,7 +19,7 @@ Wave 1.3 A05 (C-14) Security Hardening:
 """
 from datetime import datetime
 from sqlalchemy import String, Boolean, DateTime, Integer
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, synonym
 from app.core.database import Base
 
 
@@ -40,6 +40,7 @@ class InvitationToken(Base):
     # Token hash (primary key) - NOT the actual token
     # A05: This is HMAC-SHA256(plaintext_token, server_secret), not the plaintext
     token_hash: Mapped[str] = mapped_column(String(64), primary_key=True, index=True)
+    token = synonym("token_hash")
 
     # Associated username
     username: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
